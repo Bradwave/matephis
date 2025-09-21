@@ -1,9 +1,8 @@
 ---
 title: Esercizi di dinamica
 feed: show
-date: 2025-09-22
 ---
-### Qesiti
+### Quesiti
 
 **Quesito 1 [E]** Come spieghi il fatto che, per mantenere una velocità costante in auto, è necessario premere sull'acceleratore?
 
@@ -41,33 +40,22 @@ date: 2025-09-22
 ### Quiz
 
 **Quiz 1 [F]** Un’alpinista, opportunamente imbragata e legata, cade in seguito alla rottura di un appiglio. La corda arresta la caduta. Detta $F_P$ la forza peso dell’alpinista e $F_\uparrow$ la forza, diretta verso l’alto, esercitata sull’alpinista dalla corda, durante l’arresto della caduta…
-
-(a) $F_P < F_\uparrow$.
-
-(b) $F_p = F_\uparrow$.
-
-(c) $F_p > F_\uparrow$.
-
-(d) non ci sono dati a sufficienza per rispondere.
+- (a) $F_P < F_\uparrow$.
+- (b) $F_p = F_\uparrow$.
+- (c) $F_p > F_\uparrow$.
+- (d) non ci sono dati a sufficienza per rispondere.
 
 **Quiz 2 [F-]** Un ascensore sale a velocità costante. Detta $F_p$ la forza peso dell’ascensore e $F_\uparrow$ la forza esercitata sull’ascensore dalla fune che ne regola il movimento, allora…
-
-(a) $F_P < F_\uparrow$.
-
-(b) $F_p = F_\uparrow$.
-
-(c) $F_p > F_\uparrow$.
-
-(d) non ci sono dati a sufficienza per rispondere.
+- (a) $F_P < F_\uparrow$.
+- (b) $F_p = F_\uparrow$.
+- (c) $F_p > F_\uparrow$.
+- (d) non ci sono dati a sufficienza per rispondere.
 
 **Quiz 3 [F]** Un ascensore sale a velocità decrescente. Detta $F_p$ la forza peso dell’ascensore e $F_\uparrow$ la forza esercitata sull’ascensore dalla fune che ne regola il movimento, allora…
 
 (a) $F_P < F_\uparrow$.
-
 (b) $F_p = F_\uparrow$.
-
 (c) $F_p > F_\uparrow$.
-
 (d) non ci sono dati a sufficienza per rispondere.
 
 ---
