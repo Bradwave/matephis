@@ -1,46 +1,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
 
 :root {
-  --bg: rgb(255, 255, 255);
-  --bg2: rgb(239, 239, 239);
+  --bg: #ffffff;
+  --bg2: #f1f1f1;
   --text: #0d0d0d;
   --title: #000000;
-  --brand: rgb(58, 169, 159);
-  --border: rgb(226, 226, 226);
-  
+  --brand: #B01A00;
+  --border: #e8e8e8;
+
   --font: "Space Grotesk", sans-serif;
   --weight-medium: 400;
   --weight-bold: 600;
-  
+
   --space-xs: 0.5rem;
   --space-sm: 1rem;
   --space-md: 1.5rem;
   --space-lg: 2rem;
   --space-xl: 3rem;
-  
+
   --max-width: 48rem;
   --line-height: 1.5;
-  
+
   /* 5-level typography scale (1rem = 15px) */
-  --scale-xs: 0.8rem;     /* 12px */
-  --scale-sm: 0.933rem;   /* 14px */
-  --scale-base: 1rem;     /* 15px */
-  --scale-lg: 1.2rem;     /* 18px */
-  --scale-xl: 1.4rem;     /* 21px */
+  --scale-xs: 0.8rem;
+  /* 12px */
+  --scale-sm: 0.933rem;
+  /* 14px */
+  --scale-base: 1rem;
+  /* 15px */
+  --scale-lg: 1.2rem;
+  /* 18px */
+  --scale-xl: 1.4rem;
+  /* 21px */
 }
 
 /* Dark theme variables */
 [data-theme="dark"] {
-  --bg: #18181c;
-  --bg2: #23232a;
-  --text: #d6d6d6;
-  --title: #fff;
-  --brand: #3ac9b0;
-  --border: #33343a;
+  --bg: #ffffff;
+  --bg2: #f1f1f1;
+  --text: #0d0d0d;
+  --title: #000000;
+  --brand: #838383;
+  --border: #e8e8e8;
 }
 
 html, body {
-  transition: background 0.3s, color 0.3s;
+  /*transition: background 0.3s, color 0.3s;*/
 }
 
 * {
@@ -71,7 +76,7 @@ body {
   padding-top: var(--space-xl);
 }
 
-.container > div {
+.container>div {
   max-width: var(--max-width);
   width: 100%;
   margin: 0 auto;
@@ -110,11 +115,11 @@ body {
 }
 
 .hamburger svg {
-  transition: transform 0.3s ease;
+  /*transition: transform 0.3s ease;*/
 }
 
 .hamburger.active svg {
-  transform: rotate(90deg);
+  color: var(--brand);
 }
 
 .dropdown-menu {
@@ -128,7 +133,7 @@ body {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
-  transition: all 0.3s ease;
+  /*transition: all 0.3s ease;*/
   z-index: 1001;
 }
 
@@ -143,7 +148,7 @@ body {
   padding: var(--space-sm);
   color: var(--text);
   text-decoration: none;
-  transition: 0.3s ease;
+  /*transition: 0.3s ease;*/
   border-radius: 0.5rem;
   font-size: var(--scale-base);
 }
@@ -163,7 +168,7 @@ body {
     border: 1px solid var(--border);
     border-radius: 0.5rem;
   }
-  
+
   .dropdown-menu a {
     padding: 0.75rem 1rem;
     font-size: var(--scale-base);
@@ -197,13 +202,13 @@ h3 {
   margin-bottom: var(--space-sm);
 }
 
-h4, h5, h6 { 
-  font-size: var(--scale-base); 
+h4, h5, h6 {
+  font-size: var(--scale-base);
   font-weight: var(--weight-bold);
 }
 
 p {
-  font-size: var(--scale-base); 
+  font-size: var(--scale-base);
   margin-bottom: var(--space-md);
   color: var(--text);
   line-height: 1.7;
@@ -226,7 +231,7 @@ a:hover {
   border-radius: 0.2rem;
   color: var(--bg);
   background: var(--title);
-  transition: background 0.2s;
+  /*transition: background 0.2s;*/
   text-decoration: none;
   font-size: var(--scale-sm);
   text-align: center;
@@ -262,7 +267,7 @@ a:hover {
   gap: var(--space-sm);
 }
 
-.note-list > li:first-child {
+.note-list>li:first-child {
   border-top: 1px solid var(--border);
 }
 
@@ -360,7 +365,7 @@ a:hover {
   font-size: 1rem;
   padding: 0;
   margin: 0;
-  transition: color 0.3s;
+  /*transition: color 0.3s;*/
 }
 
 .theme-toggle:hover {
@@ -517,7 +522,7 @@ td {
   padding: var(--space-xs);
   text-decoration: none;
   color: var(--text);
-  transition: all 0.2s ease;
+  /*transition: all 0.2s ease;*/
   border-bottom: 1px solid var(--border);
   line-height: 1.5;
 }
@@ -583,7 +588,7 @@ td {
 .notelist-feed {
   border-bottom: 1px solid var(--border);
   padding: var(--space-sm) 0;
-  transition: background 0.3s ease;
+  /*transition: background 0.3s ease;*/
 }
 
 .notelist-feed:hover {
@@ -610,7 +615,7 @@ td {
 .list-feed a {
   text-decoration: none;
   color: var(--title);
-  transition: color 0.3s ease;
+  /*transition: color 0.3s ease;*/
 }
 
 .list-feed a:hover {
@@ -646,10 +651,10 @@ td {
   color: var(--text);
   border-radius: 6px;
   border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s;
+  /*transition: opacity 0.3s;*/
   text-align: left;
 }
 
@@ -680,7 +685,7 @@ td {
   color: var(--brand);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease;
+  /*transition: border-color 0.2s ease;*/
 }
 
 .wiki-link:hover {
@@ -716,23 +721,23 @@ td {
   .container {
     padding-top: var(--space-md);
   }
-  
-  .container > div {
+
+  .container>div {
     padding: 0 var(--space-md) var(--space-md);
   }
-  
+
   .nav {
     margin-bottom: var(--space-lg);
   }
-  
+
   h1 {
     font-size: var(--scale-lg);
   }
-  
+
   h2 {
     font-size: var(--scale-base);
   }
-  
+
   h3 {
     font-size: var(--scale-base);
   }
@@ -742,11 +747,11 @@ td {
   .container {
     padding-top: var(--space-sm);
   }
-  
-  .container > div {
+
+  .container>div {
     padding: 0 var(--space-sm) var(--space-sm);
   }
-  
+
   .btn {
     display: block;
     margin-bottom: var(--space-sm);
@@ -764,6 +769,7 @@ p a[href^="http://"], p a[href^="https://"],
 li a[href^="http://"], li a[href^="https://"] {
   position: relative;
 }
+
 p a[href^="http://"]:after, p a[href^="https://"]:after,
 li a[href^="http://"]:after, li a[href^="https://"]:after {
   content: '';

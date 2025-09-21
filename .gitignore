@@ -4,3 +4,12 @@ pages/.DS_Store
 pages/tags.md
 _notes/.obsidian
 _notes/Public/.obsidian
+
+# Obsidian settings
+.obsidian/
+.trash/
+
+# Jekyll build files
+_site/
+.sass-cache/
+.jekyll-cache/

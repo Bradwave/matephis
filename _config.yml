@@ -48,18 +48,16 @@ ie_css: "/assets/css/ie-target.css"
 
 # Menu Items
 menu:
-  - title: "Notes"
+  - title: "Appunti"
     url: "/notes"
   - title: "Blog"
     url: "/blog"
-  - title: "About"
-    url: "/about"
 
 # Footer
 footer:
-  copyright: "© 2025 Matteo Bramardi. Contents under CC-BY-NC"
+  copyright: "© 2025 sinc."
   credits:
-    enabled: true
+    enabled: false
     url: "/credits"
     text: "Credits"
 
@@ -94,8 +92,8 @@ plugins:
 
 # Private links (for broken wiki links)
 privatelinks:
-  title: "Private Note"
-  msg: "This note hasn't been published yet."
+  title: "Appunti privati"
+  msg: "Vie ancora inesplorate..."
 
 # Math rendering
 katex: true
