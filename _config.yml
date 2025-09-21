@@ -38,8 +38,8 @@ preferences:
 title: "sinc"
 heading: "Matteo Bramardi"
 description: "Un blog di matematica e fisica"
-url: "https://bradwave.github.io/sinc"
-baseurl: ""
+url: "https://bradwave.github.io"
+baseurl: "/sinc"
 
 # Asset Configuration
 apple_touch_icon: "/assets/img/profile.png"
