@@ -36,9 +36,9 @@ preferences:
 
 # Site Configuration
 title: "sinc"
-heading: "Your Name"
+heading: "Matteo Bramardi"
 description: "Un blog di matematica e fisica"
-url: ""
+url: "bradwave.github.io/sinc"
 baseurl: ""
 
 # Asset Configuration
@@ -57,7 +57,7 @@ menu:
 
 # Footer
 footer:
-  copyright: "© 2024 Your Name. Contents under CC-BY-NC"
+  copyright: "© 2025 Matteo Bramardi. Contents under CC-BY-NC"
   credits:
     enabled: true
     url: "/credits"
