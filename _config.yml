@@ -36,7 +36,7 @@ preferences:
 
 # Site Configuration
 title: "sinc"
-heading: "Matteo Bramardi"
+heading: mate e fisica"
 description: "Un blog di matematica e fisica"
 url: "https://bradwave.github.io"
 baseurl: "/sinc"
@@ -96,7 +96,7 @@ privatelinks:
   msg: "Vie ancora inesplorate..."
 
 # Math rendering
-katex: true
+mathjax: true
 
 # Exclude from processing
 exclude:

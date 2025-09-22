@@ -2,27 +2,28 @@
   <div class="nav-left">
     <a href="{{ site.baseurl }}/">
       <svg width="32" height="32" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <rect x="8" y="8" width="16" height="16" rx="4" />
+        <path
+          d="M 1.2757097,17.177686 L 7.5923719,24.232158 L 11.817309,22.601382 L 14.400725,13.624338 L 16.764392,9.3091444 L 20.469643,10.28382 L 18.906933,15.800463 L 21.783594,22.312864 L 26.216406,23.775862 L 28.824298,20.440675 L 29.44078,17.065917 L 25.229069,18.00713 L 24.656784,22.312864 L 21.532003,14.554913 L 16.317629,7.0106652 L 12.06556,9.1905093 L 10.982892,17.177686 L 6.1243641,22.195916 L 4.6052096,23.188923 L 5.7250533,19.172119 L 2.3051198,16.813831 Z" />
       </svg>
     </a>
   </div>
-  
+
   <div class="nav-right">
     <div class="dropdown">
       <div class="hamburger">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" />
         </svg>
       </div>
       <div class="dropdown-menu">
         {%- if site.menu -%}
-          {%- for item in site.menu -%}
-            <a href="{{ site.baseurl }}{{ item.url }}">{{ item.title }}</a>
-          {%- endfor -%}
+        {%- for item in site.menu -%}
+        <a href="{{ site.baseurl }}{{ item.url }}">{{ item.title }}</a>
+        {%- endfor -%}
         {%- else -%}
-          <a href="{{ site.baseurl }}/">About</a>
-          <a href="{{ site.baseurl }}/notes">Notes</a>
-          <a href="{{ site.baseurl }}/about">About</a>
+        <a href="{{ site.baseurl }}/">About</a>
+        <a href="{{ site.baseurl }}/notes">Notes</a>
+        <a href="{{ site.baseurl }}/about">About</a>
         {%- endif -%}
       </div>
     </div>
@@ -32,14 +33,14 @@
 <script>
   const hamburger = document.querySelector('.hamburger');
   const dropdown = document.querySelector('.dropdown');
-  
-  hamburger.addEventListener('click', function(e) {
+
+  hamburger.addEventListener('click', function (e) {
     e.stopPropagation();
     this.classList.toggle('active');
     dropdown.classList.toggle('active');
   });
-  
-  document.addEventListener('click', function(e) {
+
+  document.addEventListener('click', function (e) {
     if (!e.target.closest('.dropdown')) {
       hamburger.classList.remove('active');
       dropdown.classList.remove('active');

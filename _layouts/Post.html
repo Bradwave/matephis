@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 
 <head>
     <meta content="width=device-width, initial-scale=1" name="viewport" />
@@ -34,18 +34,22 @@
     {%- else -%}
     <link href="{{ site.baseurl }}/assets/css/style.css" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
-    {%- if site.katex -%}
-    <link href="{{ site.baseurl }}/assets/css/vendor/Katex.css" rel="stylesheet" media="all" class="default" />
+    {%- if site.mathjax -%}
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+        </script>
     {%- endif -%}
 
-    <!--[if IE]>
-        {%- if site.ie_css -%}
-        <link href="{{ site.baseurl }}{{ site.ie_css }}" rel="stylesheet" type="text/css"/>
-        {%- else -%}
-        <link href="{{ site.baseurl }}/assets/css/ie-target.css" rel="stylesheet" type="text/css"/>
-        {%- endif -%}
-    <![endif]-->
-    <!--<link href="/assets/css/prism.css" rel="stylesheet" />-->
     <link rel="alternate" type="application/rss+xml" href="{{ site.url }}/feed.xml">
 </head>
 
@@ -53,71 +57,72 @@
     <div class="container">
         <div>
             {%- include Nav.html -%}
-            
+
             <!-- Homepage Layout-->
             {%- if page.permalink == "/" -%}
-                {%- if site.preferences.homepage.enabled -%}
-                    <!--- Show content from index.md when homepage is enabled -->
-                    {%- include Content.html -%}
-                {%- else -%}
-                    <!--- Show content from notes.md + search + feed when homepage is disabled -->
-                    <h1>{{page.title}}</h1>
-                    {%- include Content.html -%}
-                    {%- include Search.html -%}
-                    {%- include Feed.html -%}
-                {%- endif -%}
+            {%- if site.preferences.homepage.enabled -%}
+            <!--- Show content from index.md when homepage is enabled -->
+            {%- include Content.html -%}
+            {%- else -%}
+            <!--- Show content from notes.md + search + feed when homepage is disabled -->
+            <h1>{{page.title}}</h1>
+            {%- include Content.html -%}
+            {%- include Search.html -%}
+            {%- include Feed.html -%}
+            {%- endif -%}
             {%- endif -%}
 
             <!--- Notes Feed Layout-->
             {%- if page.permalink == "/notes" -%}
-                <h1>{{page.title}}</h1>
-                {%- include Content.html -%}
-                {%- include Search.html -%}
-                {%- include Feed.html -%}
+            <h1>{{page.title}}</h1>
+            {%- include Content.html -%}
+            {%- include Search.html -%}
+            {%- include Feed.html -%}
             {%- endif -%}
 
             <!--- Notes Layout-->
             {%- if page.content-type == "notes" -%}
-                <h1>{{page.title}}</h1>
-                {%- include Content.html -%}
-                {%- if site.preferences.backlinks.enabled -%}
-                {%- include Backlinks.html -%}
-                {%- endif -%}
+            <h1>{{page.title}}</h1>
+            {%- include Content.html -%}
+            {%- if site.preferences.backlinks.enabled -%}
+            {%- include Backlinks.html -%}
+            {%- endif -%}
             {%- endif -%}
 
-             <!--- Post Layout-->
-             {%- if page.content-type == "post"  -%}
-                 <h1>{{page.title}}</h1>
-                 {%- include Content.html -%}
-                 {%- if site.preferences.backlinks.enabled -%}
-                 {%- include Backlinks.html -%}
-                 {%- endif -%}
-             {%- endif -%}
+            <!--- Post Layout-->
+            {%- if page.content-type == "post" -%}
+            <h1>{{page.title}}</h1>
+            {%- include Content.html -%}
+            {%- if site.preferences.backlinks.enabled -%}
+            {%- include Backlinks.html -%}
+            {%- endif -%}
+            {%- endif -%}
 
             <!--- Static Page Layout-->
             {%- if page.content-type == "static" -%}
-                <h1>{{page.title}}</h1>                        
-                {%- include Content.html -%}
+            <h1>{{page.title}}</h1>
+            {%- include Content.html -%}
             {%- endif -%}
-            
+
             <!--- Blog Feed Layout-->
             {%- if page.permalink == "/blog" -%}
-                <div class="related-wrapper">
+            <div class="related-wrapper">
                 {% assign post_items = site.posts | sort: "date" | reverse %}
                 {% for post_items in post_items %}
-                    {%- if post_items.feed == "show" -%}
-                            <div class="notelist-feed">
-                                <a href="{{ site.baseurl }}{{post_items.url}}">
-                                    <p>{{ post_items.title }}</p>
-                                </a>
-                            </div>
-                    {%- endif -%}
-                {%- endfor -%}
+                {%- if post_items.feed == "show" -%}
+                <div class="notelist-feed">
+                    <a href="{{ site.baseurl }}{{post_items.url}}">
+                        <p>{{ post_items.title }}</p>
+                    </a>
                 </div>
+                {%- endif -%}
+                {%- endfor -%}
+            </div>
             {%- endif -%}
 
             {%- include Footer.html -%}
         </div>
     </div>
 </body>
-</html> 
+
+</html>

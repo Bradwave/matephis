@@ -4,7 +4,7 @@
 
 layout: Post
 permalink: /
-title: sinc
+title: matefis
 ---
 
-Un blog di matematica e fisica.
+Un blog di matematica e fisica, itinerari didattici, elucubrazioni, vie non tracciate.
