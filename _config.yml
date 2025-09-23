@@ -36,7 +36,7 @@ preferences:
 
 # Site Configuration
 title: "sinc"
-heading: mate e fisica"
+heading: "mate e fisica"
 description: "Un blog di matematica e fisica"
 url: "https://bradwave.github.io"
 baseurl: "/sinc"
