@@ -5,7 +5,7 @@ tags:
   - esercizi
   - funzioni
 ---
-Esercizi, quesiti, quiz e problemi sulle funzioni, con focus sugli elementi introduttivi (identificazione di funzioni, determinazione di dominio naturale e immagine, realizzazione di semplici grafici).
+Esercizi, quesiti, quiz e problemi sulle funzioni, con focus sugli elementi introduttivi (identificazione di funzioni, determinazione di dominio naturale e immagine, realizzazione di semplici grafici, crescenza/decrescenza, zeri).
 
 Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]].
 ## Esercizi
@@ -29,12 +29,14 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 3. **[EE/F]** Definisci algebricamente la funzione che associa a ogni numero sulla retta dei numeri reali la sua distanza da zero. Determina dominio, codominio e immagine della funzione. Realizza un dynagraph e un grafico cartesiano.
 4. **[F-]** Definisci algebricamente la funzione che associa a ogni punto del piano cartesiano la propria distanza dall'origine. Determina dominio, codominio e immagine della funzione. È possibile realizzare un grafico cartesiano di tale funzione?
 5. **[T]** Qual è il dominio della funzione il cui grafico è rappresentato in figura?
-   ![funzioni-1-dominio_radice](/sinc/images/funzioni-1-dominio_radice.svg)
-6. Determina il dominio naturale delle seguenti funzioni, rappresenta sul grafico gli intervalli di definizione, quindi verifica le risposte usando Desmos, GeoGebra o software simili.
+   ![funzioni-1-dominio_radice]({{ site.baseurl }}/images/funzioni-1-dominio_radice.svg)
+6. **[EE]** Determina il dominio naturale delle seguenti funzioni, rappresenta sul grafico gli intervalli di definizione, quindi verifica le risposte usando Desmos, GeoGebra o software simili.
 	1. $f(x) = \sqrt{x^2 + 1}$
 	2. $f(x) = \dfrac{x + 3}{x - 2}$
 	3. $f(x) = \dfrac{1}{\sqrt{x + 2}}$
 	4. $f(x) = 3 \cdot \ln(x - 2)$
+7. **[E]** In figura è rappresentato il grafico della funzione $f$. Quante sono le soluzioni dell'equazione $f(x) = 2$.
+   ![funzioni-5-soluzioni]({{ site.baseurl }}/images/funzioni-5-soluzioni.svg)
 
 ## Quesiti
 
@@ -65,7 +67,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** 1
 	- **(c)** 2
 	- **(d)** Infinite
-	![funzioni-4-equazione_coseno](/sinc/images/funzioni-4-equazione_coseno.svg)
+	![funzioni-4-equazione_coseno]({{ site.baseurl }}/images/funzioni-4-equazione_coseno.svg)
 5. **[F-]** Una funzione $f(x)$ è definita in $\mathbb{R}$ e ha come insieme immagine l'intervallo $[0; 1]$. Quale delle seguenti equazioni non ha soluzione?
 	- **(a)** $f(x) = \dfrac 1 2$
 	- **(b)** $f(x) = 2$
@@ -86,22 +88,40 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** 0
 	- **(10)** 10
 	- **(d)** -2,5
-9. 
+9. **[F+]** Il polinomio $x^3+x^2−2x$ si può scomporre nella forma $x(x−1)(x+2)$. Quante sono le intersezioni del grafico della funzione $f(x)=x^3+x^2−2x$ con l'asse delle ascisse?
+	- **(a)** 1
+	- **(b)** 2
+	- **(c)** 3
+	- **(d)** Nessuna
+10. **[EE/F]** In figura sono rappresentati i grafici di $f$ (in rosso) e $g$ (in nero). Quali tra le seguenti affermazioni sono corrette? Più di una può essere corretta.
+	- **(a)** $f(x) > g(x)$ se $-10 < x < 10$.
+	- **(b)** $f(-10) + g(10) = 0$.
+	- **(c)** $f(0) + g(0) > 0$.
+	- **(d)** $f(x) \cdot g(x) \leq 0$ se $-15 < x < 15$.
+	![funzioni-6-due_funzioni]({{ site.baseurl }}/images/funzioni-6-due_funzioni.svg)
 
 ## Problemi
 
-1. **[EE]** Realizza un grafico della speranza di vita in Italia a partire dal 1900 (il sito [Our world in data](https://ourworldindata.org/) è un'ottima fonte per reperire i dati necessari). Scegli ogni quanti anni campionare il valore della speranza di vita, motivando tale scelta.
+1. **Speriamo in bene... [EE]** Realizza un grafico della speranza di vita in Italia a partire dal 1900 (il sito [Our world in data](https://ourworldindata.org/) è un'ottima fonte per reperire i dati necessari). Scegli ogni quanti anni campionare il valore della speranza di vita, motivando tale scelta.
 	1. Il grafico ottenuto rappresenta quale funzione? Quali sono dominio, codominio e immagine?
 	2. Quali sono le caratteristiche del grafico (crescenza, decrescenza, massimi e minimi)?
 	3. Cosa si può dedurre dal grafico?
-2.  **[F]** In una riserva naturale è stata programmata un’azione di ripopolamento di fagiani. Il numero di fagiani nel tempo $t$ cresce esponenzialmente secondo una legge del tipo $f(t)=a \cdot b^t$, dove $f$ è il numero di mesi trascorsi e $t$ è il numero di fagiani. L’andamento della funzione è mostrato in figura.
+2.  **Tanti fagiani [F]** In una riserva naturale è stata programmata un’azione di ripopolamento di fagiani. Il numero di fagiani nel tempo $t$ cresce esponenzialmente secondo una legge del tipo $f(t)=a \cdot b^t$, dove $f$ è il numero di mesi trascorsi e $t$ è il numero di fagiani. L’andamento della funzione è mostrato in figura.
 	1. Quanti fagiani erano presenti inizialmente?
 	2. Dopo quanti mesi i fagiani hanno raggiunto le 90 unità?
-![funzioni-2-fagiani](/sinc/images/funzioni-2-fagiani.svg)
-3. **[E]** Per svuotare un serbatoio d'acqua inizialmente pieno si apre un rubinetto. Il grafico mostra l'andamento della quantità d'acqua nel serbatoio in funzione del tempo dal momento dell'apertura del rubinetto.
+![funzioni-2-fagiani]({{ site.baseurl }}/images/funzioni-2-fagiani.svg)
+3. **Il serbatoio [E]** Per svuotare un serbatoio d'acqua inizialmente pieno si apre un rubinetto. Il grafico mostra l'andamento della quantità d'acqua nel serbatoio in funzione del tempo dal momento dell'apertura del rubinetto.
 	1. Quanti litri d'acqua ci sono nel serbatoio dopo 2 minuit?
 	2. Quanti minuti sono necessari per svuotare metà del serbatoio?
 	3. Quanti minuti sono necessari per svuotare completamente il serbatoio?
-   ![funzioni-3-serbatoio](/sinc/images/funzioni-3-serbatoio.svg)
-4. **[EE]** È lunedì. Le previsioni meteo per i prossimi martedì e mercoledì recitano: "giornate prevalentemente soleggiate, senza sbalzi di temperatura; la massima (22°C) si registrerà mercoledì alle 12:00, mentre la minima (8°C) nella notte tra martedì e mercoledì, alle 4:00". Traccia un grafico che della temperatura che rispetti la descrizione.
-5. 
+   ![funzioni-3-serbatoio]({{ site.baseurl }}/images/funzioni-3-serbatoio.svg)
+4. **Bel tempo in vista [EE]** È lunedì. Le previsioni meteo per i prossimi martedì e mercoledì recitano: "giornate prevalentemente soleggiate, senza sbalzi di temperatura; la massima (22°C) si registrerà mercoledì alle 12:00, mentre la minima (8°C) nella notte tra martedì e mercoledì, alle 4:00". Traccia un grafico che della temperatura che rispetti la descrizione.
+5. **Coltura batterica [F]** Durante un test di laboratorio, 5 ng di batteri sono posti in una piastra con abbondanti nutrimenti. Si osserva che la popolazione di batteri raddoppia ogni 30 minuti circa. Rappresenta con una funzione la crescita della popolazione di batteri e realizza un grafico cartesiano.
+6. **Dove parcheggio a Torino? [EE]** Devi lasciare l'auto a Torino per qualche giorno. Puoi scegliere tra due opzioni: il parcheggio Aurora costa 10€ all'ingresso e 2€ ogni ora. Il parcheggio Bellavista non prevede costi all'ingresso, ma costa 3€ ogni ora.
+	1. Rappresenta il costo dei parcheggi con delle funzioni e tracciane i grafici.
+	2. Quando conviene il parcheggio Aurora? Quando conviene il parcheggio Bellavista?
+	3. Se hai a disposizione un budget di 100€, quale parcheggio è più vantaggioso?
+7. **Incontri montani [EE/F]** Alice inizia la propria camminata verso il rifugio Questa (2388 m s.l.m.) dalle terme di Valdieri (1400 m s.l.m.). Alice percorre un dislivello di 380 metri ogni ora in salita. Nello stesso istante in cui Alice inizia la salita, Bob — che si trova sul monte Malinvern (2931 m s.l.m.) — inizia la propria discesa, diretto alle terme di Valdieri, ricoprendo un dislivello di 500 metri ogni ora sulle stesso sentiero percorso da Alice.
+	1. Rappresenta la posizione di Alice e Bob con delle funzioni e tracciane i grafici.
+	2. Dopo quanto tempo e a che altitudine Alice e Bob si incontrano?
+	3. Dopo quanto tempo Alice e Bob raggiungono rispettivamente la propria destinazione?
