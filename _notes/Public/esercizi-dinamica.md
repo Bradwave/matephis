@@ -10,7 +10,7 @@ Una raccolta di quesiti, quiz e problemi di dinamica.
 Alcuni degli esercizi sono tratti da *College Physics: Explore and Apply* di E. Etkina, G. Planisic e A. Van Heuvelen, altri da *Gettys Fisica 1* di G. Vannini (e opportunamente adattati), altri ancora inventati dal sottoscritto.
 
 Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]].
-### Quesiti
+## Quesiti
 
 1. **[E]** Come spieghi il fatto che, per mantenere una velocità costante in auto, è necessario premere sull'acceleratore?
 2. **[F+]** Commenta la seguente affermazione: _per il terzo principio della dinamica, ad ogni forza ne corrisponde una opposta; quindi le forse si annullano tutte a vicenda_.
@@ -40,7 +40,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ---
 
-### Quiz
+## Quiz
 
 1. **[F]** Un’alpinista, opportunamente imbragata e legata, cade in seguito alla rottura di un appiglio. La corda arresta la caduta. Detta $F_P$ la forza peso dell’alpinista e $F_\uparrow$ la forza, diretta verso l’alto, esercitata sull’alpinista dalla corda, durante l’arresto della caduta, si può affermare che...
 	- **(a)** $F_P < F_\uparrow$.
@@ -107,7 +107,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ---
 
-### Problemi
+## Problemi
 
 Per ogni problema rappresenta un diagramma delle forze e del moto, indicando tutte le forze rilevanti al fine della risoluzione del problema (precisa quale corpo esercita la forza e quale corpo la subisce), la velocità dei corpi studiati e la sua eventuale variazione.
 

@@ -35,11 +35,11 @@ preferences:
     enabled: true
 
 # Site Configuration
-title: "sinc"
+title: "matephis"
 heading: "mate e fisica"
 description: "Un blog di matematica e fisica"
 url: "https://bradwave.github.io"
-baseurl: "/sinc"
+baseurl: "/matephis"
 
 # Asset Configuration
 apple_touch_icon: "/assets/img/profile.png"
@@ -55,7 +55,7 @@ menu:
 
 # Footer
 footer:
-  copyright: "© 2025 sinc."
+  copyright: "Dobbiamo sapere, sapremo! - D. Hilbert"
   credits:
     enabled: false
     url: "/credits"
