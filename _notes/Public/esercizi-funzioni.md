@@ -78,9 +78,9 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** una soluzione se $k = 5$.
 	- **(c)** una soluzione se $k = 4$.
 	- **(d)** zero soluzioni se $k = 5$.
-7. **[PD+]** Le due funzioni $f(x)$ e $g(x)$ rappresentano due parabole nel piano cartesiano. Sappiamo che $f(x) \geq 0$ per $x \leq 2 \lor x \geq 8$, mentre $g(x) \geq 0$ per $x \leq 1 \lor x \geq 5$. Qual è il dominio della funzione $h(x) = \dfrac{\sqrt{f(x)}}{g(x)}$?
+7. **[PD+]** Le due funzioni $f(x)$ e $g(x)$ rappresentano due parabole nel piano cartesiano. Sappiamo che $f(x) \geq 0$ per $x \leq 2 \lor x \geq 8$, mentre $g(x) \geq 0$ per $x \leq -1 \lor x \geq 5$. Qual è il dominio della funzione $h(x) = \dfrac{\sqrt{f(x)}}{g(x)}$?
 	- **(a)** $x < -1 \lor x \geq 8$
-	- **(b)** $x \leq -1 \lor -1 < x \leq 2 \lor x \geq 8$
+	- **(b)** $x < -1 \lor -1 < x \leq 2 \lor x \geq 8$
 	- **(c)** $x < -1 \lor -1 < x < 2 \lor x > 8$
 	- **(d)** $x \neq -1 \land x \neq 5$
 8. **[F]** La magnitudine apparente $m$ di una stella di luminosità $L$ è definita tramite la funzione $m(L) = -2{,}5 \log_{10}\left(\dfrac L {L_0}\right)$, dove $L_0$ è la luminosità di una stella di riferimento. Qual è la magnitudine apparente della stella di riferimento, cioè della stella con luminosità $L_0$?
