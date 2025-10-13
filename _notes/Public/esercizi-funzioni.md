@@ -5,10 +5,10 @@ tags:
   - esercizi
   - funzioni
 ---
-Esercizi, quesiti, quiz e problemi sulle funzioni, con focus sugli elementi introduttivi (identificazione di funzioni, determinazione di dominio naturale e immagine, realizzazione di semplici grafici, crescenza/decrescenza, zeri).
+Quesiti, quiz e problemi sulle funzioni, con focus sugli elementi introduttivi (identificazione di funzioni, determinazione di dominio naturale e immagine, realizzazione di semplici grafici, crescenza/decrescenza, zeri).
 
 Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]].
-## Esercizi
+## Quesiti
 
 1. **[E]** Stabilisci se ciascuna delle seguenti relazioni è una funzione. In caso di risposta affermativa, determina dominio, codominio e immagine della funzione e stabilisci se è iniettiva, suriettiva o biiettiva. Rappresenta la funzione con la corretta notazione.
 	1. La relazione tra l'insieme di tutte gli istituti scolastici italiani e l'insieme di tutti i possibili indirizzi, che associa ad ogni scuola l'indirizzo della propria sede.
@@ -37,13 +37,23 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	4. $f(x) = 3 \cdot \ln(x - 2)$
 7. **[E]** In figura è rappresentato il grafico della funzione $f$. Quante sono le soluzioni dell'equazione $f(x) = 2$.
    ![funzioni-5-soluzioni]({{ site.baseurl }}/images/funzioni-5-soluzioni.svg)
-
-## Quesiti
-
-1. **[F]** Una funzione strettamente crescente sul suo dominio è invertibile?
-2. **[F+]** Una funzione invertibile è strettamente crescente sul suo dominio?
-3. **[D]** Si può costruire una biiezione tra $[0, 1]$ e $(0, 1)$? Ovvero, $[0, 1]$ e $(0, 1)$ hanno la stessa cardinalità? Se sì, come? Se no, perché?
-4. **[PD-]** Costruisce una biiezione tra $[1, 2]$ e $[1, 100]$.
+8. **[F-]** In figura è rappresentato il grafico della funzione $f$. Determina il dominio di $g(x)=\log_2 f(x)$.
+   ![funzioni-7-dominio]({{ site.baseurl }}/images/funzioni-7-dominio.svg)
+9. **[F+]** In figura è rappresentato il grafico della funzione $f$. Determina il dominio di $g(x) = \dfrac{1}{f(x)}$.
+    ![funzioni-8-dominio]({{ site.baseurl }}/images/funzioni-8-dominio.svg)
+10. Scrivi due verità e una menzogna in merito alla funzione $f$ il cui grafico è rappresentato in figura.
+	![funzioni-due_verità]({{ site.baseurl }}/images/funzioni-9-due_verità.svg)
+11. Scrivi due verità e una menzogna in merito alla funzione $f(x) = \dfrac{\sqrt{x^2 + 1}}{x^2 + 1}$.
+12. Per ciascuna delle seguenti funzioni, descrivi un fenomeno da esse modellizzato:
+	1. $f(t) = 20 \cdot 3^t$;
+	2. $f(x) = -2x + 3$;
+	3. $f(t) = 0{,}5 \cdot sin(20t)$.
+13. Descrivi un fenomeno che possa essere modellizzato dalla funzione il cui grafico è rappresentato in figura.
+    ![funzioni-10-fenomeno]({{ site.baseurl }}/images/funzioni-10-fenomeno.svg)
+14. **[F]** Una funzione strettamente crescente sul suo dominio è invertibile?
+15. **[F+]** Una funzione invertibile è strettamente crescente sul suo dominio?
+16. **[D]** Si può costruire una biiezione tra $[0, 1]$ e $(0, 1)$? Ovvero, $[0, 1]$ e $(0, 1)$ hanno la stessa cardinalità? Se sì, come? Se no, perché?
+17. **[PD-]** Costruisce una biiezione tra $[1, 2]$ e $[1, 100]$.
 
 ## Quiz
 
@@ -125,3 +135,19 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	1. Rappresenta la posizione di Alice e Bob con delle funzioni e tracciane i grafici.
 	2. Dopo quanto tempo e a che altitudine Alice e Bob si incontrano?
 	3. Dopo quanto tempo Alice e Bob raggiungono rispettivamente la propria destinazione?
+8. **Luminosità variabile [EE/F]** La luminosità dello schermo di uno smartphone varia da 5 nit, in una stanza buia (da 0,1 a 5 lux registrati dal sensore di luminosità), fino a 1000 nit, in caso di illuminazione diretta da parte del sole (circa 100'000 lux registrati dal sensore di luminosità).
+	1. Modellizza con un grafico la funzione che associa all'illuminamento dell'ambiente $A$ (misurato in lux) la luminosità dello schermo $L$ (misurata in nit).
+	2. Si tratta di una funzione crescente o decrescente?
+9. **Mezzi di trasporto analitici [E]** Descrivi tramite una funzione un fenomeno che riguarda il trasporto ferroviario.
+10. **In giro per l'Europa! [EE]** Rappresenta con una funzione il numero di capitali Europee visitate nel da Alice.
+
+| Anno | Città                          |
+| ---- | ------------------------------ |
+| 2017 | Roma                           |
+| 2018 | Parigi, Helsinki               |
+| 2019 | Reykjavik                      |
+| 2020 | Berlino                        |
+| 2022 | Vienna, Bucarest, Riga, Tallin |
+| 2023 | Madrid                         |
+| 2024 | La Valletta, Varsavia          |
+| 2025 | Lisbona, Londra                |
