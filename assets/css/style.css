@@ -380,6 +380,7 @@ blockquote {
   line-height: 1.6;
   background: var(--bg2);
   padding: var(--space-md);
+  padding-bottom: var(--space-xs); /* Counters bottom margin of paragraph */
   border-radius: 0;
 }
 
