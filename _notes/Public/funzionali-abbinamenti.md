@@ -61,10 +61,10 @@ Scrivi il risultato nel modo seguente: *"definizione A, grafico B, tabella C, fe
 | x   | f(x) |
 | --- | ---- |
 | 0   | 0,74 |
-| 0,2 | 0,58 |
-| 0,4 | 0,65 |
-| 0,6 | 0,76 |
-| 0,8 | 0,71 |
+| 0,2 | 0,22 |
+| 0,4 | 0,10 |
+| 0,6 | 0,21 |
+| 0,8 | 0,35 |
 | 1   | 0,34 |
 
 **Tabella 3**
