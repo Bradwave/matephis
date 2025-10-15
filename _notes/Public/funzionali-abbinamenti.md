@@ -5,11 +5,13 @@ tags:
   - attività
   - funzioni
 ---
+
 Sono elencate di seguito 6 definizioni algebriche di funzioni, 6 grafici, 6 tabelle input/output e 6 fenomeni fisici. Abbina correttamente ogni definizione algebrica al suo grafico, alla sua tabella input/output e al fenomeno che la funzione che modellizza.
 
 Scrivi il risultato nel modo seguente: *"definizione A, grafico B, tabella C, fenomeno D"* dove A, B, C e D sono numeri da 1 a 6.
 
 ---
+
 ### Definizioni algebriche
 
 1. $f(x) = \dfrac x {3{,}6} + \dfrac{x^2}{100}$
@@ -41,6 +43,7 @@ Scrivi il risultato nel modo seguente: *"definizione A, grafico B, tabella C, fe
 ![Grafico 6]({{ site.baseurl }}/images/funzionali_abbinamenti-6-oscillatore.svg)
 
 ---
+
 ### Tabelle di input/output
 
 **Tabella 1**
@@ -107,12 +110,15 @@ Scrivi il risultato nel modo seguente: *"definizione A, grafico B, tabella C, fe
 | 126 | 194  |
 
 ---
+
 ### Fenomeni modellizzati
 
 **1. La funzione cubica di Bézier**
 
 Una **curva di Bézier cubica** è una curva descritta matematicamente, utilizzata nella *computer graphics* e nell’animazione. Ad esempio, il testo che stai ora leggendo tramite lo schermo del monitor è riprodotto graficamente tramite curve di Bézier.
-   ![](https://rfong.github.io/creative-coding/bezier/images/jdhao_example_e.png)
+
+![Lettera e renderizzata tramite curve di Bézier](https://rfong.github.io/creative-coding/bezier/images/jdhao_example_e.png)
+
 Un particolare tipo di curva di Bézier cubica è la **funzione cubica di Bézier**, che trova applicazione nell'**animazione**, nel design delle interfacce utente e per rendere più fluida la traiettoria del cursore nelle interfacce controllate dallo sguardo. Ad esempio, una funzione cubica di Bézier può essere utilizzata per s**pecificare la posizione nel tempo di un oggetto** — come un’icona che si sposta da A a B — invece di farlo muovere semplicemente a un numero fisso di pixel per passo. Questo vale anche per la robotica, dove il movimento di un braccio di saldatura, ad esempio, deve essere fluido per evitare usura inutile.
 
 **2. La distanza di sicurezza**
@@ -134,3 +140,13 @@ L'Hunaudières, in francese *"Ligne Droite des Hunaudières"*, è nel panorama d
 **5. Manca come l'aria...**
 
 All’aumentare dell’altitudine, la concentrazione di ossigeno nell’aria rimane circa costante al 21%, ma la pressione atmosferica diminuisce, riducendo la **pressione parziale dell’ossigeno** disponibile per la respirazione. Di conseguenza, l’organismo riceve meno ossigeno, causando effetti come affaticamento e ipossia alle quote elevate. La pressione parziale dell'ossigeno è data dal prodotto della pressione atmosferica (101,325 kPa) per la percentuale d'ossigeno nell'aria.
+
+**6. L'oscillatore armonico smorzato**
+
+In fisica, il **moto armonico** è il particolare moto vario descritto da un **oscillatore armonico**, cioè un sistema meccanico che reagisce ad una perturbazione dell'equilibrio con una accelerazione di richiamo proporzionale allo spostamento subito — ad esempio, una massa appesa ad una molla, che oscilla all'allungarsi e al contrarsi della molla.
+
+![Moto armonico semplice](https://upload.wikimedia.org/wikipedia/commons/0/07/Easy_harmonic_oscillator.gif)
+
+Nello studio di fenomeni fisici reali i corpi in movimento sono di solito **soggetti a smorzamento**, di solito direttamente proporzionali alla velocità. In questo caso, il moto armonico è detto **armonizzatpo** o **smorzato**.
+
+![Moto armonico smorzato](https://upload.wikimedia.org/wikipedia/commons/2/2b/Damped_spring.gif)
