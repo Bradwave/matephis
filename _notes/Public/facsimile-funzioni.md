@@ -6,10 +6,95 @@ tags:
   - esercizi
   - funzioni
 ---
-cose da verificare
-- definizione di funzione
-- iniettiva, ecc.
-- crescente, decrescente
-- dominio
-- tabelle i/o
-- 
+### Quesito 1
+
+Nella tabella è rappresentata la relazione tra gli studenti di una classe e i voti ottenuti in una verifica di matematica.
+
+| Studente | Voto |
+| -------- | ---- |
+| Alice    | 8    |
+| Bob      | 9    |
+| Charlie  | 7    |
+| Danielle | 7    |
+| Eve      | 6    |
+| Fabian   | 5    |
+| Grant    | 6    |
+| Hope     | 7    |
+
+Rispondi ai seguenti quesiti.
+
+1. Utilizza la rappresentazione insiemistica per visualizzare la relazione.
+2. La relazione è una funzione? In caso di risposta affermativa, determina dominio, codominio e immagine; stabilisci se è iniettiva, suriettiva o biiettiva.
+3. La relazione che associa a ogni voto gli studenti che hanno ottenuto tale voto nella verifica è una funzione? Spiega.
+4. Scrivi un esempio di funzione biiettiva a scelta.
+
+### Quesito 2
+
+In figura è rappresentato il grafico cartesiano di una funzione quadratica $f$.
+
+ ![Grafico 1]({{ site.baseurl }}/images/facsimile_funzioni-1.svg)
+
+Rispondi ai seguenti quesiti.
+
+1. Spiega perché $f$ è una funzione. È iniettiva?
+2. Quali sono gli zeri della funzione $f$, ovvero i valori di $x$ per cui $f(x) = 0$?
+3. Su quali insiemi la funzione è positiva e su quali è negativa?
+4. Su quali intervalli la funzione è crescente? Su quali è decrescente? Qual è il minimo?
+
+Considera ora la funzione $g(x) = \dfrac{1}{\sqrt{f(x)}}$.
+
+1. Qual è il dominio naturale di $g$ ?
+
+### Quiz 1
+
+Una funzione $f$ è monotona su tutto il suo dominio $[2, 4]$. Inoltre è noto che $f(2) = -4$ e $f(4) = -2$. Allora...
+
+- **(a)** la funzione è crescente.
+- **(b)** la funzione è decrescente.
+- **(c)** la funzione è costante.
+- **(d)** la funzione ha un andamento variabile.
+- **(e)** non è possibile stabilire la crescenza o decrescenza della funzione a partire da i dati forniti, occorre un grafico.
+
+**Quiz 2**
+
+In figura è rappresentato il dynagraph della funzione $f$
+
+![Grafico 2]({{ site.baseurl }}/images/facsimile_funzioni-2.svg)
+
+Quali tra le seguenti affermazioni sono corrette?
+
+- **(a)** La funzione è decrescente per $x < 0$ e crescente su $x > 0$.
+- **(b)** La funzione è $f(x) = 2x - 1$.
+- **(c)** Il grafico cartesiano della funzione è una retta.
+- **(d)** $f(-2) = -7$.
+- **(e)** Nessuna delle precedenti affermazioni è corretta.
+
+### Problema 1 — La batteria del telefono
+
+Alle ore 06:00 di venerdì scolleghi il caricabatterie del tuo telefono. L'indicatore della batteria recita *"100%"*. Nel corso di lunedì si verificano i seguenti fatti:
+
+- Dopo mezzogiorno, il livello della batteria non torna più a superare l'85%.
+- Il telefono viene messo in ricarica dalle ore 20:00 alle 21:00, riportando il livello di carica all'85%.
+- Il livello della batteria non scende mai sotto il 35%.
+- L'uso più intenso del telefono avviene tra le 15:00 e le 16:00, mentre l'uso meno intenso avviene tra le 08:00 e le 12:00.
+
+Rappresenta il fenomeno con una funzione, specificando dominio, codominio e immagine e se la funzione è iniettiva e/o suriettiva. Rappresenta poi il grafico cartesiano della funzione.
+
+### Problema 2 — Il livello sonoro
+
+Il **livello di pressione sonora (SPL)** o livello sonoro $L$ è una misura della pressione sonora efficace di un'onda sonora rispetto a una sorgente sonora di riferimento. Il livello sonoro è misurato confrontando la pressione dell'onda $p$ con una sonora di riferimento $p_0$, comunemente fatta corrispondere alla soglia uditiva di $20 \;\mu\text{Pa}$ (il suono di un moscerino che vola a 3 metri di distanza). Il livello sonoro è definito dalla seguente funzione:
+
+\\[L(p) = 20 \cdot \log_{10} \left( \dfrac{p}{p_0} \right)\\]
+
+- Qual è il dominio della funzione? Interpreta fisicamente il risultato.
+- Completa la tabella di input/output.
+   
+| p                                                   | L(p) |
+| --------------------------------------------------- | ---- |
+| $8 \; \mu\text{Pa}$ (rumore in una camera anecoica) |      |
+| $p_0$ (moscerino che vola a 3 metri di distanza)    |      |
+| $20 \text{ Pa}$ (vuvuzela)                          |      |
+| $600 \text{ Pa}$ (un motore jet)                    |      |
+
+- Traccia un grafico approssimativo di $L(p)$.
+- La funzione è crescente? È decrescente?
