@@ -25,7 +25,7 @@ Scrivi un problema geometrico che possa essere risolto mediante l'equazione $x(x
 
 1. Sussiste una qualche relazione tra questo ultimo problema da te inventato e quello di partenza (nel riquadro) e, di conseguenza, tra l'equazione $x(x + 6) = 1$ e quella che modellizza il problema di partenza?
 2. Scrivi l'equazione $x(x + 6) = 1$ nella forma $ax^2 + bx + c = 0$.
-3. Quali passaggi di conducono a scrivere $x(x + 6) = 1$ nella forma $(\alpha x + \beta)^2 = \gamma$, dove $\alpha$, $\beta$ e $\gamma$ sono dei numeri reali? Perché scrivere l'equazione nella forma $(\alpha x - \beta)^2 = \gamma$ ti aiuta a risolverla algebricamente?
+3. Quali passaggi ti conducono a scrivere $x(x + 6) = 1$ nella forma $(\alpha x + \beta)^2 = \gamma$, dove $\alpha$, $\beta$ e $\gamma$ sono dei numeri reali? Perché scrivere l'equazione nella forma $(\alpha x - \beta)^2 = \gamma$ ti aiuta a risolverla algebricamente?
 
 Considera ora il seguente problema:
 
