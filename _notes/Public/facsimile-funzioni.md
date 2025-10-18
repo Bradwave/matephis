@@ -55,7 +55,7 @@ Una funzione $f$ è monotona su tutto il suo dominio $[2, 4]$. Inoltre è noto c
 - **(d)** la funzione ha un andamento variabile.
 - **(e)** non è possibile stabilire la crescenza o decrescenza della funzione a partire da i dati forniti, occorre un grafico.
 
-**Quiz 2**
+### Quiz 2
 
 In figura è rappresentato il dynagraph della funzione $f$
 
