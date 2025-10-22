@@ -183,7 +183,7 @@ h1 {
 }
 
 h2 {
-  font-size: clamp(1.1rem, 3vw, 1.2rem);
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
   font-weight: var(--weight-bold);
   margin-top: var(--space-xl);
   margin-bottom: var(--space-md);

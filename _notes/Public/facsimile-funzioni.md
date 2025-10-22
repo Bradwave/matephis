@@ -71,7 +71,7 @@ Quali tra le seguenti affermazioni sono corrette?
 
 ### Problema 1 — La batteria del telefono
 
-Alle ore 06:00 di venerdì scolleghi il caricabatterie del tuo telefono. L'indicatore della batteria recita *"100%"*. Nel corso di lunedì si verificano i seguenti fatti:
+Alle ore 06:00 di venerdì scolleghi il caricabatterie del tuo telefono. L'indicatore della batteria recita *"100%"*. Nel corso di venerdì si verificano i seguenti fatti:
 
 - Dopo mezzogiorno, il livello della batteria non torna più a superare l'85%.
 - Il telefono viene messo in ricarica dalle ore 20:00 alle 21:00, riportando il livello di carica all'85%.
