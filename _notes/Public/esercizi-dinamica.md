@@ -97,13 +97,12 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(c)** L'accelerazione da te subita durante l'atterraggio sulla sabbia è inferiore rispetto a quella che avresti subito atterrando sull'asfalto, quindi anche la forza esercitata dalla sabbia è inferiore.
 	- **(d)** Le opzioni b e c.
 	- **(e)** Le opzioni a, b e c.
-12. **[F+]** Una navicella spaziale di 3000 kg si sta allontanando dalla stazione spaziale alla velocità costante di 3 m/s. L'astronauta a bordo attiva allora il sistema di propulsione. Così facendo la somma delle forze agenti sull'astronave è diversa da zero. Quanto deve valere, al minimo, l'intensità della forza esercitata sulla navicella tramite il sistema di propulsione.
+12. **[F+]** Una navicella spaziale di 3000 kg si sta allontanando dalla stazione spaziale alla velocità costante di 3 m/s. L'astronauta a bordo attiva allora il sistema di propulsione, che espelle gas dalla navicella. Così facendo la somma delle forze agenti sull'astronave è diversa da zero. Quanto deve valere, al minimo, l'intensità della forza esercitata sulla navicella dai gas espulsi dal sistema di propulsione affinché la navicella torni alla stazione spaziale.
 	- **(a)** 9000 N.
 	- **(b)** 1000 N.
 	- **(c)** Un qualsiasi valore maggiore di zero.
 	- **(d)** In ogni caso la navicella continuerà ad allontanarsi.
 	- **(e)** Non sono fornite sufficienti informazioni per rispondere.
-13. **[D]** Scocchi una freccia con l'arco. La seguente equazione, applicazione della seconda legge di Newton, descrive 
 
 ---
 
