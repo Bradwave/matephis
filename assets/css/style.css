@@ -749,7 +749,7 @@ td {
 }
 
 img {
-  max-width: 70%;
+  max-width: 60%; /* It was 70% before */
   height: auto;
   display: block;
   margin: var(--space-md) 0;

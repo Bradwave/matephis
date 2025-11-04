@@ -84,6 +84,6 @@ tags:
 
 ---
 
-**A segno!**
+## A segno!
 
 Stima la forza esercitata dala corda di un arco su una freccia mentre viene scoccata.
