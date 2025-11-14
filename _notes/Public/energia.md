@@ -18,12 +18,43 @@ L'energia dell'universo si mantiene costante nel tempo, ovvero si conserva.
 
 ### Energia potenziale gravitazionale
 
-Un sistema formato da un corpo e dalla Terra ha più energia quando il corpo ha più massa e si trova a una maggior distanza dalla terra. Chiamiamo questa energia **potenziale gravitazionale**.
+Un sistema formato da un corpo e dalla Terra ha più energia quando il corpo ha più massa e si trova a una maggior distanza dalla terra. Chiamiamo questa energia **potenziale gravitazionale** e la indichiamo con $U_g$.
 
 Quindi l'energia potenziale gravitazionale dipende dalla massa del corpo e dalla sua distanza dalla Terra.
 
 ### Energia cinetica
 
-Un corpo che si muove ha una certa energia che tanto maggiore quanto sono maggiori la sua velocità e la sua massa. Chiamiamo questa energia **cinetica**.
+Un corpo che si muove ha una certa energia che tanto maggiore quanto sono maggiori la sua velocità e la sua massa. Chiamiamo questa energia **cinetica** e la indichiamo con $K$.
 
 Quindi l'energia cinetica dipende dalla massa del corpo e dalla sua velocità.
+
+### Energia potenziale elastica
+
+Un sistema composto da un corpo elastico (elastici, molle e.g.) ha tanta più energia quanto più il corpo elastico è stato deformato e quanto più è maggiore la sua costante elastica. Chiamiamo questa energia **potenziale elastica** e la indichiamo con $U_\text{el}$.
+
+Quindi l'energia potenziale elastica dipende dalla deformazione del corpo elastico e dalla sua costante elastica (che rappresenta la sua "durezza").
+
+### Energia interna
+
+L'energia interna di un sistema è la somma di tutte le "energie" dovute a legami chimici, agitazione termica e altri fenomeni microscopici molto difficili da analizzare nel dettaglio. Indichiamo l'energia interna con $U_\text{int}$.
+
+L'**energia termica** è una parte dell'energia interna. Maggiore è la temperatura di un sistema, maggiore è la sua energia termica. Indichiamo l'energia termica con $E_\text{termica}$ oppure con $U_\text{termica}$.
+
+# Trasferimento di energia
+
+Esploriamo alcuni casi.
+- Se sollevo un oggetto, incremento l'energia potenziale gravitazionale del sistema oggetto-Terra; per farlo devo esercitare sull'oggetto una forza diretta verso l'alto e spostarlo verso l'alto.
+- Se spingo un corpo incrementando via via la sua velocità (il corpo accelera), incremento anche la sua energia cinetica; per farlo devo esercitare sul corpo una forza che ha lo stesso verso dello spostamento.
+- Tendendo l'elastico di una fionda incremento la sua energia potenziale elastica; per farlo devo esercitare una forza con lo stesso verso dell'allungamento dell'elastico.
+
+Per **trasferire energia a un sistema** occorre esercitare su di esso una **forza** che provoca uno **spostamento** avente stessa direzione e stesso verso della forza. Chiamo questo trasferimento di energia **lavoro** e lo definisco come
+
+\\[L = F \cdot s \cdot \cos \alpha \, , \\]
+
+dove
+
+- $L$ è il lavoro;
+- $F$ è la forza;
+- $s$ è lo spostamento;
+- $\alpha$ è l'angolo tra la forza e lo spostamento (intesi come vettori).
+
