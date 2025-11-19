@@ -11,6 +11,45 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ## Quesiti
 
+1. [**F**] Descrivi una procedura per determinare il campo elettrico $\vec{E}$ in un punto
+2. [**EE**] Cosa significa se il campo elettrico $\vec{E}$ in un punto è di $5,\text{N/C}$ e punta verso nord?
+3. [**F+**] Una piccola carica positiva viene posta in un punto dello spazio. Non vi è alcuna forza elettrica su di essa.
+	1. Qual è il valore del campo elettrico $\vec{E}$ in quel punto?  
+	2. Significa che non ci sono cariche elettriche nelle vicinanze? Spiega.
+	3. Suggerisci una distribuzione di carica (due o più cariche) che produca un campo $\vec{E}$ nullo in un punto nello spazio.
+4. **[F+]** Come creiamo un campo elettrico con linee parallele e uniformemente distanziate?
+5. [**F**] Disegna uno schizzo delle linee di campo elettrico generate da:
+	1. due cariche positive della stessa magnitudine;
+	2. due cariche negative della stessa magnitudine; 
+	3. due cariche positive di magnitudine diversa.
+6. **[F]** Disegna uno schizzo delle linee di campo elettrico generate da:
+	1. una carica positiva e una carica negativa di uguale magnitudine; 
+	2. una carica positiva e una negativa di magnitudini diverse;
+	3. una carica positiva posta tra due cariche negative.
+7. **[PD-]** Jim pensa che le linee di campo elettrico siano i percorsi che una carica di prova seguirebbe se fosse posta nel campo $\vec{E}$. Sei d’accordo o in disaccordo con questa affermazione? Spiega.
+8. **[PD]** Le linee di campo elettrico possono incrociarsi? Spiega perché sì o perché no.
+9. **[AD]** Un elettrone, che si muove orizzontalmente da sinistra a destra attraverso la pagina, entra in un campo elettrico uniforme $\vec{E}$ che punta verso la parte superiore della pagina. Disegna vettori che indicano la direzione della forza elettrica esercitata dal campo sull’elettrone e la sua accelerazione. Disegna uno schizzo che indichi il percorso dell’elettrone in questo campo. Quale moto nel campo gravitazionale è simile al moto dell’elettrone?
+10. **[PD+]** Che cosa significa se il potenziale elettrico in un certo punto dello spazio è $10\ \text{V}$? Che cosa significa se la differenza di potenziale tra due punti è $10\ \text{V}$?
+11. **[F]** Spiega come funziona la messa a terra.
+12. **[F]** Spiega come funziona la schermatura elettrica.
+13. **[PD-]** Spiega perché, per oggetti carichi immersi in un materiale dielettrico, la forza elettrica che essi esercitano l’uno sull’altro deve essere divisa per la costante dielettrica (che dipende dal materiale dielettrico).
+14. **[F+]** Che cosa significa se la costante dielettrica $\varepsilon_r$ dell’acqua è $81$?
+15. **[D-]** Qual è la costante dielettrica di un metallo?
+16. **[PD-]** Descrivi la relazione tra le grandezze campo elettrico $\vec{E}$ e potenziale elettrico $V$.
+17. **[PD+]** Se il campo di potenziale $V$ in una regione è costante, qual è il campo elettrico $\vec{E}$ in questa regione? Se il campo elettrico $\vec{E}$ è costante nella regione, come appare il campo di potenziale $V$? Spiega le tue risposte.
+18. **[PD+]** Perché pezzi non carichi di materiale dielettrico vengono attratti da oggetti carichi?
+19. **[PD-]** Disegna superfici equipotenziali e etichettale in ordine di potenziale decrescente per:  
+	1. una carica positiva;
+	2. una carica negativa;
+	3. due cariche puntiformi positive uguali a una distanza $d$ l’una dall’altra;
+	4. una piastra metallica carica negativamente di dimensioni infinitamente grandi.
+20. **[D-]** Mostra una disposizione di cariche e un punto nello spazio in cui il potenziale prodotto dalle cariche sia zero ma il campo elettrico $\vec{E}$ non sia zero. Ripeti per il caso in cui il potenziale non sia zero ma il campo elettrico $\vec{E}$ sia zero.
+21. **[AD]** Spiega cosa succede quando poni un conduttore in un campo elettrico esterno. Come puoi verificare la tua spiegazione?
+22. **[AD+]** Spiega cosa succede quando poni un materiale dielettrico in un campo elettrico esterno. Come puoi verificare la tua spiegazione?
+23. **[AD]** Spiega perché la carica in eccesso su un materiale conduttore elettrico è localizzata sulla sua superficie.
+
+## Quiz
+
 1. **[T]** Da cosa dipende il campo elettrico $\vec E$ nel punto A, che si trova a una distanza $r$ dalla carica sorgente? (Più di una risposta può essere corretta.)
     - **(a)** la grandezza della carica di prova
     - **(b)** il segno della carica di prova
@@ -37,81 +76,3 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
     - **(b)** a una distanza $d$ da entrambe le cariche (tutte e tre le cariche formano un triangolo equilatero)
     - **(c)** Sia (a) che (b) sono corrette.
     - **(d)** Nessuna di queste risposte è corretta.
-6. **[PD-]** Un dipolo elettrico è posto tra due piastre opposte cariche, come mostrato nella **Figura Q18.6**. In quali dei punti indicati il campo elettrico netto $\vec{E}$ potrebbe essere zero? Scegli tutte le risposte possibili.
-_(Segue la figura con le piastre e i punti A, B, C, D, E, F, G.)_
-7. **[PD]** Una carica positiva è fissata a una certa distanza $d$ dall’origine dell’asse $z$, come mostrato nella **Figura Q18.7**. Quale grafico mostra come $E_z$, la componente lungo $z$ del campo elettrico $\vec{E}$, dipende dalla posizione lungo l’asse $z$?
-8. **[PD-]** La Figura Q18.8 mostra linee di campo elettrico in una regione dello spazio. Seleziona due affermazioni corrette sul campo elettrico $ \vec{E} $ e sul potenziale $V$ nei punti P, R e S:
-	- **(a)** $E_P = E_R = E_S$  
-	- **(b)** $E_P = E_S > E_R$  
-	- **(c)** $E_R > E_S > E_P$  
-	- **(d)** $V_P = V_R = V_S$  
-	- **(e)** $V_P > V_R > V_S$  
-	- **(f)** $V_R > V_S > V_P$
-	
-### 9. [**PD**]
-
-Come usiamo il modello del campo elettrico per spiegare l’interazione tra cariche?
-
----
-
-### 10. [**PD**]
-
-Descrivi una procedura per determinare il campo elettrico $ \vec{E} $ in un punto.
-
----
-
-### 11. [**PD+**]
-
-Cosa significa se il campo elettrico $ \vec{E} $ in un punto è di $5,\text{N/C}$ e punta verso nord?
-
----
-
-### 12. [**AD-**]
-
-Una piccola carica positiva viene posta in un punto dello spazio.  
-Non vi è alcuna forza elettrica su di essa.
-
-**(a)** Qual è il valore del campo elettrico $ \vec{E} $ in quel punto?  
-**(b)** Significa che non ci sono cariche elettriche nelle vicinanze? Spiega.  
-**(c)** Suggerisci una distribuzione di carica (due o più cariche) che produca un campo $ \vec{E} $ nullo in un punto nello spazio.
-
----
-
-### 13. [**AD**]
-
-Come creiamo un campo elettrico con linee parallele e uniformemente distanziate?
-
----
-
-### 14. [**AD**]
-
-Disegna uno schizzo delle linee di campo elettrico generate da:
-
-**(a)** due cariche positive della stessa magnitudine,  
-**(b)** due cariche negative della stessa magnitudine, e  
-**(c)** due cariche positive di magnitudine diversa.
-
----
-
-### 15. [**AD+**]
-
-Disegna uno schizzo delle linee di campo elettrico generate da:
-
-**(a)** una carica positiva e una carica negativa di uguale magnitudine,  
-**(b)** una carica positiva e una negativa di magnitudini diverse, e  
-**(c)** una carica positiva posta tra due cariche negative.
-
----
-
-### 16. [**D-**]
-
-Jim pensa che le linee di campo elettrico siano i percorsi che una carica di prova seguirebbe se fosse posta nel campo $ \vec{E} $.  
-Sei d’accordo o in disaccordo con questa affermazione?  
-Fornisci una spiegazione.
-
----
-
-### 17. [**D**]
-
-Le linee di campo elettrico possono incrociarsi?  
-Spiega perché sì o perché no.
