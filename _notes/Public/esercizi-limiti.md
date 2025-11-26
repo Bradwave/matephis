@@ -60,8 +60,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	7. ![limiti-7]({{ site.baseurl }}/images/limiti-7.svg)
 	8. ![limiti-8]({{ site.baseurl }}/images/limiti-8.svg)
 	9. ![limiti-9]({{ site.baseurl }}/images/limiti-9.svg)
-5. **[D-]** Nel grafico è rappresentata la funzione $f(x) = \dfrac{\sin x}{x}$. Puoi calcolare il limite della funzione $g(x) = \dfrac{1}{f(x)}$ per $x \, \to \, +\infty$? Perché? Rappresenta tramite Desmos o GeoGebra il grafico di $g$ e prova a spiegare la sua peculiare forma.
+5. **[D+]** Nel grafico è rappresentata la funzione $f(x) = \dfrac{\sin x}{x}$. Puoi calcolare il limite della funzione $g(x) = \dfrac{1}{f(x)}$ per $x \, \to \, +\infty$? Perché? Rappresenta tramite Desmos o GeoGebra il grafico di $g$ e prova a spiegare la sua peculiare forma.
 	![limiti-10]({{ site.baseurl }}/images/limiti-10.svg)
+6. **[PD]** Scrivi una funzione che presenti un asintoto verticale in $x = 3$ e un asintoto orizzontale in $y = 5$.
+7. **[D+]** Discuti la forma di $f(x) = log_2(x^2 + bx + c)$ al variare del discriminante di $\Delta = x^2 + bx + c$. Costruisci con Desmos una visualizzazione dinamica di $f(x)$, controllando con degli slider i valori di $b$ e $c$.
 
 ## Quiz
 
@@ -72,22 +74,50 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(d)** $\lim_{x \to -\infty} g(x) = -\infty$
 	- **(e)** Nessuna opzione è corretta.
 	![limiti-11]({{ site.baseurl }}/images/limiti-11.svg)
-2. Osserva il dynagraph di una funzione $f$ rappresentato in figura. Quale tra le seguenti affermazioni è corretta?
+2. **[F]** Osserva il dynagraph di una funzione $f$ rappresentato in figura. Quale tra le seguenti affermazioni è corretta?
 	- **(a)** $\lim_{x \, \to \, +\infty} f(x) = +\infty$
 	- **(b)** $\lim_{x \, \to \, +\infty} f(x) = 0$
 	- **(c)** $\lim_{x \, \to \, 0^+} f(x) = -\infty$
 	- **(d)** $\lim_{x \, \to \, 0^+} f(x) = +\infty$
 	- **(e)** Nessuna opzione è corretta.
 	![limiti-12]({{ site.baseurl }}/images/limiti-12.svg)
-3. Una tartaruga percorre 1 metro in 1 minuto. Dopo ogni minuto la velocità della tartaruga dimezza: percorre 0.5 m nel minuto successivo al primo, 0.25 m nel minuto ancora successivo, ecc.. Sia $v(t)$ la velocità della tartaruga al tempo $t$ (dove $t = 0$ è l'instante di tempo iniziale). Quale tra i seguenti completamenti sono corretti? Più di un completamento può essere corretto. Dopo un'infinità di tempo...
+3. **[F+]** Una tartaruga percorre 1 metro in 1 minuto. Dopo ogni minuto la velocità della tartaruga dimezza: percorre 0.5 m nel minuto successivo al primo, 0.25 m nel minuto ancora successivo, ecc.. Sia $v(t)$ la velocità della tartaruga al tempo $t$ (dove $t = 0$ è l'instante di tempo iniziale). Quale tra i seguenti completamenti sono corretti? Più di un completamento può essere corretto. Dopo un'infinità di tempo...
 	- **(a)** la tartaruga ha percorso meno di 2 metri.
 	- **(b)** la distanza percorsa dalla tartaruga tende a $+\infty$.
 	- **(c)** la velocità della tartaruga tende a zero.
 	- **(d)** la velocità della tartaruga tende a $-\infty$.
+4. **[PD-]** Per quali delle seguenti funzioni non è definito il limite per $x \to +\infty$ ?
+	- **(a)** $f(x) = \dfrac{\sin x}{x}$
+	- **(b)** $f(x) = \log(x^2)$
+	- **(c)** $f(x) = \dfrac{e^x}{x}$
+	- **(d)** $f(x) = x \cdot \sin x$
+	- **(e)** Il limite esiste per tutte le funzioni.
+5. **[PD]** Un sistema fisico è composto da due cariche elettriche elementari identiche $q_1$ e $q_2$, inizialmente ferme e poste a una certa distanza. Si denotata con $U(t)$ l'energia potenziale del sistema, che vale inizialmente $2 \times 10^{-19} \, \text{J}$. Le due cariche sono libere di muoversi. Si denota con $K(t)$ l'energia cinetica di ciascuna delle due cariche, in funzione del tempo. Qual tra le seguenti affermazioni. Quale tra le seguenti affermazioni **non** è corretta?
+	- **(a)** $U(t) \to 0$ per $t \to +\infty$
+	- **(b)** $K(t) \to +\infty$ per $t \to +\infty$
+	- **(c)** $K(t) \to 1 \times 10^{-19} \, \text{J}$ per $t \to +\infty$
+	- **(d)** $K(0) = 0$ e $U(0) = 2 \times 10^{-19} \, \text{J}$
+	- **(e)** Le affermazioni sono tutte corrette.
 
 ## Problemi
 
-**Il bosco incantato** Un sentiero del bosco incantato cambia ogni giorno. Il primo giorno è un segmento lungo 100 m, il secondo giorno si divide in tre parti uguali il segmento e si sostituisce la parte centrale con due segmenti uguali (come due lati di un triangolo equilatero). Il giorno successivo si ripete questa procedura su tutti i segmenti, e così via…
+**Decrescita infelice [EE]** Una popolazione di insetti dimezza ogni anno, a causa delle condizioni climatiche non favorevoli. L'attuale popolazione ammonta a 2 milioni di unità. La funzione $p(t)$ descrive la popolazione di insetti in funzione del tempo $t$ ($t = 0$ rappresenta l'istante di tempo iniziale).
+
+1. Quanto vale $p(0)$ ?
+2. Determina il limite di $p(t)$ per $t \to 0$ ?
+3. Esiste un istante di tempo per cui $p(t)$ vale zero?
+
+**Questione di pHeeling [EE/F]** La concentrazione degli ioni idrogeno in una soluzione è indicata con $[H^+]$ e il pH è definito dalla funzione:
+
+\\[pH=−log⁡_{10}[H+]\\]
+
+Durante una reazione chimica la concentrazione $[H^+]$ tende a diminuire, avvicinandosi a zero senza mai annullarsi. Studia il seguente limite:
+
+\\[\lim_{[H^+] \to 0^+} pH\\]
+
+e interpreta il risultato dal punto di vista chimico.
+
+**Il bosco incantato [PD-]** Un sentiero del bosco incantato cambia ogni giorno. Il primo giorno è un segmento lungo 100 m, il secondo giorno si divide in tre parti uguali il segmento e si sostituisce la parte centrale con due segmenti uguali (come due lati di un triangolo equilatero). Il giorno successivo si ripete questa procedura su tutti i segmenti, e così via…
 
 ![limiti-13]({{ site.baseurl }}/images/limiti-13.jpg)
 
@@ -96,3 +126,9 @@ Un topolino percorre tutti i giorni il sentiero per andare a scuola.
 1. Se oggi è il primo giorno, e quindi percorre 100 m, quanta strada percorrerà il quarto giorno?
 2. Quanta strada percorrerebbe dopo un'infinità di tempo?
 
+**Il triangolo no... non l'avevo considerato [PD-]** Nel giardino della sede del Dipartimento di Matematica e Fisica dell'Università di Varsavia è presente un'aiuola a forma di triangolo equilatero. Un anno, il matematico Wacław divide l'aiuola in 4 triangoli equilateri congruenti e pota completamente il triangolo centrale. Wacław ripete la procedura sui triangoli rimanenti ogni anno.    
+
+1. Qual è l'area dell'aiuola dopo 2 anni? Nell'anno zero l'aiuola è integra.
+2. Qual è l'area dopo 3 e dopo 4 anni?
+3. Quale sarebbe l'area dell'aiuola dopo un'infinità di tempo?
+4. Come si chiama la figura geometrica ottenuta ripetendo l'operazione di potatura infinite volte? Cerca online utilizzando gli indizi presenti nel testo.
