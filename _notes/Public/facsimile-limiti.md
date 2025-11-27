@@ -15,3 +15,5 @@ Per ciascuna delle seguenti funzioni, determina il dominio naturale, calcola i l
 
 ### Quesito 2
 
+Completa 
+
