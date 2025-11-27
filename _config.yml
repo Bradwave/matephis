@@ -42,6 +42,7 @@ url: "https://matephis.com"
 baseurl: ""
 
 # Asset Configuration
+favicon: "/assets/img/icon.svg"
 apple_touch_icon: "/assets/img/profile.png"
 css_file: "/assets/css/style.css"
 ie_css: "/assets/css/ie-target.css"
