@@ -52,3 +52,7 @@ Quale tra le seguenti affermazioni relative alla funzione $f$, il cui dynagraph 
 - **(d)** $\lim_{x \, \to \, 2^+} f(x) = 2.5$
 
 ![limiti-15]({{ site.baseurl }}/images/limiti-15.svg)
+
+### Esercizio 6
+
+Scrivi la definizione algebrica di una funzione che presenta due asintoti verticali in $x = 1$ e $x = -1$.
