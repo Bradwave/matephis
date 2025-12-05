@@ -49,7 +49,3 @@ In presenza di più cariche sorgente **si somma l'effetto di tutte le cariche**,
 Data una carica di prova $q_\text{test}$, è possibile calcolare la forza a cui è soggetta e la sua energia, moltiplicando la carica di prova per il campo e il potenziale rispettivamente, ovvero:
 
 \\[F_C = q_\text{test} \cdot E \, ; \quad U_e = q_\text{test} \cdot V \, .\\]
-
-
-
-$$\lim_{x \to +\infty} x$$

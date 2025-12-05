@@ -71,3 +71,6 @@ Tramite la definizione di lavoro, posso determinare l'energia di un sistema.
 Supponiamo di avere un corpo di massa $m$ posto su una superficie. Decidiamo che l'energia del sistema corpo-Terra è zero. Se il corpo viene alzato fino a una certa altezza $h$, la sua energia potenziale gravitazionale aumenta e questo aumento di energia è pari all'energia trasferita dall'ambiente esterno, ovvero il lavoro della forza che lo ha sollevato. Supponendo che venga sollevato a velocità costante, tale forza deve essere pari alla forza peso $m \cdot g$. L'angolo tra tale forza e lo spostamento verso l'alto è nullo, quindi l'energia potenziale gravitazionale finale è pari a
 
 \\[U_g = mg \cdot h \cdot \underbrace{cos \, 0^\circ}_{=1} = mgh\\]
+
+## Energia cinetica
+
