@@ -1,6 +1,6 @@
 ---
 title: Un glossario di elettrostatica
-feed: show
+feed: hide
 tags:
   - elettrostatica
 ---
