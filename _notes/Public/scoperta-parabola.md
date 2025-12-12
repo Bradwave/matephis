@@ -91,3 +91,15 @@ Supponi adesso che anche l'equazione $y = -0.1x^2 + 0.4x - 0.1$ rappresenti il g
 
 - Osserva il grafico della parabola su Desmos. Nell'istante di tempo iniziale, la velocità dell'oggetto è positiva, negativa o nulla? Quanto misura la velocità iniziale?
 - Come dovresti muovere il punto per ottenere un grafico tempo-posizione avente la forma della parabola? Prova a replicarlo tramite l'applicazione online [motus.matephis.com](https://motus.matephis.com/).
+
+## Esercizi
+
+1. Disegna il grafico delle seguenti parabole: abbozza innanzitutto il disegno tramite lo studio dei coefficienti, quindi perfeziona il disegno indicando chiaramente l'asse di simmetria della parabola, il vertice e i punti di intersezione con gli assi.
+	1. $y = 3x^2 - 3$
+	2. $y = -\dfrac{1}{2}x + 1$
+	3. $y = x^2 + 5x$
+	4. $y = -2x^2 - 10$
+	5. $y = \dfrac{1}{2}x^2 + 5x - 5$
+	6. $y = -3x^2 - x + 4$
+	7. $y = x^2 - 2x - 15$
+	8. $y = -x^2 + 2x + 15$
