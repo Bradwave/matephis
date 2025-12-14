@@ -62,16 +62,16 @@ function draw() {
 }
 ```
 
-In contenuto della funzione [*setup()*](https://p5js.org/reference/p5/setup/) è eseguito una sola volta all'avvio della web-app. La funzione [*draw()*](https://p5js.org/reference/p5/draw/) viene eseguita 60 volte al secondo (compatibilmente con il livello di performance della macchina su cui la web-app viene eseguita). Il risultato di ogni esecuzione della funzione *draw()* è detto **frame**. Si riportano di seguito alcune indicazioni utili per iniziare a programmare.
+In contenuto della funzione [`setup()`](https://p5js.org/reference/p5/setup/) è eseguito una sola volta all'avvio della web-app. La funzione [`draw()`](https://p5js.org/reference/p5/draw/) viene eseguita 60 volte al secondo (compatibilmente con il livello di performance della macchina su cui la web-app viene eseguita). Il risultato di ogni esecuzione della funzione `draw()` è detto **frame**. Si riportano di seguito alcune indicazioni utili per iniziare a programmare.
 
-- [*createCanvas*()](https://p5js.org/reference/p5/createCanvas/) crea una tela su cui possono essere visualizzati elementi grafica; le dimensioni della tela (larghezza e altezza, espresse in pixel) sono indicati tra parentesi — si dice che questi valori sono "passati" alla funzione *createCanvas()*.
-- Una volta creata, le dimensioni della tela sono accessibili tramite le variabili *width* e *height*.
-- [*background()*](https://p5js.org/reference/p5/createCanvas/) colora la tela (in questo caso, 220 corrisponde a un grigio chiaro).
-- È possibile indicare il colore desiderato usando vari sistemi (RGB, HSB, scala di grigi): il più semplice consiste nel digitare il nome del colore tra virgolette, ad esempio *"red"*; un elenco di colori disponibili è disponibile al [seguente link](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/named-color).
+- [`createCanvas()`](https://p5js.org/reference/p5/createCanvas/) crea una tela su cui possono essere visualizzati elementi grafica; le dimensioni della tela (larghezza e altezza, espresse in pixel) sono indicati tra parentesi — si dice che questi valori sono "passati" alla funzione `createCanvas()`.
+- Una volta creata, le dimensioni della tela sono accessibili tramite le variabili `width` e `height`.
+- [`background()`](https://p5js.org/reference/p5/createCanvas/) colora la tela (in questo caso, 220 corrisponde a un grigio chiaro).
+- È possibile indicare il colore desiderato usando vari sistemi (RGB, HSB, scala di grigi): il più semplice consiste nel digitare il nome del colore tra virgolette, ad esempio `"red"`; un elenco di colori disponibili è disponibile al [seguente link](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/named-color).
 
 Prova a modificare il codice.
 
-1. Visualizza una tela 500x600, di colore blu scuro, e un grande punto giallo al centro della tela. Cerca nella documentazione come disegnare un punto, come colorarlo e come variare la dimensione del punto (suggerimento: *stroke*...).
+1. Visualizza una tela 500x600, di colore blu scuro, e un grande punto giallo al centro della tela. Cerca nella documentazione come disegnare un punto, come colorarlo e come variare la dimensione del punto (suggerimento: cerca *stroke*...).
 2. Disegna due punti più piccoli: un punto rosso nell'angolo in alto a sinistra della tela e uno verde nell'angolo in basso a destra.
 3. Modifica il codice in modo che il punto giallo segua il mouse.
 
@@ -89,7 +89,7 @@ let a = 5;
 var b = 5;
 ```
 
-Le parale chiave *let* e *var* consentono di **creare una variabile**. Ponendo il nome della variabile uguale a un certo valore, si assegna questo valore alla variabile. Si consideri il codice seguente:
+Le parale chiave `let` e `var` consentono di **creare una variabile**. Ponendo il nome della variabile uguale a un certo valore, si assegna questo valore alla variabile. Si consideri il codice seguente:
 
 ```javascript
 let a; // la variabile viene creata, ma non inizializzata
@@ -137,15 +137,15 @@ x = -x;
 ```
 
 {:start="5"}
-5. Prevedi il valore di *a* al termine delle operazioni, quindi verificalo usando l'editor online (utilizza *console.log()* per visualizzare il valore di *a* nella console). Puoi scrivere il codice "al di fuori" delle funzioni *setup()* e *draw()* — ovvero nel *global scope*, per gli intenditori e le intenditrici.
+5. Prevedi il valore di `a` al termine delle operazioni, quindi verificalo usando l'editor online (utilizza `console.log()` per visualizzare il valore di *a* nella console). Puoi scrivere il codice "al di fuori" delle funzioni `setup()` e `draw()` — ovvero nel *global scope*, per gli intenditori e le intenditrici.
 
 Introduciamo una variabile che descriverà lo scorrere del tempo, la chiamiamo *T*.
 
 {:start="6"}
-6. Crea la variabile *T* "al di fuori" di *setup()* e *draw()*, in questo modo sarà visibile a tutto il programma, quindi assegna a *T* valore 0 all'avvio dell'app e incrementa di 1 il valore di *T* ad ogni frame.
+6. Crea la variabile `T` "al di fuori" di `setup()` e `draw()`, in questo modo sarà visibile a tutto il programma, quindi assegna a `T` valore 0 all'avvio dell'app e incrementa di 1 il valore di *T* ad ogni frame.
 7. Crea un punto di colore rosa che, partendo dall'angolo in alto a destra dello schermo si muova diagonalmente verso l'angolo in basso a sinistra. La velocità verticale di movimento deve essere doppia rispetto alla velocità di movimento orizzontale.
 
 Ripartiamo da una tela pulita, di colore azzurro chiaro.
 
 {:start="8"}
-8. Rappresenta un punto che ruota in senso antiorario a distanza 100 dal centro della tela, con velocità angolare 1.
+8. Rappresenta un punto che ruota in senso antiorario a distanza 100 dal centro della tela, con velocità angolare 1. ***Nota:*** per utilizzare seno e coseno occorre digitare `Math.sin()` e `Math.cos()` rispettivamente.

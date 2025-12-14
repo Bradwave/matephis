@@ -47,6 +47,12 @@ apple_touch_icon: "/assets/img/profile.png"
 css_file: "/assets/css/style.css"
 ie_css: "/assets/css/ie-target.css"
 
+# Markdown and code highlighting
+markdown: kramdown
+kramdown:
+  input: GFM # GitHub Flavored Markdown
+  syntax_highlighter: rouge
+
 # Menu Items
 menu:
   - title: "Appunti"
