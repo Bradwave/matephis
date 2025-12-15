@@ -5,46 +5,48 @@ tags:
   - attività
   - fourier
 ---
-# Riscaldamento su Desmos
+<link rel="stylesheet" href="{{ '/assets/css/syntax.css' | relative_url }}">
+
+# PARTE 1 — Riscaldamento a bordo campo con Desmos
 
 Su Desmos, $t$ è considerato un parametro. Pertanto, l'input $(2, t + 3)$, ad esempio, consentirà di visualizzare l'insieme dei punti così definiti al variare di $t$, ovvero la traiettoria definita dalle equazioni del moto $x(t) = 2$, $y(t) = t + 3$.
 
-1. Crea la traiettoria definita dalle equazioni del moto $x(t) = 2$, $y(t) = t + 3$, per $-2 \leq t \leq 4$.
+1. Create la traiettoria definita dalle equazioni del moto $x(t) = 2$, $y(t) = t + 3$, per $-2 \leq t \leq 4$.
 
 Per visualizzare un punto che si muove sulla traiettoria, occorre utilizzare un'altra lettera al posto di $t$, ad esempio $T$. L'input $(2, T + 3)$ produce un punto e uno slider, tramite cui si modifica il valore di $T$. Animando $T$ si osserva il punto muoversi lungo la traiettoria precedentemente definita.
 
 {:start="2"}
-2. Anima un punto in modo che percorra ripetutamente la traiettoria sopra definita. Giunto al termine della traiettoria, il punto riparte dal punto iniziale.
+2. Animate un punto in modo che percorra ripetutamente la traiettoria sopra definita. Giunto al termine della traiettoria, il punto riparte dal punto iniziale.
 
 Per visualizzare sia la traiettoria sia il punto, è possibile definire innanzitutto $A(t) = (2, t + 3)$, quindi utilizzare l'input $A(t)$ per visualizzare la traiettoria per un certo range di $t$ e l'input $A(T)$ per visualizzare il punto animato al variare di $T$.
 
 {:start="3"}
-3. Utilizza la sintassi proposta per visualizzare la traiettoria e il punto animato.
+3. Utilizzate la sintassi proposta per visualizzare la traiettoria e il punto animato.
 
-# Un particolare spirografo
+## Un particolare spirografo
 
-Crea una nuova pagina Desmos.
+Create una nuova pagina Desmos.
 
-1. Disegna il punto $C = (2, 3)$.
-2. Disegna un punto $P_1$ che ruoti in senso antiorario attorno al punto $C$, alla distanza di $3$ unità, con velocità angolare $2$.
-3. Disegna un punto $P_2$ che ruota in senso orario attorno a $P_2$, alla distanza di $1.5$, con velocità angolare $1$.
-4. Visualizza la traiettoria prodotta da $P_2$.
+1. Disegnate il punto $C = (2, 3)$.
+2. Disegnate un punto $P_1$ che ruoti in senso antiorario attorno al punto $C$, alla distanza di $3$ unità, con velocità angolare $2$.
+3. Disegnate un punto $P_2$ che ruota in senso orario attorno a $P_2$, alla distanza di $1.5$, con velocità angolare $1$.
+4. Visualizzate la traiettoria prodotta da $P_2$.
 
-Fai in modo che i raggi di rotazione di $P_1$ e $P_2$, detti rispettivamente $R_1$ e $R_2$, e le velocità angolari $v_1$ e $v_2$ siano controllabili mediante slider. Assicurati che i raggi siano non negativi e che le velocità angolari assumano solo valori discreti (positivi o negativi).
+Fate in modo che i raggi di rotazione di $P_1$ e $P_2$, detti rispettivamente $R_1$ e $R_2$, e le velocità angolari $v_1$ e $v_2$ siano controllabili mediante slider. Assicuratevi che i raggi siano non negativi e che le velocità angolari assumano solo valori discreti (positivi o negativi).
 
 {:start="5"}
-5. Fai variare i valori dei raggi e delle velocità angolari. **Cosa noti?**
+5. Fate variare i valori dei raggi e delle velocità angolari. **Cosa notate?**
 
 Le varie figure ottenute sono esempi di **epicicloidi**, un particolare caso di **polinomi trignometrici** (ovvero ciò che si otterrebbe se si aggiungessero più punti rotanti).
 
 Per costruire un polinomio trigonometrico, è possibile ricorrere ai vettori: su Desmos è possibile salvare più valori in un elenco (detto vettore in informatica), digitando, ad esempio, $a = [2, 3, -1, 4]$. Si può accedere al vettore del vettore in una specifica posizione, la seconda ad esempio, digitando $a[2]$: in questo caso si otterrebbe $a[2] = 3$.
 
 {:start="6"}
-6. Crea un vettore $R$ contenente i raggi per 5 punti rotanti a scelta e un vettore $v$ con le rispettive velocità angolari discrete (sempre a scelta).
+6. Create un vettore $R$ contenente i raggi per 5 punti rotanti a scelta e un vettore $v$ con le rispettive velocità angolari discrete (sempre a scelta).
 
 Per sommare più punti rotanti, usiamo la somma $\displaystyle\sum_{n = 1}^{5} \dotsc$  (che si ottiene digitando "sum"). Il parametro $n$ è detto indice e varia dal $1$ a 5. Al posto dei puntini si inserisce la definizione dei punti rotanti, usando come raggio e velocità angolari i valori salvati nei vettori $R$ e $v$.
 
-# Punti rotanti su p5.js
+# PARTE 2 — In campo con *p5.js*!
 
 [p5.js](p5js.org) è una **libreria** open-source **JavaScript per la programmazione creativa** e l'esplorazione di idee. Semplifica notevolmente la scrittura di web-app interattive e con focus sugli aspetti grafici.
 
@@ -69,16 +71,21 @@ In contenuto della funzione [`setup()`](https://p5js.org/reference/p5/setup/) è
 - [`background()`](https://p5js.org/reference/p5/createCanvas/) colora la tela (in questo caso, 220 corrisponde a un grigio chiaro).
 - È possibile indicare il colore desiderato usando vari sistemi (RGB, HSB, scala di grigi): il più semplice consiste nel digitare il nome del colore tra virgolette, ad esempio `"red"`; un elenco di colori disponibili è disponibile al [seguente link](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/named-color).
 
-Prova a modificare il codice.
+## Punti, cerchi, line... *from scratch*
 
-1. Visualizza una tela 500x600, di colore blu scuro, e un grande punto giallo al centro della tela. Cerca nella documentazione come disegnare un punto, come colorarlo e come variare la dimensione del punto (suggerimento: cerca *stroke*...).
-2. Disegna due punti più piccoli: un punto rosso nell'angolo in alto a sinistra della tela e uno verde nell'angolo in basso a destra.
-3. Modifica il codice in modo che il punto giallo segua il mouse.
+Provate a modificare il codice nell'editor online.
+
+1. Visualizzate una tela 500x600, di colore blu scuro, e un grande punto giallo al centro della tela. Cercate nella documentazione come disegnare un punto, come colorarlo e come variare la dimensione del punto (suggerimento: cercate *stroke*...).
+2. Disegnate due punti più piccoli: un punto rosso nell'angolo in alto a sinistra della tela e uno verde nell'angolo in basso a destra. Quindi congiungete i due punti con una linea sottile di colore viola.
+3. Modificate il codice in modo che il punto rosso segua il mouse.
 
 Iniziamo a disegnare qualche circonferenza.
 
 {:start="4"}
-4. Modifica il codice in modo da visualizzare una circonferenza di raggio 100 centrata nella tela. Cerca nella documentazione come disegnare una circonferenza.
+4. Modificate il codice in modo da visualizzare una circonferenza di raggio 100 centrata nella tela. Cercate nella documentazione come disegnare una circonferenza.
+5. Rappresentate una circonferenza gialla di raggio 50 con centro nel mouse.
+
+## Troppe variabili!
 
 In JavaScript, è possibile costruire delle variabili, ovvero degli oggetti che possono mantenere in memoria delle informazioni oppure comportarsi come degli slider Desmos, nel modo seguente.
 
@@ -92,20 +99,20 @@ var b = 5;
 Le parale chiave `let` e `var` consentono di **creare una variabile**. Ponendo il nome della variabile uguale a un certo valore, si assegna questo valore alla variabile. Si consideri il codice seguente:
 
 ```javascript
-let a; // la variabile viene creata, ma non inizializzata
+let a; // crea la variabile a, ma non la inizializza
 
-a = 2; // a assume valore 2
-a = 3; // a assume valore 2
+a = 2; // assegna ad a il valore 2
+a = 3; // assegna ad a il valore 3
 
-a++; // il valore di a incrementa di 1
+a++; // incrementa di 1 il valore di a
 
-a += 3; // il valore di a incrementa di 3
-a -= 2; // il valore di a decrementa di 2
+a += 3; // incrementa di 3 il valore di a
+a -= 2; // decrementa di 2 il valore di a
 
-// se a è uguale a 5, notare il doppio segno di uguaglianza,
-// il codice compreso nella prima coppia di parentesi quadre viene eseguito
+// esegue il codice compreso nella prima coppia di parentesi graffe
+// se a è uguale a 5 (notare il doppio segno di uguaglianza!)
 if (a == 5) {
-	a = a * 2 - 1; // a è moltiplicato per 2 e diminuito di 1 
+	a = a * 2 - 1; // moltiplica a per 2 e sottrae 1 
 } else {
 	// il codice seguente viene eseguito solo se a è diverso da 5
 	a = -a; // a diventa uguale al suo opposto;
@@ -137,15 +144,138 @@ x = -x;
 ```
 
 {:start="5"}
-5. Prevedi il valore di `a` al termine delle operazioni, quindi verificalo usando l'editor online (utilizza `console.log()` per visualizzare il valore di *a* nella console). Puoi scrivere il codice "al di fuori" delle funzioni `setup()` e `draw()` — ovvero nel *global scope*, per gli intenditori e le intenditrici.
+5. Prevedete il valore di `a` al termine delle operazioni, quindi verificalo usando l'editor online (utilizza `console.log()` per visualizzare il valore di *a* nella console). Potete scrivere il codice "al di fuori" delle funzioni `setup()` e `draw()` — ovvero nel *global scope*, per gli intenditori e le intenditrici.
 
 Introduciamo una variabile che descriverà lo scorrere del tempo, la chiamiamo *T*.
 
 {:start="6"}
-6. Crea la variabile `T` "al di fuori" di `setup()` e `draw()`, in questo modo sarà visibile a tutto il programma, quindi assegna a `T` valore 0 all'avvio dell'app e incrementa di 1 il valore di *T* ad ogni frame.
-7. Crea un punto di colore rosa che, partendo dall'angolo in alto a destra dello schermo si muova diagonalmente verso l'angolo in basso a sinistra. La velocità verticale di movimento deve essere doppia rispetto alla velocità di movimento orizzontale.
+6. Create la variabile `T` "al di fuori" di `setup()` e `draw()`, in questo modo sarà accessibile in tutte le parti del programma, quindi assegna a `T` valore 0 all'avvio dell'app e incrementa di 0.01 il valore di *`T`* ad ogni frame.
+7. Create un punto di colore rosa che, partendo dall'angolo in alto a destra dello schermo si muova diagonalmente verso l'angolo in basso a sinistra. La velocità verticale di movimento deve essere doppia rispetto alla velocità di movimento orizzontale.
 
-Ripartiamo da una tela pulita, di colore azzurro chiaro.
+## Un particolare spirografo, di nuovo
+
+Ripartiamo da una tela pulita. Da ora in avanti scegliete liberamente i colori per i vari elementi grafici. Mantenete l'implementazione della variabile `T` che incrementa di 0.01 ad ogni frame.
 
 {:start="8"}
-8. Rappresenta un punto che ruota in senso antiorario a distanza 100 dal centro della tela, con velocità angolare 1. ***Nota:*** per utilizzare seno e coseno occorre digitare `Math.sin()` e `Math.cos()` rispettivamente.
+8. Poiché siamo interessati/e a rappresentare fenomeni di rotazione con periodo $2\pi$, fate in modo che `T` vari tra 0 e $2\pi$, tornando a valere 0 ogni qual volta supera $2\pi$.
+9. Rappresentate un punto $P_1$ che ruota in senso antiorario a distanza 100 dal centro della tela, con velocità angolare 1. ***Nota:*** per utilizzare seno e coseno occorre digitare `Math.sin()` e `Math.cos()` rispettivamente.
+10. Prova a variare la velocità angolare del punto $P_1$.
+11. Rappresentate, al di sotto del punto $P_1$, la circonferenza (senza riempimento) lungo cui il punto si muove e un segmento che congiunge il centro della tela con il punto. Per non scrivere troppe volte lo stesso codice e renderlo più leggibile, salvate le coordinate del punto in due variabili `x1` e `y1` (all'interno della funzione `draw()`).
+12. Rappresentate un secondo punto $P_2$ che ruota a velocità angolare -2 alla distanza di 50 dal punto $P_1$. Salvate le coordinate del punto $P_2$ nelle variabili `x2` e `x2`.
+
+Vorremmo ora rappresentare il percorso tracciato da $P_2$. Per farlo, occorre utilizzare i *vettori*, che funzionano in modo del tutto analogo alle liste di Desmos.
+
+```javascript
+let v = [1, 1, 2, 3, 5, 8]; // viene creato il vettore v
+console.log(v[4]); // viene stampato il valore del vettore nella posizione 4
+// in questo caso v[4] = 5 (la prima posizione è la posizione 0)
+
+v.push(13); // aggiunge 21 in fondo al vettore
+// il vettore diventa [1, 1, 2, 3, 5, 8, 13]
+
+v.pop(); // rimuove l'ultimo elemento del vettore
+// il vettore diventa [1, 1, 2, 3, 5, 8]
+
+v.shift(0); // aggiunge 1 all'inizio del vettore
+// il vettore diventa [0, 1, 1, 2, 3, 5, 8]
+
+v.unshift() // rimuove il primo elemento del vettore
+// il vettore diventa [1, 1, 2, 3, 5, 8]
+
+// ripete l'operazione console.log(...) per ogni elemento del vettore
+for(let i = 0; i < v.length; i++) {
+	console.log(v[i]); // stampa
+}
+
+v = []; // svuota il vettore
+```
+
+L'ultima parte del codice `for(...) { ... }` si chiama *ciclo for* e consente di ripetere delle linee di codice un certo numero di volte. La variabile `i` si chiama *indice* e, in questo caso, parte dal valore 0 e incrementa di 1 ad ogni ripetizione del ciclo fino a quando raggiunge il valore `v.length`, ovvero la lunghezza del vettore `v`.
+
+{:start="13"}
+13. Create, al di fuori di `setup()` e `draw()`, due vettori vuoti `pathX` e `pathY`, che conterranno rispettivamente le coordinate `x2` e `y2` del punto $P_2$. Ad ogni frame aggiungi `x2` al fondo di `pathX` e `y2` al fondo `pathY`. Fai in modo che i due vettori vengano svuotati ogni volta che la variabile `T` torna a valere 0.
+14. Utilizzando un ciclo for, rappresentate il tracciato del punto $P_2$. Per farlo, potrebbero essere utili i seguenti comandi.
+
+```javascript
+beginShape(); // inizia la costruzione di una figura geometrica
+vertex(a, b); // definisce il vertice (a, b) della figura
+vertex(c, d); // definisce il vertice (c, d)
+vertex(e, f); // definisce il vertice (e, f)
+// ecc.
+endShape(); // chiude la costruzione della figura
+```
+
+{:start="15"}
+15. Create ora una sequenza di punti che ruotano uno attorno all'altro utilizzando come raggi di rotazione e velocità angolari i valori contenuti nei vettori `r` e `v` che seguono (il primo punto ruota intorno al centro della tela). Congiungete i punti con dei segmenti e mostrate le circonferenze lungo cui i punti ruotano. Infine, rappresentate la traccia percorsa dall'ultimo punto.
+
+```javascript
+let r = [100, 50, 40, 20, 10, 20];
+let v = [1, 2, 3, -1, -2, -3];
+```
+
+{:start="16"}
+16. Provate a modificare i valori di `r` e `v`.
+17. Sfasate la rotazione dei punti dei seguenti valori.
+
+```javascript
+let phi = [0.1, 0, 0, 2, 3.14, 4]
+```
+
+### ...
+
+```javascript
+function mouseDragged() {
+  // aggiunge le coordinate del mouse ai vettori drawingX, drawingY
+}
+
+function mousePressed() {
+  // svuota i vettori con le coordinate del disegno
+}
+
+function mouseReleased() {
+  // servirà tra poco...
+}
+```
+
+{:start="17"}
+17. Disegna il percorso definito dall'utente
+
+
+```javascript
+function dft(drawingX, drawingY) {
+  const X = [];
+  
+  for(let f = 0; f < N; f++) {
+    let sum = {re: 0, im: 0};
+    
+    for(let n = 0; n < N; n++) {
+      const phi = (- 2 * Math.PI * (n / N) * f);
+      const c = multiply(
+        {re: Math.cos(phi), im: Math.sin(phi)},
+        {re: drawingX[n], im: drawingY[n]}
+      );
+      sum = {
+        re: sum.re + c.re / N,
+        im: sum.im + c.im / N
+      }
+    }
+
+    X.push({
+      re: sum.re,
+      im: sum.im,
+      f: f,
+      radius: Math.sqrt(sum.re ** 2 + sum.im ** 2),
+      phi: Math.atan2(sum.im, sum.re)
+    })
+  }
+  
+  return X;
+}
+
+function multiply(x, y) {
+  return {
+    re: x.re * y.re - x.im * y.im,
+    im: x.re * y.im + x.im * y.re
+  }
+}
+```

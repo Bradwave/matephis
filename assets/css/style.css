@@ -172,20 +172,20 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font);
   color: var(--title);
-  margin-bottom: var(--space-sm);
   line-height: 1.5;
 }
 
 h1 {
   font-size: clamp(1.2rem, 4vw, 1.4rem);
   font-weight: var(--weight-bold);
+  margin-top: var(--space-xl);
   margin-bottom: var(--space-lg);
 }
 
 h2 {
   font-size: clamp(1.1rem, 3vw, 1.3rem);
   font-weight: var(--weight-bold);
-  margin-top: var(--space-xl);
+  margin-top: var(--space-lg);
   margin-bottom: var(--space-md);
 }
 
@@ -380,7 +380,8 @@ blockquote {
   line-height: 1.6;
   background: var(--bg2);
   padding: var(--space-md);
-  padding-bottom: var(--space-xs); /* Counters bottom margin of paragraph */
+  padding-bottom: var(--space-xs);
+  /* Counters bottom margin of paragraph */
   border-radius: 0;
 }
 
@@ -749,7 +750,8 @@ td {
 }
 
 img {
-  max-width: 60%; /* It was 70% before */
+  max-width: 60%;
+  /* It was 70% before */
   height: auto;
   display: block;
   margin: var(--space-md) 0;

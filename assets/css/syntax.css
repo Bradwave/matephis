@@ -1,116 +1,350 @@
-.highlight table td { padding: 5px; }
-.highlight table pre { margin: 0; }
-.highlight, .highlight .w {
-  color: #24292f;
-  background-color: #f6f8fa;
+/* This file was generated using `pygmentize -S lilypond -f html -a .highlight` */
+pre {
+  line-height: 125%;
 }
-.highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt, .highlight .kv {
-  color: #cf222e;
+
+td.linenos .normal {
+  color: inherit;
+  background-color: transparent;
+  padding-left: 5px;
+  padding-right: 5px;
 }
-.highlight .gr {
-  color: #f6f8fa;
+
+span.linenos {
+  color: inherit;
+  background-color: transparent;
+  padding-left: 5px;
+  padding-right: 5px;
 }
-.highlight .gd {
-  color: #82071e;
-  background-color: #ffebe9;
+
+td.linenos .special {
+  color: #000000;
+  background-color: #eeeeee;
+  padding-left: 5px;
+  padding-right: 5px;
 }
-.highlight .nb {
-  color: #953800;
+
+/* Greyscale background for special line numbers */
+span.linenos.special {
+  color: #000000;
+  background-color: #eeeeee;
+  padding-left: 5px;
+  padding-right: 5px;
 }
-.highlight .nc {
-  color: #953800;
+
+/* Greyscale background for special line numbers */
+.highlight .hll {
+  background-color: #dddddd
 }
-.highlight .no {
-  color: #953800;
+
+/* Highlighted line: light grey */
+.highlight {
+  background: #ffffff;
 }
-.highlight .nn {
-  color: #953800;
+
+/* Background: white */
+.highlight .-ChordModifier {
+  color: #ad2f19
 }
-.highlight .sr {
-  color: #116329;
+
+/* ChordModifier: Medium Red-Brown */
+.highlight .c {
+  color: #999999;
+  font-style: italic
 }
-.highlight .na {
-  color: #116329;
+
+/* Comment: Light grey (Greyscale) */
+.highlight .k {
+  color: #b8341b;
+  font-weight: bold
 }
-.highlight .nt {
-  color: #116329;
+
+/* Keyword: Vibrant Red-Brown (Primary Accent) */
+.highlight .ch {
+  color: #999999;
+  font-style: italic
 }
-.highlight .gi {
-  color: #116329;
-  background-color: #dafbe1;
+
+/* Comment.Hashbang: Light grey (Greyscale) */
+.highlight .cm {
+  color: #999999;
+  font-style: italic
 }
-.highlight .ges {
-  font-weight: bold;
-  font-style: italic;
+
+/* Comment.Multiline: Light grey (Greyscale) */
+.highlight .cp {
+  color: #999999;
+  font-style: italic
 }
+
+/* Comment.Preproc: Light grey (Greyscale) */
+.highlight .cpf {
+  color: #999999;
+  font-style: italic
+}
+
+/* Comment.PreprocFile: Light grey (Greyscale) */
+.highlight .c1 {
+  color: #999999;
+  font-style: italic
+}
+
+/* Comment.Single: Light grey (Greyscale) */
+.highlight .cs {
+  color: #999999;
+  font-style: italic
+}
+
+/* Comment.Special: Light grey (Greyscale) */
 .highlight .kc {
-  color: #0550ae;
+  color: #b8341b;
+  font-weight: bold
 }
-.highlight .l, .highlight .ld, .highlight .m, .highlight .mb, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .il, .highlight .mo, .highlight .mx {
-  color: #0550ae;
+
+/* Keyword.Constant: Vibrant Red-Brown */
+.highlight .kd {
+  color: #b8341b;
+  font-weight: bold
 }
+
+/* Keyword.Declaration: Vibrant Red-Brown */
+.highlight .kn {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Keyword.Namespace: Vibrant Red-Brown */
+.highlight .kp {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Keyword.Pseudo: Vibrant Red-Brown */
+.highlight .kr {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Keyword.Reserved: Vibrant Red-Brown */
+.highlight .kt {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Keyword.Type: Vibrant Red-Brown */
+.highlight .m {
+  color: #ad2f19
+}
+
+/* Literal.Number: Medium Red-Brown */
+.highlight .s {
+  color: #8b2715
+}
+
+/* Literal.String: Deepest Red-Brown */
+.highlight .n-BackslashReference {
+  color: #444444
+}
+
+/* Name.BackslashReference: Dark grey (Greyscale) */
+.highlight .n-Lvalue {
+  color: #444444
+}
+
+/* Name.Lvalue: Dark grey (Greyscale) */
+.highlight .mb {
+  color: #ad2f19
+}
+
+/* Literal.Number.Bin: Medium Red-Brown */
+.highlight .mf {
+  color: #ad2f19
+}
+
+/* Literal.Number.Float: Medium Red-Brown */
+.highlight .mh {
+  color: #ad2f19
+}
+
+/* Literal.Number.Hex: Medium Red-Brown */
+.highlight .mi {
+  color: #ad2f19
+}
+
+/* Literal.Number.Integer: Medium Red-Brown */
+.highlight .mo {
+  color: #ad2f19
+}
+
+/* Literal.Number.Oct: Medium Red-Brown */
+.highlight .sa {
+  color: #8b2715
+}
+
+/* Literal.String.Affix: Deepest Red-Brown */
 .highlight .sb {
-  color: #0550ae;
+  color: #8b2715
 }
-.highlight .bp {
-  color: #0550ae;
+
+/* Literal.String.Backtick: Deepest Red-Brown */
+.highlight .sc {
+  color: #8b2715
 }
-.highlight .ne {
-  color: #0550ae;
+
+/* Literal.String.Char: Deepest Red-Brown */
+.highlight .dl {
+  color: #8b2715
 }
-.highlight .nl {
-  color: #0550ae;
+
+/* Literal.String.Delimiter: Deepest Red-Brown */
+.highlight .sd {
+  color: #8b2715
 }
-.highlight .py {
-  color: #0550ae;
+
+/* Literal.String.Doc: Deepest Red-Brown */
+.highlight .s2 {
+  color: #8b2715
 }
-.highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm {
-  color: #0550ae;
+
+/* Literal.String.Double: Deepest Red-Brown */
+.highlight .se {
+  color: #b8341b
 }
-.highlight .o, .highlight .ow {
-  color: #0550ae;
+
+/* Literal.String.Escape: Vibrant Red-Brown */
+.highlight .sh {
+  color: #8b2715
 }
-.highlight .gh {
-  color: #0550ae;
-  font-weight: bold;
-}
-.highlight .gu {
-  color: #0550ae;
-  font-weight: bold;
-}
-.highlight .s, .highlight .sa, .highlight .sc, .highlight .dl, .highlight .sd, .highlight .s2, .highlight .se, .highlight .sh, .highlight .sx, .highlight .s1, .highlight .ss {
-  color: #0a3069;
-}
-.highlight .nd {
-  color: #8250df;
-}
-.highlight .nf, .highlight .fm {
-  color: #8250df;
-}
-.highlight .err {
-  color: #f6f8fa;
-  background-color: #82071e;
-}
-.highlight .c, .highlight .ch, .highlight .cd, .highlight .cm, .highlight .cp, .highlight .cpf, .highlight .c1, .highlight .cs {
-  color: #6e7781;
-}
-.highlight .gl {
-  color: #6e7781;
-}
-.highlight .gt {
-  color: #6e7781;
-}
-.highlight .ni {
-  color: #24292f;
-}
+
+/* Literal.String.Heredoc: Deepest Red-Brown */
 .highlight .si {
-  color: #24292f;
+  color: #8b2715
 }
-.highlight .ge {
-  color: #24292f;
-  font-style: italic;
+
+/* Literal.String.Interpol: Deepest Red-Brown */
+.highlight .sx {
+  color: #8b2715
 }
-.highlight .gs {
-  color: #24292f;
-  font-weight: bold;
+
+/* Literal.String.Other: Deepest Red-Brown */
+.highlight .sr {
+  color: #8b2715
+}
+
+/* Literal.String.Regex: Deepest Red-Brown */
+.highlight .s1 {
+  color: #8b2715
+}
+
+/* Literal.String.Single: Deepest Red-Brown */
+.highlight .nb-Articulation {
+  color: #666666
+}
+
+/* Name.Builtin.Articulation: Medium grey (Greyscale) */
+.highlight .nb-Clef {
+  color: #444444;
+  font-weight: bold
+}
+
+/* Name.Builtin.Clef: Dark grey, bold (Greyscale) */
+.highlight .nb-Context {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Name.Builtin.Context: Vibrant Red-Brown, bold */
+.highlight .nb-ContextProperty {
+  color: #ad2f19
+}
+
+/* Name.Builtin.ContextProperty: Medium Red-Brown */
+.highlight .nb-Dynamic {
+  color: #666666
+}
+
+/* Name.Builtin.Dynamic: Medium grey (Greyscale) */
+.highlight .nb-Grob {
+  color: #444444;
+  font-weight: bold
+}
+
+/* Name.Builtin.Grob: Dark grey, bold (Greyscale) */
+.highlight .nb-GrobProperty {
+  color: #ad2f19
+}
+
+/* Name.Builtin.GrobProperty: Medium Red-Brown */
+.highlight .nb-HeaderVariable {
+  color: #ad2f19;
+  font-weight: bold
+}
+
+/* Name.Builtin.HeaderVariable: Medium Red-Brown, bold */
+.highlight .nb-MarkupCommand {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Name.Builtin.MarkupCommand: Vibrant Red-Brown, bold */
+.highlight .nb-MusicCommand {
+  color: #444444;
+  font-weight: bold
+}
+
+/* Name.Builtin.MusicCommand: Dark grey, bold (Greyscale) */
+.highlight .nb-MusicFunction {
+  color: #444444;
+  font-weight: bold
+}
+
+/* Name.Builtin.MusicFunction: Dark grey, bold (Greyscale) */
+.highlight .nb-PaperVariable {
+  color: #ad2f19;
+  font-weight: bold
+}
+
+/* Name.Builtin.PaperVariable: Medium Red-Brown, bold */
+.highlight .nb-RepeatType {
+  color: #666666
+}
+
+/* Name.Builtin.RepeatType: Medium grey (Greyscale) */
+.highlight .nb-Scale {
+  color: #444444;
+  font-weight: bold
+}
+
+/* Name.Builtin.Scale: Dark grey, bold (Greyscale) */
+.highlight .nb-SchemeBuiltin {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Name.Builtin.SchemeBuiltin: Vibrant Red-Brown, bold */
+.highlight .nb-SchemeFunction {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Name.Builtin.SchemeFunction: Vibrant Red-Brown, bold */
+.highlight .nb-Translator {
+  color: #b8341b;
+  font-weight: bold
+}
+
+/* Name.Builtin.Translator: Vibrant Red-Brown, bold */
+.highlight .il {
+  color: #ad2f19
+}
+
+/* Literal.Number.Integer.Long: Medium Red-Brown */
+/* WHERE IS THIS? */
+
+/* Add this rule to control the width of a Tab character */
+.highlight pre {
+  tab-size: 3;
+  /* Render each tab character as 3 spaces wide */
+  -moz-tab-size: 3;
+  /* For older Firefox support */
 }
