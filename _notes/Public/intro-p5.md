@@ -1,52 +1,11 @@
 ---
-title: Alla scoperta della serie di Fourier
+title: Parte 2 — In cammino con p5.js!
 feed: hide
 tags:
   - attività
-  - fourier
+  - p5js
 ---
 <link rel="stylesheet" href="{{ '/assets/css/syntax.css' | relative_url }}">
-
-# PARTE 1 — Riscaldamento a bordo campo con Desmos
-
-Su Desmos, $t$ è considerato un parametro. Pertanto, l'input $(2, t + 3)$, ad esempio, consentirà di visualizzare l'insieme dei punti così definiti al variare di $t$, ovvero la traiettoria definita dalle equazioni del moto $x(t) = 2$, $y(t) = t + 3$.
-
-1. Create la traiettoria definita dalle equazioni del moto $x(t) = 2$, $y(t) = t + 3$, per $-2 \leq t \leq 4$.
-
-Per visualizzare un punto che si muove sulla traiettoria, occorre utilizzare un'altra lettera al posto di $t$, ad esempio $T$. L'input $(2, T + 3)$ produce un punto e uno slider, tramite cui si modifica il valore di $T$. Animando $T$ si osserva il punto muoversi lungo la traiettoria precedentemente definita.
-
-{:start="2"}
-2. Animate un punto in modo che percorra ripetutamente la traiettoria sopra definita. Giunto al termine della traiettoria, il punto riparte dal punto iniziale.
-
-Per visualizzare sia la traiettoria sia il punto, è possibile definire innanzitutto $A(t) = (2, t + 3)$, quindi utilizzare l'input $A(t)$ per visualizzare la traiettoria per un certo range di $t$ e l'input $A(T)$ per visualizzare il punto animato al variare di $T$.
-
-{:start="3"}
-3. Utilizzate la sintassi proposta per visualizzare la traiettoria e il punto animato.
-
-## Un particolare spirografo
-
-Create una nuova pagina Desmos.
-
-1. Disegnate il punto $C = (2, 3)$.
-2. Disegnate un punto $P_1$ che ruoti in senso antiorario attorno al punto $C$, alla distanza di $3$ unità, con velocità angolare $2$.
-3. Disegnate un punto $P_2$ che ruota in senso orario attorno a $P_2$, alla distanza di $1.5$, con velocità angolare $1$.
-4. Visualizzate la traiettoria prodotta da $P_2$.
-
-Fate in modo che i raggi di rotazione di $P_1$ e $P_2$, detti rispettivamente $R_1$ e $R_2$, e le velocità angolari $v_1$ e $v_2$ siano controllabili mediante slider. Assicuratevi che i raggi siano non negativi e che le velocità angolari assumano solo valori discreti (positivi o negativi).
-
-{:start="5"}
-5. Fate variare i valori dei raggi e delle velocità angolari. **Cosa notate?**
-
-Le varie figure ottenute sono esempi di **epicicloidi**, un particolare caso di **polinomi trignometrici** (ovvero ciò che si otterrebbe se si aggiungessero più punti rotanti).
-
-Per costruire un polinomio trigonometrico, è possibile ricorrere ai vettori: su Desmos è possibile salvare più valori in un elenco (detto vettore in informatica), digitando, ad esempio, $a = [2, 3, -1, 4]$. Si può accedere al vettore del vettore in una specifica posizione, la seconda ad esempio, digitando $a[2]$: in questo caso si otterrebbe $a[2] = 3$.
-
-{:start="6"}
-6. Create un vettore $R$ contenente i raggi per 5 punti rotanti a scelta e un vettore $v$ con le rispettive velocità angolari discrete (sempre a scelta).
-
-Per sommare più punti rotanti, usiamo la somma $\displaystyle\sum_{n = 1}^{5} \dotsc$  (che si ottiene digitando "sum"). Il parametro $n$ è detto indice e varia dal $1$ a 5. Al posto dei puntini si inserisce la definizione dei punti rotanti, usando come raggio e velocità angolari i valori salvati nei vettori $R$ e $v$.
-
-# PARTE 2 — In campo con *p5.js*!
 
 [p5.js](p5js.org) è una **libreria** open-source **JavaScript per la programmazione creativa** e l'esplorazione di idee. Semplifica notevolmente la scrittura di web-app interattive e con focus sugli aspetti grafici.
 
@@ -205,6 +164,10 @@ vertex(e, f); // definisce il vertice (e, f)
 endShape(); // chiude la costruzione della figura
 ```
 
+| Hai smarrito il sentiero?                                                  |
+| -------------------------------------------------------------------------- |
+| [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/dbI6naCjo) |
+
 {:start="15"}
 15. Create ora una sequenza di punti che ruotano uno attorno all'altro utilizzando come raggi di rotazione e velocità angolari i valori contenuti nei vettori `r` e `v` che seguono (il primo punto ruota intorno al centro della tela). Congiungete i punti con dei segmenti e mostrate le circonferenze lungo cui i punti ruotano. Infine, rappresentate la traccia percorsa dall'ultimo punto.
 
@@ -218,64 +181,12 @@ let v = [1, 2, 3, -1, -2, -3];
 17. Sfasate la rotazione dei punti dei seguenti valori.
 
 ```javascript
-let phi = [0.1, 0, 0, 2, 3.14, 4]
+let phi = [0.1, 0, 0, 2, 3.14, 4];
 ```
 
-### ...
+{:start="18"}
+18. Variate i valori di `r`, `v` e `phi` e il numero di elementi dei vettori.
 
-```javascript
-function mouseDragged() {
-  // aggiunge le coordinate del mouse ai vettori drawingX, drawingY
-}
-
-function mousePressed() {
-  // svuota i vettori con le coordinate del disegno
-}
-
-function mouseReleased() {
-  // servirà tra poco...
-}
-```
-
-{:start="17"}
-17. Disegna il percorso definito dall'utente
-
-
-```javascript
-function dft(drawingX, drawingY) {
-  const X = [];
-  
-  for(let f = 0; f < N; f++) {
-    let sum = {re: 0, im: 0};
-    
-    for(let n = 0; n < N; n++) {
-      const phi = (- 2 * Math.PI * (n / N) * f);
-      const c = multiply(
-        {re: Math.cos(phi), im: Math.sin(phi)},
-        {re: drawingX[n], im: drawingY[n]}
-      );
-      sum = {
-        re: sum.re + c.re / N,
-        im: sum.im + c.im / N
-      }
-    }
-
-    X.push({
-      re: sum.re,
-      im: sum.im,
-      f: f,
-      radius: Math.sqrt(sum.re ** 2 + sum.im ** 2),
-      phi: Math.atan2(sum.im, sum.re)
-    })
-  }
-  
-  return X;
-}
-
-function multiply(x, y) {
-  return {
-    re: x.re * y.re - x.im * y.im,
-    im: x.re * y.im + x.im * y.re
-  }
-}
-```
+| Hai smarrito il sentiero?                                                  |
+| -------------------------------------------------------------------------- |
+| [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/GRaOal4a-) |
