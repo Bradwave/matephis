@@ -34,7 +34,7 @@ if (Math.abs(v[i]) < maxSpeed + 1) {
 {:start="5"}
 5. Fate variare il valore dello slider e verificate come cambia la precisione dell'approssimazione del disegno fornita dal polinomio trigonometrico.
 
-| Hai smarrito il sentiero?                                                  |
+| Avete smarrito il sentiero?                                                |
 | -------------------------------------------------------------------------- |
 | [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/mX4Th-OmZ) |
 

@@ -99,15 +99,20 @@ La tripletta di valori $v_n$, $R_n$, $\phi_n$ è detta **coefficiente di Fourier
 
 Quindi, per rappresentare un qualsiasi disegno (che rispetti i requisiti sopra descritti) è importante conoscere gli opportuni valori di $R_n$, $v_n$, $\phi_n$.
 
-L'applicazione drawxy.matephis.com consente di creare dei disegni e di ricavare i corrispondenti coefficienti di Fourier. Per ovvie ragioni di carattere tecnico, non sarà possibile rappresentare su Desmos delle somme infinite, quindi ci dovremmo accontentare di approssimare i disegni usando un numero finito (ma comunque considerevole) di punti rotanti.
+L'applicazione [drawxy.matephis.com](drawxy.matephis.com) consente di creare dei disegni e di ricavare i corrispondenti coefficienti di Fourier. Per ovvie ragioni di carattere tecnico, non sarà possibile rappresentare su Desmos delle somme infinite, quindi ci dovremmo accontentare di approssimare i disegni usando un numero finito (ma comunque considerevole) di punti rotanti.
 
-1. Tramite l'applicazione drawxy.matephis.com, create dei disegni a piacere. Nella sezione *DFT Analysis* copiate i corrispondenti valori di $R_n$, $v_n$ e $\phi_n$ e incollateli su Desmos.
+1. Tramite l'applicazione [drawxy.matephis.com](drawxy.matephis.com), create dei disegni a piacere. Nella sezione *DFT Analysis* copiate i corrispondenti valori di $R_n$, $v_n$ e $\phi_n$ e incollateli su Desmos.
 2. Come variano i raggi di rotazione all'aumentare della velocità angolare?
 3. Tramite uno slider $N$ controllate il numero di punti rotanti sommati. Fate variare $N$. **Cosa notate?** Servono molti punti rotanti per approssimare il disegno?
 4. Provate a realizzare dei disegni con degli spigoli. **Cosa notate?**
 
-## Da far girare la testa!
+## Da far girare la testa! (Bonus)
 
-Oltre a disegnare l'ultimo punto della concatenazione di punti rotanti, possiamo disegnare tutti i punti "intermedi", congiungerli e rappresentare le circonferenze lungo cui questi punti ruotano. Per farlo, possiamo sfruttare la funzionalità *list comprehension* di Desmos: consulta la [seguente documentazione](https://help.desmos.com/hc/en-us/articles/4407889068557-Lists).
+ La funzionalità *list comprehension* di Desmos consente di creare nuove liste a partire da liste esistenti. Ciò permette anche di ripetere una certa operazione per un certo numero di volte, come se fosse una sorta di *ciclo for* (per le intenditrici e gli intenditori di informatica). Consulta la [documentazione](https://help.desmos.com/hc/en-us/articles/4407889068557-Lists) di Desmos per capire meglio il funzionamento della *list comprehension*.
 
-Per raprpe
+1. Oltre a disegnare l'ultimo punto della concatenazione di punti rotanti, disegnate — sfruttando una *list comprehension* — tutti i punti rotanti "intermedi" e congiungeteli.
+2. Sempre utilizzando una *list comprehension*, rappresentare le circonferenze lungo cui i vari punti ruotano.
+
+| Avete smarrito il sentiero?                                      |
+| ---------------------------------------------------------------- |
+| [Ecco un segnavia](https://www.desmos.com/calculator/dqd4zpm2id) |
