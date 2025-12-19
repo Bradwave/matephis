@@ -44,6 +44,11 @@
   --border: #e8e8e8;
 }
 
+
+::selection {
+    color: white;
+    background-color: #9a2b17;
+}
 html, body {}
 
 * {
@@ -285,9 +290,8 @@ a:hover {
 }
 
 .links-section h6 {
-  color: var(--title);
+  font-weight: bold;
   font-size: var(--scale-sm);
-  font-weight: var(--weight-medium);
   margin-bottom: var(--space-sm);
 }
 
@@ -332,10 +336,11 @@ a:hover {
 }
 
 .footer h6 {
-  color: var(--title);
+  color: #717171;
   font-size: var(--scale-xs);
   font-weight: 400;
   letter-spacing: 0.01em;
+  font-style: italic;
 }
 
 .footer-left {
@@ -409,6 +414,22 @@ pre code {
   border-radius: 0;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+details {
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--border);
+  padding: var(--space-sm);
+}
+
+details > summary {
+  font-weight: bold;
+}
+
+details > p {
+  margin-top: var(--space-xs);
+  margin-bottom: 0px;
+  padding-left: var(--space-sm);
 }
 
 hr {

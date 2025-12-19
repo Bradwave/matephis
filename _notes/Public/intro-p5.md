@@ -9,7 +9,7 @@ tags:
 
 [p5.js](p5js.org) è una **libreria** open-source **JavaScript per la programmazione creativa** e l'esplorazione di idee. Semplifica notevolmente la scrittura di web-app interattive e con focus sugli aspetti grafici.
 
-È possibile consultare tutte le funzioni di p5.js alla pagina web dell **documentazione**: [p5js.org/reference](https://p5js.org/reference/).
+È possibile consultare tutte le funzioni di p5.js alla pagina web della **documentazione**: [p5js.org/reference](https://p5js.org/reference/).
 
 All'apertura dell'[editor online](https://editor.p5js.org/), ci si trova di fronte al codice seguente.
 
@@ -23,30 +23,30 @@ function draw() {
 }
 ```
 
-In contenuto della funzione [`setup()`](https://p5js.org/reference/p5/setup/) è eseguito una sola volta all'avvio della web-app. La funzione [`draw()`](https://p5js.org/reference/p5/draw/) viene eseguita 60 volte al secondo (compatibilmente con il livello di performance della macchina su cui la web-app viene eseguita). Il risultato di ogni esecuzione della funzione `draw()` è detto **frame**. Si riportano di seguito alcune indicazioni utili per iniziare a programmare.
+Il contenuto della funzione [`setup()`](https://p5js.org/reference/p5/setup/) è eseguito una sola volta all'avvio della web-app. La funzione [`draw()`](https://p5js.org/reference/p5/draw/) viene eseguita 60 volte al secondo (compatibilmente con il livello di performance della macchina su cui la web-app viene eseguita). Il risultato di ogni esecuzione della funzione `draw()` è detto **frame**. Si riportano di seguito alcune indicazioni utili per iniziare a programmare.
 
-- [`createCanvas()`](https://p5js.org/reference/p5/createCanvas/) crea una tela su cui possono essere visualizzati elementi grafica; le dimensioni della tela (larghezza e altezza, espresse in pixel) sono indicati tra parentesi — si dice che questi valori sono "passati" alla funzione `createCanvas()`.
+- [`createCanvas()`](https://p5js.org/reference/p5/createCanvas/) crea una tela su cui possono essere visualizzati elementi grafici; le dimensioni della tela (larghezza e altezza, espresse in pixel) sono indicate tra parentesi — si dice che questi valori sono "passati" alla funzione `createCanvas()`.
 - Una volta creata, le dimensioni della tela sono accessibili tramite le variabili `width` e `height`.
 - [`background()`](https://p5js.org/reference/p5/createCanvas/) colora la tela (in questo caso, 220 corrisponde a un grigio chiaro).
-- È possibile indicare il colore desiderato usando vari sistemi (RGB, HSB, scala di grigi): il più semplice consiste nel digitare il nome del colore tra virgolette, ad esempio `"red"`; un elenco di colori disponibili è disponibile al [seguente link](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/named-color).
+- È possibile indicare il colore desiderato usando vari sistemi (RGB, HSB, scala di grigi): il più semplice consiste nel digitare il nome del colore tra virgolette, ad esempio `"red"`; un elenco di colori è disponibile al [seguente link](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/named-color).
 
 ## Punti, cerchi, line... *from scratch*
 
 Provate a modificare il codice nell'editor online.
 
 1. Visualizzate una tela 500x600, di colore blu scuro, e un grande punto giallo al centro della tela. Cercate nella documentazione come disegnare un punto, come colorarlo e come variare la dimensione del punto (suggerimento: cercate *stroke*...).
-2. Disegnate due punti più piccoli: un punto rosso nell'angolo in alto a sinistra della tela e uno verde nell'angolo in basso a destra. Quindi congiungete i due punti con una linea sottile di colore viola.
+2. Disegnate due punti più piccoli: un punto rosso nell'angolo in alto a sinistra della tela e uno verde nell'angolo in basso a destra. Quindi congiungete i due punti con una linea sottile di colore rosa.
 3. Modificate il codice in modo che il punto rosso segua il mouse.
 
 Iniziamo a disegnare qualche circonferenza.
 
 {:start="4"}
-4. Modificate il codice in modo da visualizzare una circonferenza di raggio 100 centrata nella tela. Cercate nella documentazione come disegnare una circonferenza.
-5. Rappresentate una circonferenza gialla di raggio 50 con centro nel mouse.
+4. Modificate il codice in modo da visualizzare una circonferenza di raggio $100$ centrata nel centro della tela. Cercate nella documentazione come disegnare una circonferenza.
+5. Rappresentate una circonferenza gialla di raggio $50$ con centro nel mouse.
 
 ## Troppe variabili!
 
-In JavaScript, è possibile costruire delle variabili, ovvero degli oggetti che possono mantenere in memoria delle informazioni oppure comportarsi come degli slider Desmos, nel modo seguente.
+In JavaScript, è possibile costruire delle variabili — ovvero degli oggetti che possono mantenere in memoria delle informazioni oppure comportarsi come degli slider Desmos — nel modo seguente.
 
 ```javascript
 let a = 5;
@@ -108,19 +108,19 @@ x = -x;
 Introduciamo una variabile che descriverà lo scorrere del tempo, la chiamiamo *T*.
 
 {:start="6"}
-6. Create la variabile `T` "al di fuori" di `setup()` e `draw()`, in questo modo sarà accessibile in tutte le parti del programma, quindi assegna a `T` valore 0 all'avvio dell'app e incrementa di 0.01 il valore di *`T`* ad ogni frame.
+6. Create la variabile `T` "al di fuori" di `setup()` e `draw()`, in questo modo sarà accessibile in tutte le parti del programma, quindi assegnate a `T` valore $0$ all'avvio dell'app e incrementate di $0.01$ il valore di *`T`* ad ogni frame.
 7. Create un punto di colore rosa che, partendo dall'angolo in alto a destra dello schermo si muova diagonalmente verso l'angolo in basso a sinistra. La velocità verticale di movimento deve essere doppia rispetto alla velocità di movimento orizzontale.
 
-## Un particolare spirografo, di nuovo
+## Uno spirografo matematico, di nuovo
 
 Ripartiamo da una tela pulita. Da ora in avanti scegliete liberamente i colori per i vari elementi grafici. Mantenete l'implementazione della variabile `T` che incrementa di 0.01 ad ogni frame.
 
 {:start="8"}
-8. Poiché siamo interessati/e a rappresentare fenomeni di rotazione con periodo $2\pi$, fate in modo che `T` vari tra 0 e $2\pi$, tornando a valere 0 ogni qual volta supera $2\pi$.
-9. Rappresentate un punto $P_1$ che ruota in senso antiorario a distanza 100 dal centro della tela, con velocità angolare 1. ***Nota:*** per utilizzare seno e coseno occorre digitare `Math.sin()` e `Math.cos()` rispettivamente.
-10. Prova a variare la velocità angolare del punto $P_1$.
+8. Poiché siamo interessati/e a rappresentare fenomeni di rotazione con periodo $2\pi$, fate in modo che `T` vari tra 0 e $2\pi$, tornando a valere $0$ ogni qualvolta supera $2\pi$.
+9. Rappresentate un punto $P_1$ che ruota in senso antiorario a distanza $100$ dal centro della tela, con velocità angolare $1$. ***Nota:*** per utilizzare seno e coseno occorre digitare `Math.sin()` e `Math.cos()` rispettivamente.
+10. Provate a variare la velocità angolare del punto $P_1$.
 11. Rappresentate, al di sotto del punto $P_1$, la circonferenza (senza riempimento) lungo cui il punto si muove e un segmento che congiunge il centro della tela con il punto. Per non scrivere troppe volte lo stesso codice e renderlo più leggibile, salvate le coordinate del punto in due variabili `x1` e `y1` (all'interno della funzione `draw()`).
-12. Rappresentate un secondo punto $P_2$ che ruota a velocità angolare -2 alla distanza di 50 dal punto $P_1$. Salvate le coordinate del punto $P_2$ nelle variabili `x2` e `x2`.
+12. Rappresentate un secondo punto $P_2$ che ruota a velocità angolare $-2$ alla distanza di $50$ dal punto $P_1$. Salvate le coordinate del punto $P_2$ nelle variabili `x2` e `y2`.
 
 Vorremmo ora rappresentare il percorso tracciato da $P_2$. Per farlo, occorre utilizzare i *vettori*, che funzionano in modo del tutto analogo alle liste di Desmos.
 
@@ -129,16 +129,16 @@ let v = [1, 1, 2, 3, 5, 8]; // viene creato il vettore v
 console.log(v[4]); // viene stampato il valore del vettore nella posizione 4
 // in questo caso v[4] = 5 (la prima posizione è la posizione 0)
 
-v.push(13); // aggiunge 21 in fondo al vettore
+v.push(13); // aggiunge 13 in fondo al vettore
 // il vettore diventa [1, 1, 2, 3, 5, 8, 13]
 
 v.pop(); // rimuove l'ultimo elemento del vettore
 // il vettore diventa [1, 1, 2, 3, 5, 8]
 
-v.shift(0); // aggiunge 1 all'inizio del vettore
+v.unshift(0); // aggiunge 0 all'inizio del vettore
 // il vettore diventa [0, 1, 1, 2, 3, 5, 8]
 
-v.unshift() // rimuove il primo elemento del vettore
+v.shift() // rimuove il primo elemento del vettore
 // il vettore diventa [1, 1, 2, 3, 5, 8]
 
 // ripete l'operazione console.log(...) per ogni elemento del vettore
@@ -164,7 +164,7 @@ vertex(e, f); // definisce il vertice (e, f)
 endShape(); // chiude la costruzione della figura
 ```
 
-| Hai smarrito il sentiero?                                                  |
+| Avete smarrito il sentiero?                                                |
 | -------------------------------------------------------------------------- |
 | [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/dbI6naCjo) |
 
@@ -172,12 +172,12 @@ endShape(); // chiude la costruzione della figura
 15. Create ora una sequenza di punti che ruotano uno attorno all'altro utilizzando come raggi di rotazione e velocità angolari i valori contenuti nei vettori `r` e `v` che seguono (il primo punto ruota intorno al centro della tela). Congiungete i punti con dei segmenti e mostrate le circonferenze lungo cui i punti ruotano. Infine, rappresentate la traccia percorsa dall'ultimo punto.
 
 ```javascript
-let r = [100, 50, 40, 20, 10, 20];
+let R = [100, 50, 40, 20, 10, 20];
 let v = [1, 2, 3, -1, -2, -3];
 ```
 
 {:start="16"}
-16. Provate a modificare i valori di `r` e `v`.
+16. Provate a modificare i valori di `R` e `v`.
 17. Sfasate la rotazione dei punti dei seguenti valori.
 
 ```javascript
@@ -185,8 +185,8 @@ let phi = [0.1, 0, 0, 2, 3.14, 4];
 ```
 
 {:start="18"}
-18. Variate i valori di `r`, `v` e `phi` e il numero di elementi dei vettori.
+18. Variate i valori di `R`, `v` e `phi` e il numero di elementi dei vettori.
 
-| Hai smarrito il sentiero?                                                  |
+| Avete smarrito il sentiero?                                                |
 | -------------------------------------------------------------------------- |
 | [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/GRaOal4a-) |
