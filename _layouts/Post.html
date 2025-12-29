@@ -134,6 +134,45 @@
                             <!-- JS will populate this -->
                         </ul>
                     </div>
+
+                    <!-- Related Pages by Tag -->
+                    {% assign excluded_tags = "attività,esercizi,facsimile" | split: "," %}
+                    {% assign found_related = false %}
+                    
+                    <div class="sidebar-related">
+                        <h4>Correlati</h4>
+                        <ul>
+                            {% assign max_related = 5 %}
+                            {% assign count = 0 %}
+                            
+                            <!-- Check Notes and Posts -->
+                            {% assign all_docs = site.posts | concat: site.notes %}
+                            
+                            {% for doc in all_docs %}
+                                {% if doc.url == page.url %}{% continue %}{% endif %}
+                                
+                                {% assign common_tags = false %}
+                                {% for tag in doc.tags %}
+                                    {% unless excluded_tags contains tag %}
+                                        {% if page.tags contains tag %}
+                                            {% assign common_tags = true %}
+                                            {% break %}
+                                        {% endif %}
+                                    {% endunless %}
+                                {% endfor %}
+                                
+                                {% if common_tags and count < max_related %}
+                                    <li><a href="{{ site.baseurl }}{{ doc.url }}">{{ doc.title }}</a></li>
+                                    {% assign count = count | plus: 1 %}
+                                    {% assign found_related = true %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% unless found_related %}
+                                <li style="font-style: italic; opacity: 0.6; font-size: 0.85em;">Nessuna pagina correlata.</li>
+                            {% endunless %}
+                        </ul>
+                    </div>
                 </aside>
                 {% endunless %}
             </div>

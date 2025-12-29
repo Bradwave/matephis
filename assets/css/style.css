@@ -1069,6 +1069,46 @@ li a[href^="https://"]:after {
   opacity: 0.9;
 }
 
+/* Sidebar Related Section */
+.sidebar-related {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-related h4 {
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+}
+
+.sidebar-related ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-related li {
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.sidebar-related a {
+  text-decoration: none;
+  color: var(--text);
+  display: block;
+  transition: color 0.2s;
+  font-size: 0.9rem;
+}
+
+.sidebar-related a:hover {
+  color: var(--brand);
+}
+
 /* Mobile Responsive */
 @media (max-width: 900px) {
   .page-layout {
