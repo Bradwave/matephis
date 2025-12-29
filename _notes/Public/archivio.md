@@ -65,3 +65,11 @@ Per costruire un polinomio trigonometrico, è possibile ricorrere ai vettori: su
 6. Create un vettore $R$ contenente i raggi per 5 punti rotanti a scelta e un vettore $v$ con le rispettive velocità angolari discrete (sempre a scelta).
 
 Per sommare più punti rotanti, usiamo la somma $\displaystyle\sum_{n = 1}^{5} \dotsc$  (che si ottiene digitando "sum"). Il parametro $n$ è detto indice e varia dal $1$ a 5. Al posto dei puntini si inserisce la definizione dei punti rotanti, usando come raggio e velocità angolari i valori salvati nei vettori $R$ e $v$.
+
+
+Suggerisci come puoi misurare le seguenti quantità: la potenza di un motore, l'energia cinetica di un'auto in movimento e l'energia potenziale elastica di una molla allungata.
+2. Come possono i satelliti rimanere in orbita senza alcun sistema di propulsione a getto? Spiega usando i concetti di lavoro-energia.
+3. Perché la Luna non ha atmosfera, ma la Terra sì?
+4. Cosa accadrebbe alla Terra se il nostro Sole diventasse un buco nero?
+5. Nell'equazione $U_g = mgy$, l'energia potenziale gravitazionale è direttamente proporzionale alla distanza dell'oggetto da un pianeta. Nell'equazione $U_g = -G \frac{m_1 m_2}{r}$, è inversamente proporzionale. Come puoi conciliare queste due equazioni?
+6. Il tuo amico pensa che la velocità di fuga dovrebbe essere maggiore per oggetti più massicci che per oggetti meno massicci. Fornisci un argomento per la sua opinione. Poi fornisci un controargomento sul perché la velocità di fuga è indipendente dalla massa dell'oggetto.

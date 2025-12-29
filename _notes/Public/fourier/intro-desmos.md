@@ -5,7 +5,7 @@ tags:
   - attività
   - desmos
 ---
-## Disegni e moti in 2D
+w## Disegni e moti in 2D
 
 Vogliamo descrivere matematicamente, attraverso una funzione, un disegno realizzato a mano libera, senza staccare la matita dal foglio e composto da una singola linea chiusa.
 
