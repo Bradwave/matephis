@@ -9,18 +9,23 @@
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
 
   <!-- Custom Styles / Overrides -->
-  <link rel="icon" type="image/svg+xml" href="/assets/img/icon-auth.svg">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Math&display=swap" rel="stylesheet">
   <!-- Main Site Styles -->
   <link rel="stylesheet" href="/assets/css/style.css">
 
   <style>
-    /* Apply your font globally and force white background */
-    body,
-    button,
-    input,
-    select,
-    textarea {
+    /* Hide content initially to prevent flash of unstyled content */
+    body {
+      opacity: 0 !important;
+      transition: opacity .2s ease-in !important;
+    }
+    
+    body.loaded {
+      opacity: 1 !important;
+    }
+
+    /* Apply your font globally */
+    * {
       font-family: 'Noto Sans Math', sans-serif !important;
     }
 
@@ -66,8 +71,6 @@
       color: #B01A00 !important;
     }
   </style>
-  <!-- Sveltia CMS (Main channel, unstable) -->
-  <!-- <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script> -->
 </head>
 
 <body>
@@ -84,8 +87,14 @@
       document.head.appendChild(newLink);
     }
 
-    // Run on load and observe for changes
-    window.addEventListener('load', forceFavicon);
+    // Run on load: Fix favicon AND show body
+    window.addEventListener('load', () => {
+        forceFavicon();
+        // Give a tiny buffer to Ensure styles are processed
+        setTimeout(() => {
+             document.body.classList.add('loaded');
+        }, 100);
+    });
     
     // Backup: Observe head for changes to fight back if it gets overwritten
     new MutationObserver(() => {
