@@ -1,0 +1,31 @@
+backend:
+  name: github
+  repo: Bradwave/matephis
+  branch: cms-integration # Changed to match your current branch for testing
+  base_url: "https://<YOUR_WORKER_URL>" # You will get this from the Cloudflare setup
+  auth_endpoint: /auth # This corresponds to the worker route
+
+media_folder: "images"
+public_folder: "/images"
+
+collections:
+  - name: "posts"
+    label: "Blog Posts"
+    folder: "_posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Date", name: "date", widget: "datetime" }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  - name: "notes"
+    label: "Appunti"
+    folder: "_notes/Public"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Feed", name: "feed", widget: "select", options: ["show", "hide"], default: "show" }
+      - { label: "Tags", name: "tags", widget: "list" }
+      - { label: "Body", name: "body", widget: "markdown" }
