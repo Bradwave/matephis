@@ -1,0 +1,133 @@
+<!-- Lightbox Structure -->
+<div id="lightbox" class="lightbox">
+    <span class="lightbox-close">&times;</span>
+    <img class="lightbox-content" id="lightbox-img">
+    <div id="lightbox-caption"></div>
+</div>
+
+<style>
+    /* Lightbox CSS */
+    .lightbox {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* Prevent scrolling behind */
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(5px);
+        align-items: center;
+        justify-content: center;
+        flex-direction: column; /* Stack image and caption vertically */
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .lightbox.show {
+        opacity: 1;
+    }
+
+    .lightbox-content {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+        max-height: 85vh; /* Slightly reduced to give space */
+        border-radius: 4px; /* Sharper, more elegant corners */
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15); /* tighter shadow */
+        transform: scale(0.98);
+        transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+    }
+
+    .lightbox.show .lightbox-content {
+        transform: scale(1);
+    }
+
+    .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: #333;
+        font-size: 40px;
+        font-weight: 300;
+        cursor: pointer;
+        transition: color 0.2s;
+        z-index: 10000;
+        line-height: 1;
+    }
+
+    .lightbox-close:hover {
+        color: var(--brand);
+    }
+
+    #lightbox-caption {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 700px;
+        text-align: center;
+        color: #666; /* Softer text */
+        padding: 5px 0;
+        height: auto;
+        margin-top: 8px; /* Reduced gap */
+        font-family: var(--font-title);
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+    }
+    
+    /* Make content images clickable effectively */
+    main img {
+        cursor: zoom-in;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const captionText = document.getElementById('lightbox-caption');
+        const closeBtn = document.querySelector('.lightbox-close');
+
+        // Select all images in the main content area (adjust selector if needed)
+        // We exclude the logo or icons
+        const images = document.querySelectorAll('img:not(.logo):not(.icon):not(.lightbox-content)');
+
+        images.forEach(img => {
+            img.addEventListener('click', () => {
+                lightbox.style.display = "flex";
+                // Trigger reflow for transition
+                requestAnimationFrame(() => {
+                    lightbox.classList.add('show');
+                });
+                
+                lightboxImg.src = img.src;
+                captionText.innerHTML = img.alt || "";
+            });
+        });
+
+        // Close functions
+        const closeLightbox = () => {
+            lightbox.classList.remove('show');
+            setTimeout(() => {
+                lightbox.style.display = "none";
+            }, 300);
+        };
+
+        closeBtn.onclick = closeLightbox;
+
+        // Close on clicking outside the image
+        lightbox.onclick = (e) => {
+            if (e.target !== lightboxImg) {
+                closeLightbox();
+            }
+        };
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && lightbox.style.display === "flex") {
+                closeLightbox();
+            }
+        });
+    });
+</script>
