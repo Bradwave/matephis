@@ -1,13 +1,100 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sveltia CMS</title>
-    <!-- Sveltia CMS (Production) -->
-    <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
-    <!-- Sveltia CMS (Main channel, unstable) -->
-    <!-- <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script> -->
-  </head>
-  <body></body>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sveltia CMS</title>
+  <!-- Sveltia CMS (Production) -->
+  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
+
+  <!-- Custom Styles / Overrides -->
+  <link rel="icon" type="image/svg+xml" href="/assets/img/icon-auth.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Math&display=swap" rel="stylesheet">
+  <!-- Main Site Styles -->
+  <link rel="stylesheet" href="/assets/css/style.css">
+
+  <style>
+    /* Apply your font globally and force white background */
+    body,
+    button,
+    input,
+    select,
+    textarea {
+      font-family: 'Noto Sans Math', sans-serif !important;
+    }
+
+    img.logo {
+      display: none !important;
+    }
+
+    div.main {
+      background-color: #ffffff !important;
+    }
+
+    div[role=none] {
+      color: #6a6a6a !important;
+      font-size: .8rem !important;
+    }
+
+    /* Match .btn style from matephis (Menu Buttons) */
+    button {
+      padding: 1rem !important;
+      background: #f8f8f8 !important;
+      border: none !important;
+      color: #0d0d0d !important;
+      text-decoration: none !important;
+      border-radius: 0 !important;
+      transition: none !important;
+    }
+
+    button:hover {
+      color: #B01A00 !important;
+      border: none !important;
+      background: #f1f1f1 !important;
+      /* Visual feedback */
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Links */
+    a {
+      color: #0d0d0d !important;
+    }
+
+    a:hover {
+      color: #B01A00 !important;
+    }
+  </style>
+  <!-- Sveltia CMS (Main channel, unstable) -->
+  <!-- <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script> -->
+</head>
+
+<body>
+  <script>
+    // Force custom favicon to override Sveltia CMS defaults
+    function forceFavicon() {
+      const links = document.querySelectorAll("link[rel*='icon']");
+      links.forEach(link => link.remove());
+      
+      const newLink = document.createElement('link');
+      newLink.type = 'image/svg+xml';
+      newLink.rel = 'icon';
+      newLink.href = '/assets/img/icon-auth.svg';
+      document.head.appendChild(newLink);
+    }
+
+    // Run on load and observe for changes
+    window.addEventListener('load', forceFavicon);
+    
+    // Backup: Observe head for changes to fight back if it gets overwritten
+    new MutationObserver(() => {
+        const icon = document.querySelector("link[rel*='icon']");
+        if (icon && !icon.href.includes('icon-auth.svg')) {
+            forceFavicon();
+        }
+    }).observe(document.head, { childList: true, subtree: true });
+  </script>
+</body>
+
 </html>
