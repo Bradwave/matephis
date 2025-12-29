@@ -24,9 +24,6 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ## Quesiti
 
 1. **[EE]** Spiega perché il grafico della funzione esponenziale $f(x) = e^x$ non interseca l'asse $x$.
-2. 
-
-## Quiz
 
 ## Problemi
 
@@ -85,5 +82,3 @@ Lo psicologo Ebbinghaus studiò, alla fine dell'Ottocento, il declino della memo
 - $R$ non scende mai sotto quale valore?
 - Scrivi la definizione algebrica di $R(t)$.
 - Dopo quanto tempo la capacità di recuperare informazione scende al di sotto del 30% della capacità iniziale?
-
-### 6. 
