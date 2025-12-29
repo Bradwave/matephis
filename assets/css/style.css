@@ -24,7 +24,8 @@
   --space-lg: 2rem;
   --space-xl: 3rem;
 
-  --max-width: 48rem;
+  --max-width: 72rem; /* Widened for Sidebar Layout */
+  --content-max-width: 48rem; /* Keep text readable */
   --line-height: 1.6;
   /* Slight increase for modern feel */
 
@@ -208,6 +209,10 @@ h1 {
   font-weight: 700;
   margin-top: var(--space-xl);
   margin-bottom: var(--space-lg);
+}
+
+h1.page-title {
+  margin-top: var(--space-sm);
 }
 
 h2 {
@@ -959,6 +964,8 @@ img {
   border-radius: var(--radius);
   transition: all 0.1s ease-in-out;
   box-shadow: var(--shadow-sm);
+  margin-left: var(--space-sm);
+  margin-right: var(--space-sm);
 }
 
 .center-image {
@@ -968,7 +975,7 @@ img {
 }
 
 img:hover {
-  transform: scale(1.025);
+    box-shadow: var(--shadow-md);
 }
 
 p a[href^="http://"],
@@ -991,4 +998,84 @@ li a[href^="https://"]:after {
   background: url('data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%23B01A00%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M5%2019L19%205M5%205h14v14%22/%3E%3C/svg%3E') no-repeat center center;
   background-size: 1em 1em;
   opacity: 0.8;
+}
+
+/* Sidebar Layout */
+.page-layout {
+  display: grid;
+  grid-template-columns: 1fr 240px; /* Main content vs Sidebar */
+  gap: 4rem;
+  align-items: start;
+}
+
+.page-layout main {
+  min-width: 0; /* Prevent flex overflow */
+  max-width: var(--content-max-width); /* Prevent text from getting too wide */
+  /* margin: 0 auto;  <-- Actually, standard left align often looks better next to a sidebar, 
+     but user asked for centered. */
+}
+
+.sidebar {
+  position: sticky;
+  top: 2rem;
+  font-size: 0.9rem;
+  padding-left: 1rem; /* Visual separation */
+  border-left: 1px solid var(--border); /* Optional vertical line */
+}
+
+.sidebar-toc h4 {
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.sidebar-toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-toc li {
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.sidebar-toc a {
+  text-decoration: none;
+  color: var(--text);
+  display: block;
+  transition: color 0.2s;
+  padding-left: 10px;
+  border-left: 2px solid transparent;
+  margin-left: -10px;
+}
+
+.sidebar-toc a:hover,
+.sidebar-toc a.active {
+  color: var(--brand);
+  border-left-color: var(--brand);
+}
+
+/* Indentation for h3 headers in TOC */
+.sidebar-toc li.h3 {
+  padding-left: 1rem;
+  font-size: 0.95em;
+  opacity: 0.9;
+}
+
+/* Mobile Responsive */
+@media (max-width: 900px) {
+  .page-layout {
+    display: block;
+  }
+  
+  .sidebar {
+    display: none; /* Hide TOC on mobile */
+  }
 }
