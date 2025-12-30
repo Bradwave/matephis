@@ -7,37 +7,6 @@
   <title>Sveltia CMS</title>
   <!-- Sveltia CMS (Production) -->
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
-
-  <!-- Custom Styles / Overrides -->
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Noto+Sans+Math&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Main Site Styles (for variables) -->
-  <link rel="stylesheet" href="/assets/css/style.css">
-
-  <style>
-    :root {
-      --font: "Noto Sans Math", sans-serif;
-      --font-title: 'Space Grotesk', sans-serif;
-    }
-
-    /* Hide content initially to prevent flash of unstyled content */
-    body {
-      opacity: 0 !important;
-      transition: opacity .2s ease-in !important;
-    }
-    
-    body.loaded {
-      opacity: 1 !important;
-    }
-
-    /* Apply custom typography */
-    * {
-      font-family: var(--font) !important;
-    }
-
-    h1, h2, h3, h4, h5, h6, .uppercase {
-      font-family: var(--font-title) !important;
-    }
-  </style>
 </head>
 
 <body>
@@ -54,19 +23,16 @@
       document.head.appendChild(newLink);
     }
 
-    // Run on load: Fix favicon AND show body
+    // Run on load: Fix favicon
     window.addEventListener('load', () => {
         forceFavicon();
-        // Give a tiny buffer to Ensure styles are processed
-        setTimeout(() => {
-             document.body.classList.add('loaded');
-        }, 100);
     });
     
     // Backup: Observe head for changes to fight back if it gets overwritten
     new MutationObserver(() => {
         const icon = document.querySelector("link[rel*='icon']");
         if (icon && !icon.href.includes('icon-auth.svg')) {
+             // Only run if it's NOT our icon to prevent infinite loops if Sveltia differs
             forceFavicon();
         }
     }).observe(document.head, { childList: true, subtree: true });
