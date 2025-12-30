@@ -77,7 +77,10 @@ body {
   font-weight: var(--weight-medium);
   line-height: var(--line-height);
   color: var(--text);
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-attachment: fixed; /* Keep dots still while scrolling */
   font-size: var(--scale-base);
   -webkit-font-smoothing: antialiased;
 }
