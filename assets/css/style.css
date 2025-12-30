@@ -39,6 +39,7 @@
   --scale-xl: 1.4rem;
 
   --radius: 12px;
+  --radius-sm: 4px;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -91,7 +92,7 @@ body::before {
   left: 0;
   right: 0;
   height: 60vh; /* Fade out over top 60% of viewport height initially */
-  background-image: radial-gradient(#bfbfbf 1.2px, transparent 1.2px);
+  background-image: radial-gradient(#bfbfbf 1.1px, transparent 1.1px);
   background-size: 20px 20px;
   mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
@@ -107,8 +108,9 @@ li a[href^="https://"]:after {
   display: inline-block;
   width: 1em;
   height: 1em;
-  margin-left: 0.25em;
-  vertical-align: text-top;
+  margin-left: 0.15em;
+  margin-right: 0.1em;
+  vertical-align: baseline;
   /* Grey arrow by default */
   background: url('data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22%23888888%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M5%2019L19%205M5%205h14v14%22/%3E%3C/svg%3E') no-repeat center center;
   background-size: 1em 1em;
@@ -487,7 +489,7 @@ a:hover {
 
 /* Markdown Support */
 blockquote {
-  border-left: 4px solid var(--brand);
+  border-left: var(--radius-sm) solid var(--brand);
   padding-left: var(--space-md);
   margin: var(--space-lg) 0;
   font-style: italic;
@@ -496,7 +498,7 @@ blockquote {
   background: var(--bg2);
   padding: var(--space-md);
   padding-bottom: var(--space-xs);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 
 code {
