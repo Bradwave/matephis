@@ -599,6 +599,10 @@ em {
   font-style: italic;
 }
 
+.text-uppercase {
+  text-transform: uppercase;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
