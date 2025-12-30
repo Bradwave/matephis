@@ -24,8 +24,10 @@
   --space-lg: 2rem;
   --space-xl: 3rem;
 
-  --max-width: 72rem; /* Widened for Sidebar Layout */
-  --content-max-width: 48rem; /* Keep text readable */
+  --max-width: 72rem;
+  /* Widened for Sidebar Layout */
+  --content-max-width: 48rem;
+  /* Keep text readable */
   --line-height: 1.6;
   /* Slight increase for modern feel */
 
@@ -949,7 +951,8 @@ td {
   background-color: #d1d1d1;
   border-radius: 20px;
   border: 3px solid transparent;
-  background-clip: content-box; /* Creates padding around thumb */
+  background-clip: content-box;
+  /* Creates padding around thumb */
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -960,7 +963,8 @@ img {
   max-width: 65%;
   height: auto;
   display: block;
-  margin: var(--space-lg) 0; /* Default: Left align */
+  margin: var(--space-lg) 0;
+  /* Default: Left align */
   border-radius: var(--radius);
   transition: all 0.1s ease-in-out;
   box-shadow: var(--shadow-sm);
@@ -969,13 +973,13 @@ img {
 }
 
 .center-image {
-    margin-left: auto;
-    margin-right: auto;
-    display: block;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
 }
 
 img:hover {
-    box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md);
 }
 
 p a[href^="http://"],
@@ -1003,14 +1007,17 @@ li a[href^="https://"]:after {
 /* Sidebar Layout */
 .page-layout {
   display: grid;
-  grid-template-columns: 1fr 240px; /* Main content vs Sidebar */
+  grid-template-columns: 1fr 240px;
+  /* Main content vs Sidebar */
   gap: 4rem;
   align-items: start;
 }
 
 .page-layout main {
-  min-width: 0; /* Prevent flex overflow */
-  max-width: var(--content-max-width); /* Prevent text from getting too wide */
+  min-width: 0;
+  /* Prevent flex overflow */
+  max-width: var(--content-max-width);
+  /* Prevent text from getting too wide */
   /* margin: 0 auto;  <-- Actually, standard left align often looks better next to a sidebar, 
      but user asked for centered. */
 }
@@ -1019,8 +1026,10 @@ li a[href^="https://"]:after {
   position: sticky;
   top: 2rem;
   font-size: 0.9rem;
-  padding-left: 1rem; /* Visual separation */
-  border-left: 1px solid var(--border); /* Optional vertical line */
+  padding-left: 1rem;
+  /* Visual separation */
+  border-left: 1px solid var(--border);
+  /* Optional vertical line */
 }
 
 .sidebar-toc h4 {
@@ -1111,33 +1120,36 @@ li a[href^="https://"]:after {
 
 /* Single Column Layout (Homepage, etc) */
 .page-layout.single-column {
-    display: block;
-    max-width: var(--content-max-width);
-    margin: 0 auto;
+  display: block;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
 }
+
 .page-layout.single-column main {
-    grid-column: auto;
-    width: 100%;
+  grid-column: auto;
+  width: 100%;
 }
 
 /* Mobile Responsive */
 @media (max-width: 900px) {
   html {
-    font-size: 15px; /* Indicated increase +1px */
+    font-size: 15px;
+    /* Indicated increase +1px */
   }
 
   .page-layout {
     display: flex;
     flex-direction: column;
   }
-  
+
   .page-layout main {
     margin: 0;
     max-width: 100%;
   }
 
   .sidebar {
-    display: block; /* Show sidebar on mobile */
+    display: block;
+    /* Show sidebar on mobile */
     position: static;
     width: 100%;
     border-left: none;
@@ -1146,7 +1158,7 @@ li a[href^="https://"]:after {
     border-top: 1px solid var(--border);
     padding-top: 2rem;
   }
-  
+
   /* Hide TOC on mobile as requested, keep only Correlati */
   .sidebar-toc {
     display: none;
@@ -1156,5 +1168,10 @@ li a[href^="https://"]:after {
     border-top: none;
     margin-top: 0;
     padding-top: 0;
+  }
+
+  /* Optimize images for mobile */
+  img {
+    max-width: 85%;
   }
 }
