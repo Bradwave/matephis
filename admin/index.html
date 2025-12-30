@@ -15,44 +15,18 @@
 
   <style>
     :root {
-      --bg: #ffffff;
-      --bg2: #f7f5f5;
-      --text: #0d0d0d;
-      --brand: #B01A00;
-      --border: #e1e1e1;
       --font: "Noto Sans Math", sans-serif;
       --font-title: 'Space Grotesk', sans-serif;
-      --radius: 12px;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     /* Hide content initially to prevent flash of unstyled content */
     body {
       opacity: 0 !important;
       transition: opacity .2s ease-in !important;
-      background-color: var(--bg) !important;
-      position: relative;
     }
     
     body.loaded {
       opacity: 1 !important;
-    }
-
-    /* Dotted background matching site */
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 60vh;
-      background-image: radial-gradient(#bfbfbf 1.5px, transparent 1.5px);
-      background-size: 20px 20px;
-      mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
-      z-index: -1;
-      pointer-events: none;
     }
 
     /* Apply custom typography */
@@ -62,59 +36,6 @@
 
     h1, h2, h3, h4, h5, h6, .uppercase {
       font-family: var(--font-title) !important;
-    }
-
-    div.main {
-      background-color: transparent !important; /* Let body bg show */
-    }
-
-    /* Modern Button Style */
-    button {
-      padding: 0.75rem 1.7rem !important; /* Slightly bigger */
-      background: #000 !important; /* Black Title color */
-      color: #fff !important;
-      border: none !important;
-      border-radius: var(--radius) !important;
-      font-family: var(--font-title) !important;
-      font-weight: 600 !important;
-      letter-spacing: 0.025em !important;
-      font-size: 0.95rem !important;
-      cursor: pointer !important;
-      box-shadow: var(--shadow-sm) !important;
-      transition: all 0.2s ease !important;
-      transform: none;
-    }
-
-    button:hover {
-      background: var(--brand) !important;
-      color: #fff !important;
-      transform: translateY(-2px) !important;
-      box-shadow: var(--shadow-md) !important;
-    }
-
-    /* Specific Sveltia overrides if possible (login screen) */
-    /* Target inputs */
-    input[type="text"], input[type="email"], input[type="password"] {
-       border-radius: var(--radius) !important;
-       border: 2px solid var(--border) !important;
-       padding: 0.8rem !important;
-       background: rgba(255,255,255,0.8) !important;
-    }
-    
-    input:focus {
-        border-color: var(--brand) !important;
-        outline: none !important;
-    }
-
-    /* Links */
-    a {
-      color: var(--text) !important;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-
-    a:hover {
-      color: var(--brand) !important;
     }
   </style>
 </head>
