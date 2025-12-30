@@ -20,25 +20,18 @@
         align-items: center;
         justify-content: center;
         flex-direction: column; /* Stack image and caption vertically */
+        user-select: none;
+        overflow: hidden;
     }
-
-
 
     .lightbox-content {
         margin: auto;
-        display: block;
-        max-width: 90%;
-        max-height: 85vh;
-
-        margin: auto;
+        margin-bottom: 5px;
         display: block;
         max-width: 90%;
         max-height: 85vh;
         border-radius: 0;
         box-shadow: none;
-
-
-
     }
 
     .lightbox-close {
@@ -110,7 +103,7 @@
         closeBtn.onclick = closeLightbox;
 
         // Close on clicking outside the image
-        lightbox.onclick = (e) => {
+        lightbox.onpointerdown = (e) => {
             if (e.target !== lightboxImg) {
                 closeLightbox();
             }
