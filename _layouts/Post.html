@@ -9,9 +9,6 @@
     {%- if site.og_image -%}
     <meta property="og:image" content="{{ site.baseurl }}{{ site.og_image }}">
     {%- endif -%}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     {%- if page.title -%}
     <meta content="{{ page.title }}" property="og:title">
     <meta content="article" property="og:type">
@@ -30,9 +27,9 @@
     <link rel="icon" href="{{ site.baseurl }}{{ site.favicon }}" type="image/svg+xml" sizes="any" />
     {%- endif -%}
     {%- if site.css_file -%}
-    <link href="{{ site.baseurl }}{{ site.css_file }}" rel="stylesheet" media="all" class="default" />
+    <link href="{{ site.baseurl }}{{ site.css_file }}?v=2.0" rel="stylesheet" media="all" class="default" />
     {%- else -%}
-    <link href="{{ site.baseurl }}/assets/css/style.css" rel="stylesheet" media="all" class="default" />
+    <link href="{{ site.baseurl }}/assets/css/style.css?v=2.0" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
     {%- if site.mathjax -%}
     <script>
