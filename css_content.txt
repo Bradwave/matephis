@@ -1035,22 +1035,14 @@ img {
   margin-right: var(--space-sm);
 }
 
-/* Markdown Caption Style */
-img + em {
-  display: block;
-  text-align: left;
+.image-caption {
+  text-align: center;
   font-size: 0.85rem;
   color: #888;
-  font-family: var(--font-title);
-  font-style: normal;
-  margin-top: -1.5rem;
+  margin-top: -1.5rem; /* Pull it closer to image, counteracting image margin */
   margin-bottom: var(--space-lg);
-  margin-left: var(--space-sm);
-  margin-right: var(--space-sm);
-}
-
-img.center-image + em {
-  text-align: center;
+  font-family: var(--font-title);
+  display: block;
 }
 
 .center-image {

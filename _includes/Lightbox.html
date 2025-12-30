@@ -16,43 +16,40 @@
         width: 100%;
         height: 100%;
         overflow: hidden; /* Prevent scrolling behind */
-        background-color: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(5px);
+        background-color: rgba(255, 255, 255, 0.95);
         align-items: center;
         justify-content: center;
         flex-direction: column; /* Stack image and caption vertically */
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
 
-    .lightbox.show {
-        opacity: 1;
-    }
+
 
     .lightbox-content {
         margin: auto;
         display: block;
         max-width: 90%;
         max-height: 85vh;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transform: scale(0.98);
-        transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1);
-    }
 
-    .lightbox.show .lightbox-content {
-        transform: scale(1);
+        margin: auto;
+        display: block;
+        max-width: 90%;
+        max-height: 85vh;
+        border-radius: 0;
+        box-shadow: none;
+
+
+
     }
 
     .lightbox-close {
         position: absolute;
-        top: 20px;
-        right: 35px;
+        top: 10px;
+        right: 15px;
         color: #333;
-        font-size: 40px;
+        font-size: 30px;
         font-weight: 300;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: color 0s;
         z-index: 10000;
         line-height: 1;
     }
@@ -67,10 +64,10 @@
         width: 80%;
         max-width: 700px;
         text-align: center;
-        color: #666; /* Softer text */
+        color: #888; /* Softer text */
         padding: 5px 0;
         height: auto;
-        margin-top: 8px; /* Reduced gap */
+        margin-top: 4px; /* Reduced gap */
         font-family: var(--font-title);
         font-size: 0.9rem;
         letter-spacing: 0.02em;
@@ -96,22 +93,18 @@
         images.forEach(img => {
             img.addEventListener('click', () => {
                 lightbox.style.display = "flex";
-                // Trigger reflow for transition
-                requestAnimationFrame(() => {
-                    lightbox.classList.add('show');
-                });
                 
                 lightboxImg.src = img.src;
-                captionText.innerHTML = img.alt || "";
+                // Use alt text as caption, or filename if alt is empty (simulating 'image name')
+                // User requested to use image name as caption (small and grey)
+                const imageName = img.src.split('/').pop().split('.')[0];
+                captionText.innerHTML = imageName; // Always showing image name as requested
             });
         });
 
         // Close functions
         const closeLightbox = () => {
-            lightbox.classList.remove('show');
-            setTimeout(() => {
-                lightbox.style.display = "none";
-            }, 300);
+            lightbox.style.display = "none";
         };
 
         closeBtn.onclick = closeLightbox;
