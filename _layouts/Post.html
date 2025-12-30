@@ -60,8 +60,11 @@
         <div>
             {%- include Nav.html -%}
 
+            {%- assign show_toc = true -%}
+            {%- if page.toc == false -%}{%- assign show_toc = false -%}{%- endif -%}
+            
             {%- assign show_sidebar = true -%}
-            {%- if page.permalink == "/" or page.permalink == "/blog" or page.permalink == "/notes" or page.toc == false -%}
+            {%- if page.permalink == "/" or page.permalink == "/blog" or page.permalink == "/notes" -%}
                 {%- assign show_sidebar = false -%}
             {%- endif -%}
 
@@ -130,15 +133,17 @@
                     {%- endif -%}
                 </main>
 
-                <!-- Sidebar TOC -->
+                <!-- Sidebar TOC & Related -->
                 {% if show_sidebar %}
                 <aside class="sidebar">
+                    {% if show_toc %}
                     <div class="sidebar-toc">
                         <h4>Indice</h4>
                         <ul id="toc-list">
                             <!-- JS will populate this -->
                         </ul>
                     </div>
+                    {% endif %}
 
                     <!-- Related Pages by Tag -->
                     {% assign excluded_tags = "attività,esercizi,facsimile" | split: "," %}
@@ -193,7 +198,15 @@
 
                     const headers = document.querySelectorAll('main h2, main h3');
                     if (headers.length === 0) {
-                        document.querySelector('.sidebar').style.display = 'none';
+                        const tocContainer = document.querySelector('.sidebar-toc');
+                        if (tocContainer) tocContainer.style.display = 'none';
+                        
+                        const relatedContainer = document.querySelector('.sidebar-related');
+                        if (relatedContainer) {
+                            relatedContainer.style.marginTop = '0';
+                            relatedContainer.style.paddingTop = '0';
+                            relatedContainer.style.borderTop = 'none';
+                        }
                         return;
                     }
 
