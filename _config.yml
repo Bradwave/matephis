@@ -35,7 +35,7 @@ preferences:
     enabled: true
 
 # Site Configuration
-title: "MATEPHIS"
+title: "Matephis"
 heading: " Mate e fisica"
 description: "Un blog di matematica e fisica"
 url: "https://matephis.com"
