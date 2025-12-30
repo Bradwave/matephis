@@ -78,11 +78,25 @@ body {
   line-height: var(--line-height);
   color: var(--text);
   background-color: var(--bg);
-  background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-attachment: fixed; /* Keep dots still while scrolling */
   font-size: var(--scale-base);
   -webkit-font-smoothing: antialiased;
+  position: relative; /* Ensure psuedo-element positions relative to body */
+}
+
+/* Dotted background using pseudo-element to fade out */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60vh; /* Fade out over top 60% of viewport height initially */
+  background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .container {
