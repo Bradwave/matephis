@@ -1109,6 +1109,17 @@ li a[href^="https://"]:after {
   color: var(--brand);
 }
 
+/* Single Column Layout (Homepage, etc) */
+.page-layout.single-column {
+    display: block;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+}
+.page-layout.single-column main {
+    grid-column: auto;
+    width: 100%;
+}
+
 /* Mobile Responsive */
 @media (max-width: 900px) {
   .page-layout {

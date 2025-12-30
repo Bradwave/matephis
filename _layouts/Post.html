@@ -60,7 +60,12 @@
         <div>
             {%- include Nav.html -%}
 
-            <div class="page-layout">
+            {%- assign show_sidebar = true -%}
+            {%- if page.permalink == "/" or page.permalink == "/blog" or page.permalink == "/notes" or page.toc == false -%}
+                {%- assign show_sidebar = false -%}
+            {%- endif -%}
+
+            <div class="page-layout {% unless show_sidebar %}single-column{% endunless %}">
                 <main>
                     <!-- Homepage Layout-->
                     {%- if page.permalink == "/" -%}
@@ -126,7 +131,7 @@
                 </main>
 
                 <!-- Sidebar TOC -->
-                {% unless page.permalink == "/" or page.permalink == "/blog" or page.permalink == "/notes" or page.toc == false %}
+                {% if show_sidebar %}
                 <aside class="sidebar">
                     <div class="sidebar-toc">
                         <h4>Indice</h4>
@@ -174,7 +179,7 @@
                         </ul>
                     </div>
                 </aside>
-                {% endunless %}
+                {% endif %}
             </div>
 
             {%- include Footer.html -%}
