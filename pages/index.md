@@ -4,7 +4,7 @@
 
 layout: Post
 permalink: /
-title: matephis
+title: Matephis
 ---
 
 Un blog di matematica e fisica, itinerari didattici, elucubrazioni, vie non tracciate.
