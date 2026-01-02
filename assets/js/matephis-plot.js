@@ -30,24 +30,50 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     document.head.appendChild(style);
 
-    const plots = document.querySelectorAll(".matephis-plot");
-    plots.forEach(container => {
-        try {
-            if (!container.getAttribute('data-processed')) {
-                new MatephisPlot(container);
-                container.setAttribute('data-processed', 'true');
-            }
-        } catch (e) {
-            console.error(e);
-            container.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">Error: ${e.message}</div>`;
-        }
-    });
+    MatephisPlot.init();
 });
 
 class MatephisPlot {
-    constructor(container) {
+    static init() {
+        // 1. Explicit Divs
+        const plots = document.querySelectorAll('.matephis-plot');
+        plots.forEach(container => {
+            try {
+                if (container.getAttribute('data-processed')) return;
+                const source = container.textContent;
+                container.innerHTML = ""; 
+                new MatephisPlot(container, source);
+                container.setAttribute('data-processed', 'true');
+            } catch (e) { 
+                console.error("Plot Error", e); 
+                container.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">Error: ${e.message}</div>`;
+            }
+        });
+
+        // 2. Markdown Code Blocks
+        const codeBlocks = document.querySelectorAll('code.language-matephis');
+        codeBlocks.forEach(code => {
+            try {
+                const source = code.textContent;
+                let target = code.closest('div.language-matephis') || code.closest('pre');
+                if (!target) target = code.parentElement;
+
+                if (target.getAttribute('data-processed')) return;
+
+                const container = document.createElement('div');
+                container.className = 'matephis-plot';
+                target.parentNode.insertBefore(container, target);
+                target.style.display = 'none';
+                
+                new MatephisPlot(container, source);
+                target.setAttribute('data-processed', 'true'); 
+            } catch (e) { console.error("Code Block Plot Error", e); }
+        });
+    }
+
+    constructor(container, source) {
         this.container = container;
-        this.config = JSON.parse(container.innerText.trim());
+        this.config = JSON.parse(source);
         this.container.innerHTML = ""; // Clear JSON
 
         // Wrap
