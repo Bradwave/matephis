@@ -3,34 +3,6 @@
  */
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.addEventListener("DOMContentLoaded", () => {
-        // Inject Custom CSS for Sliders
-        const style = document.createElement('style');
-        style.innerHTML = `
-        .matephis-plot-container { display:flex; flex-direction:column; align-items:center; margin: 1rem 0; }
-        .matephis-plot-controls { width: 100%; max-width: 600px; padding: 12px 16px; background: #fff; border-top: 1px solid #f0f0f0; display:flex; flex-direction:column; gap:8px; }
-        .matephis-slider-row { display: flex; align-items: center; gap: 12px; font-family: var(--font-code, monospace); font-size: 0.85rem; }
-        
-        /* Slider Style inspired by FTFilter */
-        .matephis-slider-row input[type=range] {
-            -webkit-appearance: none; appearance: none;
-            flex-grow: 1; height: 4px; background: #e0e0e0; border-radius: 2px; outline: none; cursor: pointer;
-        }
-        .matephis-slider-row input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
-            background: var(--brand, #B01A00); cursor: pointer; transition: transform 0.1s;
-            margin-top: 0; /* Align adjustment if needed */
-        }
-        .matephis-slider-row input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-        .matephis-slider-row input[type=range]::-moz-range-thumb {
-            width: 14px; height: 14px; border-radius: 50%; border: none;
-            background: var(--brand, #B01A00); cursor: pointer; transition: transform 0.1s;
-        }
-        .matephis-slider-row input[type=range]::-moz-range-thumb:hover { transform: scale(1.2); }
-        
-        .matephis-slider-val { min-width: 4ch; text-align: right; color: var(--brand, #B01A00); font-weight:bold; }
-    `;
-        document.head.appendChild(style);
-
         MatephisPlot.init();
     });
 }
@@ -136,10 +108,21 @@ class MatephisPlot {
         this.labelGroup = document.createElementNS(ns, "g");
         this.legendGroup = document.createElementNS(ns, "g");
 
+        // Layer Order
+        // Default: Numbers/Axes BELOW Data
+        // Option: Numbers/Axes ON TOP of Data (renderOrder: "numbers-top")
         this.svg.appendChild(this.bgGroup);
         this.svg.appendChild(this.gridGroup);
-        this.svg.appendChild(this.dataGroup);
-        this.svg.appendChild(this.axesGroup);
+
+        if (this.config.renderOrder === 'numbers-top') {
+            this.svg.appendChild(this.dataGroup);
+            this.svg.appendChild(this.axesGroup);
+        } else {
+            // Default: Numbers Below
+            this.svg.appendChild(this.axesGroup);
+            this.svg.appendChild(this.dataGroup);
+        }
+
         this.svg.appendChild(this.labelGroup);
         this.svg.appendChild(this.legendGroup);
 
@@ -603,6 +586,5 @@ class MatephisPlot {
         if (lb && img) { lb.style.display = "flex"; img.src = url; }
     }
 }
-
 
 if (typeof module !== 'undefined') module.exports = MatephisPlot;

@@ -1,3 +1,30 @@
+/*
+  Matephis Website Styles
+  
+  TABLE OF CONTENTS
+  -----------------
+  1.  Fonts
+  2.  Variables
+  3.  Base Styles
+  4.  Layout & Container
+  5.  Navigation
+  6.  Typography
+  7.  Components
+  8.  Markdown Elements
+  9.  Tables
+  10. Search System
+  11. Feed & Lists
+  12. Tooltips & Difficulty Tags
+  13. Link Previews
+  14. Scrollbar
+  15. Images
+  16. Sidebar Layout
+  17. Mobile & Responsive
+  18. Matephis Plot Styling
+*/
+
+/* --- 1. Fonts --- */
+
 @font-face {
   font-family: 'Fira Code';
   src: url('../fonts/FiraCode-VariableFont_wght.ttf') format('truetype');
@@ -18,6 +45,8 @@
   font-weight: 300 700;
   font-display: swap;
 }
+
+/* --- 2. Variables --- */
 
 :root {
   --bg: #ffffff;
@@ -72,6 +101,9 @@
   --brand: #838383;
   --border: #e8e8e8;
 }
+
+
+/* --- 3. Base Styles --- */
 
 
 ::selection {
@@ -150,6 +182,8 @@ li a[href^="https://"]:hover:after {
   opacity: 1;
 }
 
+/* --- 4. Layout & Container --- */
+
 .container {
   width: 100%;
   min-height: 100vh;
@@ -165,6 +199,8 @@ li a[href^="https://"]:hover:after {
   margin: 0 auto;
   padding: 0 var(--space-xl) var(--space-xl);
 }
+
+/* --- 5. Navigation --- */
 
 .nav {
   display: flex;
@@ -267,6 +303,8 @@ li a[href^="https://"]:hover:after {
   }
 }
 
+/* --- 6. Typography --- */
+
 h1,
 h2,
 h3,
@@ -332,6 +370,8 @@ a:hover {
   color: var(--brand);
   text-decoration-color: var(--brand);
 }
+
+/* --- 7. Components --- */
 
 .btn {
   padding: 0.75rem 1.5rem;
@@ -512,6 +552,8 @@ a:hover {
 }
 
 /* Markdown Support */
+/* --- 8. Markdown Elements --- */
+
 blockquote {
   border-left: var(--radius-sm) solid var(--brand);
   padding-left: var(--space-md);
@@ -627,6 +669,8 @@ em {
   text-transform: uppercase;
 }
 
+/* --- 9. Tables --- */
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -657,6 +701,8 @@ td {
 }
 
 /* Search styles - modernized */
+/* --- 10. Search System --- */
+
 .search-container {
   margin-bottom: var(--space-lg);
   position: relative;
@@ -778,6 +824,8 @@ td {
 }
 
 /* Feed styles */
+/* --- 11. Feed & Lists --- */
+
 .notelist-feed {
   border-bottom: 1px solid var(--border);
   padding: 0.5rem 0;
@@ -852,6 +900,8 @@ td {
 }
 
 /* Tooltip styles */
+/* --- 12. Tooltips & Difficulty Tags --- */
+
 .tooltip {
   position: relative;
   display: inline;
@@ -1020,6 +1070,8 @@ td {
   max-width: 100%;
 }
 
+/* --- 13. Link Previews --- */
+
 .stale-link {
   color: var(--text) !important;
   opacity: 0.6;
@@ -1110,6 +1162,8 @@ td {
 }
 
 /* Scrollbar Styling */
+/* --- 14. Scrollbar --- */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -1130,6 +1184,8 @@ td {
 ::-webkit-scrollbar-thumb:hover {
   background-color: #a8a8a8;
 }
+
+/* --- 15. Images --- */
 
 img {
   max-width: 65%;
@@ -1180,6 +1236,8 @@ li a[href^="https://"] {
 }
 
 /* Sidebar Layout */
+/* --- 16. Sidebar Layout --- */
+
 .page-layout {
   display: grid;
   grid-template-columns: 1fr 240px;
@@ -1306,6 +1364,8 @@ li a[href^="https://"] {
 }
 
 /* Mobile Responsive */
+/* --- 17. Mobile & Responsive --- */
+
 @media (max-width: 900px) {
   html {
     font-size: 15px;
@@ -1346,7 +1406,81 @@ li a[href^="https://"] {
   }
 
   /* Optimize images for mobile */
-  img {
-    max-width: 85%;
-  }
+
+}
+
+/* --- 18. Matephis Plot Styling --- */
+
+.matephis-plot-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.matephis-plot-controls {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.matephis-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-code, monospace);
+  font-size: 0.85rem;
+}
+
+.matephis-slider-row input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex-grow: 1;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.matephis-slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--brand, #B01A00);
+  cursor: pointer;
+  transition: transform 0.1s;
+  margin-top: 0;
+  /* Align adjustment if needed */
+}
+
+.matephis-slider-row input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.matephis-slider-row input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: var(--brand, #B01A00);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.matephis-slider-row input[type=range]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+.matephis-slider-val {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--brand, #B01A00);
+  font-weight: bold;
 }

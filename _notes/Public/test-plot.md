@@ -167,7 +167,7 @@ Definisci parametri in `params` per creare slider.
   "ylim": [-2, 2],
   "theme": "brand",
   "params": {
-    "k": { "min": 0.5, "max": 5, "step": 0.1, "val": 1 },
+    "k": { "min": 0.5, "max": 5, "step": 0.01, "val": 1 },
     "f": { "min": 0, "max": 6.28, "step": 0.1, "val": 0 }
   },
   "data": [
