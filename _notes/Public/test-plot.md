@@ -419,3 +419,47 @@ Opzioni: `fontSize` (es. "16px"), `cssWidth` (es. "80%", "600px"), `align` ("cen
   "data": [{"fn": "sin(x)"}]
 }
 ```
+
+### Auto Steps
+
+Se `xStep` o `yStep` non vengono specificati, il sistema calcolerà automaticamente un passo ottimale (1, 2, 5, 10...) basandosi sui limiti e sulle dimensioni del grafico.
+
+```matephis
+{
+  "xlim": [-23, 23],
+  "ylim": [-10, 50],
+  "aspectRatio": "2:1",
+  "fullWidth": true,
+  "data": [{"fn": "x^2/10", "label": "Auto Step Demo"}]
+}
+```
+
+### Auto Steps (Zoomed In)
+
+Funziona anche con intervalli molto piccoli (submultipli). Qui l'intervallo è ~0.02.
+
+```matephis
+{
+  "xlim": [0.01, 0.03],
+  "ylim": [-0.006, 0.006],
+  "fullWidth": true,
+  "aspectRatio": "3:1",
+  "data": [{"fn": "sin(100*x) * 0.004", "label": "High Freq"}]
+}
+```
+
+### Allineamento (Liste Nidificate)
+
+Per allineare un grafico con la lista padre (uscendo dall'indentazione), usa `marginLeft` negativo.
+
+1.  Livello 1
+    *   Livello 2
+        ```matephis
+        {
+          "xlim": [-5, 5],
+          "ylim": [-2, 2],
+          "width": 300,
+          "marginLeft": "-25px",
+          "data": [{"fn": "cos(x)"}]
+        }
+        ```

@@ -70,12 +70,20 @@ class MatephisPlot {
             this.wrapper.style.width = "100%"; // Ensure it scales
         }
 
-        // Alignment
-        if (this.config.align === 'center') {
+        // Alignment & Margins
+        if (this.config.marginLeft !== undefined) {
+            this.wrapper.style.marginLeft = this.config.marginLeft;
+        } else if (this.config.align === 'center') {
             this.wrapper.style.marginLeft = "auto";
-            this.wrapper.style.marginRight = "auto";
-        } else if (this.config.align === 'left') {
+        } else {
             this.wrapper.style.marginLeft = "0";
+        }
+
+        if (this.config.marginRight !== undefined) {
+            this.wrapper.style.marginRight = this.config.marginRight;
+        } else if (this.config.align === 'center') {
+            this.wrapper.style.marginRight = "auto";
+        } else {
             this.wrapper.style.marginRight = "auto";
         }
         // Default (from CSS) matches images (usually left with small margin)
@@ -97,7 +105,7 @@ class MatephisPlot {
         this.draw();
 
         // Lightbox
-        this.svg.addEventListener('click', () => this.openLightbox());
+        this.svg.onpointerdown = () => this.openLightbox();
     }
 
     initSVG() {
@@ -298,6 +306,28 @@ class MatephisPlot {
         const gridColor = "#808080"; // Darker Grey (was #c0c0c0)
         const axisColor = "#333";
 
+        // Auto Step Calculation
+        const calculateNiceStep = (range, pixelSize) => {
+            const minPxPerStep = 100; // Increased to favor cleaner plots (default step 5 for range 20)
+            const targetSteps = Math.max(2, pixelSize / minPxPerStep);
+            const rawStep = range / targetSteps;
+
+            // Magnitude
+            const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+            const normalized = rawStep / mag;
+
+            let step;
+            if (normalized < 1.5) step = 1 * mag;
+            else if (normalized < 3) step = 2 * mag;
+            else if (normalized < 7) step = 5 * mag;
+            else step = 10 * mag;
+
+            return step;
+        };
+
+        const autoXStep = calculateNiceStep(xMax - xMin, this.width - 2 * this.padding);
+        const autoYStep = calculateNiceStep(yMax - yMin, this.height - 2 * this.padding);
+
         // Step Parsers
         const parseStep = (val, def) => {
             if (val === undefined) return { val: def, isPi: false };
@@ -312,15 +342,27 @@ class MatephisPlot {
             return { val: num, isPi: isPi };
         };
 
-        const xStepObj = parseStep(this.config.xStep, 5);
-        const yStepObj = parseStep(this.config.yStep, 5);
+        const xStepObj = parseStep(this.config.xStep, autoXStep);
+        const yStepObj = parseStep(this.config.yStep, autoYStep);
 
         // Number Steps (Defaults to Grid Step if not present)
         const xNumStepObj = this.config.xNumberStep !== undefined ? parseStep(this.config.xNumberStep, xStepObj.val) : xStepObj;
         const yNumStepObj = this.config.yNumberStep !== undefined ? parseStep(this.config.yNumberStep, yStepObj.val) : yStepObj;
 
-        const formatTick = (val, isPi) => {
-            if (!isPi) return parseFloat(val.toFixed(10));
+        const formatTick = (val, isPi, step) => {
+            if (!isPi) {
+                // Determine precision based on step
+                let s = step || 1;
+                let p = 0;
+                let e = 1;
+                // Limit precision to 10 to avoid infinite loops on irrational steps
+                while (Math.abs(Math.round(s * e) / e - s) > 1e-9 && p < 10) { 
+                    e *= 10; 
+                    p++; 
+                }
+                // Format
+                return parseFloat(val.toFixed(p));
+            }
             const v = val / Math.PI;
             if (Math.abs(v) < 1e-6) return "0";
             if (Math.abs(v - 1) < 1e-6) return "π";
@@ -354,9 +396,9 @@ class MatephisPlot {
         const mainOpacity = (this.config.gridOpacity !== undefined) ? this.config.gridOpacity : 0.5;
         this.secondaryGridGroup.setAttribute("opacity", (this.config.secondaryGridOpacity !== undefined) ? this.config.secondaryGridOpacity : mainOpacity * 0.5);
 
-        // Secondary defaults to 1 if main is 5, otherwise main/5
-        const defaultSecX = (xStep === 5) ? 1 : xStep / 5;
-        const defaultSecY = (yStep === 5) ? 1 : yStep / 5;
+        // Secondary defaults to 1/5th of the main step
+        const defaultSecX = xStep / 5;
+        const defaultSecY = yStep / 5;
 
         if (this.config.xStepSecondary !== undefined || defaultSecX) {
             const sxStepObj = parseStep(this.config.xStepSecondary, defaultSecX);
@@ -400,22 +442,18 @@ class MatephisPlot {
         const xNumStep = xNumStepObj.val;
         if (this.config.showXNumbers !== false) {
             // Extend scan range slightly to catch border items
-            const startNX = Math.ceil((xMin - 0.1) / xNumStep) * xNumStep;
-            for (let x = startNX; x <= xMax + 0.1; x += xNumStep) {
+            const startNX = Math.ceil((xMin - xNumStep * 0.5) / xNumStep) * xNumStep;
+            for (let x = startNX; x <= xMax + xNumStep * 0.5; x += xNumStep) {
                 if (Math.abs(x) < 1e-9) continue; // Skip zero
 
                 let px = mapX(x);
                 let align = "middle";
 
-                // Clamping Logic
-                if (Math.abs(x - xMin) <= 0.1) {
+                // Clamping Logic (Visual - 10px threshold)
+                if (Math.abs(px - this.padding) < 10) {
                     px = this.padding;
-                    align = "start"; // Align text to right of tick (inside) ? Or start at padding
-                    // Standard "start" aligns rightwards from x.
-                    // But numbers are centered usually. 
-                    // Let's force it to padding + nudge?
-                    // Actually maybe "start" is good if it's at left edge.
-                } else if (Math.abs(x - xMax) <= 0.1) {
+                    align = "start"; 
+                } else if (Math.abs(px - (this.width - this.padding)) < 10) {
                     px = this.width - this.padding;
                     align = "end";
                 }
@@ -431,7 +469,7 @@ class MatephisPlot {
                     px -= fsVal * 0.3;
                 }
 
-                this.text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi), align, "top", "#666", "normal", this.numbersGroup, fsVal);
+                this.text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -452,28 +490,23 @@ class MatephisPlot {
         // Y Numbers (Independent Loop)
         const yNumStep = yNumStepObj.val;
         if (this.config.showYNumbers !== false) {
-            const startNY = Math.ceil((yMin - 0.1) / yNumStep) * yNumStep;
-            for (let y = startNY; y <= yMax + 0.1; y += yNumStep) {
+            const startNY = Math.ceil((yMin - yNumStep * 0.5) / yNumStep) * yNumStep;
+            for (let y = startNY; y <= yMax + yNumStep * 0.5; y += yNumStep) {
                 if (Math.abs(y) < 1e-9) continue;
 
                 let py = mapY(y);
                 let baseline = "middle";
 
-                // Clamping Y (Inverted: Max Y is Top (low py), Min Y is Bottom (high py))
-                if (Math.abs(y - yMin) <= 0.1) {
-                    py = this.height - this.padding;
-                    baseline = "auto"; // Bottom? "auto" is usually alphabetic. SVG uses "text-after-edge" or similar?
-                    // Let's use coordinate shift.
-                    py -= 5;
-                    // Or just standard middle but shifted?
-                } else if (Math.abs(y - yMax) <= 0.1) {
-                    py = this.padding;
-                    // Top edge
-                    py += 5;
+                // Clamping Y (Visual - 10px threshold)
+                if (Math.abs(py - (this.height - this.padding)) < 10) {
+                     py = this.height - this.padding - 5;
+                     baseline = "auto"; 
+                } else if (Math.abs(py - this.padding) < 10) {
+                    py = this.padding + 5;
                 }
 
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this.text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi), "end", baseline, "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
+                this.text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
             }
         }
         

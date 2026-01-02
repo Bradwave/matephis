@@ -88,7 +88,7 @@
         const images = document.querySelectorAll('img:not(.logo):not(.icon):not(.lightbox-content)');
 
         images.forEach(img => {
-            img.addEventListener('click', () => {
+            img.onpointerdown = () => {
                 lightbox.style.display = "flex";
                 
                 lightboxImg.src = img.src;
@@ -96,7 +96,7 @@
                 // User requested to use image name as caption (small and grey)
                 const imageName = img.src.split('/').pop().split('.')[0];
                 captionText.innerHTML = imageName; // Always showing image name as requested
-            });
+            };
         });
 
         // Close functions

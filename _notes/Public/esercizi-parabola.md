@@ -30,13 +30,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. $y = x^2 + 3x - 2$
 	3. $y = -x^2 - 3x - 2$
 	4. $y = x^2 - 3x + 2$
-
+	   
 ```matephis
 {
   "data": [
-    { "fn": "-x^2+3x-2", "color": "accent1" },
+    { "fn": "-x^2+3x-2", "color": "brand1" },
     { "fn": "x^2+3x-2", "color": "grayscale1"},
-    { "fn": "-x^2-3x-2", "color": "accent1", "opacity": 0.6},
+    { "fn": "-x^2-3x-2", "color": "brand1", "opacity": 0.6},
     { "fn": "x^2-3x+2", "color": "grayscale1", "opacity": 0.6}
   ]
 }
@@ -44,12 +44,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 
 1. ![](/images/parabola-2.svg)
-
+2.  <div>|Test1</div>
+	1. <div>|Test2</div>
 ## Quesiti
 
  1. **[F]** Abbina ognuna delle quattro parabole al fenomeno che descrivono. **Nota:** nel grafico del fenomeno *"A che varia in funzione di B"*, A è tipicamente rappresentato sull'asse delle ordinate e B sull'asse delle ascisse.
 	1. La posizione verticale (espressa in m) di un pallone lanciato verso l'alto in funzione del tempo (espresso in s).
-	2. La posizione verticale (espressa in m) di un pallone lanciato in orizzontale in funzione del temoi (espresso in s).
+	2. La posizione verticale (espressa in m) di un pallone lanciato in orizzontale in funzione del tempo (espresso in s).
 	3. Il costo mensile di produzione di un'azienda (espresso in migliaia di euro) in funzione del numero di unità prodotte (espresso in migliaia di unità).
 	4. Lo spazio di frenata di un'automobile (espresso in m) in funzione della velocità (espressa in m/s).
 	![parabola-3]({{ site.baseurl }}/images/parabola-3.svg)
