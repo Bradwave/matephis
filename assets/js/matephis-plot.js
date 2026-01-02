@@ -1,10 +1,11 @@
 /**
  * Matephis Plotting Library v2
  */
-document.addEventListener("DOMContentLoaded", () => {
-    // Inject Custom CSS for Sliders
-    const style = document.createElement('style');
-    style.innerHTML = `
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    document.addEventListener("DOMContentLoaded", () => {
+        // Inject Custom CSS for Sliders
+        const style = document.createElement('style');
+        style.innerHTML = `
         .matephis-plot-container { display:flex; flex-direction:column; align-items:center; margin: 1rem 0; }
         .matephis-plot-controls { width: 100%; max-width: 600px; padding: 12px 16px; background: #fff; border-top: 1px solid #f0f0f0; display:flex; flex-direction:column; gap:8px; }
         .matephis-slider-row { display: flex; align-items: center; gap: 12px; font-family: var(--font-code, monospace); font-size: 0.85rem; }
@@ -28,10 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         .matephis-slider-val { min-width: 4ch; text-align: right; color: var(--brand, #B01A00); font-weight:bold; }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
 
-    MatephisPlot.init();
-});
+        MatephisPlot.init();
+    });
+}
 
 class MatephisPlot {
     static init() {
@@ -602,3 +604,5 @@ class MatephisPlot {
     }
 }
 
+
+if (typeof module !== 'undefined') module.exports = MatephisPlot;
