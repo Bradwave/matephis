@@ -1,17 +1,80 @@
 ---
-title: Test Nuove Funzionalità Grafici
+title: Matephis Plotting System
 feed: show
 tags:
   - test
+  - grafici
 ---
 <link rel="stylesheet" href="/assets/css/syntax.css">
 
-# Matephis Plotting System v2
+Questa pagina serve come test e documentazione per il sistema di grafici generati via codice (JSON). Tutti i grafici sono renderizzati da `matephis-plot.js`.
 
-Questa pagina serve come test e documentazione per il sistema di grafici generati via codice (JSON).
-Tutti i grafici sono renderizzati da `matephis-plot.js`.
+## Documentazione opzioni JSON
 
-## 0. Obsidian Live Preview Check
+Ecco una lista completa delle opzioni disponibili per configurare i grafici:
+
+### Globali
+
+| Opzione | Tipo | Default | Descrizione |
+| :--- | :--- | :--- | :--- |
+| `width` | Number | 600 | Larghezza del grafico in pixel. |
+| `height` | Number | 400 | Altezza del grafico in pixel. |
+| `xlim` | `[min, max]` | `[-10, 10]` | Limiti dell'asse X. |
+| `ylim` | `[min, max]` | `[-10, 10]` | Limiti dell'asse Y. |
+| `axisLabels` | `[x, y]` | `null` | Etichette per gli assi (es. `["t (s)", "v (m/s)"]`). |
+| `theme` | String | `"default"` | Tema colori. Opzioni: `"grayscale"`, `"brand"`, `"default"`. |
+| `legend` | Boolean | `false` | Se `true`, mostra la legenda in alto a destra. |
+| `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri/assi sopra i grafici. |
+| `labelWeight` | String | `"normal"` | Peso font etichette (`"bold"`, `"normal"`, `"300"`, ecc.). |
+
+### Griglia e assi
+
+| Opzione | Tipo | Default | Descrizione |
+| :--- | :--- | :--- | :--- |
+| `grid` | Boolean | `true` | Se `false`, nasconde completamente la griglia. |
+| `gridOpacity` | Number | `0.5` | Opacità della griglia principale. |
+| `xStep` | Number/String | `1` | Passo griglia X. Accetta `"PI"`, `"PI/2"`. |
+| `yStep` | Number/String | `1` | Passo griglia Y. |
+| `xStepSecondary` | Number | `null` | Passo griglia secondaria X. |
+| `yStepSecondary` | Number | `null` | Passo griglia secondaria Y. |
+| `secondaryGridOpacity` | Number | `gridOpacity/2` | Opacità griglia secondaria. |
+| `axisArrows` | Boolean | `false` | Se `true`, disegna frecce alle estremità positive degli assi. |
+| `showXTicks` | Boolean | `false` | Mostra tacche sull'asse X. |
+| `showYTicks` | Boolean | `false` | Mostra tacche sull'asse Y. |
+| `showXNumbers` | Boolean | `true` | Mostra numeri sull'asse X. |
+| `showYNumbers` | Boolean | `true` | Mostra numeri sull'asse Y. |
+| `equalAspect` | Boolean | `false` | Se `true`, forza proporzioni 1:1 (utile per cerchi). |
+
+### Data Items (`data: [...]`)
+
+Ogni oggetto nell'array `data` può avere:
+
+| Proprietà | Tipo | Descrizione |
+| :--- | :--- | :--- |
+| `fn` | String | Funzione esplicita `y = f(x)` (es. `"sin(x)"`). |
+| `implicit` | String | Equazione implicita (es. `"x^2 + y^2 = 9"`). |
+| `points` | Array | Array di punti `[[x1,y1], [x2,y2]]`. |
+| `x` | Number | Linea verticale a `x = val`. |
+| `color` | String | Colore (Hex o nome tema). Default automatico. |
+| `width` | Number | Spessore linea. |
+| `dash` | String | Pattern tratteggio (es. `"5,5"`). |
+| `label` | String | Etichetta del grafico. |
+| `labelAt` | `[x, y]` | Posizione forzata etichetta. |
+| `labelOffset` | `[dx, dy]` | Spostamento in pixel dell'etichetta. |
+| `labelAnchor` | String | Ancoraggio testo (`"start"`, `"middle"`, `"end"`). |
+| `radius` | Number | Raggio punti (solo per `points`). |
+| `fillColor` | String | Colore riempimento punti. |
+
+### Parametri (`params: {...}`)
+Definisci slider per rendere il grafico interattivo.
+```json
+"params": {
+  "k": { "val": 1, "min": 0, "max": 5, "step": 0.1 }
+}
+```
+
+---
+
 Questo blocco usa la sintassi ` ```matephis ` e dovrebbe funzionare in Editing Mode (Live Preview):
 
 ```matephis
@@ -29,6 +92,7 @@ Questo blocco usa la sintassi ` ```matephis ` e dovrebbe funzionare in Editing M
 È possibile scegliere tra temi predefiniti.
 
 ### Grayscale
+
 `theme: "grayscale"` assegna automaticamente tonalità di grigio.
 
 ```matephis
@@ -56,7 +120,8 @@ Questo blocco usa la sintassi ` ```matephis ` e dovrebbe funzionare in Editing M
 }
 ```
 
-### Brand Color
+### Brand olor
+
 `theme: "brand"` usa sfumature del colore principale (Rosso).
 
 ```matephis
@@ -71,7 +136,8 @@ Questo blocco usa la sintassi ` ```matephis ` e dovrebbe funzionare in Editing M
 }
 ```
 
-## 2. Etichette Intelligenti
+## 2. Etichette intelligenti
+
 Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con `labelAt` (coordinate grafico) o `labelOffset` (pixel). Le etichette vengono rappresentate in grassetto se specificato con `labelWeight: "bold"`.
 
 ```matephis
@@ -96,7 +162,8 @@ Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con
 }
 ```
 
-## 3. Controllo Assi (Tacche vs Numeri)
+## 3. Controllo assi (tacche vs numeri)
+
 Puoi nascondere i numeri ma tenere le tacche (`showXTicks: true`, `showXNumbers: false`).
 
 ```matephis
@@ -120,7 +187,8 @@ Puoi nascondere i numeri ma tenere le tacche (`showXTicks: true`, `showXNumbers:
 }
 ```
 
-## 4. Trigonometria (Step PI)
+## 4. Trigonometria (step PI)
+
 Imposta `xStep: "PI/2"` per avere etichette in radianti ($\pi/2$, $\pi$).
 
 ```matephis
@@ -135,7 +203,8 @@ Imposta `xStep: "PI/2"` per avere etichette in radianti ($\pi/2$, $\pi$).
 }
 ```
 
-## 5. Grafici Impliciti (Cerchi, Curve)
+## 5. Grafici impliciti (cerchi, curve)
+
 Supporta equazioni implicite come `x^2 + y^2 = r^2`. Usa `equalAspect: true` per mantenere le proporzioni.
 
 ```matephis
@@ -159,7 +228,8 @@ Supporta equazioni implicite come `x^2 + y^2 = r^2`. Usa `equalAspect: true` per
 }
 ```
 
-## 6. Interattività (Slider)
+## 6. Interattività (slider)
+
 Definisci parametri in `params` per creare slider.
 
 ```matephis
@@ -187,9 +257,9 @@ Definisci parametri in `params` per creare slider.
   ]
 }
 ```
-## 7. Axis Arrows & Grid Opacity
+## 7. Frecce assi e opacità griglia
 
-Grid set to `0.3` opacity (lighter than default) and arrows enabled on both axes. Secondary grid lines set to `0.2` step.
+Griglia impostata a opacità `0.3` (più leggera del default) e frecce abilitate su entrambi gli assi. Griglia secondaria impostata con passo `0.2`.
 
 ```matephis
 {
@@ -214,9 +284,11 @@ Grid set to `0.3` opacity (lighter than default) and arrows enabled on both axes
 }
 ```
 
-## 8. Render Order: Numbers on Top
+## 8. Ordine di rendering
 
-`renderOrder` set to `"numbers-top"`. The axis lines and numbers should appear *above* the filled area (simulated by a thick line here for visibility) or intersecting graphs.
+### Numeri in primo piano
+
+`renderOrder` impostato su `"numbers-top"`. Le linee degli assi e i numeri dovrebbero apparire *sopra* l'area riempita (simulata qui da una linea spessa per visibilità) o i grafici intersecanti.
 
 ```matephis
 {
@@ -225,14 +297,14 @@ Grid set to `0.3` opacity (lighter than default) and arrows enabled on both axes
   "renderOrder": "numbers-top",
   "axisArrows": true,
   "data": [
-    { "fn": "-0.3", "color": "blue", "width": 15, "label": "Thick Line Behind Axis" }
+    { "fn": "-0.3", "color": "blue", "width": 15, "label": "Linea Spessa Dietro Assi" }
   ]
 }
 ```
 
-## 9. Default Behavior (Numbers Below)
+### Comportamento di default (numeri sotto)
 
-Standard rendering. The thick line should cover the axis numbers.
+Rendering standard. La linea spessa dovrebbe coprire i numeri degli assi.
 
 ```matephis
 {
@@ -240,7 +312,7 @@ Standard rendering. The thick line should cover the axis numbers.
   "ylim": [-4, 4],
   "axisArrows": false,
   "data": [
-    { "fn": "-0.3", "color": "green", "width": 15, "label": "Thick Line Covers Axis" }
+    { "fn": "-0.3", "color": "green", "width": 15, "label": "Linea Spessa Copre Assi" }
   ]
 }
 ```
