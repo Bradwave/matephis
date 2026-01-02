@@ -15,25 +15,25 @@ Ecco una lista completa delle opzioni disponibili per configurare i grafici:
 
 ### Globali
 
-| Opzione | Tipo | Default | Descrizione |
-| :--- | :--- | :--- | :--- |
-| `width` | Number | 600 | Larghezza interna SVG/coordinate. |
-| `height` | Number | - | Altezza interna. Calcolata da `aspectRatio` se presente. |
-| `aspectRatio` | String/Number | `"1:1"` | Rapporto larghezza:altezza (es. `"16:9"`, `1`). |
-| `xlim` | `[min, max]` | `[-9.9, 9.9]` | Limiti dell'asse X. |
-| `ylim` | `[min, max]` | `[-9.9, 9.9]` | Limiti dell'asse Y. |
-| `axisLabels` | `[x, y]` | `null` | Etichette per gli assi (es. `["t (s)", "v (m/s)"]`). |
-| `theme` | String | `"brand"` | Tema colori: `"grayscale"`, `"brand"`, `"default"`. |
-| `legend` | Boolean | `false` | Se `true`, mostra la legenda in alto a destra. |
-| `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i grafici. |
-| `labelWeight` | String | `"normal"` | Peso font etichette. |
-| `fontSize` | Number/String | `"18px"` | Dimensione font generale (default). |
-| `numberSize` | Number/String | `=` `fontSize` | Dimensione font numeri assi. |
-| `labelSize` | Number/String | `=` `fontSize` | Dimensione font etichette assi/grafici. |
-| `legendSize` | Number/String | `=` `fontSize` | Dimensione font legenda. |
-| `cssWidth` | String | `"70%"` | Larghezza CSS contenitore (es. `"100%"`). |
-| `fullWidth` | Boolean | `false` | Se `true`, imposta `cssWidth: "100%"`. |
-| `align` | String | `"left"` | Allineamento contenitore (`"center"`, `"left"`). |
+| Opzione       | Tipo          | Default            | Descrizione                                              |
+| :------------ | :------------ | :----------------- | :------------------------------------------------------- |
+| `width`       | Number        | 600                | Larghezza interna SVG/coordinate.                        |
+| `height`      | Number        | -                  | Altezza interna. Calcolata da `aspectRatio` se presente. |
+| `aspectRatio` | String/Number | `"1:1"`            | Rapporto larghezza:altezza (es. `"16:9"`, `1`).          |
+| `xlim`        | `[min, max]`  | `[-9.9, 9.9]`      | Limiti dell'asse X.                                      |
+| `ylim`        | `[min, max]`  | `[-9.9, 9.9]`      | Limiti dell'asse Y.                                      |
+| `axisLabels`  | `[x, y]`      | `null`             | Etichette per gli assi (es. `["t (s)", "v (m/s)"]`).     |
+| `theme`       | String        | `"accent"`         | Tema colori: `"grayscale"`, `"accent"`, `"default"`.     |
+| `legend`      | Boolean       | `false`            | Se `true`, mostra la legenda in alto a destra.           |
+| `renderOrder` | String        | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i grafici.    |
+| `labelWeight` | String        | `"normal"`         | Peso font etichette.                                     |
+| `fontSize`    | Number/String | `"18px"`           | Dimensione font generale (default).                      |
+| `numberSize`  | Number/String | `=` `fontSize`     | Dimensione font numeri assi.                             |
+| `labelSize`   | Number/String | `=` `fontSize`     | Dimensione font etichette assi/grafici.                  |
+| `legendSize`  | Number/String | `=` `fontSize`     | Dimensione font legenda.                                 |
+| `cssWidth`    | String        | `"70%"`            | Larghezza CSS contenitore (es. `"100%"`).                |
+| `fullWidth`   | Boolean       | `false`            | Se `true`, imposta `cssWidth: "100%"`.                   |
+| `align`       | String        | `"left"`           | Allineamento contenitore (`"center"`, `"left"`).         |
 
 ### Griglia e assi
 
@@ -96,14 +96,14 @@ Questo blocco usa la sintassi `'''matephis` e dovrebbe funzionare in *editing mo
   "xStep": "2*PI",
   "aspectRatio": "2:1",
   "secondaryGridOpacity": 0,
-  "theme": "brand",
+  "theme": "accent",
   "data": [
     { "fn": "sin(x)/x", "label": "Sinc(x)" }
   ]
 }
 ```
 
-## 1. Temi (Grayscale vs Brand)
+## 1. Temi (Grayscale vs accent)
 
 È possibile scegliere tra temi predefiniti.
 
@@ -136,14 +136,14 @@ Questo blocco usa la sintassi `'''matephis` e dovrebbe funzionare in *editing mo
 }
 ```
 
-### Brand olor
+### accent olor
 
-`theme: "brand"` usa sfumature del colore principale (Rosso).
+`theme: "accent"` usa sfumature del colore principale (Rosso).
 
 ```matephis
 {
   "xlim": [-5, 5],
-  "theme": "brand",
+  "theme": "accent",
   "legend": true,
   "data": [
     { "fn": "x^2+2", "label": "Quadrata" },
@@ -254,7 +254,7 @@ Definisci parametri in `params` per creare slider.
   "aspectRatio": "2:1",
   "xlim": [-5, 5],
   "ylim": [-2, 2],
-  "theme": "brand",
+  "theme": "accent",
   "params": {
     "k": { "min": 0.5, "max": 5, "step": 0.01, "val": 1 },
     "f": { "min": 0, "max": 6.28, "step": 0.1, "val": 0 }

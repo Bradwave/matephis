@@ -83,7 +83,7 @@ class MatephisPlot {
         // Palettes
         this.palettes = {
             grayscale: ["#000000", "#363636", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
-            brand: ["#9a2b17", "#b01a00", "#c43818", "#d65231", "#e66c4b", "#f58666"], // Dark to light red
+            brand: ["#7c2a17", "#9a2b17", "#b01a00", "#c43818", "#d65231", "#e66c4b", "#f58666"], // Dark to light red, dark red at for value 7
             default: ["#007bff", "#dc3545", "#28a745", "#fd7e14", "#6f42c1"]
         };
         // Granular maps

@@ -54,7 +54,8 @@
   /* Updated to match drawingfourier secondary bg */
   --text: #0d0d0d;
   --title: #000000;
-  --brand: #B01A00;
+  --brand: #9a2b17;
+  --accent: #B01A00;
   --border: #e1e1e1;
   /* Updated to match drawingfourier border */
 
@@ -98,7 +99,7 @@
   --bg2: #f1f1f1;
   --text: #0d0d0d;
   --title: #000000;
-  --brand: #838383;
+  --accent: #838383;
   --border: #e8e8e8;
 }
 
@@ -178,7 +179,7 @@ p a[href^="https://"]:hover:after,
 li a[href^="http://"]:hover:after,
 li a[href^="https://"]:hover:after {
   /* Red arrow on hover */
-  background-color: var(--brand);
+  background-color: var(--accent);
   opacity: 1;
 }
 
@@ -243,7 +244,7 @@ li a[href^="https://"]:hover:after {
 }
 
 .hamburger.active svg {
-  color: var(--brand);
+  color: var(--accent);
 }
 
 .dropdown-menu {
@@ -282,7 +283,7 @@ li a[href^="https://"]:hover:after {
 }
 
 .dropdown-menu a:hover {
-  color: var(--brand);
+  color: var(--accent);
   background: var(--bg2);
 }
 
@@ -367,8 +368,8 @@ a {
 }
 
 a:hover {
-  color: var(--brand);
-  text-decoration-color: var(--brand);
+  color: var(--accent);
+  text-decoration-color: var(--accent);
 }
 
 /* --- 7. Components --- */
@@ -392,7 +393,7 @@ a:hover {
 }
 
 .btn:hover {
-  background: var(--brand);
+  background: var(--accent);
   color: var(--bg);
   box-shadow: var(--shadow-md);
 }
@@ -446,7 +447,7 @@ a:hover {
 }
 
 .note-title a:hover {
-  color: var(--brand);
+  color: var(--accent);
 }
 
 .links-section {
@@ -488,7 +489,7 @@ a:hover {
 }
 
 .links-grid a:hover {
-  color: var(--brand);
+  color: var(--accent);
 }
 
 @media (max-width: 520px) {
@@ -541,7 +542,7 @@ a:hover {
 }
 
 .theme-toggle:hover {
-  color: var(--brand);
+  color: var(--accent);
   background-color: var(--bg2);
 }
 
@@ -555,7 +556,7 @@ a:hover {
 /* --- 8. Markdown Elements --- */
 
 blockquote {
-  border-left: var(--radius-sm) solid var(--brand);
+  border-left: var(--radius-sm) solid var(--accent);
   padding-left: var(--space-md);
   margin: var(--space-lg) 0;
   font-style: italic;
@@ -573,7 +574,7 @@ code {
   border-radius: 0;
   font-size: 0.9em;
   font-family: var(--font-code);
-  color: var(--brand);
+  color: var(--accent);
 }
 
 pre {
@@ -624,7 +625,7 @@ details>summary::before {
   content: "►";
   font-size: 0.8em;
   margin-right: 0.75rem;
-  color: var(--brand);
+  color: var(--accent);
 
 }
 
@@ -671,10 +672,17 @@ em {
 
 /* --- 9. Tables --- */
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.matephis-table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+  width: auto;
   margin: var(--space-lg) 0;
+}
+
+table {
+  width: auto;
+  border-collapse: collapse;
+  margin: 0;
   font-size: 0.95rem;
   border-radius: var(--radius);
   overflow: hidden;
@@ -722,7 +730,7 @@ td {
 
 .search-input:focus {
   outline: none;
-  border-color: var(--brand);
+  border-color: var(--accent);
 }
 
 .search-results {
@@ -771,7 +779,7 @@ td {
 
 .search-result:hover {
   background: var(--bg2);
-  color: var(--brand);
+  color: var(--accent);
 }
 
 .search-result-title {
@@ -809,7 +817,7 @@ td {
 }
 
 .search-result-highlight {
-  background: var(--brand);
+  background: var(--accent);
   color: var(--bg);
   padding: 0 2px;
   border-radius: 0;
@@ -867,7 +875,7 @@ td {
   margin-right: 10px;
   font-size: 0.9em;
 
-  color: var(--brand);
+  color: var(--accent);
   font-family: var(--font-main);
 }
 
@@ -887,7 +895,7 @@ td {
 }
 
 .list-feed a:hover {
-  color: var(--brand);
+  color: var(--accent);
 }
 
 /* Hide/show classes for backlinks */
@@ -1012,7 +1020,7 @@ td {
 }
 
 .diff-ad {
-  background-color: var(--brand);
+  background-color: var(--accent);
   color: #fff;
 }
 
@@ -1080,7 +1088,7 @@ td {
 }
 
 .wiki-link {
-  color: var(--brand);
+  color: var(--accent);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   padding: 0 2px;
@@ -1090,7 +1098,7 @@ td {
 
 .wiki-link:hover {
   background: var(--bg2);
-  color: var(--brand);
+  color: var(--accent);
 }
 
 .link-preview {
@@ -1300,8 +1308,8 @@ li a[href^="https://"] {
 
 .sidebar-toc a:hover,
 .sidebar-toc a.active {
-  color: var(--brand);
-  border-left-color: var(--brand);
+  color: var(--accent);
+  border-left-color: var(--accent);
 }
 
 /* Indentation for h3 headers in TOC */
@@ -1348,7 +1356,7 @@ li a[href^="https://"] {
 }
 
 .sidebar-related a:hover {
-  color: var(--brand);
+  color: var(--accent);
 }
 
 /* Single Column Layout (Homepage, etc) */
@@ -1455,7 +1463,7 @@ li a[href^="https://"] {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--brand, #B01A00);
+  background: var(--accent, #B01A00);
   cursor: pointer;
   transition: transform 0.1s;
   margin-top: 0;
@@ -1471,7 +1479,7 @@ li a[href^="https://"] {
   height: 14px;
   border-radius: 50%;
   border: none;
-  background: var(--brand, #B01A00);
+  background: var(--accent, #B01A00);
   cursor: pointer;
   transition: transform 0.1s;
 }
@@ -1483,23 +1491,14 @@ li a[href^="https://"] {
 .matephis-slider-val {
   min-width: 4ch;
   text-align: right;
-  color: var(--brand, #B01A00);
+  color: var(--accent, #B01A00);
   font-weight: bold;
 }
 /* --- 19. Mobile Overflow Fixes --- */
-
-/* Prevent horizontal overflow from tables */
-table {
-  display: block;
-  overflow-x: auto;
-  white-space: wrap;
-  max-width: 100%;
-}
 
 /* Prevent horizontal overflow from MathJax */
 mjx-container {
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
-  display: block !important;
 }

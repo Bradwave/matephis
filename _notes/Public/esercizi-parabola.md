@@ -34,9 +34,9 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```matephis
 {
   "data": [
-    { "fn": "-x^2+3x-2", "color": "brand1" },
+    { "fn": "-x^2+3x-2", "color": "accent1" },
     { "fn": "x^2+3x-2", "color": "grayscale1"},
-    { "fn": "-x^2-3x-2", "color": "brand1", "opacity": 0.6},
+    { "fn": "-x^2-3x-2", "color": "accent1", "opacity": 0.6},
     { "fn": "x^2-3x+2", "color": "grayscale1", "opacity": 0.6}
   ]
 }
