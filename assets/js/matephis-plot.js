@@ -102,24 +102,28 @@ class MatephisPlot {
 
         // Groups
         this.bgGroup = document.createElementNS(ns, "g");
+        this.secondaryGridGroup = document.createElementNS(ns, "g");
         this.gridGroup = document.createElementNS(ns, "g");
+        this.axesGroup = document.createElementNS(ns, "g"); // Axes Lines & Ticks (Always below data)
+        this.numbersGroup = document.createElementNS(ns, "g"); // Numbers (Configurable)
         this.dataGroup = document.createElementNS(ns, "g");
-        this.axesGroup = document.createElementNS(ns, "g");
         this.labelGroup = document.createElementNS(ns, "g");
         this.legendGroup = document.createElementNS(ns, "g");
 
         // Layer Order
-        // Default: Numbers/Axes BELOW Data
-        // Option: Numbers/Axes ON TOP of Data (renderOrder: "numbers-top")
+        // 1. Backgrounds
         this.svg.appendChild(this.bgGroup);
+        this.svg.appendChild(this.secondaryGridGroup);
         this.svg.appendChild(this.gridGroup);
+        this.svg.appendChild(this.axesGroup); // Grid & Notches/Axes always below plots
 
+        // 2. Data vs Numbers
         if (this.config.renderOrder === 'numbers-top') {
             this.svg.appendChild(this.dataGroup);
-            this.svg.appendChild(this.axesGroup);
+            this.svg.appendChild(this.numbersGroup);
         } else {
-            // Default: Numbers Below
-            this.svg.appendChild(this.axesGroup);
+            // Default: Numbers Below Data
+            this.svg.appendChild(this.numbersGroup);
             this.svg.appendChild(this.dataGroup);
         }
 
@@ -205,9 +209,18 @@ class MatephisPlot {
         this.gridGroup.innerHTML = "";
         this.dataGroup.innerHTML = "";
         this.axesGroup.innerHTML = "";
+        this.numbersGroup.innerHTML = "";
         this.labelGroup.innerHTML = "";
         this.legendGroup.innerHTML = "";
         this.bgGroup.innerHTML = "";
+
+        // Grid Opacity
+        if (this.config.gridOpacity !== undefined) {
+            this.gridGroup.setAttribute("opacity", this.config.gridOpacity);
+        } else {
+            // Default: slightly transparent dark grey
+            this.gridGroup.setAttribute("opacity", 0.5);
+        }
 
         // Bounds
         let xMin = this.config.xlim ? this.config.xlim[0] : -10;
@@ -242,7 +255,7 @@ class MatephisPlot {
         this.bgGroup.appendChild(rect);
 
         // --- 2. Grid/Axes ---
-        const gridColor = "#f0f0f0";
+        const gridColor = "#c0c0c0"; // Darker Grey
         const axisColor = "#333";
 
         // Step Parsers
@@ -291,6 +304,34 @@ class MatephisPlot {
         const xStep = xStepObj.val;
         const yStep = yStepObj.val;
 
+        // --- Secondary Grid ---
+        this.secondaryGridGroup.innerHTML = "";
+        // Default opacity is half of the main grid opacity (0.25 if main is 0.5)
+        const mainOpacity = (this.config.gridOpacity !== undefined) ? this.config.gridOpacity : 0.5;
+        this.secondaryGridGroup.setAttribute("opacity", (this.config.secondaryGridOpacity !== undefined) ? this.config.secondaryGridOpacity : mainOpacity * 0.5);
+
+        if (this.config.xStepSecondary) {
+            const sxStepObj = parseStep(this.config.xStepSecondary, xStep / 5);
+            const sxStep = sxStepObj.val;
+            const startSX = Math.ceil(xMin / sxStep) * sxStep;
+            for (let x = startSX; x <= xMax + 1e-9; x += sxStep) {
+                const px = mapX(x);
+                if (px < this.padding || px > this.width - this.padding) continue;
+                this.line(px, this.padding, px, this.height - this.padding, gridColor, 1, "", this.secondaryGridGroup);
+            }
+        }
+
+        if (this.config.yStepSecondary) {
+            const syStepObj = parseStep(this.config.yStepSecondary, yStep / 5);
+            const syStep = syStepObj.val;
+            const startSY = Math.ceil(yMin / syStep) * syStep;
+            for (let y = startSY; y <= yMax + 1e-9; y += syStep) {
+                const py = mapY(y);
+                if (py < this.padding || py > this.height - this.padding) continue;
+                this.line(this.padding, py, this.width - this.padding, py, gridColor, 1, "", this.secondaryGridGroup);
+            }
+        }
+
         // X Lines
         const startX = Math.ceil(xMin / xStep) * xStep;
         for (let x = startX; x <= xMax + 1e-9; x += xStep) {
@@ -302,13 +343,13 @@ class MatephisPlot {
 
             // X Axis Items (Ticks/Numbers)
             if (Math.abs(x) > 1e-9) {
-                // Ticks (Default False)
+                // Ticks (Default False) -- To AxesGroup
                 if (this.config.showXTicks === true) {
                     this.line(px, mapY(0), px, mapY(0) + 5, axisColor, 1, "", this.axesGroup);
                 }
-                // Numbers
+                // Numbers -- To NumbersGroup
                 if (this.config.showXNumbers !== false) {
-                    this.text(px, mapY(0) + 15, formatTick(x, xStepObj.isPi), "middle", "top", "#666");
+                    this.text(px, mapY(0) + 15, formatTick(x, xStepObj.isPi), "middle", "top", "#666", "normal", this.numbersGroup);
                 }
             }
         }
@@ -323,20 +364,82 @@ class MatephisPlot {
 
             // Y Axis Items
             if (Math.abs(y) > 1e-9) {
-                // Ticks (Default False)
+                // Ticks (Default False) -- To AxesGroup
                 if (this.config.showYTicks === true) {
                     this.line(mapX(0) - 5, py, mapX(0), py, axisColor, 1, "", this.axesGroup);
                 }
-                // Numbers
+                // Numbers -- To NumbersGroup
                 if (this.config.showYNumbers !== false) {
-                    this.text(mapX(0) - 8, py, formatTick(y, yStepObj.isPi), "end", "middle", "#666");
+                    this.text(mapX(0) - 8, py, formatTick(y, yStepObj.isPi), "end", "middle", "#666", "normal", this.numbersGroup);
                 }
             }
         }
-        // Main Axes
+        // Main Axes - To AxesGroup
         const x0 = mapX(0), y0 = mapY(0);
         if (x0 >= this.padding && x0 <= this.width - this.padding) this.line(x0, this.padding, x0, this.height - this.padding, axisColor, 1.5, "", this.axesGroup);
         if (y0 >= this.padding && y0 <= this.height - this.padding) this.line(this.padding, y0, this.width - this.padding, y0, axisColor, 1.5, "", this.axesGroup);
+
+        // Arrows - To AxesGroup (part of axes)
+        if (this.config.axisArrows) {
+             const defs = document.createElementNS(ns, "defs");
+             const markerW = 10, markerH = 10;
+             const arrowPath = `M 0 0 L 10 5 L 0 10 z`; // Basic triangle
+
+             // X Arrow Marker
+             const mkX = document.createElementNS(ns, "marker");
+             mkX.setAttribute("id", "arrowX");
+             mkX.setAttribute("viewBox", "0 0 10 10");
+             mkX.setAttribute("refX", "0");
+             mkX.setAttribute("refY", "5");
+             mkX.setAttribute("markerWidth", 6);
+             mkX.setAttribute("markerHeight", 6);
+             mkX.setAttribute("orient", "auto");
+             const pX = document.createElementNS(ns, "path");
+             pX.setAttribute("d", arrowPath);
+             pX.setAttribute("fill", axisColor);
+             mkX.appendChild(pX);
+
+             // Y Arrow Marker
+             const mkY = document.createElementNS(ns, "marker");
+             mkY.setAttribute("id", "arrowY");
+             mkY.setAttribute("viewBox", "0 0 10 10");
+             mkY.setAttribute("refX", "0");
+             mkY.setAttribute("refY", "5");
+             mkY.setAttribute("markerWidth", 6);
+             mkY.setAttribute("markerHeight", 6);
+             mkY.setAttribute("orient", "auto");
+             const pY = document.createElementNS(ns, "path");
+             pY.setAttribute("d", arrowPath);
+             pY.setAttribute("fill", axisColor);
+             mkY.appendChild(pY);
+             
+             defs.appendChild(mkX);
+             defs.appendChild(mkY);
+             this.axesGroup.appendChild(defs);
+
+             // Draw Arrows Manually (Markers can be tricky with scaling)
+             // X Arrow (Positive)
+             if (y0 >= this.padding && y0 <= this.height - this.padding) {
+                 const axX = this.width - this.padding + 5;
+                 const axY = y0;
+                 const arrowXPoly = document.createElementNS(ns, "polygon");
+                 // Tip at axX, base back 8px, width 6px
+                 arrowXPoly.setAttribute("points", `${axX},${axY} ${axX-8},${axY-4} ${axX-8},${axY+4}`);
+                 arrowXPoly.setAttribute("fill", axisColor);
+                 this.axesGroup.appendChild(arrowXPoly);
+             }
+
+             // Y Arrow (Positive)
+             if (x0 >= this.padding && x0 <= this.width - this.padding) {
+                 const ayX = x0;
+                 const ayY = this.padding - 5;
+                 const arrowYPoly = document.createElementNS(ns, "polygon");
+                 // Tip at ayY, base down 8px, width 6px
+                 arrowYPoly.setAttribute("points", `${ayX},${ayY} ${ayX-4},${ayY+8} ${ayX+4},${ayY+8}`);
+                 arrowYPoly.setAttribute("fill", axisColor);
+                 this.axesGroup.appendChild(arrowYPoly);
+             }
+        }
 
         // Axis Labels
         if (this.config.axisLabels) {
@@ -483,7 +586,8 @@ class MatephisPlot {
                 const lx = Math.max(10, Math.min(this.width - 10, labelPos.x + dx));
                 const ly = Math.max(10, Math.min(this.height - 10, labelPos.y + dy));
 
-                this.text(lx, ly, item.label, anchor, "bottom", color, "bold", this.labelGroup);
+                const labelWeight = this.config.labelWeight || "normal";
+                this.text(lx, ly, item.label, anchor, "bottom", color, labelWeight, this.labelGroup);
             }
         });
 
@@ -498,6 +602,7 @@ class MatephisPlot {
         const y = this.padding + 10;
         const w = 120; // Approx fixed width for now
         const h = items.length * 20 + 10;
+        const labelWeight = this.config.labelWeight || "normal";
 
         // bg
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -539,10 +644,10 @@ class MatephisPlot {
                     // Simpler fallback for now: just try innerHTML or text fallback if complicated
                     // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
                     // Let's stick to text fallback for reliability in this fast iter.
-                    this.text(lx + 25, ly, item.label, "start", "middle", "#333", "normal", this.legendGroup);
+                    this.text(lx + 25, ly, item.label, "start", "middle", "#333", labelWeight, this.legendGroup);
                 }
             } else {
-                this.text(lx + 20, ly, item.label, "start", "middle", "#333", "normal", this.legendGroup);
+                this.text(lx + 20, ly, item.label, "start", "middle", "#333", labelWeight, this.legendGroup);
             }
         });
     }

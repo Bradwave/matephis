@@ -78,6 +78,7 @@ Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con
 {
   "xlim": [-5, 5],
   "ylim": [-2, 10],
+  "gridOpacity": 0.8,
   "data": [
     { "fn": "x^2", "label": "Auto (Fine)", "color": "blue" },
     { "fn": "2*x", "label": "Forzata su [2,4]", "labelAt": [2, 4], "color": "red" },
@@ -183,6 +184,63 @@ Definisci parametri in `params` per creare slider.
   },
   "data": [
     { "fn": "sin(k * x)" }
+  ]
+}
+```
+## 7. Axis Arrows & Grid Opacity
+
+Grid set to `0.3` opacity (lighter than default) and arrows enabled on both axes. Secondary grid lines set to `0.2` step.
+
+```matephis
+{
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "gridOpacity": 1,
+  "axisArrows": true,
+  "xStepSecondary": 0.2,
+  "yStepSecondary": 0.2,
+  "data": [
+    { "fn": "sin(x)", "color": "red", "width": 3 }
+  ]
+}
+```
+
+```json
+{
+  "axisArrows": true,
+  "xStepSecondary": 0.2,
+  "yStepSecondary": 0.2,
+  "data": []
+}
+```
+
+## 8. Render Order: Numbers on Top
+
+`renderOrder` set to `"numbers-top"`. The axis lines and numbers should appear *above* the filled area (simulated by a thick line here for visibility) or intersecting graphs.
+
+```matephis
+{
+  "xlim": [-4, 4],
+  "ylim": [-4, 4],
+  "renderOrder": "numbers-top",
+  "axisArrows": true,
+  "data": [
+    { "fn": "-0.3", "color": "blue", "width": 15, "label": "Thick Line Behind Axis" }
+  ]
+}
+```
+
+## 9. Default Behavior (Numbers Below)
+
+Standard rendering. The thick line should cover the axis numbers.
+
+```matephis
+{
+  "xlim": [-4, 4],
+  "ylim": [-4, 4],
+  "axisArrows": false,
+  "data": [
+    { "fn": "-0.3", "color": "green", "width": 15, "label": "Thick Line Covers Axis" }
   ]
 }
 ```
