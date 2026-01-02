@@ -1,5 +1,5 @@
 /**
- * Matephis Plotting Library v2
+ * Matephis Plotting Library
  */
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.addEventListener("DOMContentLoaded", () => {
@@ -15,11 +15,11 @@ class MatephisPlot {
             try {
                 if (container.getAttribute('data-processed')) return;
                 const source = container.textContent;
-                container.innerHTML = ""; 
+                container.innerHTML = "";
                 new MatephisPlot(container, source);
                 container.setAttribute('data-processed', 'true');
-            } catch (e) { 
-                console.error("Plot Error", e); 
+            } catch (e) {
+                console.error("Plot Error", e);
                 container.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">Error: ${e.message}</div>`;
             }
         });
@@ -38,9 +38,9 @@ class MatephisPlot {
                 container.className = 'matephis-plot';
                 target.parentNode.insertBefore(container, target);
                 target.style.display = 'none';
-                
+
                 new MatephisPlot(container, source);
-                target.setAttribute('data-processed', 'true'); 
+                target.setAttribute('data-processed', 'true');
             } catch (e) { console.error("Code Block Plot Error", e); }
         });
     }
@@ -62,11 +62,28 @@ class MatephisPlot {
                 this.params[key] = this.config.params[key].val || 0;
             }
         }
+        
+        // Layout Options
+        if (this.config.fullWidth) this.config.cssWidth = "100%";
+        if (this.config.cssWidth) {
+            this.wrapper.style.maxWidth = this.config.cssWidth;
+            this.wrapper.style.width = "100%"; // Ensure it scales
+        }
+
+        // Alignment
+        if (this.config.align === 'center') {
+            this.wrapper.style.marginLeft = "auto";
+            this.wrapper.style.marginRight = "auto";
+        } else if (this.config.align === 'left') {
+            this.wrapper.style.marginLeft = "0";
+            this.wrapper.style.marginRight = "auto";
+        }
+        // Default (from CSS) matches images (usually left with small margin)
 
         // Palettes
         this.palettes = {
-            grayscale: ["#4a4a4a", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
-            brand: ["#b01a00", "#c43818", "#d65231", "#e66c4b", "#f58666"], // Dark to light red
+            grayscale: ["#000000", "#363636", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
+            brand: ["#9a2b17", "#b01a00", "#c43818", "#d65231", "#e66c4b", "#f58666"], // Dark to light red
             default: ["#007bff", "#dc3545", "#28a745", "#fd7e14", "#6f42c1"]
         };
         // Granular maps
@@ -85,7 +102,22 @@ class MatephisPlot {
 
     initSVG() {
         this.width = this.config.width || 600;
-        this.height = this.config.height || 400;
+
+        // Aspect Ratio
+        if (this.config.aspectRatio) {
+            let ratio = 1;
+            if (typeof this.config.aspectRatio === 'string' && this.config.aspectRatio.includes(":")) {
+                const parts = this.config.aspectRatio.split(":");
+                ratio = parseFloat(parts[0]) / parseFloat(parts[1]);
+            } else {
+                ratio = parseFloat(this.config.aspectRatio);
+            }
+            this.height = this.width / ratio;
+        } else {
+            // Default 1:1 if explicit height not set
+            this.height = this.config.height || this.width; // Default square (600x600)
+        }
+
         this.padding = 35;
 
         const ns = "http://www.w3.org/2000/svg";
@@ -178,7 +210,7 @@ class MatephisPlot {
             if (typeof this.palettes[explicit] === 'string') return this.palettes[explicit]; // brand1 etc
             return explicit; // hex
         }
-        const theme = this.config.theme || "default";
+        const theme = this.config.theme || "brand";
         const palette = this.palettes[theme] || this.palettes.default;
         return palette[index % palette.length];
     }
@@ -192,6 +224,14 @@ class MatephisPlot {
             const re = new RegExp(`\\b${key}\\b`, 'g');
             expr = expr.replace(re, `(${this.params[key]})`);
         }
+
+        // Implicit multiplication: "3x" -> "3*x", "3sin" -> "3*sin", ")x" -> ")*x"
+        expr = expr.replace(/(\d)([a-zA-Z(])/g, "$1*$2");
+        expr = expr.replace(/(\))([a-zA-Z0-9(])/g, "$1*$2");
+
+        // Negative power fix: "-x^2" -> "-(x^2)"
+        // Covers start of string or following an operator/paren
+        expr = expr.replace(/(^|[^a-zA-Z0-9])\-([a-z])\^(\d+)/g, "$1-($2^$3)");
 
         expr = expr.replace(/\^/g, "**");
         expr = expr.replace(/\b(sin|cos|tan|asin|acos|atan|sqrt|log|exp|abs|floor|ceil|round)\b/g, "Math.$1");
@@ -218,15 +258,15 @@ class MatephisPlot {
         if (this.config.gridOpacity !== undefined) {
             this.gridGroup.setAttribute("opacity", this.config.gridOpacity);
         } else {
-            // Default: slightly transparent dark grey
-            this.gridGroup.setAttribute("opacity", 0.5);
+            // Default: 0.8
+            this.gridGroup.setAttribute("opacity", 0.8);
         }
 
         // Bounds
-        let xMin = this.config.xlim ? this.config.xlim[0] : -10;
-        let xMax = this.config.xlim ? this.config.xlim[1] : 10;
-        let yMin = this.config.ylim ? this.config.ylim[0] : -10;
-        let yMax = this.config.ylim ? this.config.ylim[1] : 10;
+        let xMin = this.config.xlim ? this.config.xlim[0] : -9.9;
+        let xMax = this.config.xlim ? this.config.xlim[1] : 9.9;
+        let yMin = this.config.ylim ? this.config.ylim[0] : -9.9;
+        let yMax = this.config.ylim ? this.config.ylim[1] : 9.9;
 
         // Helper: Eval boundaries for dynamic ranges? (Skip for now, stick to fixed or equalAspect)
 
@@ -255,7 +295,7 @@ class MatephisPlot {
         this.bgGroup.appendChild(rect);
 
         // --- 2. Grid/Axes ---
-        const gridColor = "#c0c0c0"; // Darker Grey
+        const gridColor = "#808080"; // Darker Grey (was #c0c0c0)
         const axisColor = "#333";
 
         // Step Parsers
@@ -272,8 +312,12 @@ class MatephisPlot {
             return { val: num, isPi: isPi };
         };
 
-        const xStepObj = parseStep(this.config.xStep, 1);
-        const yStepObj = parseStep(this.config.yStep, 1);
+        const xStepObj = parseStep(this.config.xStep, 5);
+        const yStepObj = parseStep(this.config.yStep, 5);
+
+        // Number Steps (Defaults to Grid Step if not present)
+        const xNumStepObj = this.config.xNumberStep !== undefined ? parseStep(this.config.xNumberStep, xStepObj.val) : xStepObj;
+        const yNumStepObj = this.config.yNumberStep !== undefined ? parseStep(this.config.yNumberStep, yStepObj.val) : yStepObj;
 
         const formatTick = (val, isPi) => {
             if (!isPi) return parseFloat(val.toFixed(10));
@@ -281,6 +325,9 @@ class MatephisPlot {
             if (Math.abs(v) < 1e-6) return "0";
             if (Math.abs(v - 1) < 1e-6) return "π";
             if (Math.abs(v + 1) < 1e-6) return "-π";
+
+            // Integers (Check first to avoid 4pi/2)
+            if (Math.abs(v - Math.round(v)) < 1e-6) return Math.round(v) + "π";
 
             // Halves (k * PI/2)
             const d2 = v * 2;
@@ -295,8 +342,6 @@ class MatephisPlot {
                 const n = Math.round(d4);
                 return (n === 1 ? "" : n === -1 ? "-" : n) + "π/4";
             }
-            // Integers
-            if (Math.abs(v - Math.round(v)) < 1e-6) return Math.round(v) + "π";
 
             return v.toFixed(2) + "π";
         };
@@ -304,31 +349,34 @@ class MatephisPlot {
         const xStep = xStepObj.val;
         const yStep = yStepObj.val;
 
-        // --- Secondary Grid ---
         this.secondaryGridGroup.innerHTML = "";
         // Default opacity is half of the main grid opacity (0.25 if main is 0.5)
         const mainOpacity = (this.config.gridOpacity !== undefined) ? this.config.gridOpacity : 0.5;
         this.secondaryGridGroup.setAttribute("opacity", (this.config.secondaryGridOpacity !== undefined) ? this.config.secondaryGridOpacity : mainOpacity * 0.5);
 
-        if (this.config.xStepSecondary) {
-            const sxStepObj = parseStep(this.config.xStepSecondary, xStep / 5);
+        // Secondary defaults to 1 if main is 5, otherwise main/5
+        const defaultSecX = (xStep === 5) ? 1 : xStep / 5;
+        const defaultSecY = (yStep === 5) ? 1 : yStep / 5;
+
+        if (this.config.xStepSecondary !== undefined || defaultSecX) {
+            const sxStepObj = parseStep(this.config.xStepSecondary, defaultSecX);
             const sxStep = sxStepObj.val;
             const startSX = Math.ceil(xMin / sxStep) * sxStep;
             for (let x = startSX; x <= xMax + 1e-9; x += sxStep) {
                 const px = mapX(x);
                 if (px < this.padding || px > this.width - this.padding) continue;
-                this.line(px, this.padding, px, this.height - this.padding, gridColor, 1, "", this.secondaryGridGroup);
+                this.line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.secondaryGridGroup);
             }
         }
 
-        if (this.config.yStepSecondary) {
-            const syStepObj = parseStep(this.config.yStepSecondary, yStep / 5);
+        if (this.config.yStepSecondary !== undefined || defaultSecY) {
+            const syStepObj = parseStep(this.config.yStepSecondary, defaultSecY);
             const syStep = syStepObj.val;
             const startSY = Math.ceil(yMin / syStep) * syStep;
             for (let y = startSY; y <= yMax + 1e-9; y += syStep) {
                 const py = mapY(y);
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this.line(this.padding, py, this.width - this.padding, py, gridColor, 1, "", this.secondaryGridGroup);
+                this.line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
             }
         }
 
@@ -339,18 +387,51 @@ class MatephisPlot {
             if (px < this.padding || px > this.width - this.padding) continue;
 
             // Grid
-            if (this.config.grid !== false) this.line(px, this.padding, px, this.height - this.padding, gridColor, 1, "", this.gridGroup);
+            if (this.config.grid !== false) this.line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
 
-            // X Axis Items (Ticks/Numbers)
-            if (Math.abs(x) > 1e-9) {
-                // Ticks (Default False) -- To AxesGroup
-                if (this.config.showXTicks === true) {
-                    this.line(px, mapY(0), px, mapY(0) + 5, axisColor, 1, "", this.axesGroup);
+            // Ticks (Default False) -- To AxesGroup
+            if (Math.abs(x) > 1e-9 && this.config.showXTicks === true) {
+                this.line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+            }
+        }
+
+
+        // X Numbers (Independent Loop)
+        const xNumStep = xNumStepObj.val;
+        if (this.config.showXNumbers !== false) {
+            // Extend scan range slightly to catch border items
+            const startNX = Math.ceil((xMin - 0.1) / xNumStep) * xNumStep;
+            for (let x = startNX; x <= xMax + 0.1; x += xNumStep) {
+                if (Math.abs(x) < 1e-9) continue; // Skip zero
+
+                let px = mapX(x);
+                let align = "middle";
+
+                // Clamping Logic
+                if (Math.abs(x - xMin) <= 0.1) {
+                    px = this.padding;
+                    align = "start"; // Align text to right of tick (inside) ? Or start at padding
+                    // Standard "start" aligns rightwards from x.
+                    // But numbers are centered usually. 
+                    // Let's force it to padding + nudge?
+                    // Actually maybe "start" is good if it's at left edge.
+                } else if (Math.abs(x - xMax) <= 0.1) {
+                    px = this.width - this.padding;
+                    align = "end";
                 }
-                // Numbers -- To NumbersGroup
-                if (this.config.showXNumbers !== false) {
-                    this.text(px, mapY(0) + 15, formatTick(x, xStepObj.isPi), "middle", "top", "#666", "normal", this.numbersGroup);
+
+                if (px < this.padding || px > this.width - this.padding) continue;
+
+                // Font size for shift calc
+                const fsVal = this.getConfigSize('numberSize'); // Helper to get int value
+                
+                // Align negative numbers (center the number part)
+                if (x < -1e-9 && align === "middle") {
+                    // Shift left by half a char width approx (0.3em)
+                    px -= fsVal * 0.3;
                 }
+
+                this.text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi), align, "top", "#666", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -360,91 +441,123 @@ class MatephisPlot {
             if (py < this.padding || py > this.height - this.padding) continue;
 
             // Grid
-            if (this.config.grid !== false) this.line(this.padding, py, this.width - this.padding, py, gridColor, 1, "", this.gridGroup);
+            if (this.config.grid !== false) this.line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
 
-            // Y Axis Items
-            if (Math.abs(y) > 1e-9) {
-                // Ticks (Default False) -- To AxesGroup
-                if (this.config.showYTicks === true) {
-                    this.line(mapX(0) - 5, py, mapX(0), py, axisColor, 1, "", this.axesGroup);
+            // Ticks
+            if (Math.abs(y) > 1e-9 && this.config.showYTicks === true) {
+                this.line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+            }
+        }
+
+        // Y Numbers (Independent Loop)
+        const yNumStep = yNumStepObj.val;
+        if (this.config.showYNumbers !== false) {
+            const startNY = Math.ceil((yMin - 0.1) / yNumStep) * yNumStep;
+            for (let y = startNY; y <= yMax + 0.1; y += yNumStep) {
+                if (Math.abs(y) < 1e-9) continue;
+
+                let py = mapY(y);
+                let baseline = "middle";
+
+                // Clamping Y (Inverted: Max Y is Top (low py), Min Y is Bottom (high py))
+                if (Math.abs(y - yMin) <= 0.1) {
+                    py = this.height - this.padding;
+                    baseline = "auto"; // Bottom? "auto" is usually alphabetic. SVG uses "text-after-edge" or similar?
+                    // Let's use coordinate shift.
+                    py -= 5;
+                    // Or just standard middle but shifted?
+                } else if (Math.abs(y - yMax) <= 0.1) {
+                    py = this.padding;
+                    // Top edge
+                    py += 5;
                 }
-                // Numbers -- To NumbersGroup
-                if (this.config.showYNumbers !== false) {
-                    this.text(mapX(0) - 8, py, formatTick(y, yStepObj.isPi), "end", "middle", "#666", "normal", this.numbersGroup);
-                }
+
+                if (py < this.padding || py > this.height - this.padding) continue;
+                this.text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi), "end", baseline, "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
+            }
+        }
+        
+        // Origin "0" (Shared)
+        if (xMin <= 0 && xMax >= 0 && yMin <= 0 && yMax >= 0) {
+            // Check visibility config if needed, usually we want 0 if numbers are on
+            if (this.config.showXNumbers !== false || this.config.showYNumbers !== false) {
+                 const px = mapX(0) - 5; // Align with Y numbers (end anchor)
+                 const py = mapY(0) + 20; // Align with X numbers (top baseline)
+                 this.text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
             }
         }
         // Main Axes - To AxesGroup
         const x0 = mapX(0), y0 = mapY(0);
-        if (x0 >= this.padding && x0 <= this.width - this.padding) this.line(x0, this.padding, x0, this.height - this.padding, axisColor, 1.5, "", this.axesGroup);
-        if (y0 >= this.padding && y0 <= this.height - this.padding) this.line(this.padding, y0, this.width - this.padding, y0, axisColor, 1.5, "", this.axesGroup);
+        if (x0 >= this.padding && x0 <= this.width - this.padding) this.line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+        if (y0 >= this.padding && y0 <= this.height - this.padding) this.line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
 
         // Arrows - To AxesGroup (part of axes)
         if (this.config.axisArrows) {
-             const defs = document.createElementNS(ns, "defs");
-             const markerW = 10, markerH = 10;
-             const arrowPath = `M 0 0 L 10 5 L 0 10 z`; // Basic triangle
+            const defs = document.createElementNS(ns, "defs");
+            const markerW = 10, markerH = 10;
+            const arrowPath = `M 0 0 L 10 5 L 0 10 z`; // Basic triangle
 
-             // X Arrow Marker
-             const mkX = document.createElementNS(ns, "marker");
-             mkX.setAttribute("id", "arrowX");
-             mkX.setAttribute("viewBox", "0 0 10 10");
-             mkX.setAttribute("refX", "0");
-             mkX.setAttribute("refY", "5");
-             mkX.setAttribute("markerWidth", 6);
-             mkX.setAttribute("markerHeight", 6);
-             mkX.setAttribute("orient", "auto");
-             const pX = document.createElementNS(ns, "path");
-             pX.setAttribute("d", arrowPath);
-             pX.setAttribute("fill", axisColor);
-             mkX.appendChild(pX);
+            // X Arrow Marker
+            const mkX = document.createElementNS(ns, "marker");
+            mkX.setAttribute("id", "arrowX");
+            mkX.setAttribute("viewBox", "0 0 10 10");
+            mkX.setAttribute("refX", "0");
+            mkX.setAttribute("refY", "5");
+            mkX.setAttribute("markerWidth", 6);
+            mkX.setAttribute("markerHeight", 6);
+            mkX.setAttribute("orient", "auto");
+            const pX = document.createElementNS(ns, "path");
+            pX.setAttribute("d", arrowPath);
+            pX.setAttribute("fill", axisColor);
+            mkX.appendChild(pX);
 
-             // Y Arrow Marker
-             const mkY = document.createElementNS(ns, "marker");
-             mkY.setAttribute("id", "arrowY");
-             mkY.setAttribute("viewBox", "0 0 10 10");
-             mkY.setAttribute("refX", "0");
-             mkY.setAttribute("refY", "5");
-             mkY.setAttribute("markerWidth", 6);
-             mkY.setAttribute("markerHeight", 6);
-             mkY.setAttribute("orient", "auto");
-             const pY = document.createElementNS(ns, "path");
-             pY.setAttribute("d", arrowPath);
-             pY.setAttribute("fill", axisColor);
-             mkY.appendChild(pY);
-             
-             defs.appendChild(mkX);
-             defs.appendChild(mkY);
-             this.axesGroup.appendChild(defs);
+            // Y Arrow Marker
+            const mkY = document.createElementNS(ns, "marker");
+            mkY.setAttribute("id", "arrowY");
+            mkY.setAttribute("viewBox", "0 0 10 10");
+            mkY.setAttribute("refX", "0");
+            mkY.setAttribute("refY", "5");
+            mkY.setAttribute("markerWidth", 6);
+            mkY.setAttribute("markerHeight", 6);
+            mkY.setAttribute("orient", "auto");
+            const pY = document.createElementNS(ns, "path");
+            pY.setAttribute("d", arrowPath);
+            pY.setAttribute("fill", axisColor);
+            mkY.appendChild(pY);
 
-             // Draw Arrows Manually (Markers can be tricky with scaling)
-             // X Arrow (Positive)
-             if (y0 >= this.padding && y0 <= this.height - this.padding) {
-                 const axX = this.width - this.padding + 5;
-                 const axY = y0;
-                 const arrowXPoly = document.createElementNS(ns, "polygon");
-                 // Tip at axX, base back 8px, width 6px
-                 arrowXPoly.setAttribute("points", `${axX},${axY} ${axX-8},${axY-4} ${axX-8},${axY+4}`);
-                 arrowXPoly.setAttribute("fill", axisColor);
-                 this.axesGroup.appendChild(arrowXPoly);
-             }
+            defs.appendChild(mkX);
+            defs.appendChild(mkY);
+            this.axesGroup.appendChild(defs);
 
-             // Y Arrow (Positive)
-             if (x0 >= this.padding && x0 <= this.width - this.padding) {
-                 const ayX = x0;
-                 const ayY = this.padding - 5;
-                 const arrowYPoly = document.createElementNS(ns, "polygon");
-                 // Tip at ayY, base down 8px, width 6px
-                 arrowYPoly.setAttribute("points", `${ayX},${ayY} ${ayX-4},${ayY+8} ${ayX+4},${ayY+8}`);
-                 arrowYPoly.setAttribute("fill", axisColor);
-                 this.axesGroup.appendChild(arrowYPoly);
-             }
+            // Draw Arrows Manually (Markers can be tricky with scaling)
+            // X Arrow (Positive)
+            if (y0 >= this.padding && y0 <= this.height - this.padding) {
+                const axX = this.width - this.padding + 5;
+                const axY = y0;
+                const arrowXPoly = document.createElementNS(ns, "polygon");
+                // Tip at axX, base back 8px, width 6px
+                arrowXPoly.setAttribute("points", `${axX},${axY} ${axX - 8},${axY - 4} ${axX - 8},${axY + 4}`);
+                arrowXPoly.setAttribute("fill", axisColor);
+                this.axesGroup.appendChild(arrowXPoly);
+            }
+
+            // Y Arrow (Positive)
+            if (x0 >= this.padding && x0 <= this.width - this.padding) {
+                const ayX = x0;
+                const ayY = this.padding - 5;
+                const arrowYPoly = document.createElementNS(ns, "polygon");
+                // Tip at ayY, base down 8px, width 6px
+                arrowYPoly.setAttribute("points", `${ayX},${ayY} ${ayX - 4},${ayY + 8} ${ayX + 4},${ayY + 8}`);
+                arrowYPoly.setAttribute("fill", axisColor);
+                this.axesGroup.appendChild(arrowYPoly);
+            }
         }
 
         // Axis Labels
         if (this.config.axisLabels) {
-            this.text(this.width - this.padding + 10, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold");
-            this.text(x0, this.padding - 15, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold");
+            const lblSize = this.getConfigSize('labelSize');
+            this.text(this.width - this.padding + 10, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize);
+            this.text(x0, this.padding - 15, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize);
         }
 
         // --- 3. Data ---
@@ -453,7 +566,7 @@ class MatephisPlot {
 
         data.forEach((item, idx) => {
             const color = this.getColor(idx, item.color);
-            const width = item.width || item.strokeWidth || 2;
+            const width = item.width || item.strokeWidth || 3;
             const dash = item.dash || "";
 
             // Label Position Init
@@ -493,6 +606,7 @@ class MatephisPlot {
                 path.setAttribute("stroke", color);
                 path.setAttribute("stroke-width", width);
                 if (dash) path.setAttribute("stroke-dasharray", dash);
+                if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
                 this.dataGroup.appendChild(path);
             }
 
@@ -539,6 +653,7 @@ class MatephisPlot {
                 path.setAttribute("stroke", color);
                 path.setAttribute("stroke-width", width);
                 if (dash) path.setAttribute("stroke-dasharray", dash);
+                if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
                 this.dataGroup.appendChild(path);
             }
 
@@ -546,7 +661,8 @@ class MatephisPlot {
             if (item.x !== undefined) {
                 const px = mapX(item.x);
                 if (px >= this.padding && px <= this.width - this.padding) {
-                    this.line(px, this.padding, px, this.height - this.padding, color, width, dash, this.dataGroup);
+                    const l = this.line(px, this.padding, px, this.height - this.padding, color, width, dash, this.dataGroup);
+                    if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
                     if (!item.labelAt) labelPos = { x: px, y: this.padding + 15 };
                 }
             }
@@ -562,6 +678,7 @@ class MatephisPlot {
                         c.setAttribute("fill", item.fillColor || color);
                         c.setAttribute("stroke", item.strokeColor || "none");
                         c.setAttribute("stroke-width", item.strokeWidth || 0);
+                        if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
                         this.dataGroup.appendChild(c);
                         // Use last point for label if no labelAt
                         if (!item.labelAt) labelPos = { x: px, y: py };
@@ -587,7 +704,7 @@ class MatephisPlot {
                 const ly = Math.max(10, Math.min(this.height - 10, labelPos.y + dy));
 
                 const labelWeight = this.config.labelWeight || "normal";
-                this.text(lx, ly, item.label, anchor, "bottom", color, labelWeight, this.labelGroup);
+                this.text(lx, ly, item.label, anchor, "bottom", color, labelWeight, this.labelGroup, this.getConfigSize('labelSize'));
             }
         });
 
@@ -600,8 +717,17 @@ class MatephisPlot {
     drawLegend(items) {
         const x = this.width - this.padding - 10;
         const y = this.padding + 10;
-        const w = 120; // Approx fixed width for now
-        const h = items.length * 20 + 10;
+        
+        const fs = this.getConfigSize('legendSize');
+        
+        // Dynamic width calculation
+        let maxLen = 0;
+        items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
+        // Approx width: Symbol (30) + Chars * (FontSize * 0.6) + Padding (20)
+        let w = 30 + (maxLen * (fs * 0.6)) + 20;
+        if (w < 120) w = 120; // Min width
+
+        const h = items.length * (fs * 1.5) + 10; // Dynamic height based on font size
         const labelWeight = this.config.labelWeight || "normal";
 
         // bg
@@ -613,20 +739,21 @@ class MatephisPlot {
         rect.setAttribute("fill", "white");
         rect.setAttribute("fill-opacity", "0.9");
         rect.setAttribute("stroke", "#eee");
-        rect.setAttribute("rx", 4);
+        // rect.setAttribute("rx", 4); // Square corners requested
         this.legendGroup.appendChild(rect);
 
         items.forEach((item, i) => {
-            const ly = y + 15 + i * 20;
+            const ly = y + 15 + i * (fs * 1.5);
             const lx = x - w + 10;
             // Symbol
+            const symbolY = ly + (fs / 3); // Align with text baseline shift
             if (item.type === 'point') {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                c.setAttribute("cx", lx + 5); c.setAttribute("cy", ly); c.setAttribute("r", 4);
+                c.setAttribute("cx", lx + 5); c.setAttribute("cy", symbolY); c.setAttribute("r", 4);
                 c.setAttribute("fill", item.color);
                 this.legendGroup.appendChild(c);
             } else {
-                this.line(lx, ly, lx + 15, ly, item.color, 2, item.dash, this.legendGroup);
+                this.line(lx, symbolY, lx + 15, symbolY, item.color, 2, item.dash, this.legendGroup);
             }
 
             // Text or MathJax
@@ -644,12 +771,20 @@ class MatephisPlot {
                     // Simpler fallback for now: just try innerHTML or text fallback if complicated
                     // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
                     // Let's stick to text fallback for reliability in this fast iter.
-                    this.text(lx + 25, ly, item.label, "start", "middle", "#333", labelWeight, this.legendGroup);
+                    this.text(lx + 25, ly + (fs/3), item.label, "start", "middle", "#333", labelWeight, this.legendGroup, fs);
                 }
             } else {
-                this.text(lx + 20, ly, item.label, "start", "middle", "#333", labelWeight, this.legendGroup);
+                this.text(lx + 20, ly + (fs/3), item.label, "start", "middle", "#333", labelWeight, this.legendGroup, fs);
             }
         });
+    }
+
+    // Helper to resolve font size
+    getConfigSize(specificKey) {
+        // priority: specific > general > default(18)
+        if (this.config[specificKey]) return typeof this.config[specificKey] === 'number' ? this.config[specificKey] : parseInt(this.config[specificKey]);
+        if (this.config.fontSize) return typeof this.config.fontSize === 'number' ? this.config.fontSize : parseInt(this.config.fontSize);
+        return 18;
     }
 
     line(x1, y1, x2, y2, color, width, dash, parent) {
@@ -658,16 +793,23 @@ class MatephisPlot {
         l.setAttribute("x2", x2); l.setAttribute("y2", y2);
         l.setAttribute("stroke", color); l.setAttribute("stroke-width", width);
         if (dash) l.setAttribute("stroke-dasharray", dash);
+        // Note: The helper function 'line' doesn't easily accept extra attributes like opacity 
+        // without changing signature. But we can access the last child of parent if needed, 
+        // or just accept we might need to modify 'line' or use 'item.opacity' inside the specific call block.
+        // For the Vertical Line case (which uses this.line):
         parent.appendChild(l);
+        return l; // Return element so we can modify it
     }
 
-    text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup) {
+    text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null) {
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
         t.setAttribute("x", x); t.setAttribute("y", y);
         t.setAttribute("text-anchor", anchor);
         t.setAttribute("dominant-baseline", baseline);
         t.setAttribute("fill", color);
-        t.setAttribute("font-size", "12px");
+        // Configurable Font Size
+        const fSize = (size !== null) ? size + "px" : "18px";
+        t.setAttribute("font-size", fSize);
         t.setAttribute("font-weight", weight);
         t.textContent = str;
         t.style.paintOrder = "stroke";
@@ -682,8 +824,14 @@ class MatephisPlot {
         if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
-        source = source.replace(/width="[^"]*"/, 'width="1200"');
-        source = source.replace(/height="[^"]*"/, 'height="800"');
+        // Scale up for lightbox but maintain aspect ratio
+        const maxDim = 1200;
+        const scale = Math.min(maxDim / this.width, maxDim / this.height);
+        const newW = Math.round(this.width * scale);
+        const newH = Math.round(this.height * scale);
+
+        source = source.replace(/width="[^"]*"/, `width="${newW}"`);
+        source = source.replace(/height="[^"]*"/, `height="${newH}"`);
 
         const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(source)));
         const lb = document.getElementById('lightbox');

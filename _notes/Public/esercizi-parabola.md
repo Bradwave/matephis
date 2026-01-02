@@ -30,7 +30,20 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. $y = x^2 + 3x - 2$
 	3. $y = -x^2 - 3x - 2$
 	4. $y = x^2 - 3x + 2$
-	![](/images/parabola-2.svg)
+
+```matephis
+{
+  "data": [
+    { "fn": "-x^2+3x-2", "color": "brand1" },
+    { "fn": "x^2+3x-2", "color": "grayscale1"},
+    { "fn": "-x^2-3x-2", "color": "brand1", "opacity": 0.6},
+    { "fn": "x^2-3x+2", "color": "grayscale1", "opacity": 0.6}
+  ]
+}
+```
+
+
+1. ![](/images/parabola-2.svg)
 
 ## Quesiti
 
