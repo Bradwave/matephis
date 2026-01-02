@@ -72,7 +72,7 @@ Questo blocco usa la sintassi ` ```matephis ` e dovrebbe funzionare in Editing M
 ```
 
 ## 2. Etichette Intelligenti
-Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con `labelAt` (coordinate grafico) o `labelOffset` (pixel).
+Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con `labelAt` (coordinate grafico) o `labelOffset` (pixel). Le etichette vengono rappresentate in grassetto se specificato con `labelWeight: "bold"`.
 
 ```matephis
 {
@@ -81,7 +81,7 @@ Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con
   "gridOpacity": 0.8,
   "data": [
     { "fn": "x^2", "label": "Auto (Fine)", "color": "blue" },
-    { "fn": "2*x", "label": "Forzata su [2,4]", "labelAt": [2, 4], "color": "red" },
+    { "fn": "2*x", "label": "Forzata su [2,4]", "labelAt": [2, 4], "color": "red", "labelWeight": "bold"},
     { "x": -3, "label": "Spostata (+10px, 0)", "labelOffset": [10, 0], "color": "green" }
   ]
 }
