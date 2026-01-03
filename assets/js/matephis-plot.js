@@ -1193,33 +1193,61 @@ class MatephisPlot {
                     }
                 };
                 
-                // Initial Coarse Steps
-                const coarseSteps = this.width / 5; // 1 step every 5px (was 20px)
-                const dx = (xMax - xMin) / coarseSteps;
-                
-                for (let i = 0; i < coarseSteps; i++) {
-                    const xStart = xMin + i * dx;
-                    const xEnd = xMin + (i+1) * dx;
-                    const xMid = (xStart + xEnd) / 2;
-                    
-                    let yStart, yEnd, yMid;
-                    try { yStart = f(xStart); yEnd = f(xEnd); yMid = f(xMid); } catch(e){}
-                    
-                    const v1 = isValid(xStart, yStart);
-                    const v2 = isValid(xEnd, yEnd);
-                    const vm = isValid(xMid, yMid);
+                // Initial Coarse Steps with Domain Edge Handling
+                let rMin = xMin, rMax = xMax;
+                if (item.domain) {
+                    rMin = Math.max(rMin, item.domain[0]);
+                    rMax = Math.min(rMax, item.domain[1]);
+                }
 
-                    // Recurse if ANY point in this chunk is valid (hits domain edge, singularity, etc.)
-                    if (v1 || v2 || vm) {
-                         if (v1 && !started) {
-                             const pSX = mapX(xStart);
-                             const pSY = safeMapY(yStart);
-                             d += `M ${pSX} ${pSY}`; 
-                             started = true; 
-                         }
-                        plotSegment(xStart, yStart, xEnd, yEnd, 0);
-                    } else {
-                        started = false; 
+                // Eval Edge Helper
+                const evalEdge = (x, isMin, isMax) => {
+                    let val;
+                    try { val = f(x); } catch(e){}
+                    if (isFinite(val)) return val;
+                    const eps = 1e-6;
+                    if (isMin) { try { val = f(x + eps); } catch(e){} }
+                    if (isMax) { try { val = f(x - eps); } catch(e){} }
+                    return val;
+                };
+
+                if (rMin < rMax) {
+                    const coarseSteps = this.width / 5; 
+                    const dx = (xMax - xMin) / coarseSteps;
+                    let curr = rMin;
+                    
+                    while (curr < rMax - 1e-9) { 
+                        let next = curr + dx;
+                        if (next > rMax) next = rMax;
+                        // Avoid tiny last step
+                        if (Math.abs(next - rMax) < 1e-9) next = rMax;
+
+                        const isDomainMin = item.domain && (Math.abs(curr - item.domain[0]) < 1e-9);
+                        let yStart = evalEdge(curr, isDomainMin, false);
+
+                        const isDomainMax = item.domain && (Math.abs(next - item.domain[1]) < 1e-9);
+                        let yEnd = evalEdge(next, false, isDomainMax);
+
+                        let yMid; 
+                        const xMid = (curr + next) / 2;
+                        try { yMid = f(xMid); } catch(e){}
+                        
+                        const v1 = isValid(curr, yStart);
+                        const v2 = isValid(next, yEnd);
+                        const vm = isValid(xMid, yMid);
+
+                        if (v1 || v2 || vm) {
+                             if (v1 && !started) {
+                                 const pSX = mapX(curr);
+                                 const pSY = safeMapY(yStart);
+                                 d += `M ${pSX} ${pSY}`; 
+                                 started = true; 
+                             }
+                            plotSegment(curr, yStart, next, yEnd, 0);
+                        } else {
+                            started = false; 
+                        }
+                        curr = next;
                     }
                 }
                 
