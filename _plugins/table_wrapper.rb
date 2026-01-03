@@ -11,6 +11,7 @@ module Jekyll
           match
         else
           "<div class=\"matephis-table-wrapper\">#{match}</div>"
+        end
       end
     end
   end
