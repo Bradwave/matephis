@@ -60,6 +60,9 @@ class MatephisPlot {
         if (this.config.border) {
             this.wrapper.classList.add('bordered');
         }
+        if (this.config.interactive) {
+            this.wrapper.classList.add('interactive');
+        }
         this.container.appendChild(this.wrapper);
 
         // Param State

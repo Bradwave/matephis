@@ -6,7 +6,8 @@
   position: relative;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  -webkit-user-select: none;
+
   flex-direction: column;
   align-items: center;
   margin: 1rem 0;
@@ -200,4 +201,7 @@
     max-width: 90%;
     width: 90%;
   }
+}
+.matephis-plot-container.interactive {
+  touch-action: none;
 }
