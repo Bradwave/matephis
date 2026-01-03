@@ -702,15 +702,8 @@ td {
 }
 
 .matephis-table-wrapper {
-  overflow-x: auto;
-  max-width: 100%;
-  width: auto;
-  margin: var(--space-lg) 0;
-  -webkit-overflow-scrolling: touch;
-}
-
-.table-wrapper {
-  width: auto;
+  display: block;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -718,12 +711,9 @@ td {
   padding: 0;
 }
 
-.table-wrapper table {
-  margin-bottom: 0;
-}
-
 /* Scrollbar Styling for Table Wrapper */
-.table-wrapper::-webkit-scrollbar {
+.matephis-table-wrapper::-webkit-scrollbar {
+  height: 12px; /* Ensure height for horizontal bar */
   border: 1px solid var(--border);
   border-radius: 0px;
 }
@@ -1531,4 +1521,9 @@ mjx-container {
   overflow-y: hidden;
   max-width: 100%;
 
+}
+
+/* Fix for Flex/Grid child expansion preventing scroll */
+main, .page-layout main {
+    min-width: 0;
 }
