@@ -22,7 +22,7 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `ylim` | `[min, max]` | `[-9.9, 9.9]` | Limiti asse Y. |
 | `fullWidth` | Boolean | `false` | Se `true`, il grafico occupa il 100% della larghezza container e adatta la risoluzione. |
 | `interactive` | Boolean | `false` | Se `true`, abilita zoom, pan e controlli overlay. |
-| `theme` | String | `"accent"` | Tema colori: `"accent"`, `"grayscale"`, `"default"`. |
+| `theme` | String | `"red"` | Tema colori: `"red"`, `"black"`, `"sunburst"`, `"coastal"`, `"seaside"`, `"default"`. |
 | `legend` | Boolean | `false` | Mostra la legenda in alto a destra. |
 | `align` | String | `"left"` | Allineamento contenitore (`"center"`, `"left"`). |
 | `marginLeft` | String | `0` | Margine sinistro CSS personalizzato (es. `"-25px"`). |
@@ -118,29 +118,66 @@ Usa `fullWidth: true` per grafici responsive che occupano tutta la larghezza, co
 
 ## 2. Temi e stili
 
-### Tema grayscale e frecce assi
+### Tema black e frecce assi
 Utile per stampe o stili minimali. `axisArrows: true` aggiunge le frecce.
 
 ```json
 {
-  "theme": "grayscale",
+  "theme": "red",
   "axisArrows": true,
   "xlim": [-5, 5],
   "data": [
     { "fn": "x^2", "label": "Parabola" },
-    { "fn": "-x^2", "label": "Parabola Inv." }
+    { "fn": "-x^2", "label": "Parabola Inv." },
   ]
 }
 ```
 
 ```matephis
 {
-  "theme": "grayscale",
+  "theme": "black",
   "axisArrows": true,
   "xlim": [-5, 5],
   "data": [
     { "fn": "x^2", "label": "Parabola" },
-    { "fn": "-x^2", "label": "Parabola Inv." }
+    { "fn": "-x^2", "label": "Parabola Inv." },
+  ]
+}
+```matephis
+{
+  "theme": "black",
+  "axisArrows": true,
+  "xlim": [-5, 5],
+  "data": [
+    { "fn": "x^2", "label": "Parabola" },
+    { "fn": "-x^2", "label": "Parabola Inv." },
+  ]
+}
+```
+
+### Tema Sunburst
+Uno dei nuovi temi disponibili.
+
+```json
+{
+  "theme": "sunburst",
+  "xlim": [-5, 5],
+  "data": [
+    { "fn": "sin(x)", "label": "Seno" },
+    { "fn": "cos(x)", "label": "Coseno" },
+    { "fn": "sin(2*x)", "label": "Seno 2x" }
+  ]
+}
+```
+
+```matephis
+{
+  "theme": "sunburst",
+  "xlim": [-5, 5],
+  "data": [
+    { "fn": "sin(x)", "label": "Seno" },
+    { "fn": "cos(x)", "label": "Coseno" },
+    { "fn": "sin(2*x)", "label": "Seno 2x" }
   ]
 }
 ```

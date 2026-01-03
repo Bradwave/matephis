@@ -49,7 +49,7 @@ class MatephisPlot {
         this.container = container;
         this.config = JSON.parse(source);
         this.container.innerHTML = ""; // Clear JSON
-        
+
         // Unique ID for scoping (e.g. clip paths)
         this.uid = Math.random().toString(36).substr(2, 9);
 
@@ -77,7 +77,7 @@ class MatephisPlot {
         this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
 
         this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false };
-        
+
         this.lastScrollTime = 0;
         // Global scroll tracker for this instance (debounced interaction)
         window.addEventListener("scroll", () => { this.lastScrollTime = Date.now(); }, { passive: true });
@@ -100,14 +100,21 @@ class MatephisPlot {
         // Default (from CSS) matches images (usually left with small margin)
 
         // Palettes
+        // Palettes
         this.palettes = {
-            grayscale: ["#000000", "#363636", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
-            brand: ["#7c2a17", "#9a2b17", "#b01a00", "#c43818", "#d65231", "#e66c4b", "#f58666"], // Dark to light red, dark red at for value 7
+            black: ["#000000", "#444444", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
+            red: ["#B01A00", "#8b2e1bff", "#ce452aff", "#e64b2cff", "#fd5a35ff", "#fa7a5d"], // Based on --accent (#B01A00)
+            sunburst: ["#4f000b", "#720026", "#ce4257", "#ff7f51", "#ff9b54"],
+            coastal: ["#2b2d42", "#2b2d42", "#edf2f4", "#ef233c", "#d90429"],
+            seaside: ["#2B3A67", "#496A81", "#66999B", "#B3AF8F", "#FFC482"],
             default: ["#007bff", "#dc3545", "#28a745", "#fd7e14", "#6f42c1"]
         };
         // Granular maps
-        this.palettes.grayscale.forEach((c, i) => this.palettes[`grayscale${i + 1}`] = c);
-        this.palettes.brand.forEach((c, i) => this.palettes[`brand${i + 1}`] = c);
+        Object.keys(this.palettes).forEach(key => {
+            if (Array.isArray(this.palettes[key])) {
+                this.palettes[key].forEach((c, i) => this.palettes[`${key}${i + 1}`] = c);
+            }
+        });
 
         this.initSVG();
         if (this.config.params) this.initSliders();
@@ -142,7 +149,7 @@ class MatephisPlot {
             const cw = this.wrapper.clientWidth;
             // Use window.innerWidth as a better guess than 800 if clientWidth is 0
             if (cw > 50) targetWidth = cw;
-            else targetWidth = (window.innerWidth && window.innerWidth > 0) ? window.innerWidth : 1000; 
+            else targetWidth = (window.innerWidth && window.innerWidth > 0) ? window.innerWidth : 1000;
         }
         this.width = targetWidth;
 
@@ -243,7 +250,7 @@ class MatephisPlot {
             // 1. Label Group ("parameter = value")
             const labelGroup = document.createElement("div");
             labelGroup.className = "matephis-slider-label-group";
-            
+
             const label = document.createElement("span");
             label.innerText = `${key} = `; // Spaces restored
             label.className = "matephis-slider-label";
@@ -362,7 +369,7 @@ class MatephisPlot {
                 if (newW > 10 && Math.abs(newW - this.width) > 5) { // Threshold to prevent jitter
                     // Always resize to match container for crisp text (1:1 pixel mapping)
                     this.width = newW;
-                    
+
                     // Aspect Ratio
                     if (this.config.aspectRatio) {
                         let ratio = 1;
@@ -381,7 +388,7 @@ class MatephisPlot {
                     this.svg.setAttribute("width", this.width);
                     this.svg.setAttribute("height", this.height);
                     this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
-                    
+
                     // Update Clip Rect
                     if (this.clipRect) {
                         this.clipRect.setAttribute("width", Math.max(0, this.width - this.padding * 2));
@@ -390,8 +397,8 @@ class MatephisPlot {
 
                     // Update Transform for interactions
                     if (this.transform) {
-                         this.transform.width = this.width;
-                         this.transform.height = this.height;
+                        this.transform.width = this.width;
+                        this.transform.height = this.height;
                     }
                     this.draw();
                 }
@@ -513,7 +520,7 @@ class MatephisPlot {
         };
 
         // Unified Touch Handler (Scroll Guard + Pan + Pinch)
-        
+
         let touchStartView = null; // Snapshot of view at touch start
         let touchStartCenter = null; // {x, y}
         let touchStartDist = 0;
@@ -548,7 +555,7 @@ class MatephisPlot {
             // 2. Lock & Initialize
             if (e.touches.length > 0) {
                 if (e.cancelable) e.preventDefault(); // Lock scroll
-                
+
                 isTouchActive = true;
                 if (this.transform) {
                     const { xMin, xMax, yMin, yMax } = this.transform;
@@ -571,11 +578,11 @@ class MatephisPlot {
             if (!currentCenter) return;
 
             const currentDist = getTouchDist(e);
-            
+
             // A. Zoom (Scale)
             let scale = 1;
             if (e.touches.length > 1 && touchStartDist > 0) {
-                scale = touchStartDist / currentDist; 
+                scale = touchStartDist / currentDist;
             }
 
             // B. Pan (Translation)
@@ -603,7 +610,7 @@ class MatephisPlot {
             // Center Zoom Logic: Scale around CENTER
             const cx = (touchStartView.xMin + touchStartView.xMax) / 2;
             const cy = (touchStartView.yMin + touchStartView.yMax) / 2;
-            
+
             let nXMin = cx - newW / 2;
             let nXMax = cx + newW / 2;
             let nYMin = cy - newH / 2;
@@ -626,8 +633,8 @@ class MatephisPlot {
             } else {
                 // Rebase gesture
                 touchStartCenter = getTouchCenter(e);
-                 if (this.transform) {
-                    const { xMin, xMax, yMin, yMax } = this.transform; 
+                if (this.transform) {
+                    const { xMin, xMax, yMin, yMax } = this.transform;
                     touchStartView = { xMin, xMax, yMin, yMax, width: xMax - xMin, height: yMax - yMin };
                 }
                 touchStartDist = getTouchDist(e);
@@ -664,7 +671,7 @@ class MatephisPlot {
             if (typeof this.palettes[explicit] === 'string') return this.palettes[explicit]; // brand1 etc
             return explicit; // hex
         }
-        const theme = this.config.theme || "brand";
+        const theme = this.config.theme || "red";
         const palette = this.palettes[theme] || this.palettes.default;
         return palette[index % palette.length];
     }
@@ -1083,7 +1090,7 @@ class MatephisPlot {
                 let d = "";
                 let started = false;
                 const f = new Function("x", `return ${this.makeFn(item.fn)};`);
-                
+
                 // Adaptive State
                 const MAX_DEPTH = 8;
                 const TOLERANCE = 0.2; // Tighter tolerance for smoother curves
@@ -1105,52 +1112,52 @@ class MatephisPlot {
                 const plotSegment = (x1, y1, x2, y2, depth) => {
                     const xm = (x1 + x2) / 2;
                     let ym;
-                    try { ym = f(xm); } catch(e) { ym = NaN; }
-                    
+                    try { ym = f(xm); } catch (e) { ym = NaN; }
+
                     const p1X = mapX(x1), p1Y = safeMapY(y1);
                     const p2X = mapX(x2), p2Y = safeMapY(y2);
                     const pmX = mapX(xm), pmY = safeMapY(ym);
-                    
+
                     const v1 = isValid(x1, y1);
                     const v2 = isValid(x2, y2);
                     const vm = isValid(xm, ym);
 
                     // A. Recursion Criteria
                     if (depth < MAX_DEPTH) {
-                       let split = false;
+                        let split = false;
 
-                       // 1. Edge Hunting (One valid, one invalid)
-                       if (v1 !== v2) split = true;
-                       
-                       // 2. Hole / Singularity Hunting (Both valid, mid invalid) - e.g. sin(x)/x at 0
-                       else if (v1 && v2 && !vm) split = true;
-                       
-                       // 3. Valid Midpoint Checks
-                       else if (v1 && v2 && vm) {
-                           // Curvature / Linearity Check
-                           const linY = p1Y + (p2Y - p1Y) * 0.5;
-                           const error = Math.abs(pmY - linY);
-                           if (error > TOLERANCE) split = true;
-                           
-                           // Steep Slope / Asymptote Check
-                           // If dY is huge, subdivide to find the jump
-                           if (Math.abs(p2Y - p1Y) > this.height) split = true;
-                       }
-                       // 4. Invalid Midpoint but maybe valid edge? (vm false, v1/v2 false) -> Usually skip, 
-                       // but if we are "hunting" from coarse loop, we might have v1=false, v2=false, vm=TRUE.
-                       // This case is handled by top-level call. Inside recursion, if v1/v2 false, we often stop unless vm is true?
-                       // Actually if v1/v2 false and vm true, split!
-                       else if (!v1 && !v2 && vm) split = true;
+                        // 1. Edge Hunting (One valid, one invalid)
+                        if (v1 !== v2) split = true;
 
-                       if (split) {
-                           plotSegment(x1, y1, xm, ym, depth + 1);
-                           plotSegment(xm, ym, x2, y2, depth + 1);
-                           return;
-                       }
+                        // 2. Hole / Singularity Hunting (Both valid, mid invalid) - e.g. sin(x)/x at 0
+                        else if (v1 && v2 && !vm) split = true;
+
+                        // 3. Valid Midpoint Checks
+                        else if (v1 && v2 && vm) {
+                            // Curvature / Linearity Check
+                            const linY = p1Y + (p2Y - p1Y) * 0.5;
+                            const error = Math.abs(pmY - linY);
+                            if (error > TOLERANCE) split = true;
+
+                            // Steep Slope / Asymptote Check
+                            // If dY is huge, subdivide to find the jump
+                            if (Math.abs(p2Y - p1Y) > this.height) split = true;
+                        }
+                        // 4. Invalid Midpoint but maybe valid edge? (vm false, v1/v2 false) -> Usually skip, 
+                        // but if we are "hunting" from coarse loop, we might have v1=false, v2=false, vm=TRUE.
+                        // This case is handled by top-level call. Inside recursion, if v1/v2 false, we often stop unless vm is true?
+                        // Actually if v1/v2 false and vm true, split!
+                        else if (!v1 && !v2 && vm) split = true;
+
+                        if (split) {
+                            plotSegment(x1, y1, xm, ym, depth + 1);
+                            plotSegment(xm, ym, x2, y2, depth + 1);
+                            return;
+                        }
                     }
 
                     // B. Base Case - Draw or Move
-                    
+
                     // Case 1: Both endpoints valid -> Draw Line (unless asymptote break)
                     if (v1 && v2) {
                         const jump = Math.abs(p2Y - p1Y);
@@ -1158,23 +1165,23 @@ class MatephisPlot {
                         // Or just huge jump. For 1/x, jump is Infinity. Clampped to 20000.
                         // For tan(x), jump is also huge.
                         // We connect if jump is reasonable.
-                        
+
                         // Heuristic: If jump > 2 * Height, assume asymptote and break.
                         // EXCEPT if "Bridging" a hole? No, if we are here (v1 && v2), we just bridged the hole 
                         // by recursion (midpoint became valid or we reached max depth).
                         // Wait, if we reached max depth and mid was invalid, we are NOT in (v1 && v2) branch?
                         // Correct. This branch is for "we found a valid segment". 
-                        
+
                         if (jump < this.height * 2) {
-                             if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
-                             d += ` L ${p2X} ${p2Y}`;
-                             if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                            if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                            d += ` L ${p2X} ${p2Y}`;
+                            if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
                         } else {
-                             // Break
-                             started = false;
+                            // Break
+                            started = false;
                         }
                     }
-                    
+
                     // Case 2: Bridging a Hole (Removable Discontinuity)
                     // We reached MAX_DEPTH. v1 is valid, v2 is valid, but we couldn't resolve the middle.
                     // This happens for sin(x)/x at 0 (undefined at 0).
@@ -1188,14 +1195,14 @@ class MatephisPlot {
                             d += ` L ${p2X} ${p2Y}`;
                             if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
                         } else {
-                            started = false; 
+                            started = false;
                         }
                     }
                     else {
                         started = false;
                     }
                 };
-                
+
                 // Initial Coarse Steps with Domain Edge Handling
                 let rMin = xMin, rMax = xMax;
                 if (item.domain) {
@@ -1206,11 +1213,11 @@ class MatephisPlot {
                 // Eval Edge Helper
                 const evalEdge = (x, isMin, isMax) => {
                     let val;
-                    try { val = f(x); } catch(e){}
+                    try { val = f(x); } catch (e) { }
                     if (isFinite(val)) return val;
                     const eps = 1e-6;
-                    if (isMin) { try { val = f(x + eps); } catch(e){} }
-                    if (isMax) { try { val = f(x - eps); } catch(e){} }
+                    if (isMin) { try { val = f(x + eps); } catch (e) { } }
+                    if (isMax) { try { val = f(x - eps); } catch (e) { } }
                     return val;
                 };
 
@@ -1218,11 +1225,11 @@ class MatephisPlot {
                     // Configurable Sampling Step (pixels)
                     // Default to 2px for better quality (was 5px)
                     const sampleStep = this.config.sampleStep || 2;
-                    const coarseSteps = this.width / sampleStep; 
+                    const coarseSteps = this.width / sampleStep;
                     const dx = (xMax - xMin) / coarseSteps;
                     let curr = rMin;
-                    
-                    while (curr < rMax - 1e-9) { 
+
+                    while (curr < rMax - 1e-9) {
                         let next = curr + dx;
                         if (next > rMax) next = rMax;
                         // Avoid tiny last step
@@ -1234,29 +1241,29 @@ class MatephisPlot {
                         const isDomainMax = item.domain && (Math.abs(next - item.domain[1]) < 1e-9);
                         let yEnd = evalEdge(next, false, isDomainMax);
 
-                        let yMid; 
+                        let yMid;
                         const xMid = (curr + next) / 2;
-                        try { yMid = f(xMid); } catch(e){}
-                        
+                        try { yMid = f(xMid); } catch (e) { }
+
                         const v1 = isValid(curr, yStart);
                         const v2 = isValid(next, yEnd);
                         const vm = isValid(xMid, yMid);
 
                         if (v1 || v2 || vm) {
-                             if (v1 && !started) {
-                                 const pSX = mapX(curr);
-                                 const pSY = safeMapY(yStart);
-                                 d += `M ${pSX} ${pSY}`; 
-                                 started = true; 
-                             }
+                            if (v1 && !started) {
+                                const pSX = mapX(curr);
+                                const pSY = safeMapY(yStart);
+                                d += `M ${pSX} ${pSY}`;
+                                started = true;
+                            }
                             plotSegment(curr, yStart, next, yEnd, 0);
                         } else {
-                            started = false; 
+                            started = false;
                         }
                         curr = next;
                     }
                 }
-                
+
                 const path = document.createElementNS(ns, "path");
                 path.setAttribute("d", d);
                 path.setAttribute("fill", "none");
