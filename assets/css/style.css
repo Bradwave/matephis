@@ -1450,7 +1450,7 @@ li a[href^="https://"] {
 .matephis-slider-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   font-family: var(--font-code, monospace);
   font-size: 0.85rem;
 }
@@ -1459,27 +1459,28 @@ li a[href^="https://"] {
   -webkit-appearance: none;
   appearance: none;
   flex-grow: 1;
-  height: 4px;
+  height: 6px;
   background: #e0e0e0;
-  border-radius: 2px;
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
 }
 
 .matephis-slider-row input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
   border-radius: 50%;
   background: var(--accent, #B01A00);
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: all 0.1s ease-in-out;
   margin-top: 0;
   /* Align adjustment if needed */
 }
 
 .matephis-slider-row input[type=range]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  outline: 6px solid #b01a00;
 }
 
 .matephis-slider-row input[type=range]::-moz-range-thumb {

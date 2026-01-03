@@ -88,7 +88,7 @@
         const images = document.querySelectorAll('img:not(.logo):not(.icon):not(.lightbox-content)');
 
         images.forEach(img => {
-            img.onpointerdown = () => {
+            img.onclick = () => {
                 lightbox.style.display = "flex";
                 
                 lightboxImg.src = img.src;
@@ -107,7 +107,7 @@
         closeBtn.onclick = closeLightbox;
 
         // Close on clicking outside the image
-        lightbox.onpointerdown = (e) => {
+        lightbox.onclick = (e) => {
             if (e.target !== lightboxImg) {
                 closeLightbox();
             }

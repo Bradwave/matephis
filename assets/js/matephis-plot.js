@@ -63,6 +63,11 @@ class MatephisPlot {
             }
         }
         
+        // Controls Overlay
+        if (this.config.interactive) {
+             this.initControlsOverlay();
+        }
+
         // Layout Options
         if (this.config.fullWidth) this.config.cssWidth = "100%";
         if (this.config.cssWidth) {
@@ -70,20 +75,12 @@ class MatephisPlot {
             this.wrapper.style.width = "100%"; // Ensure it scales
         }
 
-        // Alignment & Margins
-        if (this.config.marginLeft !== undefined) {
-            this.wrapper.style.marginLeft = this.config.marginLeft;
-        } else if (this.config.align === 'center') {
+        // Alignment
+        if (this.config.align === 'center') {
             this.wrapper.style.marginLeft = "auto";
-        } else {
-            this.wrapper.style.marginLeft = "0";
-        }
-
-        if (this.config.marginRight !== undefined) {
-            this.wrapper.style.marginRight = this.config.marginRight;
-        } else if (this.config.align === 'center') {
             this.wrapper.style.marginRight = "auto";
-        } else {
+        } else if (this.config.align === 'left') {
+            this.wrapper.style.marginLeft = "0";
             this.wrapper.style.marginRight = "auto";
         }
         // Default (from CSS) matches images (usually left with small margin)
@@ -105,11 +102,25 @@ class MatephisPlot {
         this.draw();
 
         // Lightbox
-        this.svg.onpointerdown = () => this.openLightbox();
+        this.svg.onclick = () => this.openLightbox();
     }
 
     initSVG() {
-        this.width = this.config.width || 600;
+        // If fullWidth, use client width?
+        // But initSVG is called in constructor, wrapper is appended but maybe not sized yet if DOM not ready or layout not flowed?
+        // wrapper is in container.
+        // If we want crisp text, we need pixel-perfect width.
+        // But if we just use a larger default for fullWidth (e.g. 800 or 1000) it might be safer than reading clientWidth which can be 0.
+        // Or we assume standard desktop width?
+        // Better: Try to read clientWidth. If 0, fallback to config.width or 800.
+        
+        let targetWidth = this.config.width || 600;
+        if (this.config.fullWidth) {
+             const cw = this.wrapper.clientWidth;
+             if (cw > 50) targetWidth = cw; 
+             else targetWidth = 800; // Fallback
+        }
+        this.width = targetWidth;
 
         // Aspect Ratio
         if (this.config.aspectRatio) {
@@ -179,36 +190,157 @@ class MatephisPlot {
 
         for (let key in this.config.params) {
             const p = this.config.params[key];
+            // Params Row Layout: [Label "k = 1.0"]  <spacer>  [Min] [Slider] [Max]
             const row = document.createElement("div");
             row.className = "matephis-slider-row";
+            // Ensure row uses flexbox in style.css, but we can enforce some styles here or in CSS
+            // Assuming style.css has .matephis-slider-row { display: flex; align-items: center; ... }
 
-            const label = document.createElement("label");
-            label.innerText = `${key} = `;
-
+            // 1. Label Group ("parameter = value")
+            const labelGroup = document.createElement("div");
+            Object.assign(labelGroup.style, {
+                minWidth: "80px", // Keep fixed width for slider alignment 
+                whiteSpace: "nowrap",
+                textAlign: "left" // User wants left alignment
+            });
+            const label = document.createElement("span");
+            label.innerText = `${key} = `; // Spaces restored
+            label.style.fontWeight = "bold";
+            // label.style.marginRight = "4px"; // Removed extra margin since we have space in string
+            
             const valSpan = document.createElement("span");
-            valSpan.className = "matephis-slider-val";
+            valSpan.className = "matephis-slider-val"; // Keep class in case of CSS
             valSpan.innerText = p.val;
+            
+            labelGroup.appendChild(label);
+            labelGroup.appendChild(valSpan);
 
+            // 2. Min Label
+            const minLabel = document.createElement("span");
+            minLabel.innerText = p.min;
+            Object.assign(minLabel.style, {
+                fontSize: "0.8em",
+                color: "#999",
+                marginRight: "8px",
+                minWidth: "40px",      // Fixed width
+                textAlign: "right",    // Align numbers to right (near slider)
+                display: "inline-block"
+            });
+
+            // 3. Slider
             const input = document.createElement("input");
             input.type = "range";
             input.min = p.min;
             input.max = p.max;
             input.step = p.step || 0.1;
             input.value = p.val;
+            // Flex grow for slider
+            input.style.flexGrow = "1";
+
+            // 4. Max Label
+            const maxLabel = document.createElement("span");
+            maxLabel.innerText = p.max;
+            Object.assign(maxLabel.style, {
+                fontSize: "0.8em",
+                color: "#999",
+                marginLeft: "8px",
+                minWidth: "40px",      // Fixed width
+                textAlign: "left",     // Align numbers to left (near slider)
+                display: "inline-block"
+            });
 
             input.addEventListener("input", (e) => {
                 const v = parseFloat(e.target.value);
                 this.params[key] = v;
-                valSpan.innerText = v; // Update number
-                this.draw(); // Re-render plot
+                valSpan.innerText = v; // Update number next to label
+                this.draw(); 
             });
 
-            row.appendChild(label);
-            row.appendChild(valSpan);
+            row.appendChild(labelGroup);
+            row.appendChild(minLabel);
             row.appendChild(input);
+            row.appendChild(maxLabel);
+            
             controls.appendChild(row);
         }
         this.wrapper.appendChild(controls);
+    }
+
+    initControlsOverlay() {
+        // Container must be relative
+        this.wrapper.style.position = "relative";
+        
+        const overlay = document.createElement("div");
+        overlay.className = "matephis-plot-overlay";
+        Object.assign(overlay.style, {
+            position: "absolute",
+            bottom: "10px",
+            left: "10px",
+            display: "flex",
+            gap: "5px",
+            zIndex: "10"
+        });
+
+        const mkBtn = (txt, cb) => {
+            const b = document.createElement("button");
+            b.innerText = txt;
+            Object.assign(b.style, {
+                background: "rgba(255,255,255,0.8)",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                padding: "2px 8px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "bold",
+                color: "#333",
+                userSelect: "none"
+            });
+            b.onclick = (e) => {
+                e.stopPropagation(); // Prevent plot click
+                cb();
+            };
+            return b;
+        };
+
+        const zoom = (factor) => {
+             if (!this.transform) return;
+             const { xMin, xMax, yMin, yMax } = this.transform;
+             const cx = (xMin + xMax) / 2;
+             const cy = (yMin + yMax) / 2;
+             const viewW = (xMax - xMin) * factor;
+             const viewH = (yMax - yMin) * factor;
+             
+             this.view = {
+                 xMin: cx - viewW / 2,
+                 xMax: cx + viewW / 2,
+                 yMin: cy - viewH / 2,
+                 yMax: cy + viewH / 2
+             };
+             this.draw();
+        };
+
+        const btnPlus = mkBtn("+", () => zoom(0.8)); // Zoom In = smaller range
+        const btnMinus = mkBtn("-", () => zoom(1.25)); // Zoom Out = larger range
+        
+        const btnReset = mkBtn("↺", () => {
+            if (this.config.xlim) {
+               this.view.xMin = this.config.xlim[0];
+               this.view.xMax = this.config.xlim[1];
+            } else { this.view.xMin = -9.9; this.view.xMax = 9.9; }
+
+            if (this.config.ylim) {
+               this.view.yMin = this.config.ylim[0];
+               this.view.yMax = this.config.ylim[1];
+            } else { this.view.yMin = -9.9; this.view.yMax = 9.9; }
+            this.draw();
+        });
+        btnReset.title = "Reset View";
+        
+        overlay.appendChild(btnPlus);
+        overlay.appendChild(btnMinus);
+        overlay.appendChild(btnReset);
+        
+        this.wrapper.appendChild(overlay);
     }
 
     getColor(index, explicit) {
