@@ -6,10 +6,11 @@ module Jekyll
     def self.process(content)
       content.gsub(TABLE_REGEX) do |match|
         # Check if already wrapped by looking at immediate predecessor
-        # This is a basic check.
         pre_match = Regexp.last_match.pre_match
-          "<div class=\"table-wrapper\">#{match}</div>"
-        end
+        if pre_match =~ /<div[^>]*class=["']matephis-table-wrapper["'][^>]*>\s*\z/
+          match
+        else
+          "<div class=\"matephis-table-wrapper\">#{match}</div>"
       end
     end
   end

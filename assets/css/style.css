@@ -672,13 +672,6 @@ em {
 
 /* --- 9. Tables --- */
 
-.matephis-table-wrapper {
-  overflow-x: auto;
-  max-width: 100%;
-  width: auto;
-  margin: var(--space-lg) 0;
-}
-
 table {
   width: auto;
   border-collapse: collapse;
@@ -708,7 +701,33 @@ td {
   color: var(--text);
 }
 
-/* Search styles - modernized */
+.matephis-table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+  width: auto;
+  margin: var(--space-lg) 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrapper {
+  width: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: var(--space-lg) 0;
+  padding: 0;
+}
+
+.table-wrapper table {
+  margin-bottom: 0;
+}
+
+/* Scrollbar Styling for Table Wrapper */
+.table-wrapper::-webkit-scrollbar {
+  border: 1px solid var(--border);
+  border-radius: 0px;
+}
+
 /* --- 10. Search System --- */
 
 .search-container {
@@ -1511,4 +1530,5 @@ mjx-container {
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
+
 }
