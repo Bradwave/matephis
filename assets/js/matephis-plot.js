@@ -62,11 +62,17 @@ class MatephisPlot {
                 this.params[key] = this.config.params[key].val || 0;
             }
         }
+
+        // View State
+        this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
+
+        this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false };
         
-        // Controls Overlay
-        if (this.config.interactive) {
-             this.initControlsOverlay();
-        }
+        this.lastScrollTime = 0;
+        // Global scroll tracker for this instance (debounced interaction)
+        window.addEventListener("scroll", () => { this.lastScrollTime = Date.now(); }, { passive: true });
+
+        // Controls Overlay (Moved to end)
 
         // Layout Options
         if (this.config.fullWidth) this.config.cssWidth = "100%";
@@ -98,11 +104,20 @@ class MatephisPlot {
         this.initSVG();
         if (this.config.params) this.initSliders();
 
+        // Controls & Interactions (Must be after SVG)
+        if (this.config.interactive) {
+            this.initControlsOverlay();
+            this.initInteractions();
+        }
+
         // Initial Draw
         this.draw();
 
         // Lightbox
         this.svg.onclick = () => this.openLightbox();
+
+        // Responsive Resizing
+        this.initResizeObserver();
     }
 
     initSVG() {
@@ -113,12 +128,13 @@ class MatephisPlot {
         // But if we just use a larger default for fullWidth (e.g. 800 or 1000) it might be safer than reading clientWidth which can be 0.
         // Or we assume standard desktop width?
         // Better: Try to read clientWidth. If 0, fallback to config.width or 800.
-        
+
         let targetWidth = this.config.width || 600;
         if (this.config.fullWidth) {
-             const cw = this.wrapper.clientWidth;
-             if (cw > 50) targetWidth = cw; 
-             else targetWidth = 800; // Fallback
+            const cw = this.wrapper.clientWidth;
+            // Use window.innerWidth as a better guess than 800 if clientWidth is 0
+            if (cw > 50) targetWidth = cw;
+            else targetWidth = (window.innerWidth && window.innerWidth > 0) ? window.innerWidth : 1000; 
         }
         this.width = targetWidth;
 
@@ -145,10 +161,15 @@ class MatephisPlot {
         this.svg.setAttribute("height", this.height);
         this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
         this.svg.style.maxWidth = "100%";
+        this.svg.style.width = "100%"; // Force fill
         this.svg.style.height = "auto";
+        // this.svg.style.aspectRatio = ... removed to prevent issues, handled by attributes
         this.svg.style.fontFamily = "var(--font-code, monospace)";
-        this.svg.style.cursor = "zoom-in";
-        this.svg.style.userSelect = "none"; // Request: prevent selection
+        // If interactive, usual cursor (so user knows it's not just a static image/lightbox only)
+        // If not interactive, it opens lightbox -> zoom-in
+        this.svg.style.cursor = this.config.interactive ? "default" : "zoom-in";
+        this.svg.style.userSelect = "none";
+        this.svg.style.display = "block"; // Fix vertical align gaps
         this.svg.style.webkitUserSelect = "none";
 
         // Groups
@@ -181,7 +202,11 @@ class MatephisPlot {
         this.svg.appendChild(this.labelGroup);
         this.svg.appendChild(this.legendGroup);
 
-        this.wrapper.appendChild(this.svg);
+        // Create Plot Stage (Relative container for SVG + Overlay)
+        this.plotStage = document.createElement("div");
+        this.plotStage.style.position = "relative";
+        this.plotStage.appendChild(this.svg);
+        this.wrapper.appendChild(this.plotStage);
     }
 
     initSliders() {
@@ -207,11 +232,11 @@ class MatephisPlot {
             label.innerText = `${key} = `; // Spaces restored
             label.style.fontWeight = "bold";
             // label.style.marginRight = "4px"; // Removed extra margin since we have space in string
-            
+
             const valSpan = document.createElement("span");
             valSpan.className = "matephis-slider-val"; // Keep class in case of CSS
             valSpan.innerText = p.val;
-            
+
             labelGroup.appendChild(label);
             labelGroup.appendChild(valSpan);
 
@@ -253,30 +278,31 @@ class MatephisPlot {
                 const v = parseFloat(e.target.value);
                 this.params[key] = v;
                 valSpan.innerText = v; // Update number next to label
-                this.draw(); 
+                this.draw();
             });
 
             row.appendChild(labelGroup);
             row.appendChild(minLabel);
             row.appendChild(input);
             row.appendChild(maxLabel);
-            
+
             controls.appendChild(row);
         }
         this.wrapper.appendChild(controls);
     }
 
     initControlsOverlay() {
-        // Container must be relative
-        this.wrapper.style.position = "relative";
-        
+        // Container must be relative (plotStage is already relative)
+        // this.wrapper.style.position = "relative"; // No longer needed for overlay since we use plotStage
+
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-overlay";
         Object.assign(overlay.style, {
             position: "absolute",
-            bottom: "10px",
-            left: "10px",
+            bottom: (this.padding + 10) + "px",
+            left: (this.padding + 10) + "px",
             display: "flex",
+            flexDirection: "column", // Vertical stack
             gap: "5px",
             zIndex: "10"
         });
@@ -287,8 +313,13 @@ class MatephisPlot {
             Object.assign(b.style, {
                 background: "rgba(255,255,255,0.8)",
                 border: "1px solid #ccc",
-                borderRadius: "4px",
-                padding: "2px 8px",
+                borderRadius: "0px", // Square buttons
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0",
                 cursor: "pointer",
                 fontSize: "14px",
                 fontWeight: "bold",
@@ -303,44 +334,258 @@ class MatephisPlot {
         };
 
         const zoom = (factor) => {
-             if (!this.transform) return;
-             const { xMin, xMax, yMin, yMax } = this.transform;
-             const cx = (xMin + xMax) / 2;
-             const cy = (yMin + yMax) / 2;
-             const viewW = (xMax - xMin) * factor;
-             const viewH = (yMax - yMin) * factor;
-             
-             this.view = {
-                 xMin: cx - viewW / 2,
-                 xMax: cx + viewW / 2,
-                 yMin: cy - viewH / 2,
-                 yMax: cy + viewH / 2
-             };
-             this.draw();
+            if (!this.transform) return;
+            const { xMin, xMax, yMin, yMax } = this.transform;
+            const cx = (xMin + xMax) / 2;
+            const cy = (yMin + yMax) / 2;
+            const viewW = (xMax - xMin) * factor;
+            const viewH = (yMax - yMin) * factor;
+
+            this.view = {
+                xMin: cx - viewW / 2,
+                xMax: cx + viewW / 2,
+                yMin: cy - viewH / 2,
+                yMax: cy + viewH / 2
+            };
+            this.draw();
         };
 
         const btnPlus = mkBtn("+", () => zoom(0.8)); // Zoom In = smaller range
         const btnMinus = mkBtn("-", () => zoom(1.25)); // Zoom Out = larger range
-        
+
         const btnReset = mkBtn("↺", () => {
             if (this.config.xlim) {
-               this.view.xMin = this.config.xlim[0];
-               this.view.xMax = this.config.xlim[1];
+                this.view.xMin = this.config.xlim[0];
+                this.view.xMax = this.config.xlim[1];
             } else { this.view.xMin = -9.9; this.view.xMax = 9.9; }
 
             if (this.config.ylim) {
-               this.view.yMin = this.config.ylim[0];
-               this.view.yMax = this.config.ylim[1];
+                this.view.yMin = this.config.ylim[0];
+                this.view.yMax = this.config.ylim[1];
             } else { this.view.yMin = -9.9; this.view.yMax = 9.9; }
             this.draw();
         });
         btnReset.title = "Reset View";
-        
+
         overlay.appendChild(btnPlus);
         overlay.appendChild(btnMinus);
         overlay.appendChild(btnReset);
-        
-        this.wrapper.appendChild(overlay);
+
+        this.plotStage.appendChild(overlay);
+    }
+
+    initResizeObserver() {
+        // ResizeObserver for Responsive FullWidth / Dynamic Layout
+        // Solves "Large Font" (by matching pixel density) and "Height 0" (by reacting to layout)
+        if (!window.ResizeObserver) return;
+        this.resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const newW = entry.contentRect.width;
+                if (newW > 10 && Math.abs(newW - this.width) > 5) { // Threshold to prevent jitter
+                    // Always resize to match container for crisp text (1:1 pixel mapping)
+                    this.width = newW;
+                    
+                    // Aspect Ratio
+                    if (this.config.aspectRatio) {
+                        let ratio = 1;
+                        if (typeof this.config.aspectRatio === 'string' && this.config.aspectRatio.includes(":")) {
+                            const parts = this.config.aspectRatio.split(":");
+                            ratio = parseFloat(parts[0]) / parseFloat(parts[1]);
+                        } else {
+                            ratio = parseFloat(this.config.aspectRatio);
+                        }
+                        this.height = this.width / ratio;
+                    } else {
+                        // Default square if no ratio
+                        this.height = this.width;
+                    }
+
+                    this.svg.setAttribute("width", this.width);
+                    this.svg.setAttribute("height", this.height);
+                    this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
+                    
+                    // Update Transform for interactions
+                    if (this.transform) {
+                         this.transform.width = this.width;
+                         this.transform.height = this.height;
+                    }
+                    this.draw();
+                }
+            }
+        });
+        this.resizeObserver.observe(this.wrapper);
+    }
+
+
+    initInteractions() {
+        if (!this.config.interactive) return;
+
+        const svg = this.svg;
+        let startX, startY;
+        let lastX, lastY;
+        let initialView = null;
+        let initialDist = 0;
+        let isPinching = false;
+
+        const getDist = (e) => {
+            return Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        };
+
+        // Pointer Events (Mouse + Touch)
+        svg.onpointerdown = (e) => {
+            if (Date.now() - this.lastScrollTime < 150) return; // Prevent if just scrolled
+            // Check for multitouch (pinch) - usually handled by touchstart/move
+            if (e.pointerType === 'touch' && !e.isPrimary) return;
+
+            this.interactions.isDragging = true;
+            this.interactions.startX = e.clientX;
+            this.interactions.startY = e.clientY;
+            this.interactions.hasMoved = false;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            svg.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        };
+
+        svg.onpointermove = (e) => {
+            if (!this.interactions.isDragging || isPinching) return;
+
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.interactions.hasMoved = true;
+
+            // Pan logic
+            if (this.transform && this.interactions.hasMoved) {
+                const { xMin, xMax, yMin, yMax, width, height, padding } = this.transform;
+                const viewW = xMax - xMin;
+                const viewH = yMax - yMin;
+
+                const plotW = width - 2 * padding;
+                const plotH = height - 2 * padding;
+
+                const dxUnits = (dx / plotW) * viewW;
+                const dyUnits = (dy / plotH) * viewH;
+
+                // Dragging right -> view moves left (xMin decreases)
+                this.updateRange(-dxUnits, dyUnits);
+            }
+        };
+
+        svg.onpointerup = (e) => {
+            this.interactions.isDragging = false;
+            svg.releasePointerCapture(e.pointerId);
+            // If strictly a click (no move), handle lightbox or let click event fire?
+            // If we have interactive on, we might want to suppress click if we dragged.
+            // But we also have explicit buttons now.
+            // Lightbox logic:
+            if (!this.interactions.hasMoved && !isPinching) {
+                // Open lightbox only if not pinching
+                this.openLightbox();
+            }
+        };
+
+        // Wheel Zoom
+        svg.onwheel = (e) => {
+            if (Date.now() - this.lastScrollTime < 150) return; // Prevent zooming while scrolling page
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+
+            if (this.transform) {
+                // Zoom towards mouse pointer
+                const rect = svg.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                // Current Map
+                const { unmapX, unmapY, xMin, xMax, yMin, yMax } = this.transform;
+                const mouseX = unmapX(mx);
+                const mouseY = unmapY(my);
+
+                const viewW = xMax - xMin;
+                const viewH = yMax - yMin;
+
+                const newW = viewW * zoomFactor;
+                const newH = viewH * zoomFactor;
+
+                // Maintain ratio around mouseX/Y
+                const xFrac = (mouseX - xMin) / viewW;
+                const yFrac = (mouseY - yMin) / viewH;
+
+                // New Min/Max
+                const newXMin = mouseX - xFrac * newW;
+                const newXMax = newXMin + newW;
+                const newYMin = mouseY - yFrac * newH;
+                const newYMax = newYMin + newH;
+
+                this.view = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
+                this.draw();
+            }
+        };
+
+        // Touch Pinch
+        svg.ontouchstart = (e) => {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                initialDist = getDist(e);
+                e.preventDefault();
+            }
+        };
+
+        svg.ontouchmove = (e) => {
+            if (isPinching && e.touches.length === 2) {
+                e.preventDefault();
+                const dist = getDist(e);
+                const scale = initialDist / dist; // > 1 if pinching in (zoom out)
+
+                if (this.transform) {
+                    const { xMin, xMax, yMin, yMax } = this.transform;
+                    const viewW = xMax - xMin;
+                    const viewH = yMax - yMin;
+
+                    // Center Zoom for Pinch
+                    const cx = (xMin + xMax) / 2;
+                    const cy = (yMin + yMax) / 2;
+
+                    const newW = viewW * scale;
+                    const newH = viewH * scale;
+
+                    const nXMin = cx - newW / 2;
+                    const nXMax = cx + newW / 2;
+                    const nYMin = cy - newH / 2;
+                    const nYMax = cy + newH / 2;
+
+                    this.view = { xMin: nXMin, xMax: nXMax, yMin: nYMin, yMax: nYMax };
+                    this.draw();
+                    initialDist = dist;
+                }
+            }
+        };
+
+        svg.ontouchend = (e) => {
+            if (e.touches.length < 2) isPinching = false;
+        };
+    }
+
+    updateRange(dx, dy) {
+        if (!this.view.xMin && this.transform) {
+            this.view.xMin = this.transform.xMin;
+            this.view.xMax = this.transform.xMax;
+            this.view.yMin = this.transform.yMin;
+            this.view.yMax = this.transform.yMax;
+        }
+        if (this.view.xMin !== null) {
+            this.view.xMin += dx;
+            this.view.xMax += dx;
+            this.view.yMin += dy;
+            this.view.yMax += dy;
+            this.draw();
+        }
     }
 
     getColor(index, explicit) {
@@ -408,6 +653,16 @@ class MatephisPlot {
         let yMin = this.config.ylim ? this.config.ylim[0] : -9.9;
         let yMax = this.config.ylim ? this.config.ylim[1] : 9.9;
 
+        // Use View State if active (Zoom/Pan overrides)
+        if (this.view && this.view.xMin !== null) {
+            xMin = this.view.xMin; xMax = this.view.xMax;
+            yMin = this.view.yMin; yMax = this.view.yMax;
+        } else if (this.view) {
+            // Init view state
+            this.view.xMin = xMin; this.view.xMax = xMax;
+            this.view.yMin = yMin; this.view.yMax = yMax;
+        }
+
         // Helper: Eval boundaries for dynamic ranges? (Skip for now, stick to fixed or equalAspect)
 
         // Equal Aspect
@@ -423,6 +678,15 @@ class MatephisPlot {
 
         const mapX = (x) => this.padding + ((x - xMin) / (xMax - xMin)) * (this.width - 2 * this.padding);
         const mapY = (y) => this.height - this.padding - ((y - yMin) / (yMax - yMin)) * (this.height - 2 * this.padding);
+
+        // Save Transform for Interactions
+        this.transform = {
+            mapX, mapY,
+            unmapX: (px) => xMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (xMax - xMin),
+            unmapY: (py) => yMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (yMax - yMin),
+            xMin, xMax, yMin, yMax,
+            width: this.width, height: this.height, padding: this.padding
+        };
 
         // --- 1. Background ---
         const ns = "http://www.w3.org/2000/svg";
@@ -488,9 +752,9 @@ class MatephisPlot {
                 let p = 0;
                 let e = 1;
                 // Limit precision to 10 to avoid infinite loops on irrational steps
-                while (Math.abs(Math.round(s * e) / e - s) > 1e-9 && p < 10) { 
-                    e *= 10; 
-                    p++; 
+                while (Math.abs(Math.round(s * e) / e - s) > 1e-9 && p < 10) {
+                    e *= 10;
+                    p++;
                 }
                 // Format
                 return parseFloat(val.toFixed(p));
@@ -584,7 +848,7 @@ class MatephisPlot {
                 // Clamping Logic (Visual - 10px threshold)
                 if (Math.abs(px - this.padding) < 10) {
                     px = this.padding;
-                    align = "start"; 
+                    align = "start";
                 } else if (Math.abs(px - (this.width - this.padding)) < 10) {
                     px = this.width - this.padding;
                     align = "end";
@@ -594,7 +858,7 @@ class MatephisPlot {
 
                 // Font size for shift calc
                 const fsVal = this.getConfigSize('numberSize'); // Helper to get int value
-                
+
                 // Align negative numbers (center the number part)
                 if (x < -1e-9 && align === "middle") {
                     // Shift left by half a char width approx (0.3em)
@@ -631,8 +895,8 @@ class MatephisPlot {
 
                 // Clamping Y (Visual - 10px threshold)
                 if (Math.abs(py - (this.height - this.padding)) < 10) {
-                     py = this.height - this.padding - 5;
-                     baseline = "auto"; 
+                    py = this.height - this.padding - 5;
+                    baseline = "auto";
                 } else if (Math.abs(py - this.padding) < 10) {
                     py = this.padding + 5;
                 }
@@ -641,14 +905,14 @@ class MatephisPlot {
                 this.text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
             }
         }
-        
+
         // Origin "0" (Shared)
         if (xMin <= 0 && xMax >= 0 && yMin <= 0 && yMax >= 0) {
             // Check visibility config if needed, usually we want 0 if numbers are on
             if (this.config.showXNumbers !== false || this.config.showYNumbers !== false) {
-                 const px = mapX(0) - 5; // Align with Y numbers (end anchor)
-                 const py = mapY(0) + 20; // Align with X numbers (top baseline)
-                 this.text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
+                const px = mapX(0) - 5; // Align with Y numbers (end anchor)
+                const py = mapY(0) + 20; // Align with X numbers (top baseline)
+                this.text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
             }
         }
         // Main Axes - To AxesGroup
@@ -869,7 +1133,8 @@ class MatephisPlot {
                 const ly = Math.max(10, Math.min(this.height - 10, labelPos.y + dy));
 
                 const labelWeight = this.config.labelWeight || "normal";
-                this.text(lx, ly, item.label, anchor, "bottom", color, labelWeight, this.labelGroup, this.getConfigSize('labelSize'));
+                const displayLabel = item.label.replace(/\*/g, '·');
+                this.text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, this.labelGroup, this.getConfigSize('labelSize'));
             }
         });
 
@@ -882,9 +1147,9 @@ class MatephisPlot {
     drawLegend(items) {
         const x = this.width - this.padding - 10;
         const y = this.padding + 10;
-        
+
         const fs = this.getConfigSize('legendSize');
-        
+
         // Dynamic width calculation
         let maxLen = 0;
         items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
@@ -936,20 +1201,22 @@ class MatephisPlot {
                     // Simpler fallback for now: just try innerHTML or text fallback if complicated
                     // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
                     // Let's stick to text fallback for reliability in this fast iter.
-                    this.text(lx + 25, ly + (fs/3), item.label, "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                    this.text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
                 }
             } else {
-                this.text(lx + 20, ly + (fs/3), item.label, "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                this.text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
             }
         });
     }
 
     // Helper to resolve font size
     getConfigSize(specificKey) {
-        // priority: specific > general > default(18)
-        if (this.config[specificKey]) return typeof this.config[specificKey] === 'number' ? this.config[specificKey] : parseInt(this.config[specificKey]);
-        if (this.config.fontSize) return typeof this.config.fontSize === 'number' ? this.config.fontSize : parseInt(this.config.fontSize);
-        return 18;
+        // priority: specific > general > default(14)
+        if (this.config[specificKey])
+            return typeof this.config[specificKey] === 'number' ? this.config[specificKey] : parseInt(this.config[specificKey]);
+        if (this.config.fontSize)
+            return typeof this.config.fontSize === 'number' ? this.config.fontSize : parseInt(this.config.fontSize);
+        return 14;
     }
 
     line(x1, y1, x2, y2, color, width, dash, parent) {
@@ -979,7 +1246,7 @@ class MatephisPlot {
         t.textContent = str;
         t.style.paintOrder = "stroke";
         t.style.stroke = "#fff";
-        t.style.strokeWidth = "3px";
+        t.style.strokeWidth = "2.5px"; // Slightly thinner halo for smaller text
         parent.appendChild(t);
     }
 

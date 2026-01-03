@@ -9,457 +9,218 @@ tags:
 
 Questa pagina serve come test e documentazione per il sistema di grafici generati via codice (JSON). Tutti i grafici sono renderizzati da `matephis-plot.js`.
 
-## Documentazione opzioni JSON
+## Documentazione Opzioni JSON
 
-Ecco una lista completa delle opzioni disponibili per configurare i grafici:
-
-### Globali
-
-| Opzione       | Tipo          | Default            | Descrizione                                              |
-| :------------ | :------------ | :----------------- | :------------------------------------------------------- |
-| `width`       | Number        | 600                | Larghezza interna SVG/coordinate.                        |
-| `height`      | Number        | -                  | Altezza interna. Calcolata da `aspectRatio` se presente. |
-| `aspectRatio` | String/Number | `"1:1"`            | Rapporto larghezza:altezza (es. `"16:9"`, `1`).          |
-| `xlim`        | `[min, max]`  | `[-9.9, 9.9]`      | Limiti dell'asse X.                                      |
-| `ylim`        | `[min, max]`  | `[-9.9, 9.9]`      | Limiti dell'asse Y.                                      |
-| `axisLabels`  | `[x, y]`      | `null`             | Etichette per gli assi (es. `["t (s)", "v (m/s)"]`).     |
-| `theme`       | String        | `"accent"`         | Tema colori: `"grayscale"`, `"accent"`, `"default"`.     |
-| `legend`      | Boolean       | `false`            | Se `true`, mostra la legenda in alto a destra.           |
-| `renderOrder` | String        | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i grafici.    |
-| `labelWeight` | String        | `"normal"`         | Peso font etichette.                                     |
-| `fontSize`    | Number/String | `"18px"`           | Dimensione font generale (default).                      |
-| `numberSize`  | Number/String | `=` `fontSize`     | Dimensione font numeri assi.                             |
-| `labelSize`   | Number/String | `=` `fontSize`     | Dimensione font etichette assi/grafici.                  |
-| `legendSize`  | Number/String | `=` `fontSize`     | Dimensione font legenda.                                 |
-| `cssWidth`    | String        | `"70%"`            | Larghezza CSS contenitore (es. `"100%"`).                |
-| `fullWidth`   | Boolean       | `false`            | Se `true`, imposta `cssWidth: "100%"`.                   |
-| `align`       | String        | `"left"`           | Allineamento contenitore (`"center"`, `"left"`).         |
-
-### Griglia e assi
+### Opzioni Globali
 
 | Opzione | Tipo | Default | Descrizione |
 | :--- | :--- | :--- | :--- |
-| `grid` | Boolean | `true` | Se `false`, nasconde completamente la griglia. |
-| `gridOpacity` | Number | `0.8` | Opacità della griglia principale. |
-| `xStep` | Number/String | `5` | Passo griglia X. |
-| `yStep` | Number/String | `5` | Passo griglia Y. |
-| `xNumberStep` | Number | `=` `xStep` | Passo numeri asse X (indipendente da griglia). |
-| `yNumberStep` | Number | `=` `yStep` | Passo numeri asse Y. |
-| `xStepSecondary` | Number | `1` | Passo griglia secondaria X. |
-| `yStepSecondary` | Number | `1` | Passo griglia secondaria Y. |
-| `secondaryGridOpacity` | Number | `gridOpacity/2` | Opacità griglia secondaria. |
-| `axisArrows` | Boolean | `false` | Se `true`, disegna frecce alle estremità positive degli assi. |
-| `showXTicks` | Boolean | `false` | Mostra tacche sull'asse X. |
-| `showYTicks` | Boolean | `false` | Mostra tacche sull'asse Y. |
-| `showXNumbers` | Boolean | `true` | Mostra numeri sull'asse X. |
-| `showYNumbers` | Boolean | `true` | Mostra numeri sull'asse Y. |
-| `equalAspect` | Boolean | `false` | Se `true`, forza proporzioni assi (deprecato, usa `aspectRatio`). |
+| `width` | Number | 600 | Larghezza interna SVG (coordinate). |
+| `height` | Number | - | Calcolata automaticamente da `aspectRatio` o uguale a `width`. |
+| `aspectRatio` | String/Number | `"1:1"` | Rapporto larghezza:altezza (es. `"16:9"`, `2`). |
+| `xlim` | `[min, max]` | `[-9.9, 9.9]` | Limiti asse X. |
+| `ylim` | `[min, max]` | `[-9.9, 9.9]` | Limiti asse Y. |
+| `fullWidth` | Boolean | `false` | Se `true`, il grafico occupa il 100% della larghezza container e adatta la risoluzione. |
+| `interactive` | Boolean | `false` | Se `true`, abilita zoom, pan e controlli overlay. |
+| `theme` | String | `"accent"` | Tema colori: `"accent"`, `"grayscale"`, `"default"`. |
+| `legend` | Boolean | `false` | Mostra la legenda in alto a destra. |
+| `align` | String | `"left"` | Allineamento contenitore (`"center"`, `"left"`). |
+| `marginLeft` | String | `0` | Margine sinistro CSS personalizzato (es. `"-25px"`). |
+| `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
+| `fontSize` | Number | 18 | Dimensione base font. |
+| `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i dati. |
 
-### Data Items (`data: [...]`)
+### Griglia e Assi
 
-Ogni oggetto nell'array `data` può avere:
+| Opzione | Tipo | Default | Descrizione |
+| :--- | :--- | :--- | :--- |
+| `grid` | Boolean | `true` | Mostra/Nascondi la griglia. |
+| `gridOpacity` | Number | `0.8` | Opacità griglia principale. |
+| `axisArrows` | Boolean | `false` | Disegna frecce sugli assi. |
+| `axisLabels` | `[x, y]` | `null` | Etichette assi (es. `["Tempo (s)", "Posizione (m)"]`). |
+| `xStep` / `yStep` | Number | Auto | Passo griglia principale. Se omesso, calcolato automaticamente. |
+| `showXNumbers` | Boolean | `true` | Mostra i numeri sugli assi. |
+| `showXTicks` | Boolean | `false` | Mostra le tacche sugli assi. |
+
+### Serie Dati (`data: [...]`)
 
 | Proprietà | Tipo | Descrizione |
 | :--- | :--- | :--- |
-| `fn` | String | Funzione esplicita `y = f(x)` (es. `"sin(x)"`). |
-| `implicit` | String | Equazione implicita (es. `"x^2 + y^2 = 9"`). |
-| `points` | Array | Array di punti `[[x1,y1], [x2,y2]]`. |
-| `x` | Number | Linea verticale a `x = val`. |
-| `color` | String | Colore (Hex o nome tema). Default automatico. |
-| `width` | Number | Spessore linea. |
+| `fn` | String | Funzione `y = f(x)` (es. `"sin(x)"`, `"x^2"`). |
+| `implicit` | String | Equazione implicita (es. `"x^2 + y^2 = 25"`). |
+| `points` | Array | Lista di punti `[[x,y], ...]`. |
+| `color` | String | Colore (Hex o nome tema). |
+| `opacity` | Number | Opacità (0.0 - 1.0). |
+| `width` | Number | Spessore linea o raggio bordo punto. |
 | `dash` | String | Pattern tratteggio (es. `"5,5"`). |
-| `label` | String | Etichetta del grafico. |
-| `labelAt` | `[x, y]` | Posizione forzata etichetta. |
-| `labelOffset` | `[dx, dy]` | Spostamento in pixel dell'etichetta. |
-| `labelAnchor` | String | Ancoraggio testo (`"start"`, `"middle"`, `"end"`). |
-| `radius` | Number | Raggio punti (solo per `points`). |
-| `fillColor` | String | Colore riempimento punti. |
-| `opacity` | Number | Opacità (0.0 - 1.0) della linea o dei punti. |
-
-### Parametri (`params: {...}`)
-Definisci slider per rendere il grafico interattivo.
-```json
-"params": {
-  "k": { "val": 1, "min": 0, "max": 5, "step": 0.1 }
-}
-```
+| `label` | String | Etichetta (mostrata sul grafico o in legenda). |
 
 ---
 
-Questo blocco usa la sintassi `'''matephis` e dovrebbe funzionare in *editing mode (live preview)*:
+## 1. Esempi Base e Layout
+
+### Grafico Semplice (Seno e Coseno)
+Usa il tema di default (`accent`) e dimensioni standard.
+
+```matephis
+{
+  "xlim": [-7, 7],
+  "ylim": [-1.5, 1.5],
+  "legend": true,
+  "data": [
+    { "fn": "sin(x)", "label": "sin(x)" },
+    { "fn": "cos(x)", "label": "cos(x)", "dash": "5,5" }
+  ]
+}
+```
+
+### Full Width & Aspect Ratio
+Usa `fullWidth: true` per grafici responsive che occupano tutta la larghezza, con un rapporto aspetto specifico (es. `3:1`).
 
 ```matephis
 {
   "fullWidth": true,
+  "aspectRatio": "3:1",
   "xlim": [-20, 20],
   "ylim": [-2, 2],
-  "xStep": "2*PI",
-  "aspectRatio": "2:1",
-  "secondaryGridOpacity": 0,
-  "theme": "accent",
   "data": [
     { "fn": "sin(x)/x", "label": "Sinc(x)" }
   ]
 }
 ```
 
-## 1. Temi (Grayscale vs accent)
+## 2. Temi e Stili
 
-È possibile scegliere tra temi predefiniti.
-
-### Grayscale
-
-`theme: "grayscale"` assegna automaticamente tonalità di grigio.
+### Tema Grayscale e Frecce Assi
+Utile per stampe o stili minimali. `axisArrows: true` aggiunge le frecce.
 
 ```matephis
 {
-  "xlim": [0, 10],
   "theme": "grayscale",
-  "legend": true,
-  "data": [
-    { "fn": "sin(x)", "label": "Seno" },
-    { "fn": "cos(x)", "label": "Coseno" },
-    { "fn": "sin(x/2)", "label": "Lenta" }
-  ]
-}
-```
-
-```json
-{
-  "xlim": [0, 10],
-  "theme": "grayscale",
-  "legend": true,
-  "data": [
-    { "fn": "sin(x)", "label": "Seno" },
-    { "fn": "cos(x)", "label": "Coseno" }
-  ]
-}
-```
-
-### accent olor
-
-`theme: "accent"` usa sfumature del colore principale (Rosso).
-
-```matephis
-{
+  "axisArrows": true,
   "xlim": [-5, 5],
-  "theme": "accent",
-  "legend": true,
   "data": [
-    { "fn": "x^2+2", "label": "Quadrata" },
-    { "fn": "abs(x)", "label": "Valore Assoluto", "dash": "5,5" }
+    { "fn": "x^2", "label": "Parabola" },
+    { "fn": "-x^2", "label": "Parabola Inv." }
   ]
 }
 ```
 
-## 2. Etichette intelligenti
-
-Il sistema posiziona automaticamente le etichette. Puoi forzare la posizione con `labelAt` (coordinate grafico) o `labelOffset` (pixel). Le etichette vengono rappresentate in grassetto se specificato con `labelWeight: "bold"`.
-
-```matephis
-{
-  "xlim": [-5, 5],
-  "ylim": [-2, 10],
-  "gridOpacity": 0.8,
-  "data": [
-    { "fn": "x^2", "label": "Auto (Fine)", "color": "blue" },
-    { "fn": "2*x", "label": "Forzata su [2,4]", "labelAt": [2, 4], "color": "red", "labelWeight": "bold"},
-    { "x": -3, "label": "Spostata (+10px, 0)", "labelOffset": [10, 0], "color": "green" }
-  ]
-}
-```
-
-```json
-{
-  "data": [
-    { "fn": "2*x", "label": "Forzata", "labelAt": [2, 4] },
-    { "x": -3, "label": "Offset", "labelOffset": [10, 0] }
-  ]
-}
-```
-
-## 3. Controllo assi (tacche vs numeri)
-
-Puoi nascondere i numeri ma tenere le tacche (`showXTicks: true`, `showXNumbers: false`).
+### Colori Personalizzati e Opacità
+Dimostra come sovrascrivere i colori del tema e usare l'opacità per sovrapposizioni.
 
 ```matephis
 {
   "xlim": [-3, 3],
-  "ylim": [-5, 5],
-  "xStep": 0.5,
-  "showYNumbers": false,
-  "showYTicks": true,
+  "ylim": [-2, 2],
+  "gridOpacity": 0.3,
   "data": [
-    { "fn": "x^3", "color": "#444" }
+    { "fn": "sin(x)", "width": 8, "color": "red", "opacity": 0.3, "label": "Opaco 30%" },
+    { "fn": "cos(x)", "width": 8, "color": "blue", "opacity": 0.7, "label": "Opaco 70%" }
   ]
 }
 ```
 
-```json
-{
-  "xStep": 0.5,
-  "showYNumbers": false,
-  "showYTicks": true
-}
-```
+## 3. Tipi di Dati Avanzati
 
-## 4. Trigonometria (step PI)
-
-Imposta `xStep: "PI/2"` per avere etichette in radianti ($\pi/2$, $\pi$).
-
-```matephis
-{
-  "xlim": [-7, 7],
-  "ylim": [-1.2, 1.2],
-  "xStep": "PI/2",
-  "theme": "grayscale",
-  "data": [
-    { "fn": "sin(x)", "label": "sin(x)" }
-  ]
-}
-```
-
-## 5. Grafici impliciti (cerchi, curve)
-
-Supporta equazioni implicite come `x^2 + y^2 = r^2`. Usa `equalAspect: true` per mantenere le proporzioni.
+### Equazioni Implicite (Cerchi e Coniche)
+Usa `implicit` per equazioni non funzioni. `equalAspect` (o un `aspectRatio` corretto) è raccomandato per non distorcere le forme.
 
 ```matephis
 {
   "xlim": [-6, 6],
-  "equalAspect": true,
-  "grid": true,
+  "aspectRatio": "1:1",
   "data": [
-    { "implicit": "x^2 + y^2 = 25", "color": "purple", "label": "r=5" },
-    { "implicit": "x^2 - y^2 = 9", "color": "orange", "label": "Iperbole" }
+    { "implicit": "x^2 + y^2 = 16", "color": "purple", "label": "r=4" },
+    { "implicit": "x^2/9 - y^2/4 = 1", "color": "orange", "label": "Iperbole" }
   ]
 }
 ```
 
-```json
-{
-  "equalAspect": true,
-  "data": [
-    { "implicit": "x^2 + y^2 = 25" }
-  ]
-}
-```
-
-## 6. Interattività (slider)
-
-Definisci parametri in `params` per creare slider.
+### Punti e Linee Verticali
+Disegna punti specifici e rette verticali (`x: val`).
 
 ```matephis
 {
-  "fullWidth": true,
-  "aspectRatio": "2:1",
-  "xlim": [-5, 5],
-  "ylim": [-2, 2],
-  "theme": "accent",
-  "params": {
-    "k": { "min": -5, "max": 10, "step": 0.01, "val": 1 },
-    "f": { "min": 0, "max": 6.28, "step": 0.1, "val": 0 }
-  },
+  "xlim": [-2, 5],
   "data": [
-    { "fn": "sin(k * x + f)", "label": "Onda", "width": 3 }
+    { "points": [[1,1], [2,4], [3,9]], "radius": 4, "fillColor": "black" },
+    { "x": 2.5, "color": "green", "dash": "2,2", "label": "x=2.5" }
   ]
 }
 ```
 
-```json
-{
-  "params": {
-    "k": { "min": 0.5, "max": 5, "val": 1 }
-  },
-  "data": [
-    { "fn": "sin(k * x)" }
-  ]
-}
-```
-## 7. Frecce assi e opacità griglia
+## 4. Interattività
 
-Griglia impostata a opacità `0.3` (più leggera del default) e frecce abilitate su entrambi gli assi. Griglia secondaria impostata con passo `0.2`.
+Il sistema supporta due livelli di interattività: **Manipolazione Vista** (Zoom/Pan) e **Parametri Dinamici** (Slider).
 
-```matephis
-{
-  "xlim": [-5, 5],
-  "ylim": [-5, 5],
-  "gridOpacity": 1,
-  "axisArrows": true,
-  "xStepSecondary": 0.2,
-  "yStepSecondary": 0.2,
-  "data": [
-    { "fn": "sin(x)", "color": "red", "width": 3 }
-  ]
-}
-```
-
-```json
-{
-  "axisArrows": true,
-  "xStepSecondary": 0.2,
-  "yStepSecondary": 0.2,
-  "data": []
-}
-```
-
-## 8. Ordine di rendering
-
-### Numeri in primo piano
-
-`renderOrder` impostato su `"numbers-top"`. Le linee degli assi e i numeri dovrebbero apparire *sopra* l'area riempita (simulata qui da una linea spessa per visibilità) o i grafici intersecanti.
-
-```matephis
-{
-  "xlim": [-4, 4],
-  "ylim": [-4, 4],
-  "renderOrder": "numbers-top",
-  "axisArrows": true,
-  "data": [
-    { "fn": "-0.3", "color": "blue", "width": 15, "label": "Linea Spessa Dietro Assi" }
-  ]
-}
-```
-
-### Comportamento di default (numeri sotto)
-
-Rendering standard. La linea spessa dovrebbe coprire i numeri degli assi.
-
-```matephis
-{
-  "xlim": [-4, 4],
-  "ylim": [-4, 4],
-  "axisArrows": false,
-  "data": [
-    { "fn": "-0.3", "color": "green", "width": 15, "label": "Linea Spessa Copre Assi" }
-  ]
-}
-```
-
-## 11. Opacità Dati
-
-Puoi impostare l'opacità per ogni elemento dati. Utile per mostrare sovrapposizioni.
-
-```matephis
-{
-  "xlim": [-3, 3],
-  "ylim": [-2, 2],
-  "data": [
-    { "fn": "sin(x)", "width": 8, "color": "red", "opacity": 0.3, "label": "Opaco 0.3" },
-    { "fn": "cos(x)", "width": 8, "color": "blue", "opacity": 0.7, "label": "Opaco 0.7" },
-    { "points": [[0,0]], "radius": 15, "fillColor": "black", "opacity": 0.2, "label": "Punto 0.2" }
-  ]
-}
-```
-
-```json
-{
-  "data": [
-    { "fn": "sin(x)", "opacity": 0.3 },
-    { "fn": "cos(x)", "opacity": 0.7 }
-  ]
-}
-```
-## 12. Nuove Funzionalità (Math & Ratio)
-
-Questo test verifica le nuove funzionalità: parse matematico avanzato, aspect ratio, step indipendenti.
-
-### Implicit Multiplication & Negative Power
-
-```matephis
-{
-  "xlim": [-5, 5],
-  "ylim": [-10, 10],
-  "data": [
-    { "fn": "-x^2", "label": "-x^2 (corretto)", "color": "red" },
-    { "fn": "2x + 1", "label": "2x + 1", "color": "blue" },
-    { "fn": "sin(3x)", "label": "sin(3x)", "color": "green" }
-  ]
-}
-```
-
-### Aspect Ratio & Number Steps
+### Grafico Zoomabile e Riorientabile
+Imposta `"interactive": true`.
+*   **Zoom**: Rotella del mouse, o pulsanti (+/-) in basso a sinistra. Pinch su mobile.
+*   **Pan**: Trascina con il mouse o dito.
+*   **Reset**: Pulsante (↺) per tornare alla vista iniziale.
 
 ```matephis
 {
   "xlim": [-10, 10],
-  "ylim": [-5, 5],
-  "aspectRatio": "3:1",
-  "xStep": 1,
-  "xNumberStep": 5,
+  "ylim": [-10, 10],
+  "interactive": true,
+  "fullWidth": true,
+  "gridOpacity": 0.5,
   "data": [
-    { "fn": "sin(x)" }
+      { "fn": "sin(x)*x", "label": "x*sin(x)" },
+      { "fn": "log(x)"},
+      { "fn": "1/x"}
   ]
 }
 ```
-## 13. Layout & sticky labels (Configurazione avanzata)
 
-Nuove opzioni per layout CSS e comportamento bordi.
-
-### Sticky labels
-Con limiti [-9.9, 9.9] e step 5, i numeri 10 e -10 sarebbero fuori. Ma con sticky logic (entro 0.1), vengono mostrati al bordo.
+### Slider (Parametri)
+Definisci `params` per creare slider. Le variabili (es. `k`) possono essere usate nelle funzioni.
 
 ```matephis
 {
-  "xlim": [-9.9, 9.9],
-  "showXNumbers": true,
-  "xStep": 5,
-  "data": [{"fn": "x"}]
-}
-```
-
-### Layout CSS & typography
-
-Opzioni: `fontSize` (es. "16px"), `cssWidth` (es. "80%", "600px"), `align` ("center" o "left").
-
-```matephis
-{
-  "fontSize": 14,
   "cssWidth": "80%",
-  "align": "center",
-  "data": [{"fn": "sin(x)"}]
-}
-```
-
-### Auto Steps
-
-Se `xStep` o `yStep` non vengono specificati, il sistema calcolerà automaticamente un passo ottimale (1, 2, 5, 10...) basandosi sui limiti e sulle dimensioni del grafico.
-
-```matephis
-{
-  "xlim": [-23, 23],
-  "ylim": [-10, 50],
+  "align": "left",
   "aspectRatio": "2:1",
-  "fullWidth": true,
-  "data": [{"fn": "x^2/10", "label": "Auto Step Demo"}]
+  "xlim": [-10, 10],
+  "ylim": [-2, 2],
+  "interactive": true,
+  "params": {
+    "k": { "min": 0.1, "max": 5, "step": 0.1, "val": 1 },
+    "w": { "min": 0, "max": 10, "step": 0.1, "val": 0 }
+  },
+  "data": [
+    { "fn": "sin(k*x + w)", "label": "Onda Variabile" }
+  ]
 }
 ```
 
-### Auto Steps (Zoomed In)
+## 5. Layout Avanzato
 
-Funziona anche con intervalli molto piccoli (submultipli). Qui l'intervallo è ~0.02.
-
-```matephis
-{
-  "xlim": [0.01, 0.03],
-  "ylim": [-0.006, 0.006],
-  "fullWidth": true,
-  "aspectRatio": "3:1",
-  "data": [{"fn": "sin(100*x) * 0.004", "label": "High Freq"}]
-}
-```
-
-### Allineamento (Liste Nidificate)
-
-Per allineare un grafico con la lista padre (uscendo dall'indentazione), usa `marginLeft` negativo.
+### Liste Nidificate e Allineamento
+Usa `marginLeft` negativo per allineare visivamente un grafico all'interno di una lista puntata.
 
 1.  Livello 1
-    *   Livello 2
+    *   Livello 2 (Indentato)
         ```matephis
         {
-          "xlim": [-5, 5],
-          "ylim": [-2, 2],
-          "width": 300,
+          "width": 400,
+          "height": 200,
           "marginLeft": "-25px",
-          "data": [{"fn": "cos(x)"}]
+          "data": [{"fn": "x", "color": "#777"}]
         }
         ```
+
+### Auto Steps (Griglia Dinamica)
+Se `xStep` non è definito, viene calcolato automaticamente. Prova a zoomare nel grafico interattivo sopra per vedere la griglia adattarsi.
+
+```matephis
+{
+  "xlim": [0.01, 0.02], 
+  "ylim": [0, 0.005],
+  "fullWidth": true,
+  "aspectRatio": "3:1",
+  "data": [{"fn": "x^2", "label": "Zoom (Auto Grid)"}]
+}
+```
