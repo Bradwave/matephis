@@ -175,7 +175,15 @@ class MatephisPlot {
             this.height = this.config.height || this.width;
         }
 
-        this.padding = 35;
+        // Padding (Configurable / Smart Default)
+        if (this.config.padding !== undefined) {
+            this.padding = this.config.padding;
+        } else {
+            // Smart default: 10px if no numbers/labels, else 30px (reduced from 35)
+            const noNumbers = this.config.showXNumbers === false && this.config.showYNumbers === false;
+            const noLabels = !this.config.axisLabels;
+            this.padding = (noNumbers && noLabels) ? 10 : 20;
+        }
 
         const ns = "http://www.w3.org/2000/svg";
         this.svg = document.createElementNS(ns, "svg");
@@ -187,6 +195,9 @@ class MatephisPlot {
         else this.svg.classList.add('static');
 
         // this.svg.style.aspectRatio = ... removed to prevent issues, handled by attributes
+        
+        // Inline Font for Serialized usage (Lightbox)
+        this.svg.style.fontFamily = "var(--font-code, monospace)";
 
         // Groups
         this.bgGroup = document.createElementNS(ns, "g");
@@ -967,7 +978,7 @@ class MatephisPlot {
                     px -= fsVal * 0.3;
                 }
 
-                this._text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
+                this._text(px, mapY(0) + 15, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -1013,7 +1024,7 @@ class MatephisPlot {
             // Check visibility config if needed, usually we want 0 if numbers are on
             if (this.config.showXNumbers !== false || this.config.showYNumbers !== false) {
                 const px = mapX(0) - 5; // Align with Y numbers (end anchor)
-                const py = mapY(0) + 20; // Align with X numbers (top baseline)
+                const py = mapY(0) + 15; // Align with X numbers (top baseline)
                 this._text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
             }
         }
@@ -1412,11 +1423,16 @@ class MatephisPlot {
         const fs = this._getConfigSize('legendSize');
 
         // Dynamic width calculation
-        let maxLen = 0;
-        items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
-        // Approx width: Symbol (30) + Chars * (FontSize * 0.6) + Padding (20)
-        let w = 30 + (maxLen * (fs * 0.6)) + 20;
-        if (w < 120) w = 120; // Min width
+        let w;
+        if (this.config.legendWidth) {
+            w = this.config.legendWidth;
+        } else {
+            let maxLen = 0;
+            items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
+            // Approx width: Symbol (30) + Chars * (FontSize * 0.6) + Padding (20)
+            w = 30 + (maxLen * (fs * 0.6)) + 20;
+            if (w < 120) w = 120; // Min width
+        }
 
         const h = items.length * (fs * 1.5) + 10; // Dynamic height based on font size
         const labelWeight = this.config.labelWeight || "normal";

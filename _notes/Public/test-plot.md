@@ -21,9 +21,11 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `xlim` | `[min, max]` | `[-9.9, 9.9]` | Limiti asse X. |
 | `ylim` | `[min, max]` | `[-9.9, 9.9]` | Limiti asse Y. |
 | `fullWidth` | Boolean | `false` | Se `true`, il grafico occupa il 100% della larghezza container e adatta la risoluzione. |
+| `padding` | Number | 30 | Padding interno (spazio vuoto) attorno al grafico in pixel. |
 | `interactive` | Boolean | `false` | Se `true`, abilita zoom, pan e controlli overlay. |
 | `theme` | String | `"red"` | Tema colori: `"red"`, `"black"`, `"sunburst"`, `"coastal"`, `"seaside"`, `"default"`. |
 | `legend` | Boolean | `false` | Mostra la legenda in alto a destra. |
+| `legendWidth` | Number | Auto | Larghezza fissa della legenda in pixel. |
 | `align` | String | `"left"` | Allineamento contenitore (`"center"`, `"left"`). |
 | `marginLeft` | String | `0` | Margine sinistro CSS personalizzato (es. `"-25px"`). |
 | `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
@@ -42,8 +44,11 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `axisArrows` | Boolean | `false` | Disegna frecce sugli assi. |
 | `axisLabels` | `[x, y]` | `null` | Etichette assi (es. `["Tempo (s)", "Posizione (m)"]`). |
 | `xStep` / `yStep` | Number | Auto | Passo griglia principale. Se omesso, calcolato automaticamente. |
-| `showXNumbers` | Boolean | `true` | Mostra i numeri sugli assi. |
-| `showXTicks` | Boolean | `false` | Mostra le tacche sugli assi. |
+| `xStepSecondary` / `yStepSecondary` | Number | Auto | Passo griglia secondaria. Default 1/5 del principale. |
+| `xNumberStep` / `yNumberStep` | Number | Auto | Passo numerazione sugli assi. Default uguale a `xStep`. |
+| `showXNumbers` / `showYNumbers` | Boolean | `true` | Mostra i numeri sugli assi. |
+| `showXTicks` / `showYTicks` | Boolean | `false` | Mostra le tacche sugli assi. |
+| `secondaryGridOpacity` | Number | Auto | Opacità griglia secondaria (default 50% della principale). |
 
 ### Serie dati (`data: [...]`)
 
@@ -140,17 +145,7 @@ Utile per stampe o stili minimali. `axisArrows: true` aggiunge le frecce.
   "xlim": [-5, 5],
   "data": [
     { "fn": "x^2", "label": "Parabola" },
-    { "fn": "-x^2", "label": "Parabola Inv." },
-  ]
-}
-```matephis
-{
-  "theme": "black",
-  "axisArrows": true,
-  "xlim": [-5, 5],
-  "data": [
-    { "fn": "x^2", "label": "Parabola" },
-    { "fn": "-x^2", "label": "Parabola Inv." },
+    { "fn": "-x^2", "label": "Parabola Inv." }
   ]
 }
 ```

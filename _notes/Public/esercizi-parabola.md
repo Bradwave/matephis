@@ -5,6 +5,7 @@ tags:
   - esercizi
   - parabola
 ---
+
 Esercizi, quesiti, quiz e problemi sulla parabola.
 
 Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]].
@@ -25,38 +26,75 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. **[EE/F]** il grafico intercetta l'asse $y$ in $-1$, l'asse di simmetria è $x = 1$ e il vertice della parabola è $(1, -2)$.
 	3. **[EE]** l'asse di simmetria è l'asse $y$, la parabola passa per $(0, -2)$ e per $(1, -1)$;
 	4. **[PD]** la parabola passa per $(2, 2)$, la pendenza della parabola nel punto $(2, 2)$ è $-2$ e l'asse di simmetria è $x = 5$.
-3. Abbina le quattro parabole alle rispettive equazioni.
-	1. $y = -x^2 + 3x - 2$
-	2. $y = x^2 + 3x - 2$
-	3. $y = -x^2 - 3x - 2$
-	4. $y = x^2 - 3x + 2$
-	   
-```matephis
-{
-  "data": [
-    { "fn": "-x^2+3x-2", "color": "brand1" },
-    { "fn": "x^2+3x-2", "color": "grayscale1"},
-    { "fn": "-x^2-3x-2", "color": "brand1", "opacity": 0.6},
-    { "fn": "x^2-3x+2", "color": "grayscale1", "opacity": 0.6}
-  ]
-}
-```
+3. Altra domanda
 
-
-1. ![](/images/parabola-2.svg)
-2.  <div>|Test1</div>
-	1. <div>|Test2</div>
 ## Quesiti
 
- 1. **[F]** Abbina ognuna delle quattro parabole al fenomeno che descrivono. **Nota:** nel grafico del fenomeno *"A che varia in funzione di B"*, A è tipicamente rappresentato sull'asse delle ordinate e B sull'asse delle ascisse.
-	1. La posizione verticale (espressa in m) di un pallone lanciato verso l'alto in funzione del tempo (espresso in s).
-	2. La posizione verticale (espressa in m) di un pallone lanciato in orizzontale in funzione del tempo (espresso in s).
-	3. Il costo mensile di produzione di un'azienda (espresso in migliaia di euro) in funzione del numero di unità prodotte (espresso in migliaia di unità).
-	4. Lo spazio di frenata di un'automobile (espresso in m) in funzione della velocità (espressa in m/s).
-	![parabola-3]({{ site.baseurl }}/images/parabola-3.svg)
+1. Considera la famiglia di parabole descritta dall'equazione y=ax2+c. Analizza le seguenti affermazioni basate sull'uso di slider in un ambiente dinamico come Desmos,:
+	- **(a)** Al variare di a, cambia l'apertura della parabola: se a cresce positivamente la parabola diventa più "piccata" (stretta), se a decresce verso zero diventa più larga.
+2. Al variare di c, la parabola trasla orizzontalmente lungo l'asse x.
+3. L'asse di simmetria rimane sempre l'asse y (ovvero x=0) per qualsiasi valore di a e c. _Individua l'affermazione falsa e spiega il perché._
 
 ## Quiz
 
+1. **[E]** Abbina le quattro parabole alle rispettive equazioni.
+	- **(i)** $y = -x^2 + 3x - 2$
+	- **(ii)** $y = x^2 + 3x - 2$
+	- **(iii)** $y = -x^2 - 3x - 2$
+	- **(iv)** $y = x^2 - 3x + 2$   
+```matephis
+{
+  "xStep": 5,
+  "yStep": 5,
+  "legend": true,
+  "legendWidth": 50,
+  "data": [
+    { "fn": "-x^2+3x-2", "color": "red1", "label": "A" },
+    { "fn": "x^2+3x-2", "color": "black1", "label": "B" },
+    { "fn": "-x^2-3x-2", "color": "red1", "opacity": 0.6, "label": "C", "dash": "2,2" },
+    { "fn": "x^2-3x+2", "color": "black1", "opacity": 0.6, "label": "D", "dash": "2,2" }
+  ]
+}
+```
+ 2. **[F]** Abbina ognuna delle quattro parabole al fenomeno che descrivono. **Nota:** nel grafico del fenomeno *"A che varia in funzione di B"*, A è tipicamente rappresentato sull'asse delle ordinate e B sull'asse delle ascisse.
+	- **(i)** La posizione verticale (espressa in m) di un pallone lanciato verso l'alto in funzione del tempo (espresso in s).
+	- **(i)** La posizione verticale (espressa in m) di un pallone lasciato cadere da fermo in funzione del tempo (espresso in s).
+	- **(iii)** Il costo mensile di produzione di un'azienda (espresso in migliaia di euro) in funzione del numero di unità prodotte (espresso in migliaia di unità).
+	- **(iv)** Lo spazio di frenata di un'automobile (espresso in m) in funzione della velocità (espressa in m/s).
+```matephis
+{
+  "xlim": [-0.5,6.9],
+  "ylim": [-0.5,6.9],
+  "xStep": 5,
+  "yStep": 5,
+  "xSecondaryStep": 1,
+  "ySecondaryStep": 1,
+  "legend": true,
+  "data": [
+    { "fn": "-4.905x^2+3", "domain": [0,7], "color": "red1", "label": "A" },
+    { "fn": "-4.905x^2+3x+3", "domain": [0,7], "color": "red1", "opacity": 0.6, "label": "B", "dash": "2,2" },
+    { "fn": "0.05*(x-5)^2+1.5", "domain": [0,7], "color": "black1", "label": "C" },
+    { "fn": "x+0.05x^2", "domain": [0,7], "color": "black1", "opacity": 0.4, "label": "D", "dash": "2,2" }
+  ]
+}
+```
+3. **[EE]** Considera la parabola di equazione y=ax2+bx+c. Sappiamo che il coefficiente b rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse y. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
+	• **(a)** $c=0$ e $b>0$.
+	• **(b)** $c \neq 0$ e $b<0$.
+	• **(c)** c=0 e $b<0$.
+	• **(d)** c=0 e a<0.
+4. **[F]** Immagina che la parabola $y = ax^2 + bx + c$ rappresenti il grafico tempo-posizione di un oggetto che si muove su una linea retta. Se il coefficiente $a$ è negativo, cosa sta succedendo fisicamente all'oggetto?
+	• **(a)** L'oggetto sta rallentando fino a fermarsi.
+	• **(b)** L'oggetto si muove all'indietro.
+	• **(c)** L'oggetto subisce un'accelerazione che lo "tira" verso il basso (o indietro), come se qualcuno lo tirasse per la maglia.
+	• **(d)** La velocità iniziale dell'oggetto è negativa.
+5. Data una parabola con equazione $y = ax^2 + bx + c$, quale condizione deve verificarsi affinché la parabola sia tangente all'asse delle ascisse (asse x)?
+	• **(a)** $b^2 − 4ac > 0$
+	• **(b)** $b^2 − 4ac = 0$
+	• **(c)** $c = 0$
+	• **(d)** $−2ab ​ =0$
+
+
 ## Problemi
 
-	
+1. 
