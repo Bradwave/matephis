@@ -551,48 +551,133 @@ class MatephisPlot {
             }
         };
 
-        // Touch Pinch
-        svg.ontouchstart = (e) => {
-            if (e.touches.length === 2) {
-                isPinching = true;
-                initialDist = getDist(e);
-                e.preventDefault();
+        // Unified Touch Handler (Scroll Guard + Pan + Pinch)
+        
+        let touchStartView = null; // Snapshot of view at touch start
+        let touchStartCenter = null; // {x, y}
+        let touchStartDist = 0;
+        let isTouchActive = false;
+
+        const getTouchCenter = (e) => {
+            if (e.touches.length === 0) return null;
+            if (e.touches.length === 1) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            // Multi-touch center
+            let sx = 0, sy = 0;
+            for (let i = 0; i < e.touches.length; i++) {
+                sx += e.touches[i].clientX;
+                sy += e.touches[i].clientY;
             }
+            return { x: sx / e.touches.length, y: sy / e.touches.length };
         };
 
-        svg.ontouchmove = (e) => {
-            if (isPinching && e.touches.length === 2) {
-                e.preventDefault();
-                const dist = getDist(e);
-                const scale = initialDist / dist; // > 1 if pinching in (zoom out)
+        const getTouchDist = (e) => {
+            if (e.touches.length < 2) return 1;
+            return Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        };
 
+        const handleTouchStart = (e) => {
+            // 1. Scroll Guard
+            if (Date.now() - this.lastScrollTime < 150) {
+                return;
+            }
+
+            // 2. Lock & Initialize
+            if (e.touches.length > 0) {
+                if (e.cancelable) e.preventDefault(); // Lock scroll
+                
+                isTouchActive = true;
                 if (this.transform) {
                     const { xMin, xMax, yMin, yMax } = this.transform;
-                    const viewW = xMax - xMin;
-                    const viewH = yMax - yMin;
-
-                    // Center Zoom for Pinch
-                    const cx = (xMin + xMax) / 2;
-                    const cy = (yMin + yMax) / 2;
-
-                    const newW = viewW * scale;
-                    const newH = viewH * scale;
-
-                    const nXMin = cx - newW / 2;
-                    const nXMax = cx + newW / 2;
-                    const nYMin = cy - newH / 2;
-                    const nYMax = cy + newH / 2;
-
-                    this.view = { xMin: nXMin, xMax: nXMax, yMin: nYMin, yMax: nYMax };
-                    this.draw();
-                    initialDist = dist;
+                    touchStartView = { xMin, xMax, yMin, yMax, width: xMax - xMin, height: yMax - yMin };
                 }
+
+                touchStartCenter = getTouchCenter(e);
+                touchStartDist = getTouchDist(e);
+                isPinching = e.touches.length > 1;
             }
         };
 
-        svg.ontouchend = (e) => {
-            if (e.touches.length < 2) isPinching = false;
+        const handleTouchMove = (e) => {
+            if (!isTouchActive) return;
+            if (e.cancelable) e.preventDefault(); // Always prevent default if active
+
+            if (!this.transform || !touchStartView || !touchStartCenter) return;
+
+            const currentCenter = getTouchCenter(e);
+            if (!currentCenter) return;
+
+            const currentDist = getTouchDist(e);
+            
+            // A. Zoom (Scale)
+            let scale = 1;
+            if (e.touches.length > 1 && touchStartDist > 0) {
+                scale = touchStartDist / currentDist; 
+            }
+
+            // B. Pan (Translation)
+            const dxPx = currentCenter.x - touchStartCenter.x;
+            const dyPx = currentCenter.y - touchStartCenter.y;
+
+            // 1. Calculate Scaled Dimensions
+            const newW = touchStartView.width * scale;
+            const newH = touchStartView.height * scale;
+
+            // 2. Apply Scale & Shift
+            // Current Plot Dimensions (Screen)
+            // Use client rect for accuracy
+            const rect = svg.getBoundingClientRect();
+            const pW = rect.width;
+            const pH = rect.height;
+
+            // Pan Units (in NEW scale)
+            const dxUnits = (dxPx / pW) * newW;
+            const dyUnits = (dyPx / pH) * newH;
+
+            const dxGraph = -dxUnits; // Drag Right -> Move View Left
+            const dyGraph = dyUnits;  // Drag Down -> Move View Up
+
+            // Center Zoom Logic: Scale around CENTER
+            const cx = (touchStartView.xMin + touchStartView.xMax) / 2;
+            const cy = (touchStartView.yMin + touchStartView.yMax) / 2;
+            
+            let nXMin = cx - newW / 2;
+            let nXMax = cx + newW / 2;
+            let nYMin = cy - newH / 2;
+            let nYMax = cy + newH / 2;
+
+            // Apply Pan
+            nXMin += dxGraph;
+            nXMax += dxGraph;
+            nYMin += dyGraph;
+            nYMax += dyGraph;
+
+            this.view = { xMin: nXMin, xMax: nXMax, yMin: nYMin, yMax: nYMax };
+            this.draw();
         };
+
+        const handleTouchEnd = (e) => {
+            if (e.touches.length === 0) {
+                isTouchActive = false;
+                isPinching = false;
+            } else {
+                // Rebase gesture
+                touchStartCenter = getTouchCenter(e);
+                 if (this.transform) {
+                    const { xMin, xMax, yMin, yMax } = this.transform; 
+                    touchStartView = { xMin, xMax, yMin, yMax, width: xMax - xMin, height: yMax - yMin };
+                }
+                touchStartDist = getTouchDist(e);
+            }
+        };
+
+        // Use passive: false to allow preventDefault (Critical for iOS/Android)
+        svg.addEventListener('touchstart', handleTouchStart, { passive: false });
+        svg.addEventListener('touchmove', handleTouchMove, { passive: false });
+        svg.addEventListener('touchend', handleTouchEnd);
+        svg.addEventListener('touchcancel', handleTouchEnd);
     }
 
     updateRange(dx, dy) {
@@ -1040,7 +1125,7 @@ class MatephisPlot {
                 
                 // Adaptive State
                 const MAX_DEPTH = 8;
-                const TOLERANCE = 0.5; // Pixel error tolerance
+                const TOLERANCE = 0.2; // Tighter tolerance for smoother curves
 
                 const safeMapY = (y) => {
                     const py = mapY(y);
@@ -1151,7 +1236,7 @@ class MatephisPlot {
                 };
                 
                 // Initial Coarse Steps
-                const coarseSteps = this.width / 20; // 1 step every 20px
+                const coarseSteps = this.width / 5; // 1 step every 5px (was 20px)
                 const dx = (xMax - xMin) / coarseSteps;
                 
                 for (let i = 0; i < coarseSteps; i++) {

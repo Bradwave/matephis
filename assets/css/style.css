@@ -1438,6 +1438,10 @@ li a[href^="https://"] {
 
 .matephis-plot-container {
   display: flex;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* Disable browser gestures so JS can handle everything */
   flex-direction: column;
   align-items: center;
   margin: 1rem 0;
