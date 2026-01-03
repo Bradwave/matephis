@@ -9,9 +9,9 @@ tags:
 
 Questa pagina serve come test e documentazione per il sistema di grafici generati via codice (JSON). Tutti i grafici sono renderizzati da `matephis-plot.js`.
 
-## Documentazione Opzioni JSON
+## Documentazione opzioni JSON
 
-### Opzioni Globali
+### Opzioni globali
 
 | Opzione | Tipo | Default | Descrizione |
 | :--- | :--- | :--- | :--- |
@@ -27,10 +27,12 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `align` | String | `"left"` | Allineamento contenitore (`"center"`, `"left"`). |
 | `marginLeft` | String | `0` | Margine sinistro CSS personalizzato (es. `"-25px"`). |
 | `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
+| `border` | Boolean | `false` | Aggiunge un bordo al contenitore del grafico. |
+| `sliderBorder` | Boolean | `false` | Aggiunge un bordo e padding agli slider. |
 | `fontSize` | Number | 18 | Dimensione base font. |
 | `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i dati. |
 
-### Griglia e Assi
+### Griglia e assi
 
 | Opzione | Tipo | Default | Descrizione |
 | :--- | :--- | :--- | :--- |
@@ -42,7 +44,7 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `showXNumbers` | Boolean | `true` | Mostra i numeri sugli assi. |
 | `showXTicks` | Boolean | `false` | Mostra le tacche sugli assi. |
 
-### Serie Dati (`data: [...]`)
+### Serie dati (`data: [...]`)
 
 | Proprietà | Tipo | Descrizione |
 | :--- | :--- | :--- |
@@ -57,10 +59,22 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 
 ---
 
-## 1. Esempi Base e Layout
+## 1. Esempi base e layout
 
-### Grafico Semplice (Seno e Coseno)
+### Grafico semplice (seno e coseno)
 Usa il tema di default (`accent`) e dimensioni standard.
+
+```json
+{
+  "xlim": [-7, 7],
+  "ylim": [-1.5, 1.5],
+  "legend": true,
+  "data": [
+    { "fn": "sin(x)", "label": "sin(x)" },
+    { "fn": "cos(x)", "label": "cos(x)", "dash": "5,5" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -74,8 +88,20 @@ Usa il tema di default (`accent`) e dimensioni standard.
 }
 ```
 
-### Full Width & Aspect Ratio
+### Full width & aspect ratio
 Usa `fullWidth: true` per grafici responsive che occupano tutta la larghezza, con un rapporto aspetto specifico (es. `3:1`).
+
+```json
+{
+  "fullWidth": true,
+  "aspectRatio": "3:1",
+  "xlim": [-20, 20],
+  "ylim": [-2, 2],
+  "data": [
+    { "fn": "sin(x)/x", "label": "Sinc(x)" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -89,10 +115,22 @@ Usa `fullWidth: true` per grafici responsive che occupano tutta la larghezza, co
 }
 ```
 
-## 2. Temi e Stili
+## 2. Temi e stili
 
-### Tema Grayscale e Frecce Assi
+### Tema grayscale e frecce assi
 Utile per stampe o stili minimali. `axisArrows: true` aggiunge le frecce.
+
+```json
+{
+  "theme": "grayscale",
+  "axisArrows": true,
+  "xlim": [-5, 5],
+  "data": [
+    { "fn": "x^2", "label": "Parabola" },
+    { "fn": "-x^2", "label": "Parabola Inv." }
+  ]
+}
+```
 
 ```matephis
 {
@@ -106,8 +144,20 @@ Utile per stampe o stili minimali. `axisArrows: true` aggiunge le frecce.
 }
 ```
 
-### Colori Personalizzati e Opacità
+### Colori personalizzati e opacità
 Dimostra come sovrascrivere i colori del tema e usare l'opacità per sovrapposizioni.
+
+```json
+{
+  "xlim": [-3, 3],
+  "ylim": [-2, 2],
+  "gridOpacity": 0.3,
+  "data": [
+    { "fn": "sin(x)", "width": 8, "color": "red", "opacity": 0.3, "label": "Opaco 30%" },
+    { "fn": "cos(x)", "width": 8, "color": "blue", "opacity": 0.7, "label": "Opaco 70%" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -121,10 +171,21 @@ Dimostra come sovrascrivere i colori del tema e usare l'opacità per sovrapposiz
 }
 ```
 
-## 3. Tipi di Dati Avanzati
+## 3. Tipi di dati avanzati
 
-### Equazioni Implicite (Cerchi e Coniche)
+### Equazioni implicite (cerchi e coniche)
 Usa `implicit` per equazioni non funzioni. `equalAspect` (o un `aspectRatio` corretto) è raccomandato per non distorcere le forme.
+
+```json
+{
+  "xlim": [-6, 6],
+  "aspectRatio": "1:1",
+  "data": [
+    { "implicit": "x^2 + y^2 = 16", "color": "purple", "label": "r=4" },
+    { "implicit": "x^2/9 - y^2/4 = 1", "color": "orange", "label": "Iperbole" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -137,8 +198,18 @@ Usa `implicit` per equazioni non funzioni. `equalAspect` (o un `aspectRatio` cor
 }
 ```
 
-### Punti e Linee Verticali
+### Punti e linee verticali
 Disegna punti specifici e rette verticali (`x: val`).
+
+```json
+{
+  "xlim": [-2, 5],
+  "data": [
+    { "points": [[1,1], [2,4], [3,9]], "radius": 4, "fillColor": "black" },
+    { "x": 2.5, "color": "green", "dash": "2,2", "label": "x=2.5" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -154,11 +225,26 @@ Disegna punti specifici e rette verticali (`x: val`).
 
 Il sistema supporta due livelli di interattività: **Manipolazione Vista** (Zoom/Pan) e **Parametri Dinamici** (Slider).
 
-### Grafico Zoomabile e Riorientabile
+### Grafico zoomabile e riorientabile
 Imposta `"interactive": true`.
 *   **Zoom**: Rotella del mouse, o pulsanti (+/-) in basso a sinistra. Pinch su mobile.
 *   **Pan**: Trascina con il mouse o dito.
 *   **Reset**: Pulsante (↺) per tornare alla vista iniziale.
+
+```json
+{
+  "xlim": [-10, 10],
+  "ylim": [-10, 10],
+  "interactive": true,
+  "fullWidth": true,
+  "gridOpacity": 0.5,
+  "data": [
+      { "fn": "sin(x)*x", "label": "x*sin(x)" },
+      { "fn": "log(x)"},
+      { "fn": "1/x"}
+  ]
+}
+```
 
 ```matephis
 {
@@ -175,8 +261,20 @@ Imposta `"interactive": true`.
 }
 ```
 
-### Asintoti e Domini
+### Asintoti e domini
 Esempio di funzione con asintoti (`tan(x)`) e dominio limitato (`sqrt(16-x^2)` in `[-4, 4]`).
+
+```json
+{
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10], 
+  "ylim": [-5, 5],
+  "data": [
+    { "fn": "tan(x)", "color": "#007bff", "label": "tan(x)" },
+    { "fn": "sqrt(16 - x^2)", "domain": [-4, 4], "color": "#dc3545", "label": "Domain [-4, 4]" }
+  ]
+}
+```
 
 ```matephis
 {
@@ -190,10 +288,11 @@ Esempio di funzione con asintoti (`tan(x)`) e dominio limitato (`sqrt(16-x^2)` i
 }
 ```
 
-### Slider (Parametri)
+### Slider (parametri)
 Definisci `params` per creare slider. Le variabili (es. `k`) possono essere usate nelle funzioni.
+Le opzioni `border` e `sliderBorder` possono essere usate per aggiungere bordi al contenitore e agli slider.
 
-```matephis
+```json
 {
   "cssWidth": "80%",
   "align": "left",
@@ -201,6 +300,8 @@ Definisci `params` per creare slider. Le variabili (es. `k`) possono essere usat
   "xlim": [-10, 10],
   "ylim": [-2, 2],
   "interactive": true,
+  "border": true,
+  "sliderBorder": true,
   "params": {
     "k": { "min": 0.1, "max": 5, "step": 0.1, "val": 1 },
     "w": { "min": 0, "max": 10, "step": 0.1, "val": 0 }
@@ -211,13 +312,41 @@ Definisci `params` per creare slider. Le variabili (es. `k`) possono essere usat
 }
 ```
 
-## 5. Layout Avanzato
+```matephis
+{
+  "cssWidth": "80%",
+  "align": "left",
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-2, 2],
+  "interactive": true,
+  "border": true,
+  "sliderBorder": true,
+  "params": {
+    "k": { "min": 0.1, "max": 5, "step": 0.1, "val": 1 },
+    "w": { "min": 0, "max": 10, "step": 0.1, "val": 0 }
+  },
+  "data": [
+    { "fn": "sin(k*x + w)", "label": "Onda Variabile" }
+  ]
+}
+```
 
-### Liste Nidificate e Allineamento
+## 5. Layout avanzato
+
+### Liste nidificate e allineamento
 Usa `marginLeft` negativo per allineare visivamente un grafico all'interno di una lista puntata.
 
 1.  Livello 1
     *   Livello 2 (Indentato)
+        ```json
+        {
+          "width": 400,
+          "height": 200,
+          "marginLeft": "-25px",
+          "data": [{"fn": "x", "color": "#777"}]
+        }
+        ```
         ```matephis
         {
           "width": 400,
@@ -227,8 +356,18 @@ Usa `marginLeft` negativo per allineare visivamente un grafico all'interno di un
         }
         ```
 
-### Auto Steps (Griglia Dinamica)
+### Auto steps (griglia dinamica)
 Se `xStep` non è definito, viene calcolato automaticamente. Prova a zoomare nel grafico interattivo sopra per vedere la griglia adattarsi.
+
+```json
+{
+  "xlim": [0.01, 0.02], 
+  "ylim": [0, 0.005],
+  "fullWidth": true,
+  "aspectRatio": "3:1",
+  "data": [{"fn": "x^2", "label": "Zoom (Auto Grid)"}]
+}
+```
 
 ```matephis
 {

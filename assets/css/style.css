@@ -20,7 +20,7 @@
   15. Images
   16. Sidebar Layout
   17. Mobile & Responsive
-  18. Matephis Plot Styling
+  18. Mobile Overflow Fixes
 */
 
 /* --- 1. Fonts --- */
@@ -1434,11 +1434,7 @@ li a[href^="https://"] {
   }
 }
 
-/* --- 18. Matephis Plot Styling --- */
-/* Moved to assets/css/matephis-plot.css */
-
-
-/* --- 19. Mobile Overflow Fixes --- */
+/* --- 18. Mobile Overflow Fixes --- */
 
 /* Prevent horizontal overflow from MathJax */
 mjx-container {

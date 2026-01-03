@@ -56,6 +56,10 @@ class MatephisPlot {
         // Wrap
         this.wrapper = document.createElement("div");
         this.wrapper.className = "matephis-plot-container";
+        // Border Option
+        if (this.config.border) {
+            this.wrapper.classList.add('bordered');
+        }
         this.container.appendChild(this.wrapper);
 
         // Param State
@@ -227,6 +231,9 @@ class MatephisPlot {
             // Params Row Layout: [Label "k = 1.0"]  <spacer>  [Min] [Slider] [Max]
             const row = document.createElement("div");
             row.className = "matephis-slider-row";
+            if (this.config.sliderBorder) {
+                row.classList.add('slider-bordered');
+            }
             // Ensure row uses flexbox in style.css, but we can enforce some styles here or in CSS
             // Assuming style.css has .matephis-slider-row { display: flex; align-items: center; ... }
 
