@@ -134,8 +134,13 @@ class MatephisPlot {
             this._initInteractions();
         }
 
+        // Warning System
+        this.warnings = [];
+        this._validateConfig();
+
         // Initial render
         this.draw();
+        this._renderWarnings();
 
         // Lightbox on click
         this.svg.onclick = () => this._openLightbox();
@@ -908,8 +913,9 @@ class MatephisPlot {
         // Secondary defaults to 1/5th of the main step
         const defaultSecX = xStep / 5;
         const defaultSecY = yStep / 5;
+        const showSec = this.config.showSecondaryGrid !== false;
 
-        if (this.config.xStepSecondary !== undefined || defaultSecX) {
+        if (showSec && (this.config.xStepSecondary !== undefined || defaultSecX)) {
             const sxStepObj = parseStep(this.config.xStepSecondary, defaultSecX);
             const sxStep = sxStepObj.val;
             const startSX = Math.ceil(xMin / sxStep) * sxStep;
@@ -920,7 +926,7 @@ class MatephisPlot {
             }
         }
 
-        if (this.config.yStepSecondary !== undefined || defaultSecY) {
+        if (showSec && (this.config.yStepSecondary !== undefined || defaultSecY)) {
             const syStepObj = parseStep(this.config.yStepSecondary, defaultSecY);
             const syStep = syStepObj.val;
             const startSY = Math.ceil(yMin / syStep) * syStep;
@@ -1124,9 +1130,12 @@ class MatephisPlot {
             // Function
             // Function (Adaptive Sampling)
             if (item.fn) {
+                try {
                 let d = "";
                 let started = false;
                 const f = new Function("x", `return ${this._makeFn(item.fn)};`);
+                // Test call to catch syntax errors early
+                try { f(0); } catch(e) { throw new Error(`Function '${item.fn}' error: ${e.message}`); }
 
                 // Adaptive State
                 const MAX_DEPTH = 8;
@@ -1309,6 +1318,9 @@ class MatephisPlot {
                 if (dash) path.setAttribute("stroke-dasharray", dash);
                 if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
                 this.dataGroup.appendChild(path);
+                } catch (e) {
+                    this._addWarning(`Error rendering function '${item.fn}': ${e.message}`);
+                }
             }
 
             // Implicit
@@ -1536,6 +1548,94 @@ class MatephisPlot {
         t.style.stroke = "#fff";
         t.style.strokeWidth = "2.5px";
         parent.appendChild(t);
+    }
+
+    // =========================================================================
+    // PRIVATE: ERROR HANDLING / VALIDATION
+    // =========================================================================
+
+    _validateConfig() {
+        const VALID_ROOT_KEYS = [
+            "width", "height", "aspectRatio", "cssWidth", "fullWidth", "align",
+            "marginLeft", "marginRight", "border", "sliderBorder",
+            "xlim", "ylim", "interactive", "theme", "legend", "legendWidth",
+            "padding", "grid", "gridOpacity", "axisArrows", "axisLabels",
+            "xStep", "yStep", "xStepSecondary", "yStepSecondary", "showSecondaryGrid", "showGrid",
+            "xNumberStep", "yNumberStep", "showXNumbers", "showYNumbers",
+            "showXTicks", "showYTicks", "secondaryGridOpacity",
+            "sampleStep", "fontSize", "renderOrder", "params", "data", "labelWeight",
+            "numberSize", "labelSize", "legendSize"
+        ];
+
+        const VALID_DATA_KEYS = [
+            "fn", "implicit", "points", "x", "color", "opacity", "width", "strokeWidth",
+            "dash", "label", "labelAt", "labelOffset", "labelAnchor",
+            "domain", "radius", "fillColor", "strokeColor" 
+        ];
+
+        // 1. Root Keys
+        for (let key in this.config) {
+            if (!VALID_ROOT_KEYS.includes(key)) {
+                this._addWarning(`Unknown global option: '${key}'`);
+            }
+        }
+
+        // 2. Data Items
+        if (this.config.data) {
+            this.config.data.forEach((item, i) => {
+                for (let key in item) {
+                    if (!VALID_DATA_KEYS.includes(key)) {
+                        this._addWarning(`Unknown data option in item ${i+1}: '${key}'`);
+                    }
+                }
+                // Check Essentials
+                if (!item.fn && !item.implicit && !item.points && item.x === undefined) {
+                    this._addWarning(`Data item ${i+1} has no content (missing 'fn', 'points', 'implicit', or 'x').`);
+                }
+            });
+        }
+    }
+
+    _addWarning(msg) {
+        if (!this.warnings.includes(msg)) {
+            this.warnings.push(msg);
+        }
+    }
+
+    _renderWarnings() {
+        // Remove old warnings
+        const old = this.wrapper.querySelector(".matephis-plot-warnings");
+        if (old) old.remove();
+
+        if (this.warnings.length === 0) return;
+
+        const div = document.createElement("div");
+        div.className = "matephis-plot-warnings";
+        div.style.borderTop = "1px solid #ffcc00";
+        div.style.backgroundColor = "#fffbe6";
+        div.style.color = "#5c4b00";
+        div.style.padding = "10px";
+        div.style.fontSize = "0.85em";
+        div.style.width = "100%";
+        div.style.marginTop = "0";
+        // inherits font-family from wrapper
+
+        const title = document.createElement("strong");
+        title.innerText = "⚠️ Plot Warnings:";
+        div.appendChild(title);
+
+        const ul = document.createElement("ul");
+        ul.style.margin = "5px 0 0 20px";
+        ul.style.padding = "0";
+        
+        this.warnings.forEach(w => {
+            const li = document.createElement("li");
+            li.innerText = w;
+            ul.appendChild(li);
+        });
+        div.appendChild(ul);
+
+        this.wrapper.appendChild(div);
     }
 
     // =========================================================================

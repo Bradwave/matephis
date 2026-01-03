@@ -30,10 +30,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ## Quesiti
 
-1. Considera la famiglia di parabole descritta dall'equazione y=ax2+c. Analizza le seguenti affermazioni basate sull'uso di slider in un ambiente dinamico come Desmos,:
-	- **(a)** Al variare di a, cambia l'apertura della parabola: se a cresce positivamente la parabola diventa più "piccata" (stretta), se a decresce verso zero diventa più larga.
-2. Al variare di c, la parabola trasla orizzontalmente lungo l'asse x.
-3. L'asse di simmetria rimane sempre l'asse y (ovvero x=0) per qualsiasi valore di a e c. _Individua l'affermazione falsa e spiega il perché._
+1. **[E]** Considera la famiglia di parabole descritta dall'equazione $y = ax^2 + c$. Analizza le seguenti affermazioni basate sull'uso di slider in un ambiente dinamico come Desmos. Individua l'affermazione falsa e spiega il perché.
+	- **(a)** Al variare di $a$, cambia l'apertura della parabola: se a cresce positivamente la parabola diventa più "piccata" (stretta), se a decresce verso zero diventa più larga.
+	- **(b)** Al variare di $c$, la parabola trasla orizzontalmente lungo l'asse $x$.
+	- **(c)** L'asse di simmetria rimane sempre l'asse y (ovvero $x = 0$) per qualsiasi valore di $a$ e $c$.
 
 ## Quiz
 
@@ -67,9 +67,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "ylim": [-0.5,6.9],
   "xStep": 5,
   "yStep": 5,
-  "xSecondaryStep": 1,
-  "ySecondaryStep": 1,
   "legend": true,
+  "legendWidth": 50,
   "data": [
     { "fn": "-4.905x^2+3", "domain": [0,7], "color": "red1", "label": "A" },
     { "fn": "-4.905x^2+3x+3", "domain": [0,7], "color": "red1", "opacity": 0.6, "label": "B", "dash": "2,2" },
@@ -88,7 +87,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	• **(b)** L'oggetto si muove all'indietro.
 	• **(c)** L'oggetto subisce un'accelerazione che lo "tira" verso il basso (o indietro), come se qualcuno lo tirasse per la maglia.
 	• **(d)** La velocità iniziale dell'oggetto è negativa.
-5. Data una parabola con equazione $y = ax^2 + bx + c$, quale condizione deve verificarsi affinché la parabola sia tangente all'asse delle ascisse (asse x)?
+5. **[T]** Data una parabola con equazione $y = ax^2 + bx + c$, quale condizione deve verificarsi affinché la parabola sia tangente all'asse delle ascisse (asse x)?
 	• **(a)** $b^2 − 4ac > 0$
 	• **(b)** $b^2 − 4ac = 0$
 	• **(c)** $c = 0$
