@@ -47,6 +47,11 @@
     -webkit-user-select: none;
 }
 
+/* Fix for mobile pinch: ensure touches pass through lines/text to the SVG handler */
+.matephis-plot-svg * {
+    pointer-events: none;
+}
+
 .matephis-plot-svg.interactive {
     cursor: default;
 }
