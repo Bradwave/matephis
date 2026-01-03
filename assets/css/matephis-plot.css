@@ -1,0 +1,192 @@
+/* Matephis Plot Styling */
+
+/* Container */
+.matephis-plot-container {
+  display: flex;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+  max-width: 70%;
+  width: 100%;
+}
+
+/* Modifiers */
+.matephis-plot-container.align-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.matephis-plot-container.align-left {
+    margin-left: 0;
+    margin-right: auto;
+}
+
+/* Stage */
+.matephis-plot-stage {
+    position: relative;
+    width: 100%;
+}
+
+/* SVG */
+.matephis-plot-svg {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    font-family: var(--font-code, monospace);
+    display: block;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.matephis-plot-svg.interactive {
+    cursor: default;
+}
+
+.matephis-plot-svg.static {
+    cursor: zoom-in;
+}
+
+/* Error */
+.matephis-plot-error {
+     color: red;
+     border: 1px solid red;
+     padding: 5px;
+}
+
+/* Controls (Sliders) */
+.matephis-plot-controls {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.matephis-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-code, monospace);
+  font-size: 0.85rem;
+}
+
+.matephis-slider-label-group {
+    min-width: 80px;
+    white-space: nowrap;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.matephis-slider-label {
+    font-weight: bold;
+}
+
+.matephis-slider-val {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--accent, #B01A00);
+  font-weight: bold;
+}
+
+.matephis-slider-min,
+.matephis-slider-max {
+    font-size: 0.8em;
+    color: #999;
+    min-width: 40px;
+    display: inline-block;
+}
+
+.matephis-slider-min {
+    margin-right: 8px;
+    text-align: right;
+}
+
+.matephis-slider-max {
+    margin-left: 8px;
+    text-align: left;
+}
+
+.matephis-slider-row input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex-grow: 1;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.matephis-slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
+  border-radius: 50%;
+  background: var(--accent, #B01A00);
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+  margin-top: 0;
+}
+
+.matephis-slider-row input[type=range]::-webkit-slider-thumb:hover {
+  outline: 6px solid #b01a00;
+}
+
+.matephis-slider-row input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent, #B01A00);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.matephis-slider-row input[type=range]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Overlay Buttons */
+.matephis-plot-overlay {
+    position: absolute;
+    bottom: 45px;
+    left: 45px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 10;
+}
+
+.matephis-plot-btn {
+    background: rgba(255,255,255,0.8);
+    border: 1px solid #ccc;
+    border-radius: 0px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    user-select: none;
+}
+
+@media (max-width: 768px) {
+  .matephis-plot-container {
+    max-width: 90%;
+    width: 90%;
+  }
+}

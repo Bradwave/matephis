@@ -86,11 +86,9 @@ class MatephisPlot {
 
         // Alignment
         if (this.config.align === 'center') {
-            this.wrapper.style.marginLeft = "auto";
-            this.wrapper.style.marginRight = "auto";
+            this.wrapper.classList.add('align-center');
         } else if (this.config.align === 'left') {
-            this.wrapper.style.marginLeft = "0";
-            this.wrapper.style.marginRight = "auto";
+            this.wrapper.classList.add('align-left');
         }
         // Default (from CSS) matches images (usually left with small margin)
 
@@ -163,17 +161,11 @@ class MatephisPlot {
         this.svg.setAttribute("width", this.width);
         this.svg.setAttribute("height", this.height);
         this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
-        this.svg.style.maxWidth = "100%";
-        this.svg.style.width = "100%"; // Force fill
-        this.svg.style.height = "auto";
+        this.svg.setAttribute("class", "matephis-plot-svg");
+        if (this.config.interactive) this.svg.classList.add('interactive');
+        else this.svg.classList.add('static');
+
         // this.svg.style.aspectRatio = ... removed to prevent issues, handled by attributes
-        this.svg.style.fontFamily = "var(--font-code, monospace)";
-        // If interactive, usual cursor (so user knows it's not just a static image/lightbox only)
-        // If not interactive, it opens lightbox -> zoom-in
-        this.svg.style.cursor = this.config.interactive ? "default" : "zoom-in";
-        this.svg.style.userSelect = "none";
-        this.svg.style.display = "block"; // Fix vertical align gaps
-        this.svg.style.webkitUserSelect = "none";
 
         // Groups
         this.bgGroup = document.createElementNS(ns, "g");
@@ -221,7 +213,7 @@ class MatephisPlot {
 
         // Create Plot Stage (Relative container for SVG + Overlay)
         this.plotStage = document.createElement("div");
-        this.plotStage.style.position = "relative";
+        this.plotStage.className = "matephis-plot-stage";
         this.plotStage.appendChild(this.svg);
         this.wrapper.appendChild(this.plotStage);
     }
@@ -240,14 +232,11 @@ class MatephisPlot {
 
             // 1. Label Group ("parameter = value")
             const labelGroup = document.createElement("div");
-            Object.assign(labelGroup.style, {
-                minWidth: "80px", // Keep fixed width for slider alignment 
-                whiteSpace: "nowrap",
-                textAlign: "left" // User wants left alignment
-            });
+            labelGroup.className = "matephis-slider-label-group";
+            
             const label = document.createElement("span");
             label.innerText = `${key} = `; // Spaces restored
-            label.style.fontWeight = "bold";
+            label.className = "matephis-slider-label";
             // label.style.marginRight = "4px"; // Removed extra margin since we have space in string
 
             const valSpan = document.createElement("span");
@@ -260,14 +249,7 @@ class MatephisPlot {
             // 2. Min Label
             const minLabel = document.createElement("span");
             minLabel.innerText = p.min;
-            Object.assign(minLabel.style, {
-                fontSize: "0.8em",
-                color: "#999",
-                marginRight: "8px",
-                minWidth: "40px",      // Fixed width
-                textAlign: "right",    // Align numbers to right (near slider)
-                display: "inline-block"
-            });
+            minLabel.className = "matephis-slider-min";
 
             // 3. Slider
             const input = document.createElement("input");
@@ -276,20 +258,12 @@ class MatephisPlot {
             input.max = p.max;
             input.step = p.step || 0.1;
             input.value = p.val;
-            // Flex grow for slider
-            input.style.flexGrow = "1";
+            // Flex grow handled by CSS
 
             // 4. Max Label
             const maxLabel = document.createElement("span");
             maxLabel.innerText = p.max;
-            Object.assign(maxLabel.style, {
-                fontSize: "0.8em",
-                color: "#999",
-                marginLeft: "8px",
-                minWidth: "40px",      // Fixed width
-                textAlign: "left",     // Align numbers to left (near slider)
-                display: "inline-block"
-            });
+            maxLabel.className = "matephis-slider-max";
 
             input.addEventListener("input", (e) => {
                 const v = parseFloat(e.target.value);
@@ -314,35 +288,12 @@ class MatephisPlot {
 
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-overlay";
-        Object.assign(overlay.style, {
-            position: "absolute",
-            bottom: (this.padding + 10) + "px",
-            left: (this.padding + 10) + "px",
-            display: "flex",
-            flexDirection: "column", // Vertical stack
-            gap: "5px",
-            zIndex: "10"
-        });
+        // Object.assign(overlay.style, {...}) -> moved to CSS
 
         const mkBtn = (txt, cb) => {
             const b = document.createElement("button");
             b.innerText = txt;
-            Object.assign(b.style, {
-                background: "rgba(255,255,255,0.8)",
-                border: "1px solid #ccc",
-                borderRadius: "0px", // Square buttons
-                width: "24px",
-                height: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "bold",
-                color: "#333",
-                userSelect: "none"
-            });
+            b.className = "matephis-plot-btn";
             b.onclick = (e) => {
                 e.stopPropagation(); // Prevent plot click
                 cb();
