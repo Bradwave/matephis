@@ -29,6 +29,7 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
 | `border` | Boolean | `false` | Aggiunge un bordo al contenitore del grafico. |
 | `sliderBorder` | Boolean | `false` | Aggiunge un bordo e padding agli slider. |
+| `sampleStep` | Number | 2 | Passo di campionamento in pixel. Valori più bassi (es. 1) migliorano la qualità ma riducono le performance. |
 | `fontSize` | Number | 18 | Dimensione base font. |
 | `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i dati. |
 
@@ -376,5 +377,36 @@ Se `xStep` non è definito, viene calcolato automaticamente. Prova a zoomare nel
   "fullWidth": true,
   "aspectRatio": "3:1",
   "data": [{"fn": "x^2", "label": "Zoom (Auto Grid)"}]
+}
+```
+
+## 6. Qualità e performance
+
+### Alta definizione (sampleStep)
+Per funzioni ad alta frequenza o dettagli fini, usa `sampleStep: 1` per forzare il campionamento pixel-per-pixel. Di default è 2.
+
+```json
+{
+  "sampleStep": 1,
+  "xlim": [-5, 5],
+  "ylim": [-1.5, 1.5],
+  "fullWidth": true,
+  "aspectRatio": "4:1",
+  "data": [
+    { "fn": "sin(30*x)", "label": "Alta Frequenza (1px step)", "width": 1 }
+  ]
+}
+```
+
+```matephis
+{
+  "sampleStep": 1,
+  "xlim": [-5, 5],
+  "ylim": [-1.5, 1.5],
+  "fullWidth": true,
+  "aspectRatio": "4:1",
+  "data": [
+    { "fn": "sin(30*x)", "label": "Alta Frequenza (1px step)", "width": 1 }
+  ]
 }
 ```

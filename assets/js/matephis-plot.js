@@ -1215,7 +1215,10 @@ class MatephisPlot {
                 };
 
                 if (rMin < rMax) {
-                    const coarseSteps = this.width / 5; 
+                    // Configurable Sampling Step (pixels)
+                    // Default to 2px for better quality (was 5px)
+                    const sampleStep = this.config.sampleStep || 2;
+                    const coarseSteps = this.width / sampleStep; 
                     const dx = (xMax - xMin) / coarseSteps;
                     let curr = rMin;
                     
