@@ -1,17 +1,30 @@
 /**
  * Matephis Plotting Library
+ * 
+ * A lightweight SVG-based plotting library for mathematical visualizations.
+ * Supports functions, implicit equations, points, interactive pan/zoom,
+ * and configurable styling via JSON configuration.
+ * 
+ * @version 1.0
  */
+
+// Auto-initialize on DOM ready (browser environment only)
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    document.addEventListener("DOMContentLoaded", () => {
-        MatephisPlot.init();
-    });
+    document.addEventListener("DOMContentLoaded", () => MatephisPlot.init());
 }
 
 class MatephisPlot {
+    // =========================================================================
+    // STATIC INITIALIZATION
+    // =========================================================================
+
+    /**
+     * Scans the document for plot containers and initializes them.
+     * Handles both explicit `.matephis-plot` divs and `language-matephis` code blocks.
+     */
     static init() {
-        // 1. Explicit Divs
-        const plots = document.querySelectorAll('.matephis-plot');
-        plots.forEach(container => {
+        // Process explicit plot divs
+        document.querySelectorAll('.matephis-plot').forEach(container => {
             try {
                 if (container.getAttribute('data-processed')) return;
                 const source = container.textContent;
@@ -24,14 +37,12 @@ class MatephisPlot {
             }
         });
 
-        // 2. Markdown Code Blocks
-        const codeBlocks = document.querySelectorAll('code.language-matephis');
-        codeBlocks.forEach(code => {
+        // Process markdown code blocks with language-matephis
+        document.querySelectorAll('code.language-matephis').forEach(code => {
             try {
                 const source = code.textContent;
                 let target = code.closest('div.language-matephis') || code.closest('pre');
                 if (!target) target = code.parentElement;
-
                 if (target.getAttribute('data-processed')) return;
 
                 const container = document.createElement('div');
@@ -41,31 +52,37 @@ class MatephisPlot {
 
                 new MatephisPlot(container, source);
                 target.setAttribute('data-processed', 'true');
-            } catch (e) { console.error("Code Block Plot Error", e); }
+            } catch (e) {
+                console.error("Code Block Plot Error", e);
+            }
         });
     }
 
+    // =========================================================================
+    // CONSTRUCTOR
+    // =========================================================================
+
+    /**
+     * Creates a new plot instance.
+     * @param {HTMLElement} container - The DOM element to render the plot into.
+     * @param {string} source - JSON configuration string for the plot.
+     */
     constructor(container, source) {
         this.container = container;
         this.config = JSON.parse(source);
-        this.container.innerHTML = ""; // Clear JSON
+        this.container.innerHTML = "";
 
-        // Unique ID for scoping (e.g. clip paths)
+        // Unique ID for scoping clip paths
         this.uid = Math.random().toString(36).substr(2, 9);
 
-        // Wrap
+        // Create wrapper element
         this.wrapper = document.createElement("div");
         this.wrapper.className = "matephis-plot-container";
-        // Border Option
-        if (this.config.border) {
-            this.wrapper.classList.add('bordered');
-        }
-        if (this.config.interactive) {
-            this.wrapper.classList.add('interactive');
-        }
+        if (this.config.border) this.wrapper.classList.add('bordered');
+        if (this.config.interactive) this.wrapper.classList.add('interactive');
         this.container.appendChild(this.wrapper);
 
-        // Param State
+        // Initialize parameter state from config
         this.params = {};
         if (this.config.params) {
             for (let key in this.config.params) {
@@ -73,87 +90,78 @@ class MatephisPlot {
             }
         }
 
-        // View State
+        // View state for pan/zoom
         this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
-
         this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false };
 
+        // Scroll debounce for interaction handling
         this.lastScrollTime = 0;
-        // Global scroll tracker for this instance (debounced interaction)
         window.addEventListener("scroll", () => { this.lastScrollTime = Date.now(); }, { passive: true });
 
-        // Controls Overlay (Moved to end)
-
-        // Layout Options
+        // Apply layout options
         if (this.config.fullWidth) this.config.cssWidth = "100%";
         if (this.config.cssWidth) {
             this.wrapper.style.maxWidth = this.config.cssWidth;
-            this.wrapper.style.width = "100%"; // Ensure it scales
+            this.wrapper.style.width = "100%";
         }
 
-        // Alignment
-        if (this.config.align === 'center') {
-            this.wrapper.classList.add('align-center');
-        } else if (this.config.align === 'left') {
-            this.wrapper.classList.add('align-left');
-        }
-        // Default (from CSS) matches images (usually left with small margin)
+        // Apply alignment
+        if (this.config.align === 'center') this.wrapper.classList.add('align-center');
+        else if (this.config.align === 'left') this.wrapper.classList.add('align-left');
 
-        // Palettes
-        // Palettes
+        // Define color palettes
         this.palettes = {
             black: ["#000000", "#444444", "#6e6e6e", "#929292", "#b6b6b6", "#dadada"],
-            red: ["#B01A00", "#8b2e1bff", "#ce452aff", "#e64b2cff", "#fd5a35ff", "#fa7a5d"], // Based on --accent (#B01A00)
+            red: ["#B01A00", "#8b2e1bff", "#ce452aff", "#e64b2cff", "#fd5a35ff", "#fa7a5d"],
             sunburst: ["#4f000b", "#720026", "#ce4257", "#ff7f51", "#ff9b54"],
             coastal: ["#2b2d42", "#2b2d42", "#edf2f4", "#ef233c", "#d90429"],
             seaside: ["#2B3A67", "#496A81", "#66999B", "#B3AF8F", "#FFC482"],
             default: ["#007bff", "#dc3545", "#28a745", "#fd7e14", "#6f42c1"]
         };
-        // Granular maps
+
+        // Create granular color accessors (e.g., red1, red2, ...)
         Object.keys(this.palettes).forEach(key => {
             if (Array.isArray(this.palettes[key])) {
                 this.palettes[key].forEach((c, i) => this.palettes[`${key}${i + 1}`] = c);
             }
         });
 
-        this.initSVG();
-        if (this.config.params) this.initSliders();
-
-        // Controls & Interactions (Must be after SVG)
+        // Initialize components
+        this._initSVG();
+        if (this.config.params) this._initSliders();
         if (this.config.interactive) {
-            this.initControlsOverlay();
-            this.initInteractions();
+            this._initControlsOverlay();
+            this._initInteractions();
         }
 
-        // Initial Draw
+        // Initial render
         this.draw();
 
-        // Lightbox
-        this.svg.onclick = () => this.openLightbox();
+        // Lightbox on click
+        this.svg.onclick = () => this._openLightbox();
 
-        // Responsive Resizing
-        this.initResizeObserver();
+        // Responsive resizing
+        this._initResizeObserver();
     }
 
-    initSVG() {
-        // If fullWidth, use client width?
-        // But initSVG is called in constructor, wrapper is appended but maybe not sized yet if DOM not ready or layout not flowed?
-        // wrapper is in container.
-        // If we want crisp text, we need pixel-perfect width.
-        // But if we just use a larger default for fullWidth (e.g. 800 or 1000) it might be safer than reading clientWidth which can be 0.
-        // Or we assume standard desktop width?
-        // Better: Try to read clientWidth. If 0, fallback to config.width or 800.
+    // =========================================================================
+    // PRIVATE: SVG INITIALIZATION
+    // =========================================================================
 
+    /**
+     * Creates the SVG element and all layer groups.
+     * @private
+     */
+    _initSVG() {
+        // Calculate initial width
         let targetWidth = this.config.width || 600;
         if (this.config.fullWidth) {
             const cw = this.wrapper.clientWidth;
-            // Use window.innerWidth as a better guess than 800 if clientWidth is 0
             if (cw > 50) targetWidth = cw;
             else targetWidth = (window.innerWidth && window.innerWidth > 0) ? window.innerWidth : 1000;
         }
         this.width = targetWidth;
-
-        // Aspect Ratio
+        // Calculate height based on aspect ratio
         if (this.config.aspectRatio) {
             let ratio = 1;
             if (typeof this.config.aspectRatio === 'string' && this.config.aspectRatio.includes(":")) {
@@ -164,8 +172,7 @@ class MatephisPlot {
             }
             this.height = this.width / ratio;
         } else {
-            // Default 1:1 if explicit height not set
-            this.height = this.config.height || this.width; // Default square (600x600)
+            this.height = this.config.height || this.width;
         }
 
         this.padding = 35;
@@ -232,52 +239,53 @@ class MatephisPlot {
         this.wrapper.appendChild(this.plotStage);
     }
 
-    initSliders() {
+    // =========================================================================
+    // PRIVATE: PARAMETER SLIDERS
+    // =========================================================================
+
+    /**
+     * Creates slider controls for adjustable parameters.
+     * @private
+     */
+    _initSliders() {
         const controls = document.createElement("div");
         controls.className = "matephis-plot-controls";
 
         for (let key in this.config.params) {
             const p = this.config.params[key];
-            // Params Row Layout: [Label "k = 1.0"]  <spacer>  [Min] [Slider] [Max]
             const row = document.createElement("div");
             row.className = "matephis-slider-row";
-            if (this.config.sliderBorder) {
-                row.classList.add('slider-bordered');
-            }
-            // Ensure row uses flexbox in style.css, but we can enforce some styles here or in CSS
-            // Assuming style.css has .matephis-slider-row { display: flex; align-items: center; ... }
+            if (this.config.sliderBorder) row.classList.add('slider-bordered');
 
-            // 1. Label Group ("parameter = value")
+            // Label group: "parameter = value"
             const labelGroup = document.createElement("div");
             labelGroup.className = "matephis-slider-label-group";
 
             const label = document.createElement("span");
-            label.innerText = `${key} = `; // Spaces restored
+            label.innerText = `${key} = `;
             label.className = "matephis-slider-label";
-            // label.style.marginRight = "4px"; // Removed extra margin since we have space in string
 
             const valSpan = document.createElement("span");
-            valSpan.className = "matephis-slider-val"; // Keep class in case of CSS
+            valSpan.className = "matephis-slider-val";
             valSpan.innerText = p.val;
 
             labelGroup.appendChild(label);
             labelGroup.appendChild(valSpan);
 
-            // 2. Min Label
+            // Min label
             const minLabel = document.createElement("span");
             minLabel.innerText = p.min;
             minLabel.className = "matephis-slider-min";
 
-            // 3. Slider
+            // Range slider
             const input = document.createElement("input");
             input.type = "range";
             input.min = p.min;
             input.max = p.max;
             input.step = p.step || 0.1;
             input.value = p.val;
-            // Flex grow handled by CSS
 
-            // 4. Max Label
+            // Max label
             const maxLabel = document.createElement("span");
             maxLabel.innerText = p.max;
             maxLabel.className = "matephis-slider-max";
@@ -299,13 +307,17 @@ class MatephisPlot {
         this.wrapper.appendChild(controls);
     }
 
-    initControlsOverlay() {
-        // Container must be relative (plotStage is already relative)
-        // this.wrapper.style.position = "relative"; // No longer needed for overlay since we use plotStage
+    // =========================================================================
+    // PRIVATE: CONTROLS OVERLAY
+    // =========================================================================
 
+    /**
+     * Creates the zoom/pan control overlay buttons.
+     * @private
+     */
+    _initControlsOverlay() {
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-overlay";
-        // Object.assign(overlay.style, {...}) -> moved to CSS
 
         const mkBtn = (txt, cb) => {
             const b = document.createElement("button");
@@ -359,18 +371,24 @@ class MatephisPlot {
         this.plotStage.appendChild(overlay);
     }
 
-    initResizeObserver() {
-        // ResizeObserver for Responsive FullWidth / Dynamic Layout
-        // Solves "Large Font" (by matching pixel density) and "Height 0" (by reacting to layout)
+    // =========================================================================
+    // PRIVATE: RESIZE OBSERVER
+    // =========================================================================
+
+    /**
+     * Sets up ResizeObserver for responsive full-width plots.
+     * @private
+     */
+    _initResizeObserver() {
         if (!window.ResizeObserver) return;
+        
         this.resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 const newW = entry.contentRect.width;
-                if (newW > 10 && Math.abs(newW - this.width) > 5) { // Threshold to prevent jitter
-                    // Always resize to match container for crisp text (1:1 pixel mapping)
+                // Threshold to prevent jitter
+                if (newW > 10 && Math.abs(newW - this.width) > 5) {
                     this.width = newW;
-
-                    // Aspect Ratio
+                    // Recalculate height based on aspect ratio
                     if (this.config.aspectRatio) {
                         let ratio = 1;
                         if (typeof this.config.aspectRatio === 'string' && this.config.aspectRatio.includes(":")) {
@@ -381,7 +399,6 @@ class MatephisPlot {
                         }
                         this.height = this.width / ratio;
                     } else {
-                        // Default square if no ratio
                         this.height = this.width;
                     }
 
@@ -389,13 +406,11 @@ class MatephisPlot {
                     this.svg.setAttribute("height", this.height);
                     this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
 
-                    // Update Clip Rect
                     if (this.clipRect) {
                         this.clipRect.setAttribute("width", Math.max(0, this.width - this.padding * 2));
                         this.clipRect.setAttribute("height", Math.max(0, this.height - this.padding * 2));
                     }
 
-                    // Update Transform for interactions
                     if (this.transform) {
                         this.transform.width = this.width;
                         this.transform.height = this.height;
@@ -407,28 +422,30 @@ class MatephisPlot {
         this.resizeObserver.observe(this.wrapper);
     }
 
+    // =========================================================================
+    // PRIVATE: INTERACTION HANDLERS
+    // =========================================================================
 
-    initInteractions() {
+    /**
+     * Sets up mouse and touch event handlers for pan/zoom interactions.
+     * @private
+     */
+    _initInteractions() {
         if (!this.config.interactive) return;
 
         const svg = this.svg;
-        let startX, startY;
         let lastX, lastY;
-        let initialView = null;
-        let initialDist = 0;
         let isPinching = false;
 
-        const getDist = (e) => {
-            return Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            );
-        };
+        // Calculate distance between two touch points
+        const getDist = (e) => Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
 
-        // Pointer Events (Mouse + Touch)
+        // Pointer down handler
         svg.onpointerdown = (e) => {
-            if (Date.now() - this.lastScrollTime < 150) return; // Prevent if just scrolled
-            // Check for multitouch (pinch) - usually handled by touchstart/move
+            if (Date.now() - this.lastScrollTime < 150) return;
             if (e.pointerType === 'touch' && !e.isPrimary) return;
 
             this.interactions.isDragging = true;
@@ -441,6 +458,7 @@ class MatephisPlot {
             e.preventDefault();
         };
 
+        // Pointer move handler (pan)
         svg.onpointermove = (e) => {
             if (!this.interactions.isDragging || isPinching) return;
 
@@ -451,33 +469,24 @@ class MatephisPlot {
 
             if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.interactions.hasMoved = true;
 
-            // Pan logic
             if (this.transform && this.interactions.hasMoved) {
                 const { xMin, xMax, yMin, yMax, width, height, padding } = this.transform;
                 const viewW = xMax - xMin;
                 const viewH = yMax - yMin;
-
                 const plotW = width - 2 * padding;
                 const plotH = height - 2 * padding;
-
                 const dxUnits = (dx / plotW) * viewW;
                 const dyUnits = (dy / plotH) * viewH;
-
-                // Dragging right -> view moves left (xMin decreases)
-                this.updateRange(-dxUnits, dyUnits);
+                this._updateRange(-dxUnits, dyUnits);
             }
         };
 
+        // Pointer up handler
         svg.onpointerup = (e) => {
             this.interactions.isDragging = false;
             svg.releasePointerCapture(e.pointerId);
-            // If strictly a click (no move), handle lightbox or let click event fire?
-            // If we have interactive on, we might want to suppress click if we dragged.
-            // But we also have explicit buttons now.
-            // Lightbox logic:
             if (!this.interactions.hasMoved && !isPinching) {
-                // Open lightbox only if not pinching
-                this.openLightbox();
+                this._openLightbox();
             }
         };
 
@@ -641,14 +650,18 @@ class MatephisPlot {
             }
         };
 
-        // Use passive: false to allow preventDefault (Critical for iOS/Android)
+        // Touch event listeners (passive: false for preventDefault on iOS/Android)
         svg.addEventListener('touchstart', handleTouchStart, { passive: false });
         svg.addEventListener('touchmove', handleTouchMove, { passive: false });
         svg.addEventListener('touchend', handleTouchEnd);
         svg.addEventListener('touchcancel', handleTouchEnd);
     }
 
-    updateRange(dx, dy) {
+    /**
+     * Updates the view range by the given deltas.
+     * @private
+     */
+    _updateRange(dx, dy) {
         if (!this.view.xMin && this.transform) {
             this.view.xMin = this.transform.xMin;
             this.view.xMax = this.transform.xMax;
@@ -664,40 +677,53 @@ class MatephisPlot {
         }
     }
 
-    getColor(index, explicit) {
+    // =========================================================================
+    // PRIVATE: UTILITY METHODS
+    // =========================================================================
+
+    /**
+     * Gets the color for a data item by index or explicit value.
+     * @private
+     */
+    _getColor(index, explicit) {
         if (explicit) {
-            // check if it is a theme key
             if (this.palettes[explicit]) return this.palettes[explicit];
-            if (typeof this.palettes[explicit] === 'string') return this.palettes[explicit]; // brand1 etc
-            return explicit; // hex
+            if (typeof this.palettes[explicit] === 'string') return this.palettes[explicit];
+            return explicit;
         }
         const theme = this.config.theme || "red";
         const palette = this.palettes[theme] || this.palettes.default;
         return palette[index % palette.length];
     }
 
-    makeFn(str) {
-        // Replace params
+    /**
+     * Parses a mathematical expression string into JavaScript.
+     * Handles parameter substitution, implicit multiplication, and math functions.
+     * @private
+     */
+    _makeFn(str) {
         let expr = str;
+        
+        // Replace parameters with their values
         for (let key in this.params) {
-            // simple regex replacement for "k" -> value
-            // boundary checks to avoid replacing "k" in "black"
             const re = new RegExp(`\\b${key}\\b`, 'g');
             expr = expr.replace(re, `(${this.params[key]})`);
         }
 
-        // Implicit multiplication: "3x" -> "3*x", "3sin" -> "3*sin", ")x" -> ")*x"
+        // Implicit multiplication: "3x" -> "3*x", ")x" -> ")*x"
         expr = expr.replace(/(\d)([a-zA-Z(])/g, "$1*$2");
         expr = expr.replace(/(\))([a-zA-Z0-9(])/g, "$1*$2");
 
         // Negative power fix: "-x^2" -> "-(x^2)"
-        // Covers start of string or following an operator/paren
         expr = expr.replace(/(^|[^a-zA-Z0-9])\-([a-z])\^(\d+)/g, "$1-($2^$3)");
 
+        // Convert to JavaScript math
         expr = expr.replace(/\^/g, "**");
         expr = expr.replace(/\b(sin|cos|tan|asin|acos|atan|sqrt|log|exp|abs|floor|ceil|round)\b/g, "Math.$1");
         expr = expr.replace(/\b(pi|PI)\b/g, "Math.PI");
         expr = expr.replace(/\b(e|E)\b/g, "Math.E");
+        
+        // Convert implicit equations (e.g., "x^2 + y^2 = 1")
         if (expr.includes("=")) {
             const parts = expr.split("=");
             expr = `(${parts[0]}) - (${parts[1]})`;
@@ -879,7 +905,7 @@ class MatephisPlot {
             for (let x = startSX; x <= xMax + 1e-9; x += sxStep) {
                 const px = mapX(x);
                 if (px < this.padding || px > this.width - this.padding) continue;
-                this.line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.secondaryGridGroup);
+                this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.secondaryGridGroup);
             }
         }
 
@@ -890,7 +916,7 @@ class MatephisPlot {
             for (let y = startSY; y <= yMax + 1e-9; y += syStep) {
                 const py = mapY(y);
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this.line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
+                this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
             }
         }
 
@@ -901,11 +927,11 @@ class MatephisPlot {
             if (px < this.padding || px > this.width - this.padding) continue;
 
             // Grid
-            if (this.config.grid !== false) this.line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
+            if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
 
             // Ticks (Default False) -- To AxesGroup
             if (Math.abs(x) > 1e-9 && this.config.showXTicks === true) {
-                this.line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+                this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
             }
         }
 
@@ -933,7 +959,7 @@ class MatephisPlot {
                 if (px < this.padding || px > this.width - this.padding) continue;
 
                 // Font size for shift calc
-                const fsVal = this.getConfigSize('numberSize'); // Helper to get int value
+                const fsVal = this._getConfigSize('numberSize');
 
                 // Align negative numbers (center the number part)
                 if (x < -1e-9 && align === "middle") {
@@ -941,7 +967,7 @@ class MatephisPlot {
                     px -= fsVal * 0.3;
                 }
 
-                this.text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
+                this._text(px, mapY(0) + 20, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -951,11 +977,11 @@ class MatephisPlot {
             if (py < this.padding || py > this.height - this.padding) continue;
 
             // Grid
-            if (this.config.grid !== false) this.line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
+            if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
 
             // Ticks
             if (Math.abs(y) > 1e-9 && this.config.showYTicks === true) {
-                this.line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+                this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
             }
         }
 
@@ -978,7 +1004,7 @@ class MatephisPlot {
                 }
 
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this.text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
+                this._text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
             }
         }
 
@@ -988,13 +1014,13 @@ class MatephisPlot {
             if (this.config.showXNumbers !== false || this.config.showYNumbers !== false) {
                 const px = mapX(0) - 5; // Align with Y numbers (end anchor)
                 const py = mapY(0) + 20; // Align with X numbers (top baseline)
-                this.text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this.getConfigSize('numberSize'));
+                this._text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
             }
         }
         // Main Axes - To AxesGroup
         const x0 = mapX(0), y0 = mapY(0);
-        if (x0 >= this.padding && x0 <= this.width - this.padding) this.line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
-        if (y0 >= this.padding && y0 <= this.height - this.padding) this.line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
+        if (x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+        if (y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
 
         // Arrows - To AxesGroup (part of axes)
         if (this.config.axisArrows) {
@@ -1060,9 +1086,9 @@ class MatephisPlot {
 
         // Axis Labels
         if (this.config.axisLabels) {
-            const lblSize = this.getConfigSize('labelSize');
-            this.text(this.width - this.padding + 10, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize);
-            this.text(x0, this.padding - 15, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize);
+            const lblSize = this._getConfigSize('labelSize');
+            this._text(this.width - this.padding + 10, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize);
+            this._text(x0, this.padding - 15, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize);
         }
 
         // --- 3. Data ---
@@ -1070,7 +1096,7 @@ class MatephisPlot {
         const legendItems = [];
 
         data.forEach((item, idx) => {
-            const color = this.getColor(idx, item.color);
+            const color = this._getColor(idx, item.color);
             const width = item.width || item.strokeWidth || 3;
             const dash = item.dash || "";
 
@@ -1089,7 +1115,7 @@ class MatephisPlot {
             if (item.fn) {
                 let d = "";
                 let started = false;
-                const f = new Function("x", `return ${this.makeFn(item.fn)};`);
+                const f = new Function("x", `return ${this._makeFn(item.fn)};`);
 
                 // Adaptive State
                 const MAX_DEPTH = 8;
@@ -1276,7 +1302,7 @@ class MatephisPlot {
 
             // Implicit
             if (item.implicit) {
-                const f = new Function("x", "y", `return ${this.makeFn(item.implicit)};`);
+                const f = new Function("x", "y", `return ${this._makeFn(item.implicit)};`);
                 // Use lower resolution if dragging slider (not implemented detection yet, but 60x60 is safe freq)
                 const res = 60;
                 const dx = (xMax - xMin) / res, dy = (yMax - yMin) / res;
@@ -1325,7 +1351,7 @@ class MatephisPlot {
             if (item.x !== undefined) {
                 const px = mapX(item.x);
                 if (px >= this.padding && px <= this.width - this.padding) {
-                    const l = this.line(px, this.padding, px, this.height - this.padding, color, width, dash, this.dataGroup);
+                    const l = this._line(px, this.padding, px, this.height - this.padding, color, width, dash, this.dataGroup);
                     if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
                     if (!item.labelAt) labelPos = { x: px, y: this.padding + 15 };
                 }
@@ -1369,21 +1395,21 @@ class MatephisPlot {
 
                 const labelWeight = this.config.labelWeight || "normal";
                 const displayLabel = item.label.replace(/\*/g, '·');
-                this.text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, this.labelGroup, this.getConfigSize('labelSize'));
+                this._text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, this.labelGroup, this._getConfigSize('labelSize'));
             }
         });
 
         // --- 4. Legend ---
         if (this.config.legend && legendItems.length > 0) {
-            this.drawLegend(legendItems);
+            this._drawLegend(legendItems);
         }
     }
 
-    drawLegend(items) {
+    _drawLegend(items) {
         const x = this.width - this.padding - 10;
         const y = this.padding + 10;
 
-        const fs = this.getConfigSize('legendSize');
+        const fs = this._getConfigSize('legendSize');
 
         // Dynamic width calculation
         let maxLen = 0;
@@ -1418,7 +1444,7 @@ class MatephisPlot {
                 c.setAttribute("fill", item.color);
                 this.legendGroup.appendChild(c);
             } else {
-                this.line(lx, symbolY, lx + 15, symbolY, item.color, 2, item.dash, this.legendGroup);
+                this._line(lx, symbolY, lx + 15, symbolY, item.color, 2, item.dash, this.legendGroup);
             }
 
             // Text or MathJax
@@ -1436,62 +1462,83 @@ class MatephisPlot {
                     // Simpler fallback for now: just try innerHTML or text fallback if complicated
                     // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
                     // Let's stick to text fallback for reliability in this fast iter.
-                    this.text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                    this._text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
                 }
             } else {
-                this.text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                this._text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
             }
         });
     }
 
-    // Helper to resolve font size
-    getConfigSize(specificKey) {
-        // priority: specific > general > default(14)
-        if (this.config[specificKey])
+    /**
+     * Resolves font size from config, with fallback chain.
+     * @private
+     */
+    _getConfigSize(specificKey) {
+        if (this.config[specificKey]) {
             return typeof this.config[specificKey] === 'number' ? this.config[specificKey] : parseInt(this.config[specificKey]);
-        if (this.config.fontSize)
+        }
+        if (this.config.fontSize) {
             return typeof this.config.fontSize === 'number' ? this.config.fontSize : parseInt(this.config.fontSize);
+        }
         return 14;
     }
 
-    line(x1, y1, x2, y2, color, width, dash, parent) {
+    /**
+     * Creates an SVG line element.
+     * @private
+     */
+    _line(x1, y1, x2, y2, color, width, dash, parent) {
         const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        l.setAttribute("x1", x1); l.setAttribute("y1", y1);
-        l.setAttribute("x2", x2); l.setAttribute("y2", y2);
-        l.setAttribute("stroke", color); l.setAttribute("stroke-width", width);
+        l.setAttribute("x1", x1);
+        l.setAttribute("y1", y1);
+        l.setAttribute("x2", x2);
+        l.setAttribute("y2", y2);
+        l.setAttribute("stroke", color);
+        l.setAttribute("stroke-width", width);
         if (dash) l.setAttribute("stroke-dasharray", dash);
-        // Note: The helper function 'line' doesn't easily accept extra attributes like opacity 
-        // without changing signature. But we can access the last child of parent if needed, 
-        // or just accept we might need to modify 'line' or use 'item.opacity' inside the specific call block.
-        // For the Vertical Line case (which uses this.line):
         parent.appendChild(l);
-        return l; // Return element so we can modify it
+        return l;
     }
 
-    text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null) {
+    /**
+     * Creates an SVG text element with white halo effect.
+     * @private
+     */
+    _text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null) {
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", x); t.setAttribute("y", y);
+        t.setAttribute("x", x);
+        t.setAttribute("y", y);
         t.setAttribute("text-anchor", anchor);
         t.setAttribute("dominant-baseline", baseline);
         t.setAttribute("fill", color);
-        // Configurable Font Size
         const fSize = (size !== null) ? size + "px" : "18px";
         t.setAttribute("font-size", fSize);
         t.setAttribute("font-weight", weight);
         t.textContent = str;
         t.style.paintOrder = "stroke";
         t.style.stroke = "#fff";
-        t.style.strokeWidth = "2.5px"; // Slightly thinner halo for smaller text
+        t.style.strokeWidth = "2.5px";
         parent.appendChild(t);
     }
 
-    openLightbox() {
+    // =========================================================================
+    // PRIVATE: LIGHTBOX
+    // =========================================================================
+
+    /**
+     * Opens the plot in a lightbox overlay.
+     * @private
+     */
+    _openLightbox() {
         const serializer = new XMLSerializer();
         let source = serializer.serializeToString(this.svg);
+        
         if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
-        // Scale up for lightbox but maintain aspect ratio
+        
+        // Scale up for lightbox while maintaining aspect ratio
         const maxDim = 1200;
         const scale = Math.min(maxDim / this.width, maxDim / this.height);
         const newW = Math.round(this.width * scale);
@@ -1503,7 +1550,10 @@ class MatephisPlot {
         const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(source)));
         const lb = document.getElementById('lightbox');
         const img = document.getElementById('lightbox-img');
-        if (lb && img) { lb.style.display = "flex"; img.src = url; }
+        if (lb && img) {
+            lb.style.display = "flex";
+            img.src = url;
+        }
     }
 }
 
