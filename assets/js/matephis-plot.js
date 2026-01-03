@@ -49,6 +49,9 @@ class MatephisPlot {
         this.container = container;
         this.config = JSON.parse(source);
         this.container.innerHTML = ""; // Clear JSON
+        
+        // Unique ID for scoping (e.g. clip paths)
+        this.uid = Math.random().toString(36).substr(2, 9);
 
         // Wrap
         this.wrapper = document.createElement("div");
@@ -179,11 +182,25 @@ class MatephisPlot {
         this.axesGroup = document.createElementNS(ns, "g"); // Axes Lines & Ticks (Always below data)
         this.numbersGroup = document.createElementNS(ns, "g"); // Numbers (Configurable)
         this.dataGroup = document.createElementNS(ns, "g");
+        this.dataGroup.setAttribute("clip-path", `url(#clip_${this.uid})`); // Clip Data to Plot Area
         this.labelGroup = document.createElementNS(ns, "g");
         this.legendGroup = document.createElementNS(ns, "g");
 
         // Layer Order
-        // 1. Backgrounds
+        // 1. Definition (Clip Path)
+        const defs = document.createElementNS(ns, "defs");
+        const clipPath = document.createElementNS(ns, "clipPath");
+        clipPath.setAttribute("id", `clip_${this.uid}`);
+        this.clipRect = document.createElementNS(ns, "rect");
+        this.clipRect.setAttribute("x", this.padding);
+        this.clipRect.setAttribute("y", this.padding);
+        this.clipRect.setAttribute("width", Math.max(0, this.width - this.padding * 2));
+        this.clipRect.setAttribute("height", Math.max(0, this.height - this.padding * 2));
+        clipPath.appendChild(this.clipRect);
+        defs.appendChild(clipPath);
+        this.svg.appendChild(defs);
+
+        // 2. Backgrounds
         this.svg.appendChild(this.bgGroup);
         this.svg.appendChild(this.secondaryGridGroup);
         this.svg.appendChild(this.gridGroup);
@@ -350,8 +367,8 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("+", () => zoom(0.8)); // Zoom In = smaller range
-        const btnMinus = mkBtn("-", () => zoom(1.25)); // Zoom Out = larger range
+        const btnPlus = mkBtn("+", () => zoom(0.9)); // Zoom In = smaller range (10%)
+        const btnMinus = mkBtn("-", () => zoom(1.1)); // Zoom Out = larger range (10%)
 
         const btnReset = mkBtn("↺", () => {
             if (this.config.xlim) {
@@ -404,6 +421,12 @@ class MatephisPlot {
                     this.svg.setAttribute("height", this.height);
                     this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
                     
+                    // Update Clip Rect
+                    if (this.clipRect) {
+                        this.clipRect.setAttribute("width", Math.max(0, this.width - this.padding * 2));
+                        this.clipRect.setAttribute("height", Math.max(0, this.height - this.padding * 2));
+                    }
+
                     // Update Transform for interactions
                     if (this.transform) {
                          this.transform.width = this.width;
@@ -494,7 +517,7 @@ class MatephisPlot {
         svg.onwheel = (e) => {
             if (Date.now() - this.lastScrollTime < 150) return; // Prevent zooming while scrolling page
             e.preventDefault();
-            const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+            const zoomFactor = e.deltaY > 0 ? 1.05 : 0.95; // Gentler zoom (5%)
 
             if (this.transform) {
                 // Zoom towards mouse pointer
@@ -1009,26 +1032,154 @@ class MatephisPlot {
             }
 
             // Function
+            // Function (Adaptive Sampling)
             if (item.fn) {
                 let d = "";
                 let started = false;
                 const f = new Function("x", `return ${this.makeFn(item.fn)};`);
-                const res = (this.width);
-                const dx = (xMax - xMin) / res;
+                
+                // Adaptive State
+                const MAX_DEPTH = 8;
+                const TOLERANCE = 0.5; // Pixel error tolerance
 
-                for (let i = 0; i <= res; i++) {
-                    const x = xMin + i * dx;
-                    try {
-                        const y = f(x);
-                        if (isFinite(y) && y >= yMin && y <= yMax) {
-                            const px = mapX(x), py = mapY(y);
-                            if (py < -this.height || py > this.height * 2) { started = false; continue; } // Clip
-                            if (!started) { d += `M ${px} ${py}`; started = true; }
-                            else d += ` L ${px} ${py}`;
-                            if (!item.labelAt) labelPos = { x: px, y: py };
-                        } else started = false;
-                    } catch (e) { }
+                const safeMapY = (y) => {
+                    const py = mapY(y);
+                    if (py < -10000) return -10000;
+                    if (py > 10000) return 10000;
+                    return py;
+                };
+
+                // Helper to check validity (finite + domain)
+                const isValid = (x, y) => {
+                    if (!isFinite(y)) return false;
+                    if (item.domain && (x < item.domain[0] || x > item.domain[1])) return false;
+                    return true;
+                };
+
+                const plotSegment = (x1, y1, x2, y2, depth) => {
+                    const xm = (x1 + x2) / 2;
+                    let ym;
+                    try { ym = f(xm); } catch(e) { ym = NaN; }
+                    
+                    const p1X = mapX(x1), p1Y = safeMapY(y1);
+                    const p2X = mapX(x2), p2Y = safeMapY(y2);
+                    const pmX = mapX(xm), pmY = safeMapY(ym);
+                    
+                    const v1 = isValid(x1, y1);
+                    const v2 = isValid(x2, y2);
+                    const vm = isValid(xm, ym);
+
+                    // A. Recursion Criteria
+                    if (depth < MAX_DEPTH) {
+                       let split = false;
+
+                       // 1. Edge Hunting (One valid, one invalid)
+                       if (v1 !== v2) split = true;
+                       
+                       // 2. Hole / Singularity Hunting (Both valid, mid invalid) - e.g. sin(x)/x at 0
+                       else if (v1 && v2 && !vm) split = true;
+                       
+                       // 3. Valid Midpoint Checks
+                       else if (v1 && v2 && vm) {
+                           // Curvature / Linearity Check
+                           const linY = p1Y + (p2Y - p1Y) * 0.5;
+                           const error = Math.abs(pmY - linY);
+                           if (error > TOLERANCE) split = true;
+                           
+                           // Steep Slope / Asymptote Check
+                           // If dY is huge, subdivide to find the jump
+                           if (Math.abs(p2Y - p1Y) > this.height) split = true;
+                       }
+                       // 4. Invalid Midpoint but maybe valid edge? (vm false, v1/v2 false) -> Usually skip, 
+                       // but if we are "hunting" from coarse loop, we might have v1=false, v2=false, vm=TRUE.
+                       // This case is handled by top-level call. Inside recursion, if v1/v2 false, we often stop unless vm is true?
+                       // Actually if v1/v2 false and vm true, split!
+                       else if (!v1 && !v2 && vm) split = true;
+
+                       if (split) {
+                           plotSegment(x1, y1, xm, ym, depth + 1);
+                           plotSegment(xm, ym, x2, y2, depth + 1);
+                           return;
+                       }
+                    }
+
+                    // B. Base Case - Draw or Move
+                    
+                    // Case 1: Both endpoints valid -> Draw Line (unless asymptote break)
+                    if (v1 && v2) {
+                        const jump = Math.abs(p2Y - p1Y);
+                        // Asymptote Break: Huge jump AND opposite signs relative to viewport center (heuristic)? 
+                        // Or just huge jump. For 1/x, jump is Infinity. Clampped to 20000.
+                        // For tan(x), jump is also huge.
+                        // We connect if jump is reasonable.
+                        
+                        // Heuristic: If jump > 2 * Height, assume asymptote and break.
+                        // EXCEPT if "Bridging" a hole? No, if we are here (v1 && v2), we just bridged the hole 
+                        // by recursion (midpoint became valid or we reached max depth).
+                        // Wait, if we reached max depth and mid was invalid, we are NOT in (v1 && v2) branch?
+                        // Correct. This branch is for "we found a valid segment". 
+                        
+                        if (jump < this.height * 2) {
+                             if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                             d += ` L ${p2X} ${p2Y}`;
+                             if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                        } else {
+                             // Break
+                             started = false;
+                        }
+                    }
+                    
+                    // Case 2: Bridging a Hole (Removable Discontinuity)
+                    // We reached MAX_DEPTH. v1 is valid, v2 is valid, but we couldn't resolve the middle.
+                    // This happens for sin(x)/x at 0 (undefined at 0).
+                    // x1 is -epsilon, x2 is +epsilon.
+                    else if (v1 && v2 && !vm) {
+                        // Check continuity
+                        const jump = Math.abs(p2Y - p1Y);
+                        if (jump < 50) { // arbitrary small threshold for visual continuity
+                            // Bridge it!
+                            if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                            d += ` L ${p2X} ${p2Y}`;
+                            if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                        } else {
+                            started = false; 
+                        }
+                    }
+                    else {
+                        started = false;
+                    }
+                };
+                
+                // Initial Coarse Steps
+                const coarseSteps = this.width / 20; // 1 step every 20px
+                const dx = (xMax - xMin) / coarseSteps;
+                
+                for (let i = 0; i < coarseSteps; i++) {
+                    const xStart = xMin + i * dx;
+                    const xEnd = xMin + (i+1) * dx;
+                    const xMid = (xStart + xEnd) / 2;
+                    
+                    let yStart, yEnd, yMid;
+                    try { yStart = f(xStart); yEnd = f(xEnd); yMid = f(xMid); } catch(e){}
+                    
+                    const v1 = isValid(xStart, yStart);
+                    const v2 = isValid(xEnd, yEnd);
+                    const vm = isValid(xMid, yMid);
+
+                    // Recurse if ANY point in this chunk is valid (hits domain edge, singularity, etc.)
+                    if (v1 || v2 || vm) {
+                         if (v1 && !started) {
+                             const pSX = mapX(xStart);
+                             const pSY = safeMapY(yStart);
+                             d += `M ${pSX} ${pSY}`; 
+                             started = true; 
+                         }
+                        plotSegment(xStart, yStart, xEnd, yEnd, 0);
+                    } else {
+                        started = false; 
+                    }
                 }
+                
                 const path = document.createElementNS(ns, "path");
                 path.setAttribute("d", d);
                 path.setAttribute("fill", "none");

@@ -175,6 +175,21 @@ Imposta `"interactive": true`.
 }
 ```
 
+### Asintoti e Domini
+Esempio di funzione con asintoti (`tan(x)`) e dominio limitato (`sqrt(16-x^2)` in `[-4, 4]`).
+
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10], 
+  "ylim": [-5, 5],
+  "data": [
+    { "fn": "tan(x)", "color": "#007bff", "label": "tan(x)" },
+    { "fn": "sqrt(16 - x^2)", "domain": [-4, 4], "color": "#dc3545", "label": "Domain [-4, 4]" }
+  ]
+}
+```
+
 ### Slider (Parametri)
 Definisci `params` per creare slider. Le variabili (es. `k`) possono essere usate nelle funzioni.
 
