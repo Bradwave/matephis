@@ -34,6 +34,11 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(a)** Al variare di $a$, cambia l'apertura della parabola: se a cresce positivamente la parabola diventa più "piccata" (stretta), se a decresce verso zero diventa più larga.
 	- **(b)** Al variare di $c$, la parabola trasla orizzontalmente lungo l'asse $x$.
 	- **(c)** L'asse di simmetria rimane sempre l'asse y (ovvero $x = 0$) per qualsiasi valore di $a$ e $c$.
+2. **[EE/F]** Considera l'equazione $x = −0.1t^2 + 0.4t − 0.1$ come il grafico tempo-posizione di un oggetto che si muove su una linea retta.
+	- **Velocità iniziale.** Nell’istante di tempo iniziale ($t = 0$), quanto misura la velocità dell'oggetto? È positiva o negativa?
+	- **Posizione iniziale.** A quale "metro" si trova l'oggetto all'istante $t = 0$?
+	- **Accelerazione.** Il moto è accelerato o decelerato? L'accelerazione spinge l'oggetto nel verso positivo o negativo del moto?
+	- **Simulazione.** Se dovessi replicare questo moto camminando, come dovresti muoverti? Descrivi i cambi di direzione e velocità.
 
 ## Quiz
 
@@ -78,10 +83,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 }
 ```
 3. **[EE]** Considera la parabola di equazione y=ax2+bx+c. Sappiamo che il coefficiente b rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse y. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
-	• **(a)** $c=0$ e $b>0$.
-	• **(b)** $c \neq 0$ e $b<0$.
-	• **(c)** c=0 e $b<0$.
-	• **(d)** c=0 e a<0.
+	• **(a)** $c = 0$ e $b > 0$.
+	• **(b)** $c \neq 0$ e $b < 0$.
+	• **(c)** $c = 0$ e $b < 0$.
+	• **(d)** $c = 0$ e $a < 0$.
 4. **[F]** Immagina che la parabola $y = ax^2 + bx + c$ rappresenti il grafico tempo-posizione di un oggetto che si muove su una linea retta. Se il coefficiente $a$ è negativo, cosa sta succedendo fisicamente all'oggetto?
 	• **(a)** L'oggetto sta rallentando fino a fermarsi.
 	• **(b)** L'oggetto si muove all'indietro.
