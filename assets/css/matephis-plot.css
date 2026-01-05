@@ -7,6 +7,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-select: none;
+  cursor: default; /* Explicit default cursor to stop inheritance */
 
   flex-direction: column;
   align-items: center;
@@ -140,7 +141,7 @@
   background: #e0e0e0;
   border-radius: 3px;
   outline: none;
-  cursor: pointer;
+  cursor: default;
 }
 
 .matephis-slider-row input[type=range]::-webkit-slider-thumb {
@@ -150,7 +151,7 @@
   box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
   border-radius: 50%;
   background: var(--accent, #B01A00);
-  cursor: pointer;
+  cursor: default;
   transition: all 0.1s ease-in-out;
   margin-top: 0;
 }
@@ -173,32 +174,45 @@
   transform: scale(1.2);
 }
 
-/* Overlay Buttons */
-.matephis-plot-overlay {
-    position: absolute;
-    bottom: 45px;
-    left: 45px;
+/* Toolbar (Below Plot) */
+.matephis-plot-toolbar {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
     z-index: 10;
+    cursor: default; /* Toolbar background should be default */
 }
 
 .matephis-plot-btn {
-    background: rgba(255,255,255,0.8);
-    border: 1px solid #ccc;
-    border-radius: 0px;
-    width: 24px;
-    height: 24px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 0;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    padding: 2px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    color: #333;
     user-select: none;
+}
+
+.matephis-plot-btn:hover {
+    background: #e0e0e0;
+}
+
+.matephis-plot-btn:active {
+    background: #d0d0d0;
+}
+
+.matephis-plot-btn img {
+    opacity: 0.6;
+    pointer-events: none; /* Let clicks pass to button */
+}
+
+.matephis-plot-btn:hover img {
+    opacity: 0.9;
 }
 
 @media (max-width: 768px) {

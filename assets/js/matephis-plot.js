@@ -128,11 +128,11 @@ class MatephisPlot {
 
         // Initialize components
         this._initSVG();
-        if (this.config.params) this._initSliders();
         if (this.config.interactive) {
             this._initControlsOverlay();
             this._initInteractions();
         }
+        if (this.config.params && this.config.showSliders !== false) this._initSliders();
 
         // Warning System
         this.warnings = [];
@@ -142,8 +142,10 @@ class MatephisPlot {
         this.draw();
         this._renderWarnings();
 
-        // Lightbox on click
-        this.svg.onclick = () => this._openLightbox();
+        // Lightbox on click (Only for static plots)
+        if (!this.config.interactive) {
+            this.svg.onclick = () => this._openLightbox();
+        }
 
         // Responsive resizing
         this._initResizeObserver();
@@ -333,12 +335,19 @@ class MatephisPlot {
      */
     _initControlsOverlay() {
         const overlay = document.createElement("div");
-        overlay.className = "matephis-plot-overlay";
+        overlay.className = "matephis-plot-toolbar"; // Renamed class for new styling logic
 
-        const mkBtn = (txt, cb) => {
+        const mkBtn = (iconPath, title, cb) => {
             const b = document.createElement("button");
-            b.innerText = txt;
             b.className = "matephis-plot-btn";
+            b.title = title;
+            const img = document.createElement("img");
+            img.src = iconPath;
+            img.style.width = "20px";
+            img.style.height = "20px";
+            img.draggable = false;
+            b.appendChild(img);
+            
             b.onclick = (e) => {
                 e.stopPropagation(); // Prevent plot click
                 cb();
@@ -363,10 +372,9 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("+", () => zoom(0.9)); // Zoom In = smaller range (10%)
-        const btnMinus = mkBtn("-", () => zoom(1.1)); // Zoom Out = larger range (10%)
-
-        const btnReset = mkBtn("↺", () => {
+        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9)); 
+        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1)); 
+        const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
             if (this.config.xlim) {
                 this.view.xMin = this.config.xlim[0];
                 this.view.xMax = this.config.xlim[1];
@@ -378,13 +386,18 @@ class MatephisPlot {
             } else { this.view.yMin = -9.9; this.view.yMax = 9.9; }
             this.draw();
         });
-        btnReset.title = "Reset View";
+
+        const btnFull = mkBtn("/assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
 
         overlay.appendChild(btnPlus);
         overlay.appendChild(btnMinus);
         overlay.appendChild(btnReset);
+        overlay.appendChild(btnFull);
 
-        this.plotStage.appendChild(overlay);
+        // Place OUTSIDE the plot stage (SVG), below it.
+        // If sliders exist, place before them? Or after? user said "below the plot".
+        // Appending to wrapper puts it after plotStage.
+        this.wrapper.appendChild(overlay);
     }
 
     // =========================================================================
@@ -501,9 +514,7 @@ class MatephisPlot {
         svg.onpointerup = (e) => {
             this.interactions.isDragging = false;
             svg.releasePointerCapture(e.pointerId);
-            if (!this.interactions.hasMoved && !isPinching) {
-                this._openLightbox();
-            }
+            // Removed automatic lightbox on click for interactive plots
         };
 
         // Wheel Zoom
@@ -720,6 +731,15 @@ class MatephisPlot {
     _makeFn(str) {
         let expr = str;
         
+        // 1. Implicit Multiplication for Parameters (e.g., "ax" -> "a*x")
+        // Must be done BEFORE parameter value substitution
+        for (let key in this.params) {
+            // Param followed by variable (x/y/t) or open parenthesis
+            // Lookbehind support in JS is good, but simple regex is safer: capture key, then lookahead
+            const re = new RegExp(`(?<![a-zA-Z0-9])(${key})(?=[xyt\\(])`, 'g');
+            expr = expr.replace(re, "$1*");
+        }
+
         // Replace parameters with their values
         for (let key in this.params) {
             const re = new RegExp(`\\b${key}\\b`, 'g');
@@ -1429,24 +1449,38 @@ class MatephisPlot {
     }
 
     _drawLegend(items) {
-        const x = this.width - this.padding - 10;
-        const y = this.padding + 10;
-
-        const fs = this._getConfigSize('legendSize');
-
-        // Dynamic width calculation
+        // Default Top-Right
+        let x = this.width - this.padding - 10;
+        let y = this.padding + 10;
+        
+        const pos = this.config.legendPosition || 'top-right';
+        
+        // Width Calc (Pre-calc needed for X positioning)
         let w;
         if (this.config.legendWidth) {
             w = this.config.legendWidth;
         } else {
             let maxLen = 0;
+            const fs = this._getConfigSize('legendSize');
             items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
-            // Approx width: Symbol (30) + Chars * (FontSize * 0.6) + Padding (20)
             w = 30 + (maxLen * (fs * 0.6)) + 20;
-            if (w < 120) w = 120; // Min width
+            if (w < 120) w = 120;
         }
 
-        const h = items.length * (fs * 1.5) + 10; // Dynamic height based on font size
+        const fs = this._getConfigSize('legendSize');
+        const h = items.length * (fs * 1.5) + 10;
+
+        if (pos === 'top-left') {
+            x = this.padding + 10 + w; // rect is drawn x-w, so x must be right edge
+        } else if (pos === 'bottom-right') {
+            x = this.width - this.padding - 10;
+            y = this.height - this.padding - 10 - h;
+        } else if (pos === 'bottom-left') {
+            x = this.padding + 10 + w;
+            y = this.height - this.padding - 10 - h;
+        }
+        // top-right is default (x already set)
+
         const labelWeight = this.config.labelWeight || "normal";
 
         // bg
@@ -1558,12 +1592,12 @@ class MatephisPlot {
         const VALID_ROOT_KEYS = [
             "width", "height", "aspectRatio", "cssWidth", "fullWidth", "align",
             "marginLeft", "marginRight", "border", "sliderBorder",
-            "xlim", "ylim", "interactive", "theme", "legend", "legendWidth",
+            "xlim", "ylim", "interactive", "theme", "legend", "legendWidth", "legendPosition",
             "padding", "grid", "gridOpacity", "axisArrows", "axisLabels",
             "xStep", "yStep", "xStepSecondary", "yStepSecondary", "showSecondaryGrid", "showGrid",
             "xNumberStep", "yNumberStep", "showXNumbers", "showYNumbers",
             "showXTicks", "showYTicks", "secondaryGridOpacity",
-            "sampleStep", "fontSize", "renderOrder", "params", "data", "labelWeight",
+            "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize"
         ];
 
