@@ -829,10 +829,15 @@ class MatephisPlot {
         // --- 1. Background ---
         const ns = "http://www.w3.org/2000/svg";
         const rect = document.createElementNS(ns, "rect");
-        rect.setAttribute("x", this.padding);
-        rect.setAttribute("y", this.padding);
-        rect.setAttribute("width", this.width - 2 * this.padding);
-        rect.setAttribute("height", this.height - 2 * this.padding);
+        // Previous config
+        // rect.setAttribute("x", this.padding);
+        // rect.setAttribute("y", this.padding);
+        // rect.setAttribute("width", this.width - 2 * this.padding);
+        // rect.setAttribute("height", this.height - 2 * this.padding);
+        rect.setAttribute("x", 0);
+        rect.setAttribute("y", 0);
+        rect.setAttribute("width", this.width);
+        rect.setAttribute("height", this.height);
         rect.setAttribute("fill", "#fff");
         this.bgGroup.appendChild(rect);
 
@@ -1124,8 +1129,8 @@ class MatephisPlot {
         // Axis Labels
         if (this.config.axisLabels) {
             const lblSize = this._getConfigSize('labelSize');
-            this._text(this.width - this.padding + 10, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize);
-            this._text(x0, this.padding - 15, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize);
+            this._text(this.width - this.padding + 5, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize, false);
+            this._text(x0, this.padding - 5, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize, false);
         }
 
         // --- 3. Data ---
@@ -1567,7 +1572,7 @@ class MatephisPlot {
      * Creates an SVG text element with white halo effect.
      * @private
      */
-    _text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null) {
+    _text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null, outline = true) {
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
         t.setAttribute("x", x);
         t.setAttribute("y", y);
@@ -1578,9 +1583,11 @@ class MatephisPlot {
         t.setAttribute("font-size", fSize);
         t.setAttribute("font-weight", weight);
         t.textContent = str;
-        t.style.paintOrder = "stroke";
-        t.style.stroke = "#fff";
-        t.style.strokeWidth = "2.5px";
+        if (outline) {
+            t.style.paintOrder = "stroke";
+            t.style.stroke = "#fff";
+            t.style.strokeWidth = "2.5px";
+        }
         parent.appendChild(t);
     }
 

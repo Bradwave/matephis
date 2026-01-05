@@ -26,7 +26,6 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. **[EE/F]** il grafico intercetta l'asse $y$ in $-1$, l'asse di simmetria è $x = 1$ e il vertice della parabola è $(1, -2)$.
 	3. **[EE]** l'asse di simmetria è l'asse $y$, la parabola passa per $(0, -2)$ e per $(1, -1)$;
 	4. **[PD]** la parabola passa per $(2, 2)$, la pendenza della parabola nel punto $(2, 2)$ è $-2$ e l'asse di simmetria è $x = 5$.
-3. Altra domanda
 
 ## Quesiti
 
@@ -39,6 +38,26 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **Posizione iniziale.** A quale "metro" si trova l'oggetto all'istante $t = 0$?
 	- **Accelerazione.** Il moto è accelerato o decelerato? L'accelerazione spinge l'oggetto nel verso positivo o negativo del moto?
 	- **Simulazione.** Se dovessi replicare questo moto camminando, come dovresti muoverti? Descrivi i cambi di direzione e velocità.
+3. **[F]** Nel grafico sono rappresentati i grafici posizione-tempo di un'auto e di una moto, che si muovono parallelamente lungo una strada rettilinea. La persona che osserva l'auto e la moto è posizionata nel punto $x = 0$.
+	- Dopo quanto tempo e in che posizione rispetto all'osservatore auto e moto si trovano affiancate?
+	- Descrivi a parole in che modo si muovo l'auto e la moto.
+```matephis
+{
+  "xlim": [-0.9, 12.9],
+  "ylim": [-19.9, 249.9],
+  "axisLabels": ["t","x"],
+  "aspectRatio": "3:2",
+  "legend": true,
+  "legendWidth": 80,
+  "data": [
+    { "fn": "5x^2", "color": "red1", "domain": [0, 10], "label": "Moto" },
+    { "fn": "30x", "color": "black1", "domain": [0, 10], "label": "Auto" }
+  ]
+}
+```
+4. **[AD-]** Fai riferimento all'esercizio precedente.
+	- Scrivi le equazioni della retta e della parabola, che descrivono il moto di auto e moto rispettivamente. La moto parte da ferma.
+	- Verifica per via algebrica l'istante di tempo e la posizione in cui i due veicoli sono affiancati, identificati precedentemente per via grafica.
 
 ## Quiz
 
@@ -83,20 +102,20 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 }
 ```
 3. **[EE]** Considera la parabola di equazione y=ax2+bx+c. Sappiamo che il coefficiente b rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse y. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
-	• **(a)** $c = 0$ e $b > 0$.
-	• **(b)** $c \neq 0$ e $b < 0$.
-	• **(c)** $c = 0$ e $b < 0$.
-	• **(d)** $c = 0$ e $a < 0$.
+	- **(a)** $c = 0$ e $b > 0$.
+	- **(b)** $c \neq 0$ e $b < 0$.
+	- **(c)** $c = 0$ e $b < 0$.
+	- **(d)** $c = 0$ e $a < 0$.
 4. **[F]** Immagina che la parabola $y = ax^2 + bx + c$ rappresenti il grafico tempo-posizione di un oggetto che si muove su una linea retta. Se il coefficiente $a$ è negativo, cosa sta succedendo fisicamente all'oggetto?
-	• **(a)** L'oggetto sta rallentando fino a fermarsi.
-	• **(b)** L'oggetto si muove all'indietro.
-	• **(c)** L'oggetto subisce un'accelerazione che lo "tira" verso il basso (o indietro), come se qualcuno lo tirasse per la maglia.
-	• **(d)** La velocità iniziale dell'oggetto è negativa.
+	- **(a)** L'oggetto sta rallentando fino a fermarsi.
+	- **(b)** L'oggetto si muove all'indietro.
+	- **(c)** L'oggetto subisce un'accelerazione che lo "tira" verso il basso (o indietro), come se qualcuno lo tirasse per la maglia.
+	- **(d)** La velocità iniziale dell'oggetto è negativa.
 5. **[T]** Data una parabola con equazione $y = ax^2 + bx + c$, quale condizione deve verificarsi affinché la parabola sia tangente all'asse delle ascisse (asse x)?
-	• **(a)** $b^2 − 4ac > 0$
-	• **(b)** $b^2 − 4ac = 0$
-	• **(c)** $c = 0$
-	• **(d)** $−2ab ​ =0$
+	- **(a)** $b^2 − 4ac > 0$
+	- **(b)** $b^2 − 4ac = 0$
+	- **(c)** $c = 0$
+	- **(d)** $−2ab ​ =0$
 
 
 ## Problemi

@@ -7,7 +7,8 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-select: none;
-  cursor: default; /* Explicit default cursor to stop inheritance */
+  cursor: default;
+  /* Explicit default cursor to stop inheritance */
 
   flex-direction: column;
   align-items: center;
@@ -22,50 +23,51 @@
 
 /* Modifiers */
 .matephis-plot-container.align-center {
-    margin-left: auto;
-    margin-right: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .matephis-plot-container.align-left {
-    margin-left: 0;
-    margin-right: auto;
+  margin-left: 0;
+  margin-right: auto;
 }
 
 /* Stage */
 .matephis-plot-stage {
-    position: relative;
-    width: 100%;
+  position: relative;
+  width: 100%;
 }
 
 /* SVG */
 .matephis-plot-svg {
-    max-width: 100%;
-    width: 100%;
-    height: auto;
-    font-family: var(--font-code, monospace);
-    display: block;
-    user-select: none;
-    -webkit-user-select: none;
+  background: var(--bg, #fff);
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  font-family: var(--font-code, monospace);
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Fix for mobile pinch: ensure touches pass through lines/text to the SVG handler */
 .matephis-plot-svg * {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .matephis-plot-svg.interactive {
-    cursor: default;
+  cursor: default;
 }
 
 .matephis-plot-svg.static {
-    cursor: zoom-in;
+  cursor: zoom-in;
 }
 
 /* Error */
 .matephis-plot-error {
-     color: red;
-     border: 1px solid red;
-     padding: 5px;
+  color: red;
+  border: 1px solid red;
+  padding: 5px;
 }
 
 /* Controls (Sliders) */
@@ -96,15 +98,15 @@
 }
 
 .matephis-slider-label-group {
-    min-width: 80px;
-    white-space: nowrap;
-    text-align: left;
-    display: flex;
-    align-items: center;
+  min-width: 80px;
+  white-space: nowrap;
+  text-align: left;
+  display: flex;
+  align-items: center;
 }
 
 .matephis-slider-label {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .matephis-slider-val {
@@ -117,20 +119,20 @@
 
 .matephis-slider-min,
 .matephis-slider-max {
-    font-size: 0.8em;
-    color: #999;
-    min-width: 40px;
-    display: inline-block;
+  font-size: 0.8em;
+  color: #999;
+  min-width: 40px;
+  display: inline-block;
 }
 
 .matephis-slider-min {
-    margin-right: 8px;
-    text-align: right;
+  margin-right: 8px;
+  text-align: right;
 }
 
 .matephis-slider-max {
-    margin-left: 8px;
-    text-align: left;
+  margin-left: 8px;
+  text-align: left;
 }
 
 .matephis-slider-row input[type=range] {
@@ -176,43 +178,45 @@
 
 /* Toolbar (Below Plot) */
 .matephis-plot-toolbar {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    z-index: 10;
-    cursor: default; /* Toolbar background should be default */
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  z-index: 10;
+  cursor: default;
+  /* Toolbar background should be default */
 }
 
 .matephis-plot-btn {
-    background: #f0f0f0;
-    border: none;
-    border-radius: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px;
-    cursor: pointer;
-    user-select: none;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .matephis-plot-btn:hover {
-    background: #e0e0e0;
+  background: #e0e0e0;
 }
 
 .matephis-plot-btn:active {
-    background: #d0d0d0;
+  background: #d0d0d0;
 }
 
 .matephis-plot-btn img {
-    opacity: 0.6;
-    pointer-events: none; /* Let clicks pass to button */
+  opacity: 0.6;
+  pointer-events: none;
+  /* Let clicks pass to button */
 }
 
 .matephis-plot-btn:hover img {
-    opacity: 0.9;
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
@@ -221,6 +225,7 @@
     width: 90%;
   }
 }
+
 .matephis-plot-container.interactive {
   touch-action: none;
 }

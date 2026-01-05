@@ -661,6 +661,13 @@ strong {
   font-weight: 700;
 }
 
+.option-label {
+  font-family: var(--font-code);
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 2px;
+}
+
 em {
   font-style: italic;
 }
@@ -957,6 +964,7 @@ td {
   cursor: help;
   display: inline-block;
   padding: 0.1em 0.5em;
+  font-family: var(--font-code);
   font-weight: bold;
   font-size: 0.85em;
   border-radius: 0;
