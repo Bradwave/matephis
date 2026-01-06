@@ -209,3 +209,23 @@ L'asse di simmetria della parabola ha equazione $x = -\dfrac{b}{2a}$, perché, s
 Il vertice è il punto più alto, se la parabola è triste, o più basso, se la parabola è felice, della parabola. È l'intersezione tra la parabola e l'asse.
 
 Per trovare le coordinate del vertice, basta sostituire nella parabola la coordinata $x$ dell'asse di simmetria e ricavare così la coordinata $y$.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "marginBottom": "20px",
+  "params": {
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "b": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "c": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+  },
+  "data": [
+    { "fn": "ax^2+bx+c" },
+    { "x": "-b/(2*a)", "color": "black1", "dash": "3,3", "label": "x = -b/2a" },
+    { "points": [["-b/(2*a)","(4*a*c-b^2)/(4*a)","V"]], "radius": 4, "fillColor": "black1", "strokeColor": "#fff", "strokeWidth": 2 }
+  ]
+}
+```
+
+Se la parabola descrive l'andamento di una certa grandezza (che può rappresentare un fenomeno matematico, fisico, economico, sociale, ecc.), il vertice indica il valore massimo o minimo di tale grandezza. I problemi in cui occorre trovare massimi e minimi di una grandezza variabile si chiamano **problemi di ottimizzazione**.

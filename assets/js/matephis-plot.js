@@ -1585,7 +1585,7 @@ class MatephisPlot {
             items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
             // Tighter packing: 0.5 char width estimate, less padding
             w = 30 + (maxLen * (fs * 0.5)) + 15;
-            if (w < 80) w = 80;
+            if (w < 50) w = 50;
         }
 
         const fs = this._getConfigSize('legendSize');
