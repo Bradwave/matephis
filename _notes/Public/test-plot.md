@@ -4,6 +4,7 @@ feed: show
 tags:
   - test
   - grafici
+plot: true
 ---
 <link rel="stylesheet" href="/assets/css/syntax.css">
 

@@ -4,6 +4,7 @@ feed: show
 tags:
   - esercizi
   - parabola
+plot: true
 ---
 
 Esercizi, quesiti, quiz e problemi sulla parabola.
