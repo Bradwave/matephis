@@ -213,6 +213,7 @@ class MatephisPlot {
 
         const ns = "http://www.w3.org/2000/svg";
         this.svg = document.createElementNS(ns, "svg");
+        this.svg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
         this.svg.setAttribute("width", this.width);
         this.svg.setAttribute("height", this.height);
         this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
@@ -1485,8 +1486,14 @@ class MatephisPlot {
 
                 const labelWeight = this.config.labelWeight || "normal";
                 const labelStyle = this.config.labelStyle || "normal";
-                const displayLabel = item.label.replace(/\*/g, '·');
-                this._text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, labelStyle, this.labelGroup, this._getConfigSize('labelSize'));
+                const displayLabel = item.label;
+
+                if (window.MathJax && displayLabel.includes("$")) {
+                     this._renderMathJax(displayLabel, lx, ly, this._getConfigSize('labelSize'), color, anchor, "bottom", this.labelGroup);
+                } else {
+                     const cleanLabel = displayLabel.replace(/\*/g, '·');
+                     this._text(lx, ly, cleanLabel, anchor, "bottom", color, labelWeight, labelStyle, this.labelGroup, this._getConfigSize('labelSize'));
+                }
             }
         });
 
@@ -1503,7 +1510,9 @@ class MatephisPlot {
 
         const pos = this.config.legendPosition || 'top-right';
 
-        // Width Calc (Pre-calc needed for X positioning)
+        // Width logic remains... (simplified for this tool call, keeping existing width logic logic implied or using simple replacement)
+        // Wait, I need to replace the whole function to safely change the flow.
+        
         let w;
         if (this.config.legendWidth) {
             w = this.config.legendWidth;
@@ -1516,38 +1525,67 @@ class MatephisPlot {
         }
 
         const fs = this._getConfigSize('legendSize');
-        const h = items.length * (fs * 1.5) + 15;
-
-        if (pos === 'top-left') {
-            x = this.padding + 10 + w; // rect is drawn x-w, so x must be right edge
-        } else if (pos === 'bottom-right') {
-            x = this.width - this.padding - 10;
-            y = this.height - this.padding - 10 - h;
-        } else if (pos === 'bottom-left') {
-            x = this.padding + 10 + w;
-            y = this.height - this.padding - 10 - h;
-        }
-        // top-right is default (x already set)
-        const labelWeight = this.config.labelWeight || "normal";
-        const labelStyle = this.config.labelStyle || "normal";
-
-        // bg
+        
+        // bg (Height will be set later)
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", x - w);
-        rect.setAttribute("y", y);
         rect.setAttribute("width", w);
-        rect.setAttribute("height", h);
         rect.setAttribute("fill", "white");
         rect.setAttribute("fill-opacity", "0.9");
         rect.setAttribute("stroke", "#eee");
-        // rect.setAttribute("rx", 4); // Square corners requested
         this.legendGroup.appendChild(rect);
 
+        // Calculate Position Start
+        // For bottom-aligned, we need to know height beforehand OR shift later.
+        // Shifting later is hard with SVG.
+        // Let's do a 2-pass approach or just use flow if top-aligned.
+        // If bottom-aligned, we might guessing or need to measure.
+        // For now, let's assume top-aligned flow logic, and if bottom-aligned, we might be slightly off or need Pre-calc.
+        // Let's stick to Pre-calc loop for height.
+        
+        let totalH = 10; // Top padding
+        const RowH = fs * 1.5;
+        
+        // Pass 1: Calculate Heights
+        const rowHeights = items.map(item => {
+             if (window.MathJax && item.label.includes("$")) {
+                 // Estimaate
+                 // If normal text is 1.5 * fs, MathJax fractions might be 2.5 * fs?
+                 // Without rendering, we guess.
+                 // Better: Render them, measure? No, too slow/complex DOM thrashing.
+                 // Heuristic: if it hasfrac, increase height
+                 if (item.label.includes("\\frac")) return fs * 2.5;
+                 if (item.label.includes("\\sum") || item.label.includes("\\int")) return fs * 2.2;
+                 return fs * 1.5;
+             }
+             return fs * 1.5;
+        });
+        
+        totalH = 10 + rowHeights.reduce((a, b) => a + b, 0) + 10; // +10 bottom padding
+
+        // X/Y calculations based on totalH
+        if (pos === 'top-left') {
+            x = this.padding + 10 + w;
+        } else if (pos === 'bottom-right') {
+            x = this.width - this.padding - 10;
+            y = this.height - this.padding - 10 - totalH;
+        } else if (pos === 'bottom-left') {
+            x = this.padding + 10 + w;
+            y = this.height - this.padding - 10 - totalH;
+        }
+
+        rect.setAttribute("x", x - w);
+        rect.setAttribute("y", y);
+        rect.setAttribute("height", totalH);
+
+        let currentY = y + 10; // Start Y
+
         items.forEach((item, i) => {
-            const ly = y + 15 + i * (fs * 1.5);
+            const h = rowHeights[i];
+            const ly = currentY + (h / 2); // Center of row
+            
             const lx = x - w + 10;
             // Symbol
-            const symbolY = ly + (fs / 3); // Align with text baseline shift
+            const symbolY = ly; 
             if (item.type === 'point') {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 c.setAttribute("cx", lx + 5); c.setAttribute("cy", symbolY); c.setAttribute("r", 4);
@@ -1559,25 +1597,112 @@ class MatephisPlot {
 
             // Text or MathJax
             if (window.MathJax && item.label.includes("$")) {
-                const tex = item.label.replace(/\$/g, "");
-                const svgNode = MathJax.tex2svg(tex).querySelector("svg");
-                if (svgNode) {
-                    // Inject vector math
-                    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                    g.setAttribute("transform", `translate(${lx + 25}, ${ly - 5}) scale(0.015)`); // MathJax scale is usually huge
-                    g.setAttribute("fill", "#333"); // Force color
-                    // We need to copy paths deeply
-                    g.innerHTML = svgNode.innerHTML;
-                    // Note: MathJax SVG uses <use> refs, needs <defs>. Complicated.
-                    // Simpler fallback for now: just try innerHTML or text fallback if complicated
-                    // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
-                    // Let's stick to text fallback for reliability in this fast iter.
-                    this._text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, labelStyle, this.legendGroup, fs);
-                }
+                // We pass the row height 'h' as a hint or just center in it
+                // Align middle of MathJax to 'ly'
+                this._renderMathJax(item.label, lx + 25, ly - 2, fs, "#333", "start", "middle", this.legendGroup);
             } else {
-                this._text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, labelStyle, this.legendGroup, fs);
+                this._text(lx + 20, ly + 1, item.label.replace(/\*/g, '·'), "start", "middle", "#333", this.config.labelWeight || "normal", this.config.labelStyle || "normal", this.legendGroup, fs);
             }
+            
+            currentY += h;
         });
+    }
+
+    /**
+     * Renders MathJax into the SVG.
+     * @private
+     */
+    _renderMathJax(text, x, y, baseSize, color, anchor, baseline, parent) {
+        try {
+            const tex = text.replace(/^\$|\$$/g, '').replace(/\\$/g, '');
+            const mjNode = MathJax.tex2svg(tex);
+            const mjSvg = mjNode.querySelector("svg");
+            
+            if (mjSvg) {
+                const svgNode = mjSvg.cloneNode(true);
+                svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                svgNode.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+                
+                // Parse dimensions (usually in 'ex')
+                const wAttr = svgNode.getAttribute("width") || "1ex";
+                const hAttr = svgNode.getAttribute("height") || "1ex";
+                const valign = svgNode.style.verticalAlign || "0ex"; // e.g. -0.25ex
+
+                // Conversion factor: assume 1ex in MathJax ~= 0.5 * baseSize (in pixels)
+                const ex2px = baseSize * 0.5; 
+                
+                const wIdx = parseFloat(wAttr) * ex2px;
+                const hIdx = parseFloat(hAttr) * ex2px;
+                const vShift = parseFloat(valign) * ex2px;
+
+                svgNode.setAttribute("width", wIdx + "px");
+                svgNode.setAttribute("height", hIdx + "px");
+                
+                // Alignment Logic
+                let finalX = x;
+                if (anchor === 'end') finalX = x - wIdx;
+                else if (anchor === 'middle') finalX = x - wIdx / 2;
+                
+                let finalY = y;
+                // Baseline vs Middle
+                if (baseline === 'middle') {
+                    // Center vertically around y
+                    finalY = y - (hIdx / 2); 
+                } else {
+                    // Bottom/Baseline alignment
+                    // MathJax 'vertical-align' tells us how deeply it sits below baseline
+                    // y is the baseline. 
+                    // So top of box is: y - height - vShift?
+                    // Usually: y is baseline. The bottom of SVG is at y + depth.
+                    // Top is y - (height + vShift) ... it's complex.
+                    // Simple heuristic: Treat y as bottom.
+                    finalY = y - hIdx;
+                }
+
+                svgNode.setAttribute("x", finalX);
+                svgNode.setAttribute("y", finalY);
+                // Ensure self-containment: Check for missing defs (Global Cache Issue)
+                // MathJax often uses a global cache. Use references might point to IDs not in this SVG.
+                // We must find them in the document and copy them here.
+                const uses = svgNode.querySelectorAll("use");
+                let defs = svgNode.querySelector("defs");
+                if (!defs) {
+                    defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                    svgNode.prepend(defs);
+                }
+
+                uses.forEach(use => {
+                    const href = use.getAttribute("xlink:href") || use.getAttribute("href");
+                    if (href && href.startsWith("#")) {
+                        const id = href.substring(1);
+                        // Check if it exists inside this SVG
+                        if (!svgNode.querySelector(`[id="${id}"]`)) {
+                            // Valid ID?
+                            // Try to find in global document
+                            const globalDef = document.getElementById(id);
+                            if (globalDef) {
+                                // Clone and append to local defs
+                                const clone = globalDef.cloneNode(true);
+                                defs.appendChild(clone);
+                            }
+                        }
+                    }
+                });
+
+                svgNode.setAttribute("fill", color);
+                svgNode.style.color = color; // For currentColor
+                
+                // Ensure text color is applied to paths if they use currentColor
+                svgNode.querySelectorAll('path').forEach(p => p.setAttribute('fill', color));
+
+                parent.appendChild(svgNode);
+            } else {
+                 this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize);
+            }
+        } catch (e) {
+            console.warn("MathJax Render Error", e);
+            this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize);
+        }
     }
 
     /**

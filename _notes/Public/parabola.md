@@ -5,6 +5,7 @@ tags:
   - parabola
 plot: true
 ---
+
 ## Il coefficiente a
 
 Nel grafico è rappresentata la parabola di equazione $y = ax^2$. Fai variare il valore di $a$.
@@ -34,16 +35,35 @@ Il coefficiente $a$ determina la **forma della parabola**.
   "padding": 5,
   "align": "center",
   "legend": true,
+  "legendWidth": 110,
+  "labelStyle": "italic",
   "data": [
     { "fn": "x^2", "color": "red1", "label": "y = x²" },
-    { "fn": "2x^2", "color": "red1", "dash": "2,2", "label": "y = 2x²" },
-    { "fn": "0.5x^2", "color": "red2", "dash": "4,4", "label": "y = ½x²" },
-    { "fn": "-x^2", "color": "black1", "label": "y = -x²" }
+    { "fn": "2x^2", "color": "red1", "dash": "2,2", "label": "$y = 2x^2$" },
+    { "fn": "0.5x^2", "color": "red2", "dash": "4,4", "label": "$y = \\frac{1}{2}x^2$" },
+    { "fn": "-x^2", "color": "black1", "label": "$y = -x^2$" }
   ]
 }
 ```
 
 ## Il coefficiente b
+
+Nel grafico è rappresentata la parabola di equazione $y = ax^2 + b$. Fai variare il valore di $b$.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "marginBottom": "20px",
+  "params": {
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "b": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+  },
+  "data": [
+    { "fn": "ax^2 + bx" }
+  ]
+}
+```
 
 Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pendenza nel punto di intersezione con l'asse $y$.
 
@@ -51,6 +71,20 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
 - Il valore di $b$ è la pendenza della retta tangente alla parabola nel punto di intersezione con l'asse $y$, che avrà equazione $y = bx + c$.
 - Variando $b$, la parabola è spostata a destra o a sinistra. Se $a$ e $b$ sono concordi, l'asse di simmetria della parabola è spostato a sinistra dell'asse $y$, se $a$ e $b$ sono discordi, l'asse di simmetria è spostato a destra.
 - Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $b$ è la **velocità iniziale** dell'oggetto in movimento.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "legend": true,
+  "legendWidth": 110,
+  "labelStyle": "italic",
+  "data": [
+    { "fn": "x^2 + x", "color": "red1", "label": "$y = x²$" },
+    { "fn": "x^2 - x", "color": "red1", "dash": "2,2", "label": "$y = 2x^2$" }
+  ]
+}
+```
 
 ## Il coefficiente c
 
