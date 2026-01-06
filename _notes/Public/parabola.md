@@ -94,11 +94,23 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
   ]
 }
 ```
-*Osservare come la parabola di equazione $y = x^2 + x$ ha pendenza 1 (positiva) nell'origine e la parabola di equazione $y = x^2 - x$ ha pendenza -1 (negativa) nell'origine.*
+*Osservare come la parabola di equazione $y = x^2 + x$ ha pendenza 1 (positiva) nell'origine ed è infatti tangente alla retta di equazione $y = x$; la parabola di equazione $y = x^2 - x$, invece, ha pendenza -1 (negativa) nell'origine ed è tangente alla retta di equazione $y = -x$.*
 
 ## Il coefficiente c
 
-
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "marginBottom": "20px",
+  "params": {
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+  },
+  "data": [
+    { "fn": "ax^2" }
+  ]
+}
+```
 
 Il coefficiente $c$ è l'**intercetta, il "punto iniziale", della parabola**.
 

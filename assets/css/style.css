@@ -1333,7 +1333,7 @@ li a[href^="https://"] {
 }
 
 .sidebar-toc h4 {
-  font-family: var(--font-title);
+  font-family: var(--font);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1480,6 +1480,7 @@ li a[href^="https://"] {
     margin-right: auto;
   }
 
+  /* I doubt this is needed */
   .page-layout .matephis-plot-container {
     max-width: 90%;
     width: 90%;

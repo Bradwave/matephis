@@ -229,7 +229,26 @@
 .matephis-plot-container.interactive {
   touch-action: none;
 }
+
 /* SVG Text - Force Font Family */
 .matephis-plot-text {
   font-family: var(--font-plot, 'Space Mono', monospace) !important;
+}
+
+/* Captions for plots */
+.matephis-plot~p:has(>em):not(:has(>:not(em))):not(.matephis-plot~p:has(>em):not(:has(>:not(em)))~p) {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #888;
+  font-family: var(--font);
+  font-style: normal;
+  margin-top: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  margin-left: var(--space-sm);
+  margin-right: var(--space-sm);
+}
+
+.matephis-plot:has(.matephis-plot-container.align-center)~p:has(>em):not(:has(>:not(em))):not(.matephis-plot:has(.matephis-plot-container.align-center)~p:has(>em):not(:has(>:not(em)))~p) {
+  text-align: center;
+  padding: 0 var(--space-lg) 0 var(--space-lg);
 }
