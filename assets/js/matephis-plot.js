@@ -1451,18 +1451,51 @@ class MatephisPlot {
             // Points
             if (item.points) {
                 item.points.forEach(pt => {
-                    const px = mapX(pt[0]), py = mapY(pt[1]);
-                    if (px >= 0 && px <= this.width && py >= 0 && py <= this.height) {
-                        const c = document.createElementNS(ns, "circle");
-                        c.setAttribute("cx", px); c.setAttribute("cy", py);
-                        c.setAttribute("r", item.radius || 4);
-                        c.setAttribute("fill", item.fillColor || color);
-                        c.setAttribute("stroke", item.strokeColor || "none");
-                        c.setAttribute("stroke-width", item.strokeWidth || 0);
-                        if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
-                        this.dataGroup.appendChild(c);
-                        // Use last point for label if no labelAt
-                        if (!item.labelAt) labelPos = { x: px, y: py };
+                    let valX = pt[0];
+                    let valY = pt[1];
+
+                    // Evaluate X if it's a string expression
+                    if (typeof valX === 'string') {
+                        try {
+                            const fnX = new Function(`return ${this._makeFn(valX)}`);
+                            valX = fnX();
+                        } catch (e) {
+                            console.warn(`Error evaluating point x: ${valX}`, e);
+                            valX = NaN;
+                        }
+                    }
+
+                    // Evaluate Y if it's a string expression
+                    if (typeof valY === 'string') {
+                        try {
+                            const fnY = new Function(`return ${this._makeFn(valY)}`);
+                            valY = fnY();
+                        } catch (e) {
+                            console.warn(`Error evaluating point y: ${valY}`, e);
+                            valY = NaN;
+                        }
+                    }
+
+                    // Proceed only if we have valid numbers
+                    if (!isNaN(valX) && !isNaN(valY)) {
+                        const px = mapX(valX), py = mapY(valY);
+                        // Relaxed bounds check for points slightly off-screen or for drag behavior
+                        if (px >= -50 && px <= this.width + 50 && py >= -50 && py <= this.height + 50) {
+                            const c = document.createElementNS(ns, "circle");
+                            c.setAttribute("cx", px); c.setAttribute("cy", py);
+                            c.setAttribute("r", item.radius || 4);
+                            
+                            const fillColor = item.fillColor ? this._getColor(0, item.fillColor) : color;
+                            const strokeColor = item.strokeColor ? this._getColor(0, item.strokeColor) : "none";
+                            
+                            c.setAttribute("fill", fillColor);
+                            c.setAttribute("stroke", strokeColor);
+                            c.setAttribute("stroke-width", item.strokeWidth || 0);
+                            if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
+                            this.dataGroup.appendChild(c);
+                            // Use last point for label if no labelAt
+                            if (!item.labelAt) labelPos = { x: px, y: py };
+                        }
                     }
                 });
             }

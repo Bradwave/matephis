@@ -63,7 +63,7 @@ Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx$ e la retta
   "data": [
     { "fn": "ax^2 + bx" },
     { "fn": "bx", "color": "black1", "dash": "3,3" },
-    { "points": [[0, 0]], "radius": 4, "fillColor": "#fff", "strokeColor": "#000", "strokeWidth": 2 }
+    { "points": [[0, 0]], "radius": 4, "fillColor": "#000", "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
@@ -90,7 +90,7 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
     { "fn": "x", "domain": [-1, 1], "color": "red1", "dash": "3,3", "label": "$y = x$" },
     { "fn": "x^2 - x", "color": "black1", "label": "$y = x^2 - x$" },
     { "fn": "-x", "domain": [-1, 1], "color": "black1", "dash": "3,3", "label": "$y = -x$" },
-    { "points": [[0, 0]], "radius": 4, "fillColor": "#fff", "strokeColor": "#000", "strokeWidth": 2 }
+    { "points": [[0, 0]], "radius": 4, "fillColor": "#000", "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
@@ -112,7 +112,7 @@ Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx + c$. Fai v
   },
   "data": [
     { "fn": "ax^2+bx+c" },
-    { "points": [[0,c]], "radius": 4, "fillColor": "#fff", "strokeColor": "red1", "strokeWidth": 2 }
+    { "points": [[0,"c"]], "radius": 4, "fillColor": "red1", "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
@@ -153,17 +153,19 @@ Nel caso più generale, l'equazione si può risolvere con la formula quadratica 
 
 ```matephis
 {
+  "ylim": [-19.9,9.9],
   "padding": 5,
   "align": "center",
   "legend": true,
   "legendWidth": 115,
   "labelStyle": "italic",
   "data": [
-    { "fn": "x^2+2", "color": "red1", "label": "$y = x^2 + 2$" },
-    { "points": [[], []] }
+    { "fn": "x^2-5x-14", "color": "red1", "label": "$y = x^2 - 5x - 14$" },
+    { "points": [[-2,0], [7,0]], "radius": 4, "fillColor": "red1", "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
+
 
 ## L'asse di simmetria
 
