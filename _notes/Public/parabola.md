@@ -38,9 +38,9 @@ Il coefficiente $a$ determina la **forma della parabola**.
   "legendWidth": 110,
   "labelStyle": "italic",
   "data": [
-    { "fn": "x^2", "color": "red1", "label": "y = x²" },
+    { "fn": "x^2", "color": "red1", "label": "$y = x^2$" },
     { "fn": "2x^2", "color": "red1", "dash": "2,2", "label": "$y = 2x^2$" },
-    { "fn": "0.5x^2", "color": "red2", "dash": "4,4", "label": "$y = \\frac{1}{2}x^2$" },
+    { "fn": "0.5x^2", "color": "red1", "dash": "3,3", "label": "$y = \\frac{1}{2}x^2$" },
     { "fn": "-x^2", "color": "black1", "label": "$y = -x^2$" }
   ]
 }
@@ -48,19 +48,22 @@ Il coefficiente $a$ determina la **forma della parabola**.
 
 ## Il coefficiente b
 
-Nel grafico è rappresentata la parabola di equazione $y = ax^2 + b$. Fai variare il valore di $b$.
+Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx$ e la retta di equazione $y = bx$. Fai variare il valore di $b$. Prova a zoomare sull'origine.
 
 ```matephis
 {
   "padding": 5,
   "align": "center",
   "marginBottom": "20px",
+  "interactive": true,
   "params": {
     "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
     "b": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
   },
   "data": [
-    { "fn": "ax^2 + bx" }
+    { "fn": "ax^2 + bx" },
+    { "fn": "bx", "color": "black1", "dash": "3,3" },
+    { "points": [[0, 0]], "radius": 4, "fillColor": "#fff", "strokeColor": "#000", "strokeWidth": 2 }
   ]
 }
 ```
@@ -74,19 +77,27 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
 
 ```matephis
 {
+  "xlim": [-4.9,4.9],
+  "ylim": [-0.9,8.9],
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendWidth": 110,
+  "legendWidth": 120,
   "labelStyle": "italic",
+  "renderOrder": "numbers-top",
   "data": [
-    { "fn": "x^2 + x", "color": "red1", "label": "$y = x²$" },
-    { "fn": "x^2 - x", "color": "red1", "dash": "2,2", "label": "$y = 2x^2$" }
+    { "fn": "x^2 + x", "color": "red1", "label": "$y = x^2 + x$" },
+    { "fn": "x", "domain": [-1, 1], "color": "red1", "dash": "3,3", "label": "$y = x$" },
+    { "fn": "x^2 - x", "color": "black1", "label": "$y = x^2 - x$" },
+    { "fn": "-x", "domain": [-1, 1], "color": "black1", "dash": "3,3", "label": "$y = -x$" },
+    { "points": [[0, 0]], "radius": 4, "fillColor": "#fff", "strokeColor": "#000", "strokeWidth": 2 }
   ]
 }
 ```
 
 ## Il coefficiente c
+
+
 
 Il coefficiente $c$ è l'**intercetta, il "punto iniziale", della parabola**.
 

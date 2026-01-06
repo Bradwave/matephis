@@ -1859,43 +1859,59 @@ class MatephisPlot {
      * Opens the plot in a lightbox overlay.
      * @private
      */
-    /**
-     * Opens the plot in a lightbox overlay.
-     * @private
-     */
     _openLightbox() {
-        const serializer = new XMLSerializer();
-        let source = serializer.serializeToString(this.svg);
-
-        if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
-            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-        }
-
-        // Feature: Resolve CSS Variables for Lightbox (Image Mode)
-        // We replace var(--font-plot) with the actual computed font stack
-        const fontPlot = getComputedStyle(document.body).getPropertyValue('--font-plot').trim().replace(/['"]/g, "'");
-        // Safe Replacements
-        source = source.replace(/var\(--font-code[^)]*\)/g, fontPlot || "monospace");
-        source = source.replace(/var\(--font-plot[^)]*\)/g, fontPlot || "monospace");
-
-        // Scale up for lightbox while maintaining aspect ratio
-        const maxDim = 1200;
-        const scale = Math.min(maxDim / this.width, maxDim / this.height);
-        const newW = Math.round(this.width * scale);
-        const newH = Math.round(this.height * scale);
-
-        source = source.replace(/width="[^"]*"/, `width="${newW}"`);
-        source = source.replace(/height="[^"]*"/, `height="${newH}"`);
-
-        const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(source)));
         const lb = document.getElementById('lightbox');
         const img = document.getElementById('lightbox-img');
-        if (lb && img) {
+        const svgContainer = document.getElementById('lightbox-svg');
+        const caption = document.getElementById('lightbox-caption');
+
+        if (lb && svgContainer) {
+            // Feature: Inline SVG Mode (Fixes Fonts & MathJax natively)
+            // Instead of serializing to image, we clone the DOM node.
+            
+            // 1. Prepare Container
+            svgContainer.innerHTML = "";
+            if (img) img.style.display = "none";
+            svgContainer.style.display = "flex"; // Flex to align center
             lb.style.display = "flex";
-            img.src = url;
-            // Clear caption for plots to avoid confusion or show "Plot"
-            const cap = document.getElementById('lightbox-caption');
-            if (cap) cap.innerHTML = "";
+            if (caption) caption.innerHTML = ""; // Or explicit caption if needed
+
+            // 2. Clone SVG
+            const clone = this.svg.cloneNode(true);
+            
+            // 3. Responsive Sizing
+            // 3. Responsive Sizing with Perspective
+            // target: 1200px, but constrained by viewport (90% width, 85vh height)
+            const maxWidth = Math.min(1200, window.innerWidth * 0.9);
+            const maxHeight = window.innerHeight * 0.85;
+            
+            // Calculate scale to fit within BOTH constraints
+            const scaleW = maxWidth / this.width;
+            const scaleH = maxHeight / this.height;
+            const scale = Math.min(scaleW, scaleH); // Fit start (contain)
+            
+            const finalW = Math.round(this.width * scale);
+            const finalH = Math.round(this.height * scale);
+            
+            // Apply dimensions to the CONTAINER
+            // Since we calculated 'fit', setting explicit px ensures container matches SVG exactly
+            svgContainer.style.width = `${finalW}px`;
+            svgContainer.style.height = `${finalH}px`;
+            
+            // The SVG fills the container
+            clone.setAttribute("width", "100%");
+            clone.setAttribute("height", "100%");
+            // Ensure no conflicting inline styles
+            clone.style.width = "100%";
+            clone.style.height = "100%";
+            
+            // Ensure ViewBox is present (critical for scaling)
+            if (!clone.hasAttribute("viewBox")) {
+               clone.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
+            }
+            
+            // 4. Append
+            svgContainer.appendChild(clone);
         }
     }
 }

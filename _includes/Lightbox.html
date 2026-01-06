@@ -2,6 +2,7 @@
 <div id="lightbox" class="lightbox">
     <span class="lightbox-close">&times;</span>
     <img class="lightbox-content" id="lightbox-img">
+    <div id="lightbox-svg" class="lightbox-content" style="display:none; justify-content:center; align-items:center;"></div>
     <div id="lightbox-caption"></div>
 </div>
 
@@ -37,6 +38,12 @@
         border-radius: 0;
         box-shadow: none;
         border: 1px solid var(--border, #e1e1e1);
+        background: var(--bg, #fff); /* Ensure background for SVG */
+    }
+    
+    /* Ensure SVG fills container */
+    #lightbox-svg svg {
+        display: block;
     }
 
     .lightbox-close {
@@ -81,6 +88,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxSvg = document.getElementById('lightbox-svg');
         const captionText = document.getElementById('lightbox-caption');
         const closeBtn = document.querySelector('.lightbox-close');
 
@@ -92,6 +100,11 @@
             img.onclick = () => {
                 lightbox.style.display = "flex";
                 
+                // Reset SVG
+                if (lightboxSvg) lightboxSvg.style.display = 'none';
+                
+                // Show Image
+                lightboxImg.style.display = 'block';
                 lightboxImg.src = img.src;
                 // Use alt text as caption, or filename if alt is empty (simulating 'image name')
                 // User requested to use image name as caption (small and grey)
@@ -103,6 +116,12 @@
         // Close functions
         const closeLightbox = () => {
             lightbox.style.display = "none";
+            // Clear contents
+            lightboxImg.src = "";
+            if (lightboxSvg) {
+                lightboxSvg.innerHTML = "";
+                lightboxSvg.style.display = 'none';
+            }
         };
 
         closeBtn.onclick = closeLightbox;
