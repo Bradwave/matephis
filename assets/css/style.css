@@ -1100,9 +1100,37 @@ td {
   color: #fff;
 }
 
+@keyframes abo-pulse {
+  0% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 5px rgba(255, 60, 0, 0.5);
+    transform: scale(1);
+  }
+
+  50% {
+    background-position: 100% 50%;
+    box-shadow: 0 0 20px rgba(255, 200, 0, 0.8), 0 0 10px rgba(255, 50, 0, 1);
+    transform: scale(1.05);
+  }
+
+  100% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 5px rgba(255, 60, 0, 0.5);
+    transform: scale(1);
+  }
+}
+
 .diff-abo {
-  background-color: #ff5c3d;
+  /* Aggressive Lava Gradient */
+  background: linear-gradient(120deg, #b00000 0%, #ff4d00 25%, #ffd700 50%, #ff4d00 75%, #b00000 100%);
+  background-size: 200% auto;
+  animation: abo-pulse 1s linear infinite;
   color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  display: inline-block; /* Required for transform */
 }
 
 /* Most Vibrant Red */
