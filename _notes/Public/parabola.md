@@ -111,7 +111,8 @@ Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx + c$. Fai v
     "c": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
   },
   "data": [
-    { "fn": "ax^2+bx+c" }
+    { "fn": "ax^2+bx+c" },
+    { "points": [[0,c]], "radius": 4, "fillColor": "#fff", "strokeColor": "red1", "strokeWidth": 2 }
   ]
 }
 ```
@@ -148,7 +149,21 @@ Le intersezioni con l'asse $x$ della parabola, se esistono, hanno come coordinat
 - esiste un punto di intersezione/tangenza se $\Delta = 0$;
 - esistono due punti di intersezione se $\Delta > 0$.
 
-Nel caso più generale, l'equazione si può risolvere con la formula quadratica (se altre tecniche più immediate non sono possibili): $x = -\dfrac{b}{2a} \pm \dfrac{\sqrt \Delta}{2a}$.
+Nel caso più generale, l'equazione si può risolvere con la formula quadratica (se altre tecniche più immediate non sono possibili): $x = -\dfrac{b}{2a} \pm \dfrac{\sqrt \Delta}{2a}$. L'equazione si può tuttavia risolvere per altre vie (spesso preferibili), tra cui completamento del quadrato e fattorizzazione.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "legend": true,
+  "legendWidth": 115,
+  "labelStyle": "italic",
+  "data": [
+    { "fn": "x^2+2", "color": "red1", "label": "$y = x^2 + 2$" },
+    { "points": [[], []] }
+  ]
+}
+```
 
 ## L'asse di simmetria
 
