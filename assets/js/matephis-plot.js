@@ -1516,7 +1516,7 @@ class MatephisPlot {
         }
 
         const fs = this._getConfigSize('legendSize');
-        const h = items.length * (fs * 1.5) + 10;
+        const h = items.length * (fs * 1.5) + 15;
 
         if (pos === 'top-left') {
             x = this.padding + 10 + w; // rect is drawn x-w, so x must be right edge
