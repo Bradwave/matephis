@@ -39,14 +39,17 @@ class MatephisPlot {
 
         // Process markdown code blocks with language-matephis
         document.querySelectorAll('code.language-matephis').forEach(code => {
+            let container;
+            let target;
             try {
-                const source = code.textContent;
-                let target = code.closest('div.language-matephis') || code.closest('pre');
+                target = code.closest('div.language-matephis') || code.closest('pre');
                 if (!target) target = code.parentElement;
                 if (target.getAttribute('data-processed')) return;
 
-                const container = document.createElement('div');
+                const source = code.textContent;
+                container = document.createElement('div');
                 container.className = 'matephis-plot';
+                
                 target.parentNode.insertBefore(container, target);
                 target.style.display = 'none';
 
@@ -54,6 +57,13 @@ class MatephisPlot {
                 target.setAttribute('data-processed', 'true');
             } catch (e) {
                 console.error("Code Block Plot Error", e);
+                if (container) {
+                    container.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">Error: ${e.message}</div>`;
+                } else if (target) {
+                     const errorDiv = document.createElement('div');
+                     errorDiv.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">Error: ${e.message}</div>`;
+                     target.parentNode.insertBefore(errorDiv, target);
+                }
             }
         });
     }
@@ -108,6 +118,13 @@ class MatephisPlot {
         // Apply alignment
         if (this.config.align === 'center') this.wrapper.classList.add('align-center');
         else if (this.config.align === 'left') this.wrapper.classList.add('align-left');
+
+        // Apply margins
+        if (this.config.marginBottom) {
+            this.wrapper.style.marginBottom = typeof this.config.marginBottom === 'number' 
+                ? `${this.config.marginBottom}px` 
+                : this.config.marginBottom;
+        }
 
         // Define color palettes
         this.palettes = {
@@ -206,7 +223,7 @@ class MatephisPlot {
         // this.svg.style.aspectRatio = ... removed to prevent issues, handled by attributes
 
         // Inline Font for Serialized usage (Lightbox)
-        this.svg.style.fontFamily = "var(--font-code, monospace)";
+        this.svg.style.fontFamily = "var(--font-plot, monospace)";
 
         // Groups
         this.bgGroup = document.createElementNS(ns, "g");
@@ -1628,7 +1645,7 @@ class MatephisPlot {
             "width", "height", "aspectRatio", "cssWidth", "fullWidth", "align",
             "marginLeft", "marginRight", "border", "sliderBorder",
             "xlim", "ylim", "interactive", "theme", "legend", "legendWidth", "legendPosition",
-            "padding", "grid", "gridOpacity", "axisArrows", "axisLabels",
+            "padding", "marginBottom", "grid", "gridOpacity", "axisArrows", "axisLabels",
             "xStep", "yStep", "xStepSecondary", "yStepSecondary", "showSecondaryGrid", "showGrid",
             "xNumberStep", "yNumberStep", "showXNumbers", "showYNumbers",
             "showXTicks", "showYTicks", "secondaryGridOpacity",
@@ -1717,6 +1734,10 @@ class MatephisPlot {
      * Opens the plot in a lightbox overlay.
      * @private
      */
+    /**
+     * Opens the plot in a lightbox overlay.
+     * @private
+     */
     _openLightbox() {
         const serializer = new XMLSerializer();
         let source = serializer.serializeToString(this.svg);
@@ -1724,6 +1745,13 @@ class MatephisPlot {
         if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
+
+        // Feature: Resolve CSS Variables for Lightbox (Image Mode)
+        // We replace var(--font-plot) with the actual computed font stack
+        const fontPlot = getComputedStyle(document.body).getPropertyValue('--font-plot').trim().replace(/['"]/g, "'");
+        // Safe Replacements
+        source = source.replace(/var\(--font-code[^)]*\)/g, fontPlot || "monospace");
+        source = source.replace(/var\(--font-plot[^)]*\)/g, fontPlot || "monospace");
 
         // Scale up for lightbox while maintaining aspect ratio
         const maxDim = 1200;
@@ -1740,6 +1768,9 @@ class MatephisPlot {
         if (lb && img) {
             lb.style.display = "flex";
             img.src = url;
+            // Clear caption for plots to avoid confusion or show "Plot"
+            const cap = document.getElementById('lightbox-caption');
+            if (cap) cap.innerHTML = "";
         }
     }
 }

@@ -3,14 +3,45 @@ title: Un recap (da bar) sulla parabola
 feed: show
 tags:
   - parabola
+plot: true
 ---
 ## Il coefficiente a
+
+Nel grafico è rappresentata la parabola di equazione $y = ax^2$. Fai variare il valore di $a$.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "marginBottom": "20px",
+  "params": {
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+  },
+  "data": [
+    { "fn": "ax^2" }
+  ]
+}
+```
 
 Il coefficiente $a$ determina la **forma della parabola**.
 
 - Se $a$ è positivo, la parabola sorride; se $a$ è negativo, la parabola è triste.
 - Più $a$ è distante da zero, più la parabola è piccata (stretta); più è vicino a zero, meno la parabola è piccata (ovvero, è larga).
 - Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $a$ è associato all'**accelerazione** dell'oggetto in movimento. L'accelerazione descrive come varia la velocità: immaginate che l'oggetto in movimento sia tirato verso l'alto se $a$ è positivo, verso il basso se $a$ è negativo. *Nota*: il fatto che l'oggetto sia tirato in una direzione non significa necessariamente che si muova sempre in quella direzione: ad esempio, se corri in avanti, ma qualcuno ti tira per la maglia all'indietro, continuerai a correre in avanti per un po', poi ti fermerai, poi inizierai a cadere all'indietro.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "legend": true,
+  "data": [
+    { "fn": "x^2", "color": "red1", "label": "y = x²" },
+    { "fn": "2x^2", "color": "red1", "dash": "2,2", "label": "y = 2x²" },
+    { "fn": "0.5x^2", "color": "red2", "dash": "4,4", "label": "y = ½x²" },
+    { "fn": "-x^2", "color": "black1", "label": "y = -x²" }
+  ]
+}
+```
 
 ## Il coefficiente b
 
