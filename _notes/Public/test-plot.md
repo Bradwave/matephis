@@ -1,6 +1,6 @@
 ---
 title: Matephis Plotting System
-feed: show
+feed: hide
 tags:
   - test
   - grafici

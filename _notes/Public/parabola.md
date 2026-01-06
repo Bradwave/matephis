@@ -98,16 +98,20 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
 
 ## Il coefficiente c
 
+Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx + c$. Fai variare il valore di $c$.
+
 ```matephis
 {
   "padding": 5,
   "align": "center",
   "marginBottom": "20px",
   "params": {
-    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "b": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "c": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
   },
   "data": [
-    { "fn": "ax^2" }
+    { "fn": "ax^2+bx+c" }
   ]
 }
 ```
@@ -117,6 +121,24 @@ Il coefficiente $c$ è l'**intercetta, il "punto iniziale", della parabola**.
 - La parabola interseca l'asse $y$ nel punto $(0, c)$.
 - Variando $c$, la parabola è traslata in verticale: verso l'alto se $c$ cresce; verso il basso se $c$ decresce.
 - Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $c$ la **posizione di partenza** dell'oggetto in movimento.
+
+```matephis
+{
+  "xlim": [-2.9,2.9],
+  "ylim": [-1.9,3.9],
+  "padding": 5,
+  "align": "center",
+  "legend": true,
+  "legendWidth": 115,
+  "labelStyle": "italic",
+  "data": [
+    { "fn": "x^2+2", "color": "red1", "label": "$y = x^2 + 2$" },
+    { "fn": "x^2+1", "color": "red1", "dash": "3,3", "label": "$y = x^2 + 1$" },
+    { "fn": "x^2", "color": "black1", "label": "$y = x^2$" },
+    { "fn": "x^2-1", "color": "black1", "dash": "3,3", "label": "$y = x^2 - 1$" }
+  ]
+}
+```
 
 ## Le intersezioni con l'asse x
 
