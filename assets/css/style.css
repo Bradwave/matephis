@@ -26,24 +26,65 @@
 /* --- 1. Fonts --- */
 
 @font-face {
-  font-family: 'Fira Code';
-  src: url('../fonts/FiraCode-VariableFont_wght.ttf') format('truetype');
-  font-weight: 300 700;
+  font-family: 'Noto Sans';
+  src: url('../fonts/NotoSans/NotoSans-Variable.woff2') format('woff2');
+  font-weight: 100 900;
   font-display: swap;
+  font-style: normal;
 }
 
 @font-face {
-  font-family: 'Noto Sans Math';
-  src: url('../fonts/NotoSansMath-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Noto Sans';
+  src: url('../fonts/NotoSans/NotoSans-Italic.woff2') format('woff2');
+  font-weight: 100 900;
   font-display: swap;
+  font-style: italic;
 }
 
 @font-face {
   font-family: 'Space Grotesk';
-  src: url('../fonts/SpaceGrotesk-VariableFont_wght.ttf') format('truetype');
+  src: url('../fonts/SpaceGrotesk/SpaceGrotesk-Variable.woff2') format('woff2');
   font-weight: 300 700;
   font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('../fonts/FiraCode/FiraCode-Variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../fonts/SpaceMono/SpaceMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../fonts/SpaceMono/SpaceMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../fonts/SpaceMono/SpaceMono-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../fonts/SpaceMono/SpaceMono-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  font-style: italic;
 }
 
 /* --- 2. Variables --- */
@@ -58,9 +99,10 @@
   --border: #e1e1e1;
   /* Updated to match drawingfourier border */
 
-  --font: "Noto Sans Math", sans-serif;
+  --font: "Noto Sans", sans-serif;
   --font-title: 'Space Grotesk', sans-serif;
   --font-code: 'Fira Code', monospace;
+  --font-plot: 'Space Mono', monospace;
 
   --weight-medium: 400;
   --weight-bold: 600;

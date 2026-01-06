@@ -167,7 +167,8 @@ class MatephisPlot {
             if (cw > 50) targetWidth = cw;
             else targetWidth = (window.innerWidth && window.innerWidth > 0) ? window.innerWidth : 1000;
         }
-        this.width = targetWidth;
+        this.width = Math.max(50, targetWidth); // Safe min width
+
         // Calculate height based on aspect ratio
         if (this.config.aspectRatio) {
             let ratio = 1;
@@ -181,6 +182,7 @@ class MatephisPlot {
         } else {
             this.height = this.config.height || this.width;
         }
+        this.height = Math.max(50, this.height); // Safe min height
 
         // Padding (Configurable / Smart Default)
         if (this.config.padding !== undefined) {
@@ -1399,9 +1401,29 @@ class MatephisPlot {
             if (item.x !== undefined) {
                 const px = mapX(item.x);
                 if (px >= this.padding && px <= this.width - this.padding) {
-                    const l = this._line(px, this.padding, px, this.height - this.padding, color, width, dash, this.dataGroup);
-                    if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
-                    if (!item.labelAt) labelPos = { x: px, y: this.padding + 15 };
+                    // Range support for vertical lines
+                    let yStart = this.padding;
+                    let yEnd = this.height - this.padding;
+                    
+                    if (item.range && Array.isArray(item.range)) {
+                        // Map range values to pixels
+                        const y1 = mapY(item.range[0]);
+                        const y2 = mapY(item.range[1]);
+                        // SVG Y coordinates: mapY(max) is smaller (top) than mapY(min) (bottom)
+                        // So usually mapY(range[1]) < mapY(range[0])
+                        // But let's just take min/max to be safe
+                        const rawYMin = Math.min(y1, y2);
+                        const rawYMax = Math.max(y1, y2);
+                        
+                        yStart = Math.max(this.padding, rawYMin);
+                        yEnd = Math.min(this.height - this.padding, rawYMax);
+                    }
+                    
+                    if (yEnd > yStart) {
+                         const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
+                         if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
+                         if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
+                    }
                 }
             }
 

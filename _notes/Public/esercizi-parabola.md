@@ -55,9 +55,28 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-4. **[AD-]** Fai riferimento all'esercizio precedente.
+4. **[AD-]** Fai riferimento al quesito precedente.
 	- Scrivi le equazioni della retta e della parabola, che descrivono il moto di auto e moto rispettivamente. La moto parte da ferma.
 	- Verifica per via algebrica l'istante di tempo e la posizione in cui i due veicoli sono affiancati, identificati precedentemente per via grafica.
+5. **[D]** Considera la generica parabola di equazione $y = ax^2 + bx + c$. Verifica che la retta di equazione $y = bx + c$, tangente alla parabola, interseca la parabola in un solo punto, di coordinate $(0, c)$.
+6. **[PD-]** Spiega tramite controesempi la retta tangente a una curva **non** è la retta che interseca la curva in un solo punto: con un primo controesempio presenta una retta tangente che interseca la curva in più punti; con un secondo controesempio, presenta una retta non tangente che interseca la curva in un solo punto.
+7. **Una "nuova" equazione per la parabola [PD]** Nel grafico è rappresentata la parabola di equazione $y = a(x - h)^2$. Fai variare il valore di $a$ e $h$ utilizzando gli slider e spiega cosa osservi.
+	- Cosa varia la forma della parabola al variare di $a$?
+	- Come varia l'asse di simmetria della parabola al variare di $h$? Qual è l'equazione dell'asse di simmetria?
+	- Scrivi l'equazione della parabola nell
+	- Costruisci la parabola avente asse di simmetria $x = -2$ e passante per il punto $(0, 2)$.
+```matephis
+{
+  "params": {
+    "a": {"val": 1, "min": -5, "max": 5, "step": 0.1},
+    "h": {"val": 1, "min": -5, "max": 5, "step": 0.1}
+  },
+  "data": [
+    { "fn": "a(x-h)^2", "color": "#B01A00" }
+  ]
+}
+```
+8. **[PD+]** Fai riferimento all'esercizio precedente.
 
 ## Quiz
 
