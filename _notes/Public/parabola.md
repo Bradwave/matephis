@@ -36,6 +36,7 @@ Il coefficiente $a$ determina la **forma della parabola**.
   "align": "center",
   "legend": true,
   "labelStyle": "italic",
+  "legendWidth": 110,
   "data": [
     { "fn": "x^2", "color": "red1", "label": "$y = x^2$" },
     { "fn": "2x^2", "color": "red1", "dash": "2,2", "label": "$y = 2x^2$" },

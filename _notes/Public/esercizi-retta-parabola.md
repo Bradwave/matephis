@@ -3,7 +3,6 @@ title: Esercizi sulla retta e sulla parabola
 feed: show
 tags:
   - esercizi
-  - parabola
 ---
 **Quesiti**
 

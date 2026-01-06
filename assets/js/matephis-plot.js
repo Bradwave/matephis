@@ -10,7 +10,27 @@
 
 // Auto-initialize on DOM ready (browser environment only)
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    document.addEventListener("DOMContentLoaded", () => MatephisPlot.init());
+    document.addEventListener("DOMContentLoaded", () => {
+        // If MathJax is expected, wait for it
+        if (document.getElementById('MathJax-script')) {
+            const checkMathJax = () => {
+                if (window.MathJax && (window.MathJax.tex2svg || (window.MathJax.startup && window.MathJax.startup.promise))) {
+                    // If promise exists, use it to be safe
+                    if (window.MathJax.startup && window.MathJax.startup.promise) {
+                        window.MathJax.startup.promise.then(() => MatephisPlot.init());
+                    } else {
+                        MatephisPlot.init();
+                    }
+                } else {
+                    // Poll again shortly
+                    setTimeout(checkMathJax, 50);
+                }
+            };
+            checkMathJax();
+        } else {
+            MatephisPlot.init();
+        }
+    });
 }
 
 class MatephisPlot {
