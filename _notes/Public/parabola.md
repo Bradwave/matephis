@@ -35,7 +35,6 @@ Il coefficiente $a$ determina la **forma della parabola**.
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendWidth": 110,
   "labelStyle": "italic",
   "data": [
     { "fn": "x^2", "color": "red1", "label": "$y = x^2$" },
@@ -82,7 +81,6 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendWidth": 120,
   "labelStyle": "italic",
   "renderOrder": "numbers-top",
   "data": [
@@ -130,7 +128,6 @@ Il coefficiente $c$ è l'**intercetta, il "punto iniziale", della parabola**.
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendWidth": 115,
   "labelStyle": "italic",
   "data": [
     { "fn": "x^2+2", "color": "red1", "label": "$y = x^2 + 2$" },
@@ -153,23 +150,41 @@ Nel caso più generale, l'equazione si può risolvere con la formula quadratica 
 
 ```matephis
 {
-  "ylim": [-19.9,9.9],
+  "xlim": [-5.9,11.9],
+  "ylim": [-24.9,9.9],
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendWidth": 115,
   "labelStyle": "italic",
   "data": [
     { "fn": "x^2-5x-14", "color": "red1", "label": "$y = x^2 - 5x - 14$" },
-    { "points": [[-2,0], [7,0]], "radius": 4, "fillColor": "red1", "strokeColor": "#fff", "strokeWidth": 2 }
+    { "points": [[-2,0,"(-2,0)"], [7,0,"(7,0)"]], "radius": 4, "fillColor": "red1", "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
-
+*La parabola di equazione $y = x^2 - 5x - 14$ interseca l'asse $x$ nei punti $(-2, 0)$ e $(7, 0)$. Infatti, $-2$ e $7$ sono le soluzioni dell'equazione $y = x^2 - 5x- 14$.*
 
 ## L'asse di simmetria
 
 L'asse di simmetria della parabola ha equazione $x = -\dfrac{b}{2a}$, perché, se la parabola interseca l'asse $x$, sta tra i due punti di intersezione — che si trovano rispettivamente prima e dopo l'asse, alla distanza di $\dfrac{\sqrt{\Delta}}{2a}$.
+
+```matephis
+{
+  "xlim": [-5.9,11.9],
+  "ylim": [-24.9,9.9],
+  "padding": 5,
+  "align": "center",
+  "legend": true,
+  "legendPosition": "bottom-right",
+  "labelStyle": "italic",
+  "data": [
+    { "fn": "x^2-5x-14", "color": "red1", "label": "$y = x^2 - 5x - 14$" },
+    { "points": [[-2,0,"(-2,0)"], [7,0,"(7,0)"]], "radius": 4, "fillColor": "red1", "strokeColor": "#fff", "strokeWidth": 2 },
+    { "x": 2.5, "color": "black1", "dash": "3,3", "label": "x = 5/2" }
+  ]
+}
+```
+*La parabola di equazione $y = x^2 - 5x - 14$ ha per asse di simmetria la retta verticale di equazione $x = 5/2$, perché $-b/(2a) = 5/2$ e perché la media delle coordinate $x$ dei punti di intersezione della parabola con l'asse $x$ vale $(-2 + 7) / 2 = 5/2 = 2{,}5$.*
 
 ## Il vertice
 

@@ -1493,6 +1493,23 @@ class MatephisPlot {
                             c.setAttribute("stroke-width", item.strokeWidth || 0);
                             if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
                             this.dataGroup.appendChild(c);
+                            
+                            // Per-point Label [x, y, "Label"]
+                            if (pt[2] && typeof pt[2] === 'string') {
+                                const pLabel = pt[2];
+                                const lx = px + 8;
+                                const ly = py - 8;
+                                const fs = this._getConfigSize('labelSize');
+                                const lw = this.config.labelWeight || "normal";
+                                const ls = this.config.labelStyle || "normal";
+                                
+                                if (window.MathJax && pLabel.includes("$")) {
+                                     this._renderMathJax(pLabel, lx, ly, fs, "#333", "start", "alphabetic", this.labelGroup);
+                                } else {
+                                     this._text(lx, ly, pLabel, "start", "alphabetic", "#333", lw, ls, this.labelGroup, fs);
+                                }
+                            }
+
                             // Use last point for label if no labelAt
                             if (!item.labelAt) labelPos = { x: px, y: py };
                         }
@@ -1553,8 +1570,9 @@ class MatephisPlot {
             let maxLen = 0;
             const fs = this._getConfigSize('legendSize');
             items.forEach(it => maxLen = Math.max(maxLen, it.label.length));
-            w = 30 + (maxLen * (fs * 0.6)) + 20;
-            if (w < 120) w = 120;
+            // Tighter packing: 0.5 char width estimate, less padding
+            w = 30 + (maxLen * (fs * 0.5)) + 15;
+            if (w < 80) w = 80;
         }
 
         const fs = this._getConfigSize('legendSize');

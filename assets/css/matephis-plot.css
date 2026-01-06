@@ -236,7 +236,7 @@
 }
 
 /* Captions for plots */
-.matephis-plot~p:has(>em):not(:has(>:not(em))):not(.matephis-plot~p:has(>em):not(:has(>:not(em)))~p) {
+.matephis-plot + pre + p:has(> em:only-child) {
   text-align: left;
   font-size: 0.85rem;
   color: #888;
@@ -248,7 +248,7 @@
   margin-right: var(--space-sm);
 }
 
-.matephis-plot:has(.matephis-plot-container.align-center)~p:has(>em):not(:has(>:not(em))):not(.matephis-plot:has(.matephis-plot-container.align-center)~p:has(>em):not(:has(>:not(em)))~p) {
+.matephis-plot:has(.matephis-plot-container.align-center)+pre+p:has(> em:only-child) {
   text-align: center;
   padding: 0 var(--space-lg) 0 var(--space-lg);
 }
