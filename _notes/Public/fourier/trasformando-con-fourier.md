@@ -5,8 +5,9 @@ tags:
   - attività
   - p5js
   - fourier
+code: true
 ---
-<link rel="stylesheet" href="{{ '/assets/css/syntax.css' | relative_url }}">
+
 
 ## Sempre più coefficienti!
 

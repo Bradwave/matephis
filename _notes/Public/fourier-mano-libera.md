@@ -5,6 +5,7 @@ tags:
   - attività
   - p5js
   - fourier
+code: true
 ---
 Vorremmo implementare direttamente all'interno della nostra applicazione la possibilità di creare un disegno e rappresentarlo attraverso una serie di Fourier.
 

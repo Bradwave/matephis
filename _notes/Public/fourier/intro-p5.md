@@ -4,8 +4,9 @@ feed: hide
 tags:
   - attività
   - p5js
+code: true
 ---
-<link rel="stylesheet" href="{{ '/assets/css/syntax.css' | relative_url }}">
+
 
 [p5.js](p5js.org) è una **libreria** open-source **JavaScript per la programmazione creativa** e l'esplorazione di idee. Semplifica notevolmente la scrittura di web-app interattive e con focus sugli aspetti grafici.
 

@@ -4,9 +4,10 @@ feed: show
 tags:
   - test
   - grafici
+code: true
 plot: true
 ---
-<link rel="stylesheet" href="/assets/css/syntax.css">
+
 
 Questa pagina serve come test e documentazione per il sistema di grafici generati via codice (JSON). Tutti i grafici sono renderizzati da `matephis-plot.js`.
 

@@ -1640,7 +1640,8 @@ class MatephisPlot {
         const VALID_DATA_KEYS = [
             "fn", "implicit", "points", "x", "color", "opacity", "width", "strokeWidth",
             "dash", "label", "labelAt", "labelOffset", "labelAnchor",
-            "domain", "radius", "fillColor", "strokeColor"
+            "domain", "radius", "fillColor", "strokeColor",
+            "range"
         ];
 
         // 1. Root Keys

@@ -1,8 +1,9 @@
 ---
 title: Coordinate del disegno
 feed: hide
+code: true
 ---
-<link rel="stylesheet" href="{{ '/assets/css/syntax.css' | relative_url }}">
+
 
 ```javascript
 let drawingX = [

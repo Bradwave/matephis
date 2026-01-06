@@ -62,11 +62,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Verifica per via algebrica l'istante di tempo e la posizione in cui i due veicoli sono affiancati, identificati precedentemente per via grafica.
 5. **[D]** Considera la generica parabola di equazione $y = ax^2 + bx + c$. Verifica che la retta di equazione $y = bx + c$, tangente alla parabola, interseca la parabola in un solo punto, di coordinate $(0, c)$.
 6. **[PD-]** Spiega tramite controesempi la retta tangente a una curva **non** è la retta che interseca la curva in un solo punto: con un primo controesempio presenta una retta tangente che interseca la curva in più punti; con un secondo controesempio, presenta una retta non tangente che interseca la curva in un solo punto.
-7. **Una "nuova" equazione per la parabola [PD]** Nel grafico è rappresentata la parabola di equazione $y = a(x - h)^2$. Fai variare il valore di $a$ e $h$ utilizzando gli slider e spiega cosa osservi.
+7. **Una "nuova" equazione per la parabola [PD]** Nel grafico è rappresentata la parabola di equazione $y = a(x - h)^2$. Fai variare il valore di $a$ e $h$, utilizzando gli slider, e spiega cosa osservi.
 	- Cosa varia la forma della parabola al variare di $a$?
 	- Come varia l'asse di simmetria della parabola al variare di $h$? Qual è l'equazione dell'asse di simmetria?
-	- Scrivi l'equazione della parabola nell
-	- Costruisci la parabola avente asse di simmetria $x = -2$ e passante per il punto $(0, 2)$.
+	- Costruisci la parabola avente asse di simmetria $x = -2$ e passante per il punto $(0, 2)$. Riscrivi l'equazione della parabola nella forma $y = ax^2 + bx + c$.
 ```matephis
 {
   "params": {
@@ -78,7 +77,26 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-8. **[PD+]** Fai riferimento all'esercizio precedente.
+8. **[PD+]** Fai riferimento all'esercizio precedente. Considera ora la parabola di equazione $y = a(x - h)^2 + k$. Fai variare il valore di $k$, utilizzando lo slider, e spiega cosa osservi.
+	- Come varia il vertice della parabola al variare di $k$?
+	- Quali sono le coordinate del vertice?
+	- Costruisci la parabola avente vertice $(2, -3)$ e $a = 0{,}2$.
+	- Costruisci la parabola avente vertice $(-2, 3)$ e passante per $(0, 5)$. Riscrivi l'equazione nella forma $y = ax^2 + bx + c$.
+```matephis
+{
+  "params": {
+    "a": {"val": 1, "min": -5, "max": 5, "step": 0.1},
+    "h": {"val": 1, "min": -5, "max": 5, "step": 0.1},
+    "k": {"val": 0, "min": -5, "max": 5, "step": 0.1}
+  },
+  "data": [
+    { "fn": "a(x-h)^2+k", "color": "#B01A00" }
+  ]
+}
+```
+9. **[AD]** Riscrivi l'equazione di una generica parabola $y = a(x - h)^2 + k$ nella forma $y = ax^2 + bx + c$.
+	- A cosa equivalgono $b$ e $c$?
+	- I risultati ottenuti in merito ad asse di simmetria e vertice della parabola di equazione $y = a(x - h)^2 + k$ sono compatibili con quelli noti in merito alla parabola di equazione $y = ax^2 + bx + c$?
 
 ## Quiz
 
@@ -122,7 +140,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-3. **[EE]** Considera la parabola di equazione y=ax2+bx+c. Sappiamo che il coefficiente b rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse y. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
+3. **[E]** Considera la parabola di equazione $y=ax^2 + bx + c.$ Sappiamo che il coefficiente$ b$ rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse $y$. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
 	- **(a)** $c = 0$ e $b > 0$.
 	- **(b)** $c \neq 0$ e $b < 0$.
 	- **(c)** $c = 0$ e $b < 0$.
@@ -138,7 +156,4 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(c)** $c = 0$
 	- **(d)** $−2ab ​ =0$
 
-
 ## Problemi
-
-1. 
