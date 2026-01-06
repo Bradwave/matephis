@@ -1595,14 +1595,17 @@ class MatephisPlot {
                 this._line(lx, symbolY, lx + 15, symbolY, item.color, 2, item.dash, this.legendGroup);
             }
 
+            // Use baseline alignment for better vertical centering
+            // Visual middle of text is approx 0.35em above baseline
+            const textBaseline = ly + (fs * 0.35);
+
             // Text or MathJax
             if (window.MathJax && item.label.includes("$")) {
-                // We pass the row height 'h' as a hint or just center in it
-                // Align middle of MathJax to 'ly'
-                this._renderMathJax(item.label, lx + 25, ly - 2, fs, "#333", "start", "middle", this.legendGroup);
+                this._renderMathJax(item.label, lx + 25, textBaseline - 1, fs, "#333", "start", "alphabetic", this.legendGroup);
             } else {
-                this._text(lx + 20, ly + 1, item.label.replace(/\*/g, '·'), "start", "middle", "#333", this.config.labelWeight || "normal", this.config.labelStyle || "normal", this.legendGroup, fs);
+                this._text(lx + 20, textBaseline, item.label.replace(/\*/g, '·'), "start", "alphabetic", "#333", this.config.labelWeight || "normal", this.config.labelStyle || "normal", this.legendGroup, fs);
             }
+
             
             currentY += h;
         });
@@ -1646,17 +1649,15 @@ class MatephisPlot {
                 let finalY = y;
                 // Baseline vs Middle
                 if (baseline === 'middle') {
-                    // Center vertically around y
+                    // Center vertically around y (bounding box center)
                     finalY = y - (hIdx / 2); 
                 } else {
-                    // Bottom/Baseline alignment
-                    // MathJax 'vertical-align' tells us how deeply it sits below baseline
-                    // y is the baseline. 
-                    // So top of box is: y - height - vShift?
-                    // Usually: y is baseline. The bottom of SVG is at y + depth.
-                    // Top is y - (height + vShift) ... it's complex.
-                    // Simple heuristic: Treat y as bottom.
-                    finalY = y - hIdx;
+                    // Baseline alignment
+                    // y is the target baseline.
+                    // MathJax SVG top = Baseline - (Height - Depth)
+                    // Depth = -vShift (vShift is usually negative in MathJax)
+                    // Top = y - hIdx - vShift
+                    finalY = y - hIdx - vShift;
                 }
 
                 svgNode.setAttribute("x", finalX);

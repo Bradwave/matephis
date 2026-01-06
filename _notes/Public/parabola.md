@@ -78,7 +78,7 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
 ```matephis
 {
   "xlim": [-4.9,4.9],
-  "ylim": [-0.9,8.9],
+  "ylim": [-1.9,7.9],
   "padding": 5,
   "align": "center",
   "legend": true,
@@ -94,6 +94,7 @@ Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pe
   ]
 }
 ```
+*Osservare come la parabola di equazione $y = x^2 + x$ ha pendenza 1 (positiva) nell'origine e la parabola di equazione $y = x^2 - x$ ha pendenza -1 (negativa) nell'origine.*
 
 ## Il coefficiente c
 
