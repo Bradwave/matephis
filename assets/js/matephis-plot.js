@@ -1133,8 +1133,9 @@ class MatephisPlot {
             const lblSize = this._getConfigSize('labelSize');
             const axisWeight = this.config.axisLabelWeight || "bold";
             const axisStyle = this.config.axisLabelStyle || "normal";
-            this._text(this.width - this.padding + 5, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
-            this._text(x0, this.padding - 5, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            const axisLabelOffset = this.config.axisLabelOffset || 5;
+            this._text(this.width - this.padding + axisLabelOffset, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            this._text(x0, this.padding - axisLabelOffset, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
         }
 
         // --- 3. Data ---
@@ -1633,7 +1634,7 @@ class MatephisPlot {
             "showXTicks", "showYTicks", "secondaryGridOpacity",
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize",
-            "axisLabelWeight", "axisLabelStyle", "labelStyle"
+            "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset",
         ];
 
         const VALID_DATA_KEYS = [
