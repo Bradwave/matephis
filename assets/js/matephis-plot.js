@@ -1420,30 +1420,43 @@ class MatephisPlot {
 
             // Vertical Line
             if (item.x !== undefined) {
-                const px = mapX(item.x);
-                if (px >= this.padding && px <= this.width - this.padding) {
-                    // Range support for vertical lines
-                    let yStart = this.padding;
-                    let yEnd = this.height - this.padding;
-
-                    if (item.range && Array.isArray(item.range)) {
-                        // Map range values to pixels
-                        const y1 = mapY(item.range[0]);
-                        const y2 = mapY(item.range[1]);
-                        // SVG Y coordinates: mapY(max) is smaller (top) than mapY(min) (bottom)
-                        // So usually mapY(range[1]) < mapY(range[0])
-                        // But let's just take min/max to be safe
-                        const rawYMin = Math.min(y1, y2);
-                        const rawYMax = Math.max(y1, y2);
-
-                        yStart = Math.max(this.padding, rawYMin);
-                        yEnd = Math.min(this.height - this.padding, rawYMax);
+                let valX = item.x;
+                if (typeof valX === 'string') {
+                    try {
+                        const fnX = new Function(`return ${this._makeFn(valX)}`);
+                        valX = fnX();
+                    } catch (e) {
+                        console.warn(`Error evaluating vertical line x: ${valX}`, e);
+                        valX = NaN;
                     }
+                }
 
-                    if (yEnd > yStart) {
-                        const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
-                        if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
-                        if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
+                if (!isNaN(valX)) {
+                    const px = mapX(valX);
+                    if (px >= this.padding && px <= this.width - this.padding) {
+                        // Range support for vertical lines
+                        let yStart = this.padding;
+                        let yEnd = this.height - this.padding;
+
+                        if (item.range && Array.isArray(item.range)) {
+                            // Map range values to pixels
+                            const y1 = mapY(item.range[0]);
+                            const y2 = mapY(item.range[1]);
+                            // SVG Y coordinates: mapY(max) is smaller (top) than mapY(min) (bottom)
+                            // So usually mapY(range[1]) < mapY(range[0])
+                            // But let's just take min/max to be safe
+                            const rawYMin = Math.min(y1, y2);
+                            const rawYMax = Math.max(y1, y2);
+
+                            yStart = Math.max(this.padding, rawYMin);
+                            yEnd = Math.min(this.height - this.padding, rawYMax);
+                        }
+
+                        if (yEnd > yStart) {
+                            const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
+                            if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
+                            if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
+                        }
                     }
                 }
             }

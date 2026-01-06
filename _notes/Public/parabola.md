@@ -166,6 +166,25 @@ Nel caso più generale, l'equazione si può risolvere con la formula quadratica 
 
 ## L'asse di simmetria
 
+Nel grafico sono rappresentati la parabola di equazione $y = ax^2 + bx + c$ e, tratteggiato, il suo asse di simmetria. Fai variare i valori di $a$, $b$ e $c$ e nota come l'asse si sposta solo al variare di $a$ e $b$, ma non al variare di $c$.
+
+```matephis
+{
+  "padding": 5,
+  "align": "center",
+  "marginBottom": "20px",
+  "params": {
+    "a": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "b": { "val": 1, "min": -5, "max": 5, "step": 0.1 },
+    "c": { "val": 1, "min": -5, "max": 5, "step": 0.1 }
+  },
+  "data": [
+    { "fn": "ax^2+bx+c" },
+    { "x": "-b/(2*a)", "color": "black1", "dash": "3,3" }
+  ]
+}
+```
+
 L'asse di simmetria della parabola ha equazione $x = -\dfrac{b}{2a}$, perché, se la parabola interseca l'asse $x$, sta tra i due punti di intersezione — che si trovano rispettivamente prima e dopo l'asse, alla distanza di $\dfrac{\sqrt{\Delta}}{2a}$.
 
 ```matephis
@@ -175,7 +194,6 @@ L'asse di simmetria della parabola ha equazione $x = -\dfrac{b}{2a}$, perché, s
   "padding": 5,
   "align": "center",
   "legend": true,
-  "legendPosition": "bottom-right",
   "labelStyle": "italic",
   "data": [
     { "fn": "x^2-5x-14", "color": "red1", "label": "$y = x^2 - 5x - 14$" },
