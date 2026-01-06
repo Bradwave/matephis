@@ -46,6 +46,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.9, 12.9],
   "ylim": [-19.9, 249.9],
   "axisLabels": ["t","x"],
+  "axisLabelStyle": "italic",
   "aspectRatio": "3:2",
   "legend": true,
   "legendWidth": 80,

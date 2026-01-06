@@ -374,9 +374,9 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9)); 
-        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1)); 
-        const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
+        const btnPlus = mkBtn("/assets/img/material-symbols/add.svg", "Zoom In", () => zoom(0.9)); 
+        const btnMinus = mkBtn("/assets/img/material-symbols/remove.svg", "Zoom Out", () => zoom(1.1)); 
+        const btnReset = mkBtn("/assets/img/material-symbols/center_focus_weak.svg", "Reset View", () => {
             if (this.config.xlim) {
                 this.view.xMin = this.config.xlim[0];
                 this.view.xMax = this.config.xlim[1];
@@ -389,7 +389,7 @@ class MatephisPlot {
             this.draw();
         });
 
-        const btnFull = mkBtn("/assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
+        const btnFull = mkBtn("/assets/img/material-symbols/open_in_full.svg", "Full Screen", () => this._openLightbox());
 
         overlay.appendChild(btnPlus);
         overlay.appendChild(btnMinus);
@@ -1011,7 +1011,7 @@ class MatephisPlot {
                     px -= fsVal * 0.3;
                 }
 
-                this._text(px, mapY(0) + 15, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", this.numbersGroup, fsVal);
+                this._text(px, mapY(0) + 15, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -1048,7 +1048,7 @@ class MatephisPlot {
                 }
 
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this._text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
+                this._text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
             }
         }
 
@@ -1058,7 +1058,7 @@ class MatephisPlot {
             if (this.config.showXNumbers !== false || this.config.showYNumbers !== false) {
                 const px = mapX(0) - 5; // Align with Y numbers (end anchor)
                 const py = mapY(0) + 15; // Align with X numbers (top baseline)
-                this._text(px, py, "0", "end", "top", "#666", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
+                this._text(px, py, "0", "end", "top", "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
             }
         }
         // Main Axes - To AxesGroup
@@ -1131,8 +1131,10 @@ class MatephisPlot {
         // Axis Labels
         if (this.config.axisLabels) {
             const lblSize = this._getConfigSize('labelSize');
-            this._text(this.width - this.padding + 5, y0, this.config.axisLabels[0], "start", "middle", axisColor, "bold", this.axesGroup, lblSize, false);
-            this._text(x0, this.padding - 5, this.config.axisLabels[1], "middle", "bottom", axisColor, "bold", this.axesGroup, lblSize, false);
+            const axisWeight = this.config.axisLabelWeight || "bold";
+            const axisStyle = this.config.axisLabelStyle || "normal";
+            this._text(this.width - this.padding + 5, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            this._text(x0, this.padding - 5, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
         }
 
         // --- 3. Data ---
@@ -1464,8 +1466,9 @@ class MatephisPlot {
                 const ly = Math.max(10, Math.min(this.height - 10, labelPos.y + dy));
 
                 const labelWeight = this.config.labelWeight || "normal";
+                const labelStyle = this.config.labelStyle || "normal";
                 const displayLabel = item.label.replace(/\*/g, '·');
-                this._text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, this.labelGroup, this._getConfigSize('labelSize'));
+                this._text(lx, ly, displayLabel, anchor, "bottom", color, labelWeight, labelStyle, this.labelGroup, this._getConfigSize('labelSize'));
             }
         });
 
@@ -1507,8 +1510,8 @@ class MatephisPlot {
             y = this.height - this.padding - 10 - h;
         }
         // top-right is default (x already set)
-
         const labelWeight = this.config.labelWeight || "normal";
+        const labelStyle = this.config.labelStyle || "normal";
 
         // bg
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -1551,10 +1554,10 @@ class MatephisPlot {
                     // Simpler fallback for now: just try innerHTML or text fallback if complicated
                     // Actually, standard mathjax output relies on defs. We might break it if we don't copy defs.
                     // Let's stick to text fallback for reliability in this fast iter.
-                    this._text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                    this._text(lx + 25, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, labelStyle, this.legendGroup, fs);
                 }
             } else {
-                this._text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, this.legendGroup, fs);
+                this._text(lx + 20, ly + (fs / 3), item.label.replace(/\*/g, '·'), "start", "middle", "#333", labelWeight, labelStyle, this.legendGroup, fs);
             }
         });
     }
@@ -1594,16 +1597,18 @@ class MatephisPlot {
      * Creates an SVG text element with white halo effect.
      * @private
      */
-    _text(x, y, str, anchor, baseline, color, weight = "normal", parent = this.axesGroup, size = null, outline = true) {
+    _text(x, y, str, anchor, baseline, color, weight = "normal", style = "normal", parent = this.axesGroup, size = null, outline = true) {
         const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
         t.setAttribute("x", x);
         t.setAttribute("y", y);
+        t.setAttribute("class", "matephis-plot-text");
         t.setAttribute("text-anchor", anchor);
         t.setAttribute("dominant-baseline", baseline);
         t.setAttribute("fill", color);
         const fSize = (size !== null) ? size + "px" : "18px";
         t.setAttribute("font-size", fSize);
         t.setAttribute("font-weight", weight);
+        t.setAttribute("font-style", style);
         t.textContent = str;
         if (outline) {
             t.style.paintOrder = "stroke";
@@ -1627,7 +1632,8 @@ class MatephisPlot {
             "xNumberStep", "yNumberStep", "showXNumbers", "showYNumbers",
             "showXTicks", "showYTicks", "secondaryGridOpacity",
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
-            "numberSize", "labelSize", "legendSize"
+            "numberSize", "labelSize", "legendSize",
+            "axisLabelWeight", "axisLabelStyle", "labelStyle"
         ];
 
         const VALID_DATA_KEYS = [

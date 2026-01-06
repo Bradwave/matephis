@@ -44,7 +44,7 @@
   max-width: 100%;
   width: 100%;
   height: auto;
-  font-family: var(--font-code, monospace);
+  font-family: var(--font-plot, monospace);
   display: block;
   user-select: none;
   -webkit-user-select: none;
@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--font-code, monospace);
+  font-family: var(--font-plot, monospace);
   font-size: 0.85rem;
 }
 
@@ -228,4 +228,8 @@
 
 .matephis-plot-container.interactive {
   touch-action: none;
+}
+/* SVG Text - Force Font Family */
+.matephis-plot-text {
+  font-family: var(--font-plot, 'Space Mono', monospace) !important;
 }
