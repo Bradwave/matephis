@@ -374,9 +374,9 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("/assets/img/material-symbols/add.svg", "Zoom In", () => zoom(0.9)); 
-        const btnMinus = mkBtn("/assets/img/material-symbols/remove.svg", "Zoom Out", () => zoom(1.1)); 
-        const btnReset = mkBtn("/assets/img/material-symbols/center_focus_weak.svg", "Reset View", () => {
+        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9)); 
+        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1)); 
+        const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
             if (this.config.xlim) {
                 this.view.xMin = this.config.xlim[0];
                 this.view.xMax = this.config.xlim[1];
@@ -389,7 +389,7 @@ class MatephisPlot {
             this.draw();
         });
 
-        const btnFull = mkBtn("/assets/img/material-symbols/open_in_full.svg", "Full Screen", () => this._openLightbox());
+        const btnFull = mkBtn("/assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
 
         overlay.appendChild(btnPlus);
         overlay.appendChild(btnMinus);
