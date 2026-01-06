@@ -204,7 +204,7 @@ class MatephisPlot {
         else this.svg.classList.add('static');
 
         // this.svg.style.aspectRatio = ... removed to prevent issues, handled by attributes
-        
+
         // Inline Font for Serialized usage (Lightbox)
         this.svg.style.fontFamily = "var(--font-code, monospace)";
 
@@ -349,7 +349,7 @@ class MatephisPlot {
             img.style.height = "20px";
             img.draggable = false;
             b.appendChild(img);
-            
+
             b.onclick = (e) => {
                 e.stopPropagation(); // Prevent plot click
                 cb();
@@ -374,8 +374,8 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9)); 
-        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1)); 
+        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9));
+        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1));
         const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
             if (this.config.xlim) {
                 this.view.xMin = this.config.xlim[0];
@@ -412,7 +412,7 @@ class MatephisPlot {
      */
     _initResizeObserver() {
         if (!window.ResizeObserver) return;
-        
+
         this.resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 const newW = entry.contentRect.width;
@@ -732,7 +732,7 @@ class MatephisPlot {
      */
     _makeFn(str) {
         let expr = str;
-        
+
         // 1. Implicit Multiplication for Parameters (e.g., "ax" -> "a*x")
         // Must be done BEFORE parameter value substitution
         for (let key in this.params) {
@@ -760,7 +760,7 @@ class MatephisPlot {
         expr = expr.replace(/\b(sin|cos|tan|asin|acos|atan|sqrt|log|exp|abs|floor|ceil|round)\b/g, "Math.$1");
         expr = expr.replace(/\b(pi|PI)\b/g, "Math.PI");
         expr = expr.replace(/\b(e|E)\b/g, "Math.E");
-        
+
         // Convert implicit equations (e.g., "x^2 + y^2 = 1")
         if (expr.includes("=")) {
             const parts = expr.split("=");
@@ -1161,193 +1161,193 @@ class MatephisPlot {
             // Function (Adaptive Sampling)
             if (item.fn) {
                 try {
-                let d = "";
-                let started = false;
-                const f = new Function("x", `return ${this._makeFn(item.fn)};`);
-                // Test call to catch syntax errors early
-                try { f(0); } catch(e) { throw new Error(`Function '${item.fn}' error: ${e.message}`); }
+                    let d = "";
+                    let started = false;
+                    const f = new Function("x", `return ${this._makeFn(item.fn)};`);
+                    // Test call to catch syntax errors early
+                    try { f(0); } catch (e) { throw new Error(`Function '${item.fn}' error: ${e.message}`); }
 
-                // Adaptive State
-                const MAX_DEPTH = 8;
-                const TOLERANCE = 0.2; // Tighter tolerance for smoother curves
+                    // Adaptive State
+                    const MAX_DEPTH = 8;
+                    const TOLERANCE = 0.2; // Tighter tolerance for smoother curves
 
-                const safeMapY = (y) => {
-                    const py = mapY(y);
-                    if (py < -10000) return -10000;
-                    if (py > 10000) return 10000;
-                    return py;
-                };
+                    const safeMapY = (y) => {
+                        const py = mapY(y);
+                        if (py < -10000) return -10000;
+                        if (py > 10000) return 10000;
+                        return py;
+                    };
 
-                // Helper to check validity (finite + domain)
-                const isValid = (x, y) => {
-                    if (!isFinite(y)) return false;
-                    if (item.domain && (x < item.domain[0] || x > item.domain[1])) return false;
-                    return true;
-                };
+                    // Helper to check validity (finite + domain)
+                    const isValid = (x, y) => {
+                        if (!isFinite(y)) return false;
+                        if (item.domain && (x < item.domain[0] || x > item.domain[1])) return false;
+                        return true;
+                    };
 
-                const plotSegment = (x1, y1, x2, y2, depth) => {
-                    const xm = (x1 + x2) / 2;
-                    let ym;
-                    try { ym = f(xm); } catch (e) { ym = NaN; }
+                    const plotSegment = (x1, y1, x2, y2, depth) => {
+                        const xm = (x1 + x2) / 2;
+                        let ym;
+                        try { ym = f(xm); } catch (e) { ym = NaN; }
 
-                    const p1X = mapX(x1), p1Y = safeMapY(y1);
-                    const p2X = mapX(x2), p2Y = safeMapY(y2);
-                    const pmX = mapX(xm), pmY = safeMapY(ym);
+                        const p1X = mapX(x1), p1Y = safeMapY(y1);
+                        const p2X = mapX(x2), p2Y = safeMapY(y2);
+                        const pmX = mapX(xm), pmY = safeMapY(ym);
 
-                    const v1 = isValid(x1, y1);
-                    const v2 = isValid(x2, y2);
-                    const vm = isValid(xm, ym);
+                        const v1 = isValid(x1, y1);
+                        const v2 = isValid(x2, y2);
+                        const vm = isValid(xm, ym);
 
-                    // A. Recursion Criteria
-                    if (depth < MAX_DEPTH) {
-                        let split = false;
+                        // A. Recursion Criteria
+                        if (depth < MAX_DEPTH) {
+                            let split = false;
 
-                        // 1. Edge Hunting (One valid, one invalid)
-                        if (v1 !== v2) split = true;
+                            // 1. Edge Hunting (One valid, one invalid)
+                            if (v1 !== v2) split = true;
 
-                        // 2. Hole / Singularity Hunting (Both valid, mid invalid) - e.g. sin(x)/x at 0
-                        else if (v1 && v2 && !vm) split = true;
+                            // 2. Hole / Singularity Hunting (Both valid, mid invalid) - e.g. sin(x)/x at 0
+                            else if (v1 && v2 && !vm) split = true;
 
-                        // 3. Valid Midpoint Checks
-                        else if (v1 && v2 && vm) {
-                            // Curvature / Linearity Check
-                            const linY = p1Y + (p2Y - p1Y) * 0.5;
-                            const error = Math.abs(pmY - linY);
-                            if (error > TOLERANCE) split = true;
+                            // 3. Valid Midpoint Checks
+                            else if (v1 && v2 && vm) {
+                                // Curvature / Linearity Check
+                                const linY = p1Y + (p2Y - p1Y) * 0.5;
+                                const error = Math.abs(pmY - linY);
+                                if (error > TOLERANCE) split = true;
 
-                            // Steep Slope / Asymptote Check
-                            // If dY is huge, subdivide to find the jump
-                            if (Math.abs(p2Y - p1Y) > this.height) split = true;
-                        }
-                        // 4. Invalid Midpoint but maybe valid edge? (vm false, v1/v2 false) -> Usually skip, 
-                        // but if we are "hunting" from coarse loop, we might have v1=false, v2=false, vm=TRUE.
-                        // This case is handled by top-level call. Inside recursion, if v1/v2 false, we often stop unless vm is true?
-                        // Actually if v1/v2 false and vm true, split!
-                        else if (!v1 && !v2 && vm) split = true;
-
-                        if (split) {
-                            plotSegment(x1, y1, xm, ym, depth + 1);
-                            plotSegment(xm, ym, x2, y2, depth + 1);
-                            return;
-                        }
-                    }
-
-                    // B. Base Case - Draw or Move
-
-                    // Case 1: Both endpoints valid -> Draw Line (unless asymptote break)
-                    if (v1 && v2) {
-                        const jump = Math.abs(p2Y - p1Y);
-                        // Asymptote Break: Huge jump AND opposite signs relative to viewport center (heuristic)? 
-                        // Or just huge jump. For 1/x, jump is Infinity. Clampped to 20000.
-                        // For tan(x), jump is also huge.
-                        // We connect if jump is reasonable.
-
-                        // Heuristic: If jump > 2 * Height, assume asymptote and break.
-                        // EXCEPT if "Bridging" a hole? No, if we are here (v1 && v2), we just bridged the hole 
-                        // by recursion (midpoint became valid or we reached max depth).
-                        // Wait, if we reached max depth and mid was invalid, we are NOT in (v1 && v2) branch?
-                        // Correct. This branch is for "we found a valid segment". 
-
-                        if (jump < this.height * 2) {
-                            if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
-                            d += ` L ${p2X} ${p2Y}`;
-                            if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
-                        } else {
-                            // Break
-                            started = false;
-                        }
-                    }
-
-                    // Case 2: Bridging a Hole (Removable Discontinuity)
-                    // We reached MAX_DEPTH. v1 is valid, v2 is valid, but we couldn't resolve the middle.
-                    // This happens for sin(x)/x at 0 (undefined at 0).
-                    // x1 is -epsilon, x2 is +epsilon.
-                    else if (v1 && v2 && !vm) {
-                        // Check continuity
-                        const jump = Math.abs(p2Y - p1Y);
-                        if (jump < 50) { // arbitrary small threshold for visual continuity
-                            // Bridge it!
-                            if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
-                            d += ` L ${p2X} ${p2Y}`;
-                            if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
-                        } else {
-                            started = false;
-                        }
-                    }
-                    else {
-                        started = false;
-                    }
-                };
-
-                // Initial Coarse Steps with Domain Edge Handling
-                let rMin = xMin, rMax = xMax;
-                if (item.domain) {
-                    rMin = Math.max(rMin, item.domain[0]);
-                    rMax = Math.min(rMax, item.domain[1]);
-                }
-
-                // Eval Edge Helper
-                const evalEdge = (x, isMin, isMax) => {
-                    let val;
-                    try { val = f(x); } catch (e) { }
-                    if (isFinite(val)) return val;
-                    const eps = 1e-6;
-                    if (isMin) { try { val = f(x + eps); } catch (e) { } }
-                    if (isMax) { try { val = f(x - eps); } catch (e) { } }
-                    return val;
-                };
-
-                if (rMin < rMax) {
-                    // Configurable Sampling Step (pixels)
-                    // Default to 2px for better quality (was 5px)
-                    const sampleStep = this.config.sampleStep || 2;
-                    const coarseSteps = this.width / sampleStep;
-                    const dx = (xMax - xMin) / coarseSteps;
-                    let curr = rMin;
-
-                    while (curr < rMax - 1e-9) {
-                        let next = curr + dx;
-                        if (next > rMax) next = rMax;
-                        // Avoid tiny last step
-                        if (Math.abs(next - rMax) < 1e-9) next = rMax;
-
-                        const isDomainMin = item.domain && (Math.abs(curr - item.domain[0]) < 1e-9);
-                        let yStart = evalEdge(curr, isDomainMin, false);
-
-                        const isDomainMax = item.domain && (Math.abs(next - item.domain[1]) < 1e-9);
-                        let yEnd = evalEdge(next, false, isDomainMax);
-
-                        let yMid;
-                        const xMid = (curr + next) / 2;
-                        try { yMid = f(xMid); } catch (e) { }
-
-                        const v1 = isValid(curr, yStart);
-                        const v2 = isValid(next, yEnd);
-                        const vm = isValid(xMid, yMid);
-
-                        if (v1 || v2 || vm) {
-                            if (v1 && !started) {
-                                const pSX = mapX(curr);
-                                const pSY = safeMapY(yStart);
-                                d += `M ${pSX} ${pSY}`;
-                                started = true;
+                                // Steep Slope / Asymptote Check
+                                // If dY is huge, subdivide to find the jump
+                                if (Math.abs(p2Y - p1Y) > this.height) split = true;
                             }
-                            plotSegment(curr, yStart, next, yEnd, 0);
-                        } else {
+                            // 4. Invalid Midpoint but maybe valid edge? (vm false, v1/v2 false) -> Usually skip, 
+                            // but if we are "hunting" from coarse loop, we might have v1=false, v2=false, vm=TRUE.
+                            // This case is handled by top-level call. Inside recursion, if v1/v2 false, we often stop unless vm is true?
+                            // Actually if v1/v2 false and vm true, split!
+                            else if (!v1 && !v2 && vm) split = true;
+
+                            if (split) {
+                                plotSegment(x1, y1, xm, ym, depth + 1);
+                                plotSegment(xm, ym, x2, y2, depth + 1);
+                                return;
+                            }
+                        }
+
+                        // B. Base Case - Draw or Move
+
+                        // Case 1: Both endpoints valid -> Draw Line (unless asymptote break)
+                        if (v1 && v2) {
+                            const jump = Math.abs(p2Y - p1Y);
+                            // Asymptote Break: Huge jump AND opposite signs relative to viewport center (heuristic)? 
+                            // Or just huge jump. For 1/x, jump is Infinity. Clampped to 20000.
+                            // For tan(x), jump is also huge.
+                            // We connect if jump is reasonable.
+
+                            // Heuristic: If jump > 2 * Height, assume asymptote and break.
+                            // EXCEPT if "Bridging" a hole? No, if we are here (v1 && v2), we just bridged the hole 
+                            // by recursion (midpoint became valid or we reached max depth).
+                            // Wait, if we reached max depth and mid was invalid, we are NOT in (v1 && v2) branch?
+                            // Correct. This branch is for "we found a valid segment". 
+
+                            if (jump < this.height * 2) {
+                                if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                                d += ` L ${p2X} ${p2Y}`;
+                                if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                            } else {
+                                // Break
+                                started = false;
+                            }
+                        }
+
+                        // Case 2: Bridging a Hole (Removable Discontinuity)
+                        // We reached MAX_DEPTH. v1 is valid, v2 is valid, but we couldn't resolve the middle.
+                        // This happens for sin(x)/x at 0 (undefined at 0).
+                        // x1 is -epsilon, x2 is +epsilon.
+                        else if (v1 && v2 && !vm) {
+                            // Check continuity
+                            const jump = Math.abs(p2Y - p1Y);
+                            if (jump < 50) { // arbitrary small threshold for visual continuity
+                                // Bridge it!
+                                if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                                d += ` L ${p2X} ${p2Y}`;
+                                if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                            } else {
+                                started = false;
+                            }
+                        }
+                        else {
                             started = false;
                         }
-                        curr = next;
-                    }
-                }
+                    };
 
-                const path = document.createElementNS(ns, "path");
-                path.setAttribute("d", d);
-                path.setAttribute("fill", "none");
-                path.setAttribute("stroke", color);
-                path.setAttribute("stroke-width", width);
-                if (dash) path.setAttribute("stroke-dasharray", dash);
-                if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
-                this.dataGroup.appendChild(path);
+                    // Initial Coarse Steps with Domain Edge Handling
+                    let rMin = xMin, rMax = xMax;
+                    if (item.domain) {
+                        rMin = Math.max(rMin, item.domain[0]);
+                        rMax = Math.min(rMax, item.domain[1]);
+                    }
+
+                    // Eval Edge Helper
+                    const evalEdge = (x, isMin, isMax) => {
+                        let val;
+                        try { val = f(x); } catch (e) { }
+                        if (isFinite(val)) return val;
+                        const eps = 1e-6;
+                        if (isMin) { try { val = f(x + eps); } catch (e) { } }
+                        if (isMax) { try { val = f(x - eps); } catch (e) { } }
+                        return val;
+                    };
+
+                    if (rMin < rMax) {
+                        // Configurable Sampling Step (pixels)
+                        // Default to 2px for better quality (was 5px)
+                        const sampleStep = this.config.sampleStep || 2;
+                        const coarseSteps = this.width / sampleStep;
+                        const dx = (xMax - xMin) / coarseSteps;
+                        let curr = rMin;
+
+                        while (curr < rMax - 1e-9) {
+                            let next = curr + dx;
+                            if (next > rMax) next = rMax;
+                            // Avoid tiny last step
+                            if (Math.abs(next - rMax) < 1e-9) next = rMax;
+
+                            const isDomainMin = item.domain && (Math.abs(curr - item.domain[0]) < 1e-9);
+                            let yStart = evalEdge(curr, isDomainMin, false);
+
+                            const isDomainMax = item.domain && (Math.abs(next - item.domain[1]) < 1e-9);
+                            let yEnd = evalEdge(next, false, isDomainMax);
+
+                            let yMid;
+                            const xMid = (curr + next) / 2;
+                            try { yMid = f(xMid); } catch (e) { }
+
+                            const v1 = isValid(curr, yStart);
+                            const v2 = isValid(next, yEnd);
+                            const vm = isValid(xMid, yMid);
+
+                            if (v1 || v2 || vm) {
+                                if (v1 && !started) {
+                                    const pSX = mapX(curr);
+                                    const pSY = safeMapY(yStart);
+                                    d += `M ${pSX} ${pSY}`;
+                                    started = true;
+                                }
+                                plotSegment(curr, yStart, next, yEnd, 0);
+                            } else {
+                                started = false;
+                            }
+                            curr = next;
+                        }
+                    }
+
+                    const path = document.createElementNS(ns, "path");
+                    path.setAttribute("d", d);
+                    path.setAttribute("fill", "none");
+                    path.setAttribute("stroke", color);
+                    path.setAttribute("stroke-width", width);
+                    if (dash) path.setAttribute("stroke-dasharray", dash);
+                    if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
+                    this.dataGroup.appendChild(path);
                 } catch (e) {
                     this._addWarning(`Error rendering function '${item.fn}': ${e.message}`);
                 }
@@ -1407,7 +1407,7 @@ class MatephisPlot {
                     // Range support for vertical lines
                     let yStart = this.padding;
                     let yEnd = this.height - this.padding;
-                    
+
                     if (item.range && Array.isArray(item.range)) {
                         // Map range values to pixels
                         const y1 = mapY(item.range[0]);
@@ -1417,15 +1417,15 @@ class MatephisPlot {
                         // But let's just take min/max to be safe
                         const rawYMin = Math.min(y1, y2);
                         const rawYMax = Math.max(y1, y2);
-                        
+
                         yStart = Math.max(this.padding, rawYMin);
                         yEnd = Math.min(this.height - this.padding, rawYMax);
                     }
-                    
+
                     if (yEnd > yStart) {
-                         const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
-                         if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
-                         if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
+                        const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
+                        if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
+                        if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
                     }
                 }
             }
@@ -1483,9 +1483,9 @@ class MatephisPlot {
         // Default Top-Right
         let x = this.width - this.padding - 10;
         let y = this.padding + 10;
-        
+
         const pos = this.config.legendPosition || 'top-right';
-        
+
         // Width Calc (Pre-calc needed for X positioning)
         let w;
         if (this.config.legendWidth) {
@@ -1640,7 +1640,7 @@ class MatephisPlot {
         const VALID_DATA_KEYS = [
             "fn", "implicit", "points", "x", "color", "opacity", "width", "strokeWidth",
             "dash", "label", "labelAt", "labelOffset", "labelAnchor",
-            "domain", "radius", "fillColor", "strokeColor" 
+            "domain", "radius", "fillColor", "strokeColor"
         ];
 
         // 1. Root Keys
@@ -1655,12 +1655,12 @@ class MatephisPlot {
             this.config.data.forEach((item, i) => {
                 for (let key in item) {
                     if (!VALID_DATA_KEYS.includes(key)) {
-                        this._addWarning(`Unknown data option in item ${i+1}: '${key}'`);
+                        this._addWarning(`Unknown data option in item ${i + 1}: '${key}'`);
                     }
                 }
                 // Check Essentials
                 if (!item.fn && !item.implicit && !item.points && item.x === undefined) {
-                    this._addWarning(`Data item ${i+1} has no content (missing 'fn', 'points', 'implicit', or 'x').`);
+                    this._addWarning(`Data item ${i + 1} has no content (missing 'fn', 'points', 'implicit', or 'x').`);
                 }
             });
         }
@@ -1697,7 +1697,7 @@ class MatephisPlot {
         const ul = document.createElement("ul");
         ul.style.margin = "5px 0 0 20px";
         ul.style.padding = "0";
-        
+
         this.warnings.forEach(w => {
             const li = document.createElement("li");
             li.innerText = w;
@@ -1719,11 +1719,11 @@ class MatephisPlot {
     _openLightbox() {
         const serializer = new XMLSerializer();
         let source = serializer.serializeToString(this.svg);
-        
+
         if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
-        
+
         // Scale up for lightbox while maintaining aspect ratio
         const maxDim = 1200;
         const scale = Math.min(maxDim / this.width, maxDim / this.height);
