@@ -375,7 +375,7 @@ class MatephisPlot {
         };
 
         const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9));
-        const btnMinus = mkBtn("/assets/img/remove_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Zoom Out", () => zoom(1.1));
+        const btnMinus = mkBtn("/assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
         const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
             if (this.config.xlim) {
                 this.view.xMin = this.config.xlim[0];
