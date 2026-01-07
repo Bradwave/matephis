@@ -99,7 +99,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 9. **[AD]** Riscrivi l'equazione di una generica parabola $y = a(x - h)^2 + k$ nella forma $y = ax^2 + bx + c$.
 	- A cosa equivalgono $b$ e $c$?
 	- I risultati ottenuti in merito ad asse di simmetria e vertice della parabola di equazione $y = a(x - h)^2 + k$ sono compatibili con quelli noti in merito alla parabola di equazione $y = ax^2 + bx + c$?
-10. **[ABO]** Scrivi l'equazione della retta tangente a una generica parabola di equazione $y = ax^2 + bx + c$ nel generico punto $(x_0, y_0)$, appartenente alla parabola. Come varia la pendenza della parabola al variare di $x_0$?
+10. **[TD]** Scrivi l'equazione della retta tangente a una generica parabola di equazione $y = ax^2 + bx + c$ nel generico punto $(x_0, y_0)$, appartenente alla parabola. Come varia la pendenza della parabola al variare di $x_0$?
 
 ## Quiz
 
