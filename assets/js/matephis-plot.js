@@ -807,6 +807,24 @@ class MatephisPlot {
         return expr;
     }
 
+    /**
+     * Safely evaluates a math expression or returns the number.
+     * @private
+     */
+    _eval(val, context = "value") {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            try {
+                const fn = new Function(`return ${this._makeFn(val)}`);
+                return fn();
+            } catch (e) {
+                console.warn(`Error evaluating ${context}: ${val}`, e);
+                return NaN;
+            }
+        }
+        return NaN;
+    }
+
     draw() {
         // Clear dynamic groups
         this.gridGroup.innerHTML = "";
@@ -1188,7 +1206,11 @@ class MatephisPlot {
             // Label Position Init
             let labelPos = null;
             if (item.labelAt) {
-                labelPos = { x: mapX(item.labelAt[0]), y: mapY(item.labelAt[1]) };
+                const lx = this._eval(item.labelAt[0], "labelAt x");
+                const ly = this._eval(item.labelAt[1], "labelAt y");
+                if (!isNaN(lx) && !isNaN(ly)) {
+                    labelPos = { x: mapX(lx), y: mapY(ly) };
+                }
             }
 
             if (item.label && this.config.legend) {
@@ -1199,6 +1221,15 @@ class MatephisPlot {
             // Function (Adaptive Sampling)
             if (item.fn) {
                 try {
+                    let domain = null;
+                    if (item.domain && Array.isArray(item.domain)) {
+                        const dMin = this._eval(item.domain[0], "domain min");
+                        const dMax = this._eval(item.domain[1], "domain max");
+                        if (!isNaN(dMin) && !isNaN(dMax)) {
+                            domain = [dMin, dMax];
+                        }
+                    }
+
                     let d = "";
                     let started = false;
                     const f = new Function("x", `return ${this._makeFn(item.fn)};`);
@@ -1219,7 +1250,7 @@ class MatephisPlot {
                     // Helper to check validity (finite + domain)
                     const isValid = (x, y) => {
                         if (!isFinite(y)) return false;
-                        if (item.domain && (x < item.domain[0] || x > item.domain[1])) return false;
+                        if (domain && (x < domain[0] || x > domain[1])) return false;
                         return true;
                     };
 
@@ -1319,9 +1350,9 @@ class MatephisPlot {
 
                     // Initial Coarse Steps with Domain Edge Handling
                     let rMin = xMin, rMax = xMax;
-                    if (item.domain) {
-                        rMin = Math.max(rMin, item.domain[0]);
-                        rMax = Math.min(rMax, item.domain[1]);
+                    if (domain) {
+                        rMin = Math.max(rMin, domain[0]);
+                        rMax = Math.min(rMax, domain[1]);
                     }
 
                     // Eval Edge Helper
@@ -1349,10 +1380,10 @@ class MatephisPlot {
                             // Avoid tiny last step
                             if (Math.abs(next - rMax) < 1e-9) next = rMax;
 
-                            const isDomainMin = item.domain && (Math.abs(curr - item.domain[0]) < 1e-9);
+                            const isDomainMin = domain && (Math.abs(curr - domain[0]) < 1e-9);
                             let yStart = evalEdge(curr, isDomainMin, false);
 
-                            const isDomainMax = item.domain && (Math.abs(next - item.domain[1]) < 1e-9);
+                            const isDomainMax = domain && (Math.abs(next - domain[1]) < 1e-9);
                             let yEnd = evalEdge(next, false, isDomainMax);
 
                             let yMid;
@@ -1438,18 +1469,8 @@ class MatephisPlot {
                 this.dataGroup.appendChild(path);
             }
 
-            // Vertical Line
             if (item.x !== undefined) {
-                let valX = item.x;
-                if (typeof valX === 'string') {
-                    try {
-                        const fnX = new Function(`return ${this._makeFn(valX)}`);
-                        valX = fnX();
-                    } catch (e) {
-                        console.warn(`Error evaluating vertical line x: ${valX}`, e);
-                        valX = NaN;
-                    }
-                }
+                const valX = this._eval(item.x, "vertical line x");
 
                 if (!isNaN(valX)) {
                     const px = mapX(valX);
@@ -1460,16 +1481,21 @@ class MatephisPlot {
 
                         if (item.range && Array.isArray(item.range)) {
                             // Map range values to pixels
-                            const y1 = mapY(item.range[0]);
-                            const y2 = mapY(item.range[1]);
-                            // SVG Y coordinates: mapY(max) is smaller (top) than mapY(min) (bottom)
-                            // So usually mapY(range[1]) < mapY(range[0])
-                            // But let's just take min/max to be safe
-                            const rawYMin = Math.min(y1, y2);
-                            const rawYMax = Math.max(y1, y2);
+                            const r0 = this._eval(item.range[0], "vertical line range start");
+                            const r1 = this._eval(item.range[1], "vertical line range end");
+                            
+                            if (!isNaN(r0) && !isNaN(r1)) {
+                                const y1 = mapY(r0);
+                                const y2 = mapY(r1);
+                                // SVG Y coordinates: mapY(max) is smaller (top) than mapY(min) (bottom)
+                                // So usually mapY(range[1]) < mapY(range[0])
+                                // But let's just take min/max to be safe
+                                const rawYMin = Math.min(y1, y2);
+                                const rawYMax = Math.max(y1, y2);
 
-                            yStart = Math.max(this.padding, rawYMin);
-                            yEnd = Math.min(this.height - this.padding, rawYMax);
+                                yStart = Math.max(this.padding, rawYMin);
+                                yEnd = Math.min(this.height - this.padding, rawYMax);
+                            }
                         }
 
                         if (yEnd > yStart) {
@@ -1484,30 +1510,8 @@ class MatephisPlot {
             // Points
             if (item.points) {
                 item.points.forEach(pt => {
-                    let valX = pt[0];
-                    let valY = pt[1];
-
-                    // Evaluate X if it's a string expression
-                    if (typeof valX === 'string') {
-                        try {
-                            const fnX = new Function(`return ${this._makeFn(valX)}`);
-                            valX = fnX();
-                        } catch (e) {
-                            console.warn(`Error evaluating point x: ${valX}`, e);
-                            valX = NaN;
-                        }
-                    }
-
-                    // Evaluate Y if it's a string expression
-                    if (typeof valY === 'string') {
-                        try {
-                            const fnY = new Function(`return ${this._makeFn(valY)}`);
-                            valY = fnY();
-                        } catch (e) {
-                            console.warn(`Error evaluating point y: ${valY}`, e);
-                            valY = NaN;
-                        }
-                    }
+                    let valX = this._eval(pt[0], "point x");
+                    let valY = this._eval(pt[1], "point y");
 
                     // Proceed only if we have valid numbers
                     if (!isNaN(valX) && !isNaN(valY)) {

@@ -65,7 +65,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 5. **[D]** Considera la generica parabola di equazione $y = ax^2 + bx + c$. Verifica che la retta di equazione $y = bx + c$, tangente alla parabola, interseca la parabola in un solo punto, di coordinate $(0, c)$.
 6. **[PD-]** Spiega tramite controesempi la retta tangente a una curva **non** è la retta che interseca la curva in un solo punto: con un primo controesempio presenta una retta tangente che interseca la curva in più punti; con un secondo controesempio, presenta una retta non tangente che interseca la curva in un solo punto.
 7. **Una "nuova" equazione per la parabola [PD]** Nel grafico è rappresentata la parabola di equazione $y = a(x - h)^2$. Fai variare il valore di $a$ e $h$, utilizzando gli slider, e spiega cosa osservi.
-	- Cosa varia la forma della parabola al variare di $a$?
+	- Come varia la forma della parabola al variare di $a$?
 	- Come varia l'asse di simmetria della parabola al variare di $h$? Qual è l'equazione dell'asse di simmetria?
 	- Costruisci la parabola avente asse di simmetria $x = -2$ e passante per il punto $(0, 2)$. Riscrivi l'equazione della parabola nella forma $y = ax^2 + bx + c$.
 ```matephis
@@ -129,7 +129,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(iv)** Lo spazio di frenata di un'automobile (espresso in m) in funzione della velocità (espressa in m/s).
 ```matephis
 {
-  "xlim": [-0.5,6.9],
+  "xlim": [-0.5,9.9],
   "ylim": [-0.5,6.9],
   "xStep": 5,
   "yStep": 5,
@@ -138,7 +138,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "data": [
     { "fn": "-4.905x^2+3", "domain": [0,7], "color": "red1", "label": "A" },
     { "fn": "-4.905x^2+3x+3", "domain": [0,7], "color": "red1", "opacity": 0.6, "label": "B", "dash": "2,2" },
-    { "fn": "0.05*(x-5)^2+1.5", "domain": [0,7], "color": "black1", "label": "C" },
+    { "fn": "0.002x^2+0.05x+5", "domain": [0,10], "color": "black1", "label": "C" },
     { "fn": "x+0.05x^2", "domain": [0,7], "color": "black1", "opacity": 0.4, "label": "D", "dash": "2,2" }
   ]
 }
@@ -164,7 +164,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(c)** $y = +2$
 	- **(d)** $x = - 3/2$
 7. **[AD-]** Quale delle seguenti parabole è tangente alla parabola di equazione $y = 4x^2 - 3x + 2$ nel punto $(0, 2)$?
-	- **(a)** $y = \frac 1 4 x^2 - \frac 1 3 x + \dfrac 1 2$
+	- **(a)** $y = \frac 1 4 x^2 - \frac 1 3 x + \frac 1 2$
 	- **(b)** $y = 4x^2$
 	- **(c)** $y = 5x^2 - 3x + 2$
 	- **(d)** $x = -4x^2 + 3x - 2$
