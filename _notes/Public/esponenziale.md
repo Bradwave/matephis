@@ -22,7 +22,5 @@ In una coltura microbiologica, all'istante temporale $t = 0$, un insieme di tali
 | 4     | $16 = 2^4$ |
 | 5     | $32 = 2^5$ |
 
-Si nota che la massa di batteri dopo $n$ ore vale $2^n$. Possiamo quindi esprimere la massa $m$ di batteri in funzione del tempo $t$:
-$$
-m(t) = 2^t
-$$
+Si nota che la massa di batteri dopo $n$ ore vale $2^n$. Possiamo quindi esprimere la massa $m$ di batteri in funzione del tempo $t$: $m(t) = 2^t$.
+

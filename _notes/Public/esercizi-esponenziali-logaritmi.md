@@ -1,10 +1,11 @@
 ---
-title: Esercizi su esponenziali e logaritmi
+title: Esercizi sulla funzione esponenziale
 feed: show
 tags:
   - esercizi
   - esponenziale
   - logaritmo
+plot: true
 ---
 Esercizi, quesiti, quiz e problemi sulle funzioni esponenziale e logaritmo.
 
@@ -20,10 +21,111 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	5. $f(x) = 2 \cdot 2^x - 1$
 	6. $f(x) = -2 + \left(\dfrac 1 3\right)^x - 2$
 	7. $f(x) = +5 - 3^x$
+2. **[F]** Quanti sono i punti di intersezione tra il grafico di $f(x) = e^x - 2$ e il grafico di $f(x) = x - 2$?
+3. **[PD-]** Determina, in modo approssimativo, la soluzione o le soluzioni di $e^x -2 = x - 2$.
+4. **[D]** Riscrivi le seguenti funzioni esponenziali nella forma $f(x) = a \cdot e^{\lambda x} + c$.
+	1. $f(x) = 4 \cdot 1{,}2^x$
+	2. $f(x) = 2 \cdot 0{,}8^x - 1$
+	3. $f(x) = -3^x$
+	4. $f(x) = \left(\frac 1 2 \right)^x + \frac 1 2$
+	5. $f(x) = 0{,}1^x - 10$
+	6. $f(x) = 2^{-x} + 1$
+5. **[PD-]** Determina le definizioni algebriche ($f(x) = \dotsc$) delle funzioni il cui grafico è rappresentato in figura.
+```matephis
+{
+  "xlim": [-6.9,6.9],
+  "ylim": [-6.9,6.9],
+  "legend": true,
+  "data": [
+    { "fn": "2^x + 1", "color": "red1", "label": "f" },
+    { "fn": "-(0.75^x) - 1", "color": "red1", "label": "g", "dash": "2,2" },
+    { "fn": "-(2^x) + 2", "color": "black1", "label": "h" }
+  ]
+}
+```
+6. **[PD]** In figura è rappresentato il grafico della funzione $f$. Rappresenta il grafico della funzione $g(x) = -2 \cdot f(x) - 1$.
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "2^x", "color": "red1", "label": "f" }
+  ]
+}
+```
+6. **[AD-]** In figura è rappresentato il grafico della funzione $f$. Rappresenta il grafico della funzione $g(x) = 3 \cdot f(x)$.
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "-(2^x)+1", "color": "red1", "label": "f" }
+  ]
+}
+```
 
 ## Quesiti
 
-1. **[EE]** Spiega perché il grafico della funzione esponenziale $f(x) = e^x$ non interseca l'asse $x$.
+1. **[F+]** Spiega perché il grafico della funzione esponenziale $f(x) = e^x$ non interseca l'asse $x$.
+2. **[F]** Spiega perché
+	- il grafico di $f(x) + c$ risulta traslato di $c$ rispetto al grafico di $f(x)$;
+	- il grafico di $a \cdot f(x)$ risulta dilatata verticalmente se $a > 1$, compresso verticalmente se $0 < a < 1$, riflesso verticalmente e dilatato/compresso se $a < 0$;
+	- il grafico di $b^x$ è crescente se $b > 1$ ed è decrescente se $0 < b < 1$.
+3. **[F-]** Per quale valore di $b$ la funzione $f(x) = b^x$ è costante?
+
+## Quiz
+
+1. **[F+]** Quale dei seguenti è il grafico di $f(x) = 2^x - 1$?
+	- **(a)** Grafico A
+	- **(b)** Grafico B
+	- **(c)** Grafico C
+	- **(d)** Non è possibile scegliere tra (a) e (b)
+```matephis
+{
+  "legend": true,
+  "data": [
+    { "fn": "3^x - 1", "color": "red1", "label": "A" },
+    { "fn": "2^x - 1", "color": "red1", "label": "B", "dash": "2,2" },
+    { "fn": "-(2^x) + 2", "color": "black1", "label": "C" }
+  ]
+}
+```
+2. **[F-]** Associa a ciascuna delle seguenti funzioni il proprio grafico.
+	- **(i)** $f(x) = \frac 1 2 4^x - 1$
+	- **(ii)** $f(x) = -\frac 1 2 4^x + 1$
+	- **(iii)** $f(x) = 4 \left(\frac 1 2\right)^x + 1$
+	- **(iv)** $f(x) = -4 \left(\frac 1 2\right)^x - 1$
+```matephis
+{
+  "legend": true,
+  "data": [
+    { "fn": "4*0.5^x+1", "color": "red1", "label": "A" },
+    { "fn": "-4*0.5^x-1", "color": "red1", "dash": "2,2", "label": "B" },
+    { "fn": "-0.5*4^x+1", "color": "black1", "label": "C" },
+    { "fn": "0.5*4^x-1", "color": "black1", "dash": "2,2", "label": "D" }
+  ]
+}
+```
+3. **[F-]** Quale funzione è rappresentata in figura?
+	- **(a)** $f(x) = e^{x} + 1$
+	- **(b)** $f(x) = -e^{x} + 1$
+	- **(c)** $f(x) = e^{x} - 1$
+	- **(d)** $f(x) = -e^{x} - 1$
+```matephis
+{
+  "legend": true,
+  "data": [
+    { "fn": "-exp(x) - 1", "color": "red1" }
+  ] 
+}
+```
+4. **[F+]** Una delle seguenti funzioni è equivalente a $f(x) = 5 \cdot \left(\frac 1 2\right)^x +2$. Quale?
+	- **(a)** $f(x) = 5 \cdot 2^{-x} + 2$
+	- **(b)** $f(x) = \left(\frac 5 2\right)^x + 2$
+	- **(c)** $f(x) = \left(\frac 5 2 \right)^x + 10$
+	- **(d)** $f(x) = 7 \cdot 2^x$
 
 ## Problemi
 

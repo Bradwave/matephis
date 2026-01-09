@@ -150,10 +150,11 @@
   -webkit-appearance: none;
   width: 6px;
   height: 6px;
-  box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
-  border-radius: 50%;
   background: var(--accent, #B01A00);
-  cursor: default;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
+  cursor: pointer;
   transition: all 0.1s ease-in-out;
   margin-top: 0;
 }
