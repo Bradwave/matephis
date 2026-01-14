@@ -70,7 +70,7 @@ Nel grafico è rappresentata la parabola di equazione $y = ax^2 + bx$ e la retta
 
 Il coefficiente $b$ è la **pendenza iniziale della parabola**, ovvero la sua pendenza nel punto di intersezione con l'asse $y$.
 
-- Se $b$ è positivo, la parabola inizialmente cresce; se $a$ è negativa la parabola inizialmente decresce.
+- Se $b$ è positivo, la parabola inizialmente cresce; se $a$ è negativo la parabola inizialmente decresce.
 - Il valore di $b$ è la pendenza della retta tangente alla parabola nel punto di intersezione con l'asse $y$, che avrà equazione $y = bx + c$.
 - Variando $b$, la parabola è spostata a destra o a sinistra. Se $a$ e $b$ sono concordi, l'asse di simmetria della parabola è spostato a sinistra dell'asse $y$, se $a$ e $b$ sono discordi, l'asse di simmetria è spostato a destra.
 - Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $b$ è la **velocità iniziale** dell'oggetto in movimento.
@@ -120,7 +120,7 @@ Il coefficiente $c$ è l'**intercetta, il "punto iniziale", della parabola**.
 
 - La parabola interseca l'asse $y$ nel punto $(0, c)$.
 - Variando $c$, la parabola è traslata in verticale: verso l'alto se $c$ cresce; verso il basso se $c$ decresce.
-- Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $c$ la **posizione di partenza** dell'oggetto in movimento.
+- Dal punto di vista fisico, se la parabola è un grafico tempo-posizione, $c$ è la **posizione di partenza** dell'oggetto in movimento.
 
 ```matephis
 {

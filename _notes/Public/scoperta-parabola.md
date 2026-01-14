@@ -49,8 +49,8 @@ Considera ora la parabola di equazione $y = x^2 + 1$.
 Su Desmos o GeoGebra, rappresenta il grafico della parabola di equazione $y = ax^2 + c$, dove i valori di $a$ e di $c$ sono controllati da uno slider. Fai variare il coefficiente $c$.
 
 - **Cosa osservi?** Al variare di $a$, quale proprietà della parabola viene modificata?
-- Qual è il punto di **intersezione** della parabola con l'**asse** $y$ ? Dipende dal valore di $a$? Rispondi anche tramite l'ausilio di Desmos o GeoGebra.
-- Riesci ad individuare una **regola generale** che leghi il coefficiente $c$ all'intersezione della parabola con l'asse $y$ ?
+- Qual è il punto di **intersezione** della parabola con l'**asse** $y$? Dipende dal valore di $a$? Rispondi anche tramite l'ausilio di Desmos o GeoGebra.
+- Riesci ad individuare una **regola generale** che leghi il coefficiente $c$ all'intersezione della parabola con l'asse $y$?
 - Qual è l'**asse di simmetria** di tutte le parabole del tipo $y = ax^2 + c$ ? Qual è il **vertice**?
 
 Sulla base di quanto appreso, traccia il grafico approssimativo di $y = -x^2 + 5$.
@@ -70,7 +70,7 @@ Su Desmos o GeoGebra, rappresenta il grafico della parabola di equazione $y = ax
 - **Cosa osservi?**
 	- Al variare di $b$, quale proprietà della parabola viene modificata?
 	- Cambia il punto di intersezione con l'asse $y$?
-	- Cambiano i punti di intersezione con l'asse $x$
+	- Cambiano i punti di intersezione con l'asse $x$?
 	- Cambia l'asse di simmetria della parabola?
 - Se si varia $c$ e si mantengono costanti $a$ e $b$, cambia la forma della parabola? Cambia l'asse di simmetria?
 - Considera la formula quadratica per risolvere le equazioni di secondo grado — che ricordo derivare dal metodo di completamento del quadrato: $x = \dfrac{-b}{2a} \pm \dfrac{\sqrt \Delta}{2a}$. Cosa si ottiene sostituendo al posto di $a$, $b$ e $c$ i coefficienti della parabola?

@@ -43,7 +43,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **Simulazione.** Se dovessi replicare questo moto camminando, come dovresti muoverti? Descrivi i cambi di direzione e velocità.
 3. **[F]** Nel grafico sono rappresentati i grafici posizione-tempo di un'auto e di una moto, che si muovono parallelamente lungo una strada rettilinea. La persona che osserva l'auto e la moto è posizionata nel punto $x = 0$.
 	- Dopo quanto tempo e in che posizione rispetto all'osservatore auto e moto si trovano affiancate?
-	- Descrivi a parole in che modo si muovo l'auto e la moto.
+	- Descrivi a parole in che modo si muovono l'auto e la moto.
 ```matephis
 {
   "xlim": [-0.9, 12.9],
@@ -63,7 +63,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Scrivi le equazioni della retta e della parabola, che descrivono il moto di auto e moto rispettivamente. La moto parte da ferma.
 	- Verifica per via algebrica l'istante di tempo e la posizione in cui i due veicoli sono affiancati, identificati precedentemente per via grafica.
 5. **[D]** Considera la generica parabola di equazione $y = ax^2 + bx + c$. Verifica che la retta di equazione $y = bx + c$, tangente alla parabola, interseca la parabola in un solo punto, di coordinate $(0, c)$.
-6. **[PD-]** Spiega tramite controesempi la retta tangente a una curva **non** è la retta che interseca la curva in un solo punto: con un primo controesempio presenta una retta tangente che interseca la curva in più punti; con un secondo controesempio, presenta una retta non tangente che interseca la curva in un solo punto.
+6. **[PD-]** Spiega tramite controesempi che la retta tangente a una curva **non** è la retta che interseca la curva in un solo punto: con un primo controesempio presenta una retta tangente che interseca la curva in più punti; con un secondo controesempio, presenta una retta non tangente che interseca la curva in un solo punto.
 7. **Una "nuova" equazione per la parabola [PD]** Nel grafico è rappresentata la parabola di equazione $y = a(x - h)^2$. Fai variare il valore di $a$ e $h$, utilizzando gli slider, e spiega cosa osservi.
 	- Come varia la forma della parabola al variare di $a$?
 	- Come varia l'asse di simmetria della parabola al variare di $h$? Qual è l'equazione dell'asse di simmetria?
@@ -143,7 +143,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-3. **[E]** Considera la parabola di equazione $y=ax^2 + bx + c.$ Sappiamo che il coefficiente$ b$ rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse $y$. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
+3. **[E]** Considera la parabola di equazione $y=ax^2 + bx + c.$ Sappiamo che il coefficiente $b$ rappresenta la pendenza della retta tangente alla parabola nel punto di intersezione con l’asse $y$. Se osserviamo una parabola che passa per l'origine e in quel punto è decrescente, cosa possiamo dire dei suoi coefficienti?
 	- **(a)** $c = 0$ e $b > 0$.
 	- **(b)** $c \neq 0$ e $b < 0$.
 	- **(c)** $c = 0$ e $b < 0$.
@@ -198,7 +198,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Quanto dista da terra l'apice?
 	- Dove si troverà la pallina dopo 2 secondi dal lancio?
 2. **[PD]** Qual è il massimo prodotto che si può ottenere moltiplicando due numeri la cui somma è $26$? Quali sono i due numeri il cui prodotto è massimo?
-3. **[AD-]** Durante un'esperimento, vengono misurate la compressione $x$ di una molla (espressa in m) e l'energia $E$ immagazzinata nella molla (espressa in joule, J). I dati raccolti sono riportati nel grafico.
+3. **[AD-]** Durante un esperimento, vengono misurate la compressione $x$ di una molla (espressa in m) e l'energia $E$ immagazzinata nella molla (espressa in joule, J). I dati raccolti sono riportati nel grafico.
 	- Scrivi la più semplice relazione che consente di descrivere l'energia della molla in funzione della sua compressione.
 	- Prevedi l'energia della molla in caso di compressione $x = 0{,}24 \text{ m}$.
 	- Prevedi la compressione necessaria ad immagazzinare $32 \text{ J}$ di energia.
@@ -223,11 +223,11 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ### La distanza di sicurezza
 
-**[AD+]** La *distanza di sicurezza per l'arresto* $D_A$ è data dalla somma della *spazio di reazione* $D_R$, ovvero lo spazio percorsa nel tempo complessivo di reazione (percezione, riflessione, reazione, attuazione), e lo *spazio di frenatura* $D_F$. Ovvero, $D_A = D_R + D_F$.
+**[AD+]** La *distanza di sicurezza per l'arresto* $D_A$ è data dalla somma della *spazio di reazione* $D_R$, ovvero lo spazio percorso nel tempo complessivo di reazione (percezione, riflessione, reazione, attuazione), e lo *spazio di frenatura* $D_F$. Ovvero, $D_A = D_R + D_F$.
 
 Nei corsi di scuola guida viene solitamente spiegata un'espressione matematica che consente di stimare la distanza di sicurezza $D_A$ nel modo seguente:
 1. si stima lo spazio di reazione $D_R$ moltiplicando la velocità del veicolo $v$, espressa in km/h, per 3 e dividendola per 10;
-2. si stima lo spazio di di frenatura $D_F$ calcolando il quadrato della velocità del veicolo $v$, espresso in km/h, e dividendolo per 100;
+2. si stima lo spazio di frenatura $D_F$ calcolando il quadrato della velocità del veicolo $v$, espresso in km/h, e dividendolo per 100;
 3. si calcola la somma $D_R + D_F$.
 
 Rispondi ai seguenti quesiti.
