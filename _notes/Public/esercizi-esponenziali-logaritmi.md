@@ -126,12 +126,14 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $f(x) = \left(\frac 5 2\right)^x + 2$
 	- **(c)** $f(x) = \left(\frac 5 2 \right)^x + 10$
 	- **(d)** $f(x) = 7 \cdot 2^x$
+5. **[F-]** Associa a ciascuno dei seguenti fenomeni il grafico più opportuno.
+	- **(i)** 
 
 ## Problemi
 
 ### 1. Diramazioni
 
-Nei primi anni di vita, una pianta cresce nel modo seguente: ogni anno da ogni ramo spuntano 3 nuovi rami; inizialmente la pianta ha 2 rami.
+**[PD-]** Nei primi anni di vita, una pianta cresce nel modo seguente: ogni anno da ogni ramo spuntano 3 nuovi rami; inizialmente la pianta ha 2 rami.
 
 - Quale funzione descrive il numero di rami terminali $r$ in funzione del tempo $t$?
 - Se la pianta continuasse a crescere nel modo descritto, quanti rami terminali avrebbe dopo 20 anni?
@@ -140,7 +142,7 @@ Nei primi anni di vita, una pianta cresce nel modo seguente: ogni anno da ogni r
 
 ### 2. Ardua scelta
 
-Scrollando su un qualche social, ti imbatti nel seguente post (pensato per fare *engagement-baiting*):
+**[AD-]** Scrollando su un qualche social, ti imbatti nel seguente post (pensato per fare *engagement-baiting*):
 
 > Preferisci 2 miliardi di euro subito oppure 1 euro che raddoppia ogni giorno?
 
@@ -159,7 +161,7 @@ Una altro post — decisamente più sofisticato — recita invece quanto segue:
 
 ### 3. Deconcentrazioni farmaceutiche
 
-$C(t) = 30 \cdot 0.7^t$ descrive la concentrazione nel sangue del paracetamolo (espressa in µg/mL — ovvero microgrammi per millilitro) in funzione del tempo (espresso in ore).  L'istante di tempo $t = 0$ corrisponde al momento, successivo all'assunzione, in cui la concentrazione è massima.
+**[PD]** $C(t) = 30 \cdot 0.7^t$ descrive la concentrazione nel sangue del paracetamolo (espressa in µg/mL — ovvero microgrammi per millilitro) in funzione del tempo (espresso in ore).  L'istante di tempo $t = 0$ corrisponde al momento, successivo all'assunzione, in cui la concentrazione è massima.
 
 - Qual è la concentrazione iniziale del farmaco?
 - Come varia ogni ora la concentrazione del farmaco?
@@ -167,7 +169,7 @@ $C(t) = 30 \cdot 0.7^t$ descrive la concentrazione nel sangue del paracetamolo (
 
 ### 4. Chill out!
 
-Quando un oggetto a temperatura $T_0 = 85^\circ$ — posto in un ambiente a temperatura $T_\text{amb} = 20^\circ$ — si raffredda, la sua temperatura decresce esponenzialmente. Dopo ogni minuto, la temperatura diventa il 75% della temperatura precedente.
+**[PD+]** Quando un oggetto a temperatura $T_0 = 85^\circ$ — posto in un ambiente a temperatura $T_\text{amb} = 20^\circ$ — si raffredda, la sua temperatura decresce esponenzialmente. Dopo ogni minuto, la temperatura diventa il 75% della temperatura precedente.
 
 - Quale funzione descrive la temperatura dell'oggetto $T$ in funzione del tempo $t$?
 - Qual è la temperatura dell'oggetto dopo un'ora? Dopo due ore?
@@ -176,7 +178,7 @@ Quando un oggetto a temperatura $T_0 = 85^\circ$ — posto in un ambiente a temp
 
 ### 5. Problemi di memoria
 
-Lo psicologo Ebbinghaus studiò, alla fine dell'Ottocento, il declino della memoria nel tempo. In un certo soggetto, la capacità di recuperare certe informazioni acquisite dalla memoria $R$ è descritta, al variare del tempo $t$ (dove $t = 0$ è corrisponde al momento di acquisizione dell'informazione) dalla funzione $R(t)$ il cui grafico è sotto riportato (*curva dell'oblio*). Il tempo è espresso in giorni e $R$ in percentuale rispetto alla capacità iniziale (100%).
+**[PD]** Lo psicologo Ebbinghaus studiò, alla fine dell'Ottocento, il declino della memoria nel tempo. In un certo soggetto, la capacità di recuperare certe informazioni acquisite dalla memoria $R$ è descritta, al variare del tempo $t$ (dove $t = 0$ è corrisponde al momento di acquisizione dell'informazione) dalla funzione $R(t)$ il cui grafico è sotto riportato (*curva dell'oblio*). Il tempo è espresso in giorni e $R$ in percentuale rispetto alla capacità iniziale (100%).
 
 ![esponenziale-1]({{ site.baseurl }}/images/esponenziale-1.svg)
 
@@ -184,3 +186,7 @@ Lo psicologo Ebbinghaus studiò, alla fine dell'Ottocento, il declino della memo
 - $R$ non scende mai sotto quale valore?
 - Scrivi la definizione algebrica di $R(t)$.
 - Dopo quanto tempo la capacità di recuperare informazione scende al di sotto del 30% della capacità iniziale?
+
+### 6. 
+
+

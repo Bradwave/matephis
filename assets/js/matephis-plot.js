@@ -1317,7 +1317,8 @@ class MatephisPlot {
                             // Wait, if we reached max depth and mid was invalid, we are NOT in (v1 && v2) branch?
                             // Correct. This branch is for "we found a valid segment". 
 
-                            if (jump < this.height * 2) {
+                            // Heuristic: If jump > 100px, assume asymptote/discontinuity and break.
+                            if (jump < 100) {
                                 if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
                                 d += ` L ${p2X} ${p2Y}`;
                                 if (!item.labelAt) labelPos = { x: p2X, y: p2Y };

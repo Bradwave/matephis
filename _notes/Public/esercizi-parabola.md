@@ -168,5 +168,71 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $y = 4x^2$
 	- **(c)** $y = 5x^2 - 3x + 2$
 	- **(d)** $x = -4x^2 + 3x - 2$
+8. **[E]** Quale tra le seguenti parabole interseca in $(2, 0)$ e $(3, 0)$ l'asse $x$?
+	- **(a)** $y = x^2 - 5x - 6$
+	- **(b)**  $y = x^2 + 5x - 6$
+	- **(c)**  $y = x^2 + 2x + 3$
+	- **(d)** $y = x^2 - 5x + 6$
+9. **[F+]** In figura è rappresentata una parabola e la retta tangente alla parabola nel punto di intersezione con l'asse $y$. Qual è l'equazione della parabola?
+	- **(a)** $y = 3x^2 - 2x + 2$
+	- **(b)** $y = 3x^2 - x + 2$
+	- **(c)** $y = 3x^2 - 3x + 2$
+	- **(d)** $y = 3x^2 + 3x + 2$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-2.9,6.9],
+  "data": [
+    { "fn": "3x^2-3x+2", "color": "red1" },
+    { "fn": "-3x+2", "color": "black1", "dash": [2,2] }
+  ]
+}
+```
 
 ## Problemi
+
+1. **[PD+]** Un pallina da tennis è lanciata verso l'alto alla velocità di 15 m/s (ovvero 54 km/h). La posizione verticale della pallina (misurata a partire da terra ed espressa in metri) in funzione del tempo (espresso in secondi) è descritta dalla seguente relazione: $y = -\frac{9{,}81}{2}t^2 + 15t + 0{,}8$.
+	- Traccia il grafico posizione-tempo della pallina.
+	- Da che altezza è stata lanciata la pallina?
+	- Dopo quanto tempo la pallina raggiunge l'apice?
+	- Quanto dista da terra l'apice?
+	- Dove si troverà la pallina dopo 2 secondi dal lancio?
+2. **[PD]** Qual è il massimo prodotto che si può ottenere moltiplicando due numeri la cui somma è $26$? Quali sono i due numeri il cui prodotto è massimo?
+3. **[AD-]** Durante un'esperimento, vengono misurate la compressione $x$ di una molla (espressa in m) e l'energia $E$ immagazzinata nella molla (espressa in joule, J). I dati raccolti sono riportati nel grafico.
+	- Scrivi la più semplice relazione che consente di descrivere l'energia della molla in funzione della sua compressione.
+	- Prevedi l'energia della molla in caso di compressione $x = 0{,}24 \text{ m}$.
+	- Prevedi la compressione necessaria ad immagazzinare $32 \text{ J}$ di energia.
+```matephis
+{
+  "xlim": [-0.039,0.29],
+  "ylim": [-3.9,29],
+  "axisLabels": ["x","E"],
+  "axisLabelStyle": "italic",
+  "data": [
+    { "points": [[0,0],[0.05,1],[0.1,4],[0.15,9],[0.2,16],[0.25,25]], "color": "red1" }
+  ]
+}
+```
+4. **[PD+]** Pigmalione sfida Didone a delimitare, utilizzando 28 m di corda, un rettangolo con la maggior area possibile. Aiuta Didone a costruire tale rettangolo.
+5. **[PD]** Achille e la tartaruga competono in una gara di corsa, lungo una strada rettilinea. Achille parte da un albero (posizione $x = 0$), mentre alla tartaruga è concesso un vantaggio. La posizione (espressa in metri) di Achille in funzione del tempo (espresso in secondi) è descritta dall'equazione $x_A = 2t^2$, mentre la posizione della tartaruga è descritta da $x_T = 20 + 0{,}5t$.
+	- Qual è il vantaggio della tartaruga in partenza?
+	- A che velocità si muove la tartaruga?
+	- Qual è la velocità iniziale di Achille?
+	- Traccia un grafico della posizione di Achille e della tartaruga in funzione del tempo.
+	- Dopo quanti secondi e in che posizione Achille raggiunge la tartaruga?
+
+### La distanza di sicurezza
+
+**[AD+]** La *distanza di sicurezza per l'arresto* $D_A$ è data dalla somma della *spazio di reazione* $D_R$, ovvero lo spazio percorsa nel tempo complessivo di reazione (percezione, riflessione, reazione, attuazione), e lo *spazio di frenatura* $D_F$. Ovvero, $D_A = D_R + D_F$.
+
+Nei corsi di scuola guida viene solitamente spiegata un'espressione matematica che consente di stimare la distanza di sicurezza $D_A$ nel modo seguente:
+1. si stima lo spazio di reazione $D_R$ moltiplicando la velocità del veicolo $v$, espressa in km/h, per 3 e dividendola per 10;
+2. si stima lo spazio di di frenatura $D_F$ calcolando il quadrato della velocità del veicolo $v$, espresso in km/h, e dividendolo per 100;
+3. si calcola la somma $D_R + D_F$.
+
+Rispondi ai seguenti quesiti.
+- Scrivi un'unica espressione per calcolare $D_A$ a partire dalla velocità del veicolo $v$, espressa in km/h.
+- Quanto misura la distanza di sicurezza se si viaggia a 50 km/h? Quanto misura se si viaggia a 70 km/h?
+- La distanza di sicurezza è direttamente proporzionale alla velocità?
+- Traccia un grafico della distanza di sicurezza $D_A$ in funzione della velocità $v$.
+- A quale velocità la distanza di sicurezza misura 5 m?
