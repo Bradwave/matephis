@@ -1041,17 +1041,38 @@ class MatephisPlot {
         if (this.config.showXNumbers !== false) {
             // Extend scan range slightly to catch border items
             const startNX = Math.ceil((xMin - xNumStep * 0.5) / xNumStep) * xNumStep;
+            
+            // X-Axis Sticky Logic
+            let axisY = mapY(0);
+            let numY = axisY + 15;
+            let numBaseline = "top";
+            let isStickyX = false;
+            
+            // Clamp to Top
+            if (axisY < this.padding) {
+                numY = this.padding + 5;
+                numBaseline = "hanging";
+                isStickyX = true; 
+            }
+            // Clamp to Bottom
+            else if (axisY > this.height - this.padding) {
+                numY = this.height - this.padding - 5;
+                numBaseline = "bottom";
+                isStickyX = true;
+            }
+
             for (let x = startNX; x <= xMax + xNumStep * 0.5; x += xNumStep) {
                 if (Math.abs(x) < 1e-9) continue; // Skip zero
 
                 let px = mapX(x);
                 let align = "middle";
 
-                // Clamping Logic (Visual - 10px threshold)
-                if (Math.abs(px - this.padding) < 10) {
+                // Clamping Logic (Visual - 4px threshold)
+                // This keeps specific numbers inside if they hit the side walls
+                if (Math.abs(px - this.padding) < 4) {
                     px = this.padding;
                     align = "start";
-                } else if (Math.abs(px - (this.width - this.padding)) < 10) {
+                } else if (Math.abs(px - (this.width - this.padding)) < 4) {
                     px = this.width - this.padding;
                     align = "end";
                 }
@@ -1059,7 +1080,9 @@ class MatephisPlot {
                 if (px < this.padding || px > this.width - this.padding) continue;
 
                 // Font size for shift calc
-                const fsVal = this._getConfigSize('numberSize');
+                const baseFs = this._getConfigSize('numberSize');
+                const fsVal = isStickyX ? baseFs * 0.85 : baseFs;
+                const colVal = isStickyX ? "#999" : "#666";
 
                 // Align negative numbers (center the number part)
                 if (x < -1e-9 && align === "middle") {
@@ -1067,7 +1090,7 @@ class MatephisPlot {
                     px -= fsVal * 0.3;
                 }
 
-                this._text(px, mapY(0) + 15, formatTick(x, xNumStepObj.isPi, xNumStep), align, "top", "#666", "normal", "normal", this.numbersGroup, fsVal);
+                this._text(px, numY, formatTick(x, xNumStepObj.isPi, xNumStep), align, numBaseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
             }
         }
         // Y Lines
@@ -1089,22 +1112,47 @@ class MatephisPlot {
         const yNumStep = yNumStepObj.val;
         if (this.config.showYNumbers !== false) {
             const startNY = Math.ceil((yMin - yNumStep * 0.5) / yNumStep) * yNumStep;
+            
+            // Y-Axis Sticky Logic
+            let axisX = mapX(0);
+            let numX = axisX - 5;
+            let numAlign = "end";
+            let isStickyY = false;
+            
+            // Clamp to Left
+            if (axisX < this.padding) {
+                numX = this.padding + 5;
+                numAlign = "start";
+                isStickyY = true;
+            }
+            // Clamp to Right
+            else if (axisX > this.width - this.padding) {
+                numX = this.width - this.padding - 5;
+                numAlign = "end";
+                isStickyY = true;
+            }
+
             for (let y = startNY; y <= yMax + yNumStep * 0.5; y += yNumStep) {
                 if (Math.abs(y) < 1e-9) continue;
 
                 let py = mapY(y);
                 let baseline = "middle";
 
-                // Clamping Y (Visual - 10px threshold)
-                if (Math.abs(py - (this.height - this.padding)) < 10) {
+                // Clamping Y (Visual - 2px threshold)
+                if (Math.abs(py - (this.height - this.padding)) < 2) {
                     py = this.height - this.padding - 5;
                     baseline = "auto";
-                } else if (Math.abs(py - this.padding) < 10) {
+                } else if (Math.abs(py - this.padding) < 2) {
                     py = this.padding + 5;
                 }
 
                 if (py < this.padding || py > this.height - this.padding) continue;
-                this._text(mapX(0) - 5, py, formatTick(y, yNumStepObj.isPi, yNumStep), "end", baseline, "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
+                
+                const baseFs = this._getConfigSize('numberSize');
+                const fsVal = isStickyY ? baseFs * 0.85 : baseFs;
+                const colVal = isStickyY ? "#999" : "#666";
+
+                this._text(numX, py, formatTick(y, yNumStepObj.isPi, yNumStep), numAlign, baseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
             }
         }
 

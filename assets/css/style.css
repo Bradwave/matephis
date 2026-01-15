@@ -600,7 +600,7 @@ a:hover {
 /* --- 8. Markdown Elements --- */
 
 blockquote {
-  border-left: var(--radius-sm) solid var(--accent);
+  border-left: 3px solid var(--accent);
   padding-left: var(--space-md);
   margin: var(--space-lg) 0;
   font-style: italic;

@@ -202,7 +202,7 @@ Una altro post — decisamente più sofisticato — recita invece quanto segue:
 
 In una bomba o in un reattore nucleare, il numero di neutroni liberi $N$ al tempo $t$ (misurato in secondi) può essere descritto dalla seguente funzione esponenziale:
 
-\\[N(t) = N_0 \cdot k^{t / \tau}\\]
+$$N(t) = N_0 \cdot k^{t / \tau}$$
 
 dove
 - $N_0$ è il numero iniziale di neutroni;
@@ -210,7 +210,7 @@ dove
 - $\tau$ è il *tempo di generazione* (in secondi), ovvero il tempo medio che intercorre tra l'emissione di un neutrone e la fissione successiva che esso provoca.
 
 Rispondi ai seguenti quesiti.
-- Quale parametro, tra $N_0$, $k$ e $tau$, è cruciale nella distinzione tra una bomba e un reattore nucleare? Quanto deve valere tale fattore in una bomba? Quanto deve valere in un reattore?
+- Quale parametro, tra $N_0$, $k$ e $\tau$, è cruciale nella distinzione tra una bomba e un reattore nucleare? Quanto deve valere tale fattore in una bomba? Quanto deve valere in un reattore?
 - Sostituisci $N_0 = 1$, $\tau = 10^{-8}$ e $k = 2{,}1$ nella funzione $N(t)$. La funzione descrive una bomba oppure un reattore nucleare? Traccia un grafico approssimativo della funzione.
 - Quante reazioni di fissioni avvengono dopo 1 millesimo di secondo?
 - Se l'energia liberata da ogni fissione vale, in media, $200 \, \text{MeV}$ (nota $1 \, \text{Mev} \approx 1{,}6 \times 10^{-13} \, \text{J}$), quanta energia è prodotto al tempo $t = 0{,}001$ (non è richiesto il calcolo dell'energia prodotta *fino* al tempo $t = 0{,}001$, ma solo l'energia prodotta in quell'istante di tempo).
@@ -220,7 +220,7 @@ Rispondi ai seguenti quesiti.
 
 **[AD]** La magnitudo $M$ di un terremoto sulla scala Richter è legata all'energia $E$ liberata dal sisma (misurata in joule) dalla relazione esponenziale (in base 10) o, inversamente, logaritmica. Una formula semplificata che lega l'energia alla magnitudo è:
 
-\\[E(M) = 10^{(1{,}5 \cdot M + 4{,}8)}\\]
+$$E(M) = 10^{(1{,}5 \cdot M + 4{,}8)}$$
 
 - Calcola l'energia liberata da un terremoto di magnitudo 4 e da uno di magnitudo 6.
 - Quante volte è più grande l'energia di un terremoto di magnitudo 6 rispetto a uno di magnitudo 4? E rispetto a uno di magnitudo 5?

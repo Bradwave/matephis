@@ -52,6 +52,7 @@ markdown: kramdown
 kramdown:
   input: GFM # GitHub Flavored Markdown
   syntax_highlighter: rouge
+  math_engine: null
 
 # Menu Items
 menu:
