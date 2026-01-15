@@ -187,6 +187,22 @@ Una altro post — decisamente più sofisticato — recita invece quanto segue:
 - Scrivi la definizione algebrica di $R(t)$.
 - Dopo quanto tempo la capacità di recuperare informazione scende al di sotto del 30% della capacità iniziale?
 
-### 6. 
+### 6. Bomba o reattore?
 
+La reazione di *fissione nucleare* dell'uranio-235, un isotopo fissile dell'uranio, consiste nell'assorbimento di un neutrone da parte di un nucleo di uranio-235 e la successiva scissione del nucleo. Tramite tale processo è liberata una grande quantità di energia, principalmente sotto forma di energia cinetica dei frammenti in cui il nucleo è stato scisso (i prodotti di fissione), e l'emissione di alcuni neutroni veloci, in media 2,43. Tali neutroni possono causare altre reazioni di fissione, innescando un procedimento a catena. La probabilità che un neutrone venga assorbito da un nucleo di uranio-235 aumenta se i neutroni sono lenti (tali neutroni sono detti *termici*).
 
+In una bomba o in un reattore nucleare, il numero di neutroni liberi $N$ al tempo $t$ (misurato in secondi) può essere descritto dalla seguente funzione esponenziale:
+
+\[[N(t) = N_0 \cdot k^{t / \tau}, \]]
+
+dove
+- $N_0$ è il numero iniziale di neutroni;
+- $k$ è il *fattore di moltiplicazione efficace*, ovvero il numero medio di neutroni prodotti da una fissione che riescono a causare una nuova fissione;
+- $\tau$ è il *tempo di generazione* (in secondi), ovvero il tempo medio che intercorre tra l'emissione di un neutrone e la fissione successiva che esso provoca.
+
+Rispondi ai seguenti quesiti.
+- Quale parametro, tra $N_0$, $k$ e $tau$, è cruciale nella distinzione tra una bomba e un reattore nucleare? Quanto deve valere tale fattore in una bomba? Quanto deve valere in un reattore?
+- Sostituisci $N_0 = 1$, $\tau = 10^{-8}$ e $k = 2{,}1$ nella funzione $N(t)$. La funzione descrive una bomba oppure un reattore nucleare? Traccia un grafico approssimativo della funzione.
+- Quante reazioni di fissioni avvengono dopo 1 millesimo di secondo?
+- Se l'energia liberata da ogni fissione vale, in media, $200 \, \text{MeV$ (nota $1 \, \text{Mev} \approx 1{,}6 \times 10^{-13} \, \text{J}$), quanta energia è prodotto al tempo $t = 0{,}001$ (non è richiesto il calcolo dell'energia prodotta *fino* al tempo $t = 0{,}001$, ma solo l'energia prodotta in quell'istante di tempo).
+- Dopo quanto tempo il numero di neutroni liberi supera i mille miliardi?
