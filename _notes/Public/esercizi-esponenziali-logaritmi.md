@@ -65,6 +65,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
+7. **[PD]** Determina graficamente, in modo approssimativo, il numero di soluzioni dell'equazione $3^x = 4 − x^2$ . Verifica successivamente utilizzando uno strumento grafico (es. Desmos).
 
 ## Quesiti
 
@@ -126,8 +127,16 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $f(x) = \left(\frac 5 2\right)^x + 2$
 	- **(c)** $f(x) = \left(\frac 5 2 \right)^x + 10$
 	- **(d)** $f(x) = 7 \cdot 2^x$
-5. **[F-]** Associa a ciascuno dei seguenti fenomeni il grafico più opportuno.
-	- **(i)** 
+5. **[E]** Il grafico di $g(x) = 2^x + 3$ rispetto a quello di $f(x) = 2^x$ risulta:
+	- **(a)** Traslato verso l'alto di 3 unità.
+	- **(b)** Traslato verso destra di 3 unità.
+	- **(c)** Traslato verso sinistra di 3 unità.
+	- **(d)** Dilatato verticalmente di fattore 3.
+6. **[F+]** Una coltura batterica raddoppia ogni ora. Se inizialmente ci sono 100 batteri, quale funzione rappresenta il numero di batteri $N$ dopo $t$ ore?
+	- **(a)** $N(t) = 100 + 2^t$
+	- **(b)** $N(t) = 100 \cdot t^2$
+	- **(c)** $N(t) = 100 \cdot 2^t$
+	- **(d)** $N(t) = 2 \cdot 100^t$
 
 ## Problemi
 
@@ -189,11 +198,11 @@ Una altro post — decisamente più sofisticato — recita invece quanto segue:
 
 ### 6. Bomba o reattore?
 
-La reazione di *fissione nucleare* dell'uranio-235, un isotopo fissile dell'uranio, consiste nell'assorbimento di un neutrone da parte di un nucleo di uranio-235 e la successiva scissione del nucleo. Tramite tale processo è liberata una grande quantità di energia, principalmente sotto forma di energia cinetica dei frammenti in cui il nucleo è stato scisso (i prodotti di fissione), e l'emissione di alcuni neutroni veloci, in media 2,43. Tali neutroni possono causare altre reazioni di fissione, innescando un procedimento a catena. La probabilità che un neutrone venga assorbito da un nucleo di uranio-235 aumenta se i neutroni sono lenti (tali neutroni sono detti *termici*).
+**[D-]** La reazione di *fissione nucleare* dell'uranio-235, un isotopo fissile dell'uranio, consiste nell'assorbimento di un neutrone da parte di un nucleo di uranio-235 e la successiva scissione del nucleo. Tramite tale processo è liberata una grande quantità di energia, principalmente sotto forma di energia cinetica dei frammenti in cui il nucleo è stato scisso (i prodotti di fissione), e l'emissione di alcuni neutroni veloci, in media 2,43. Tali neutroni possono causare altre reazioni di fissione, innescando un procedimento a catena. La probabilità che un neutrone venga assorbito da un nucleo di uranio-235 aumenta se i neutroni sono lenti (tali neutroni sono detti *termici*).
 
 In una bomba o in un reattore nucleare, il numero di neutroni liberi $N$ al tempo $t$ (misurato in secondi) può essere descritto dalla seguente funzione esponenziale:
 
-\[[N(t) = N_0 \cdot k^{t / \tau}, \]]
+\\[N(t) = N_0 \cdot k^{t / \tau}\\]
 
 dove
 - $N_0$ è il numero iniziale di neutroni;
@@ -204,5 +213,33 @@ Rispondi ai seguenti quesiti.
 - Quale parametro, tra $N_0$, $k$ e $tau$, è cruciale nella distinzione tra una bomba e un reattore nucleare? Quanto deve valere tale fattore in una bomba? Quanto deve valere in un reattore?
 - Sostituisci $N_0 = 1$, $\tau = 10^{-8}$ e $k = 2{,}1$ nella funzione $N(t)$. La funzione descrive una bomba oppure un reattore nucleare? Traccia un grafico approssimativo della funzione.
 - Quante reazioni di fissioni avvengono dopo 1 millesimo di secondo?
-- Se l'energia liberata da ogni fissione vale, in media, $200 \, \text{MeV$ (nota $1 \, \text{Mev} \approx 1{,}6 \times 10^{-13} \, \text{J}$), quanta energia è prodotto al tempo $t = 0{,}001$ (non è richiesto il calcolo dell'energia prodotta *fino* al tempo $t = 0{,}001$, ma solo l'energia prodotta in quell'istante di tempo).
+- Se l'energia liberata da ogni fissione vale, in media, $200 \, \text{MeV}$ (nota $1 \, \text{Mev} \approx 1{,}6 \times 10^{-13} \, \text{J}$), quanta energia è prodotto al tempo $t = 0{,}001$ (non è richiesto il calcolo dell'energia prodotta *fino* al tempo $t = 0{,}001$, ma solo l'energia prodotta in quell'istante di tempo).
 - Dopo quanto tempo il numero di neutroni liberi supera i mille miliardi?
+
+### 7. La terra trema
+
+**[AD]** La magnitudo $M$ di un terremoto sulla scala Richter è legata all'energia $E$ liberata dal sisma (misurata in joule) dalla relazione esponenziale (in base 10) o, inversamente, logaritmica. Una formula semplificata che lega l'energia alla magnitudo è:
+
+\\[E(M) = 10^{(1{,}5 \cdot M + 4{,}8)}\\]
+
+- Calcola l'energia liberata da un terremoto di magnitudo 4 e da uno di magnitudo 6.
+- Quante volte è più grande l'energia di un terremoto di magnitudo 6 rispetto a uno di magnitudo 4? E rispetto a uno di magnitudo 5?
+- Dimostra che aumentando la magnitudo di 1 unità, l'energia liberata aumenta di un fattore costante. Quanto vale questo fattore? (Approssima il risultato a un numero intero).
+
+### 8. Svalutation
+
+**[PD+]** Hai appena acquistato un'automobile nuova al prezzo di 25'000€. Si stima che il valore dell'auto si deprezzi (diminuisca) del 15% ogni anno rispetto al valore dell'anno precedente.
+
+- Scrivi la funzione $V(t)$ che esprime il valore dell'auto dopo $t$ anni.
+- Quale sarà il valore approssimativo dell'auto dopo 5 anni?
+- Dopo quanto tempo il valore dell'auto scenderà sotto i 5'000€? Imposta la disequazione corretta.
+- Confronta questo modello con un deprezzamento lineare in cui l'auto perde una cifra fissa di 3'000€ ogni anno. Dopo quanti anni il modello esponenziale diventa più "vantaggioso" (ovvero l'auto mantiene un valore più alto) rispetto al modello lineare?
+
+### 9. Luce negli abissi
+
+**[D]** L'intensità della luce solare I che penetra nell'acqua oceanica decresce esponenzialmente con la profondità $x$ (misurata in metri). La legge che descrive il fenomeno è nota come Legge di Beer-Lambert ed è del tipo $I(x)=I_0​ \cdot e^{−kx}$ , dove $I_0$​ è l'intensità in superficie. Supponiamo che in un certo oceano l'intensità si riduca della metà ogni 10 metri di profondità.
+
+- Determina il valore del coefficiente $k$ (suggerimento: imposta $I(10)=\frac{1}{2}I_0$​ ).
+- Quale funzione descrive la percentuale di luce residua rispetto alla superficie in funzione della profondità?
+- A quale profondità l'intensità luminosa è ridotta all'1% di quella iniziale? Scrivi un'equazione per rispondere alla domanda e prova a risolverla graficamente o con WolframAlpha.
+- Traccia un grafico qualitativo di $I(x)$ assumendo $I_0​ = 100$.
