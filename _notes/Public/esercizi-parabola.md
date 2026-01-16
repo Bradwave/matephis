@@ -220,6 +220,23 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Qual è la velocità iniziale di Achille?
 	- Traccia un grafico della posizione di Achille e della tartaruga in funzione del tempo.
 	- Dopo quanti secondi e in che posizione Achille raggiunge la tartaruga?
+6. **[D]** Una vettura si trova inizialmente alla distanza di 100 m prima di un incrocio (posizione $x = 0$). Nel grafico è rappresentata la posizione della vettura $x$ (espressa in metri) rispetto all'incrocio in funzione del tempo $t$ (espressa in secondi).
+	- Descrivi a parole il moto della vettura.
+	- L'auto si ferma all'incrocio? Dopo quanto tempo si ferma o transita presso l'incrocio?
+	- Stima la velocità iniziale della vettura.
+	- Sapendo che, nel caso del moto di un corpo la cui posizione in funzione del tempo è descritta da una parabola, l'accelerazione fisica corrisponde al doppio del coefficiente $a$ della parabola, determina l'accelerazione della vettura.
+```matephis
+{
+  "xlim": [-0.9,12.9],
+  "ylim": [-100.9,9.9],
+  "axisLabels": ["t","x"],
+  "axisLabelStyle": "italic",
+  "data": [
+    { "fn": "-x^2+20x-100", "domain": [0,10], "color": "red1" },
+    { "fn": "0", "domain": [10,13], "color": "red1" }
+  ]
+}
+```
 
 ### La distanza di sicurezza
 

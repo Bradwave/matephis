@@ -189,7 +189,17 @@ Una altro post — decisamente più sofisticato — recita invece quanto segue:
 
 **[PD]** Lo psicologo Ebbinghaus studiò, alla fine dell'Ottocento, il declino della memoria nel tempo. In un certo soggetto, la capacità di recuperare certe informazioni acquisite dalla memoria $R$ è descritta, al variare del tempo $t$ (dove $t = 0$ è corrisponde al momento di acquisizione dell'informazione) dalla funzione $R(t)$ il cui grafico è sotto riportato (*curva dell'oblio*). Il tempo è espresso in giorni e $R$ in percentuale rispetto alla capacità iniziale (100%).
 
-![esponenziale-1]({{ site.baseurl }}/images/esponenziale-1.svg)
+```matephis
+{
+  "xlim": [-0.9,14.9],
+  "ylim": [-9.9,100.9],
+  "axisLabels": ["t","R"],
+  "axisLabelStyle": "italic",
+  "data": [
+    { "fn": "20+80*0.75^x", "domain": [0,20], "color": "red1" }
+  ]
+}
+```
 
 - Qual è la capacità di recuperare informazioni al momento dell'acquisizione delle informazioni? Quanto vale $R$ dopo un giorno dall'acquisizione dell'informazione?
 - $R$ non scende mai sotto quale valore?
