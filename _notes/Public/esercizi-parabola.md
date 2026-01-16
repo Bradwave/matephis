@@ -237,6 +237,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
+7. **[PD+]** L'energia ($E$, espressa in joule J) di un corpo in movimento, detta *energia cinetica*, è direttamente proporzionale al quadrato della velocità ($v$, espressa in m/s) del corpo. La costante di proporzionalità è la metà della massa ($m$, espressa in kg) del corpo.
+	- Scrivi la relazione che lega $E$ a $v$.
+	- Traccia un grafico approssimativo dell'energia di un'auto di massa 1500 kg in funzione della velocità.
+	- Al raddoppiare della velocità, come varia l'energia della macchina? Quanto è più pericoloso viaggiare a 120 km/h rispetto a 60 km/h.
 
 ### La distanza di sicurezza
 
