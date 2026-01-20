@@ -40,7 +40,7 @@
 
 /* SVG */
 .matephis-plot-svg {
-  background: var(--bg, #fff);
+  background: transparent;
   max-width: 100%;
   width: 100%;
   height: auto;
