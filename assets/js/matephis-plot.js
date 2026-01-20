@@ -1930,7 +1930,69 @@ class MatephisPlot {
             }
 
             if (item.label && this.config.legend) {
-                legendItems.push({ color, label: item.label, type: item.points ? 'point' : 'line', dash });
+                legendItems.push({ color, label: item.label, type: item.points ? 'point' : (item.type === 'interpolation' ? 'interpolation' : 'line'), dash });
+            }
+
+            // Interpolation Type
+            if (item.type === 'interpolation' && item.points && Array.isArray(item.points)) {
+                try {
+                    // Evaluate points
+                    const rawPoints = [];
+                    item.points.forEach(pt => {
+                        const vx = this._eval(pt[0], "interp x");
+                        const vy = this._eval(pt[1], "interp y");
+                        if (!isNaN(vx) && !isNaN(vy)) rawPoints.push([vx, vy]);
+                    });
+
+                    if (rawPoints.length > 1) {
+                         const mappedPoints = rawPoints.map(p => [mapX(p[0]), mapY(p[1])]);
+                         
+                         let finalPoints = [];
+                         const smoothness = item.smoothness !== undefined ? item.smoothness : 0; // Default 0
+                         
+                         if (smoothness > 0) {
+                             // Use Curve
+                             const segments = 10;
+                             finalPoints = this._getCurvePoints(mappedPoints, smoothness, segments);
+                         } else {
+                             // Use Linear
+                             finalPoints = mappedPoints;
+                         }
+
+                         // Convert to Path
+                         if (finalPoints.length > 0) {
+                             const d = "M " + finalPoints.map(p => `${p[0]},${p[1]}`).join(" L ");
+                             const path = document.createElementNS(ns, "path");
+                             path.setAttribute("d", d);
+                             path.setAttribute("fill", "none");
+                             path.setAttribute("stroke", color);
+                             path.setAttribute("stroke-width", width);
+                             if (dash) path.setAttribute("stroke-dasharray", dash);
+                             if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
+                             this.dataGroup.appendChild(path);
+
+                             // Cache for Interaction
+                             // Generate polyline structure for hit testing
+                             const cachedPoly = finalPoints.map(p => ({
+                                 x: p[0], y: p[1],
+                                 valX: this.transform.unmapX(p[0]),
+                                 valY: this.transform.unmapY(p[1]) 
+                             }));
+                             
+                             this.plotData.push({
+                                 type: 'fn', // Treat as fn for interaction compatibility (slope/tangent)
+                                 isInterpolation: true,
+                                 index: idx,
+                                 polyline: cachedPoly
+                             });
+
+                             if (!item.labelAt) {
+                                 const last = finalPoints[finalPoints.length - 1];
+                                 labelPos = { x: last[0], y: last[1] };
+                             }
+                         }
+                    }
+                } catch (e) { console.warn("Interp Error", e); }
             }
 
             // Function
@@ -2383,17 +2445,20 @@ class MatephisPlot {
         
         // Pass 1: Calculate Heights
         const rowHeights = items.map(item => {
-             if (window.MathJax && item.label.includes("$")) {
-                 // Estimaate
-                 // If normal text is 1.5 * fs, MathJax fractions might be 2.5 * fs?
-                 // Without rendering, we guess.
-                 // Better: Render them, measure? No, too slow/complex DOM thrashing.
-                 // Heuristic: if it hasfrac, increase height
-                 if (item.label.includes("\\frac")) return fs * 2.5;
-                 if (item.label.includes("\\sum") || item.label.includes("\\int")) return fs * 2.2;
+                if (window.MathJax && item.label.includes("$")) {
+                     // Estimaate
+                     // If normal text is 1.5 * fs, MathJax fractions might be 2.5 * fs?
+                     // Without rendering, we guess.
+                     // Better: Render them, measure? No, too slow/complex DOM thrashing.
+                     // Heuristic: if it hasfrac, increase height
+                     if (item.label.includes("\\frac")) return fs * 2.5;
+                     if (item.label.includes("\\sum") || item.label.includes("\\int")) return fs * 2.2;
+                     return fs * 1.5;
+                 } else if (item.type === 'interpolation') {
+                     // Interpolation Label
+                     return fs * 1.5;
+                 }
                  return fs * 1.5;
-             }
-             return fs * 1.5;
         });
         
         totalH = 10 + rowHeights.reduce((a, b) => a + b, 0) + 10; // +10 bottom padding
@@ -2460,7 +2525,7 @@ class MatephisPlot {
             if (mjSvg) {
                 const svgNode = mjSvg.cloneNode(true);
                 svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-                svgNode.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+                svgNode.setAttribute("xmlns:xlink", "http://www.w3.org/2000/xlink");
                 
                 // Parse dimensions (usually in 'ex')
                 const wAttr = svgNode.getAttribute("width") || "1ex";
@@ -2619,10 +2684,10 @@ class MatephisPlot {
         ];
 
         const VALID_DATA_KEYS = [
-            "fn", "implicit", "points", "x", "color", "opacity", "width", "strokeWidth",
-            "dash", "label", "labelAt", "labelOffset", "labelAnchor",
-            "domain", "radius", "fillColor", "strokeColor",
-            "range"
+            "type", "fn", "implicit", "points", "x", "range", "domain",
+            "color", "width", "strokeWidth", "dash", "opacity", "fillColor", "strokeColor", "radius",
+            "label", "labelAt", "labelOffset", "labelAnchor",
+            "smoothness" // Added interpolation
         ];
 
         // 1. Root Keys
@@ -2693,6 +2758,59 @@ class MatephisPlot {
     // Add visuals restore at end of draw loop
     _restoreSelectionVisualsCheck() {
        this._restoreSelectionVisuals();
+    }
+
+    /**
+     * Generates points for a Cardinal Spline passing through the given data points.
+     * @param {Array} points - Array of [x, y] coordinates
+     * @param {number} tension - Smoothness factor (0 to 1), mapped to tension
+     * @param {number} numOfSegments - Number of segments between two points
+     * @returns {Array} - Array of [x, y] coordinates for the spline
+     * @private
+     */
+    _getCurvePoints(points, tension, numOfSegments) {
+        let _pts = [], res = [], 
+            x, y,          
+            t1x, t2x, t1y, t2y, 
+            c1, c2, c3, c4,     
+            st, t, i;      
+
+        // Clone points
+        for (i = 0; i < points.length; i++) _pts.push(points[i].slice());
+
+        // Duplicate First and Last points to handle open curve boundaries
+        _pts.unshift(points[0].slice());
+        _pts.push(points[points.length - 1].slice());
+
+        // Map smoothness (0-1) to tension factor 'k'
+        // Smoothness 0 => Linear (handled by caller)
+        // Smoothness 1 => Catmull-Rom (k=0.5)
+        const k = tension * 0.5;
+
+        for (i = 1; i < _pts.length - 2; i++) {
+            for (t = 0; t <= numOfSegments; t++) {
+                const s = t / numOfSegments;
+
+                // Calc tension vectors
+                t1x = (_pts[i + 1][0] - _pts[i - 1][0]) * k;
+                t1y = (_pts[i + 1][1] - _pts[i - 1][1]) * k;
+
+                t2x = (_pts[i + 2][0] - _pts[i][0]) * k;
+                t2y = (_pts[i + 2][1] - _pts[i][1]) * k;
+
+                // Cardinal Spline basis functions
+                c1 = 2 * Math.pow(s, 3) - 3 * Math.pow(s, 2) + 1;
+                c2 = -2 * Math.pow(s, 3) + 3 * Math.pow(s, 2);
+                c3 = Math.pow(s, 3) - 2 * Math.pow(s, 2) + s;
+                c4 = Math.pow(s, 3) - Math.pow(s, 2);
+
+                x = c1 * _pts[i][0] + c2 * _pts[i + 1][0] + c3 * t1x + c4 * t2x;
+                y = c1 * _pts[i][1] + c2 * _pts[i + 1][1] + c3 * t1y + c4 * t2y;
+
+                res.push([x, y]);
+            }
+        }
+        return res;
     }
 
     // =========================================================================

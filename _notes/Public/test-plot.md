@@ -432,15 +432,113 @@ Per funzioni ad alta frequenza o dettagli fini, usa `sampleStep: 1` per forzare 
 }
 ```
 
+
+## 7. Interattività Avanzata e Nuove Funzioni
+
+### Selezione Punti, Pendenze e Tangenti
+Nuove modalità per esplorare le funzioni. Le modalità sono mutuamente esclusive.
+
+*   `pointSelection`: Abilita il trascinamento di un punto sulla curva.
+*   `slopeSelection`: Calcola la pendenza media tra due punti (triangolo).
+*   `tangentSelection`: Calcola la retta tangente e la derivata in un punto.
+*   `specifySlope`: Se `true`, mostra la formula completa (es. $\Delta y / \Delta x$).
+
+```json
+{
+  "interactive": true,
+  "pointSelection": true,
+  "slopeSelection": true,
+  "tangentSelection": true,
+  "specifySlope": true,
+  "slopeLabel": "m",
+  "axisLabels": ["t", "s"],
+  "axisUnitMeasures": ["sec", "m"],
+  "data": [{ "fn": "0.5*x^2" }]
+}
+```
+
 ```matephis
 {
-  "sampleStep": 1,
-  "xlim": [-5, 5],
-  "ylim": [-1.5, 1.5],
-  "fullWidth": true,
-  "aspectRatio": "4:1",
+  "interactive": true,
+  "pointSelection": true,
+  "slopeSelection": true,
+  "tangentSelection": true,
+  "specifySlope": true,
+  "slopeLabel": "m",
+  "axisLabels": ["t", "s"],
+  "axisUnitMeasures": ["sec", "m"],
+  "data": [{ "fn": "0.5*x^2" }]
+}
+```
+
+### Interpolazione (Smoothing)
+Il tipo `interpolation` permette di disegnare curve che passano per una serie di punti.
+*   `smoothness`: `0` (linee spezzate) fino a `1` (curve morbide, Catmull-Rom).
+
+```json
+{
+  "legend": true,
   "data": [
-    { "fn": "sin(30*x)", "label": "Alta Frequenza (1px step)", "width": 1 }
+    { 
+      "type": "interpolation", 
+      "points": [[-2,0], [-1,1], [0,0], [1,1], [2,0]], 
+      "smoothness": 1, 
+      "color": "red", 
+      "label": "Smooth (1.0)" 
+    },
+    { 
+      "type": "interpolation", 
+      "points": [[-2,-1], [-1,0], [0,-1], [1,0], [2,-1]], 
+      "smoothness": 0, 
+      "color": "blue", 
+      "label": "Linear (0.0)" 
+    }
   ]
 }
 ```
+
+```matephis
+{
+  "legend": true,
+  "data": [
+    { 
+      "type": "interpolation", 
+      "points": [[-2,0], [-1,1], [0,0], [1,1], [2,0]], 
+      "smoothness": 1, 
+      "color": "red", 
+      "label": "Smooth (1.0)" 
+    },
+    { 
+      "type": "interpolation", 
+      "points": [[-2,-1], [-1,0], [0,-1], [1,0], [2,-1]], 
+      "smoothness": 0, 
+      "color": "blue", 
+      "label": "Linear (0.0)" 
+    }
+  ]
+}
+```
+
+### Vincoli di Navigazione
+*   `constrainView`: Se `true`, impedisce di zoomare o traslare oltre i limiti definiti da `xlim` e `ylim`.
+
+```json
+{
+  "interactive": true, 
+  "constrainView": true,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [{ "fn": "sin(x)" }]
+}
+```
+
+```matephis
+{
+  "interactive": true, 
+  "constrainView": true,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [{ "fn": "sin(x)" }]
+}
+```
+
