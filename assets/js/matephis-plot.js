@@ -1266,6 +1266,9 @@ class MatephisPlot {
 
         const handleTouchMove = (e) => {
             if (!isTouchActive) return;
+            // PREVENT PAN IF SELECTION IS BEING DRAGGED
+            if (this.interactions.isDragging) return;
+
             if (e.cancelable) e.preventDefault(); // Always prevent default if active
 
             if (!this.transform || !touchStartView || !touchStartCenter) return;
@@ -1313,10 +1316,29 @@ class MatephisPlot {
             let nYMax = cy + newH / 2;
 
             // Apply Pan
-            nXMin += dxGraph;
-            nXMax += dxGraph;
-            nYMin += dyGraph;
-            nYMax += dyGraph;
+            // Constraints Logic (Cloned from Mouse/Wheel logic)
+            if (this.config.constrainView) {
+                if (this.config.xlim) {
+                    if (nXMin < this.config.xlim[0]) {
+                        const diff = this.config.xlim[0] - nXMin;
+                        nXMin += diff; nXMax += diff;
+                    }
+                    if (nXMax > this.config.xlim[1]) {
+                        const diff = this.config.xlim[1] - nXMax;
+                        nXMin += diff; nXMax += diff;
+                    }
+                }
+                if (this.config.ylim) {
+                    if (nYMin < this.config.ylim[0]) {
+                        const diff = this.config.ylim[0] - nYMin;
+                        nYMin += diff; nYMax += diff;
+                    }
+                    if (nYMax > this.config.ylim[1]) {
+                        const diff = this.config.ylim[1] - nYMax;
+                        nYMin += diff; nYMax += diff;
+                    }
+                }
+            }
 
             this.view = { xMin: nXMin, xMax: nXMax, yMin: nYMin, yMax: nYMax };
             this.draw();
