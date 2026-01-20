@@ -627,6 +627,16 @@ class MatephisPlot {
             if (item.type === 'point') {
                 dist = Math.hypot(x - item.cx, y - item.cy);
                 candX = item.cx; candY = item.cy;
+            } else if (item.type === 'interpolation' && item.polyline) {
+                for (let i = 0; i < item.polyline.length - 1; i++) {
+                    const p1 = item.polyline[i];
+                    const p2 = item.polyline[i+1];
+                    const res = this._projectPointOnSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                    if (res.dist < dist) {
+                        dist = res.dist;
+                        candX = res.x; candY = res.y;
+                    }
+                }
             } else {
                 const res = this._projectPointOnSegment(x, y, item.x1, item.y1, item.x2, item.y2);
                 dist = res.dist;
@@ -647,6 +657,28 @@ class MatephisPlot {
     _getPointAtGraphX(valX, index) {
         if (!this.config.data || !this.config.data[index]) return null;
         const item = this.config.data[index];
+        // Support for interpolation items in follow mode
+        const plotItem = (this.plotData) ? this.plotData.find(pi => pi.index === index) : null;
+        if (plotItem && plotItem.type === 'interpolation' && plotItem.polyline) {
+             for (let i = 0; i < plotItem.polyline.length - 1; i++) {
+                 const p1 = plotItem.polyline[i];
+                 const p2 = plotItem.polyline[i+1];
+                 const minX = Math.min(p1.valX, p2.valX);
+                 const maxX = Math.max(p1.valX, p2.valX);
+                 if (valX >= minX && valX <= maxX) {
+                      let valY = p1.valY;
+                      if (Math.abs(p2.valX - p1.valX) > 1e-9) {
+                           const t = (valX - p1.valX) / (p2.valX - p1.valX);
+                           valY = p1.valY + t * (p2.valY - p1.valY);
+                      }
+                      const px = this.transform.mapX(valX);
+                      const py = this.safeMapY ? this.safeMapY(valY) : this.transform.mapY(valY);
+                      return { type: 'interpolation', index: index, x: px, y: py, valX: valX, valY: valY, dist: 0, polyline: plotItem.polyline };
+                 }
+             }
+             return null;
+        }
+
         if (!item.fn) return null;
         
         try {
@@ -709,6 +741,24 @@ class MatephisPlot {
         // 3. Vertical Line
         if (match.type === 'vertical') {
             return Infinity;
+        }
+        // 4. Interpolation
+        if (match.type === 'interpolation' && match.polyline) {
+             let bestM = NaN;
+             let minDist = Infinity;
+             // Find closest segment to match.x, match.y
+             for (let i = 0; i < match.polyline.length - 1; i++) {
+                 const p1 = match.polyline[i];
+                 const p2 = match.polyline[i+1];
+                 const res = this._projectPointOnSegment(match.x, match.y, p1.x, p1.y, p2.x, p2.y);
+                 if (res.dist < minDist) {
+                     minDist = res.dist;
+                     const dy = p2.valY - p1.valY;
+                     const dx = p2.valX - p1.valX;
+                     bestM = (Math.abs(dx) < 1e-9) ? Infinity : dy / dx;
+                 }
+             }
+             return bestM;
         }
         return NaN;
     }
@@ -1980,7 +2030,7 @@ class MatephisPlot {
                              }));
                              
                              this.plotData.push({
-                                 type: 'fn', // Treat as fn for interaction compatibility (slope/tangent)
+                                 type: 'interpolation',
                                  isInterpolation: true,
                                  index: idx,
                                  polyline: cachedPoly

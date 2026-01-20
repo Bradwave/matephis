@@ -65,6 +65,7 @@ Si definisce ***portata (volumetrica)*** $\dot{V}$ la variazione di volume d'ari
   "specifySlope": true,
   "legend": true,
   "data": [
+    { "fn": "x^2" },
     {
       "type": "interpolation",
       "points": [[-2, -1], [-1, 2], [0, 0], [1, 3], [2, 1], [3, 4]],
