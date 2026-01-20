@@ -896,7 +896,8 @@ class MatephisPlot {
         rect.setAttribute("y", 0);
         rect.setAttribute("width", this.width);
         rect.setAttribute("height", this.height);
-        rect.setAttribute("fill", "#fff");
+        rect.setAttribute("fill", "none");
+        rect.setAttribute("class", "matephis-plot-bg");
         this.bgGroup.appendChild(rect);
 
         // --- 2. Grid/Axes ---
@@ -1030,8 +1031,17 @@ class MatephisPlot {
             if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
 
             // Ticks (Default False) -- To AxesGroup
-            if (Math.abs(x) > 1e-9 && this.config.showXTicks === true) {
-                this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+            if (this.config.showXTicks === true) {
+                if (this.config.boxPlot) {
+                     // Bottom Ticks
+                     this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
+                     // Top Ticks (if not partial)
+                     if (!this.config.boxPlotPartial) {
+                         this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                     }
+                } else if (Math.abs(x) > 1e-9) {
+                    this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+                }
             }
         }
 
@@ -1048,17 +1058,22 @@ class MatephisPlot {
             let numBaseline = "top";
             let isStickyX = false;
             
-            // Clamp to Top
-            if (axisY < this.padding) {
-                numY = this.padding + 5;
+            if (this.config.boxPlot) {
+                numY = this.height - this.padding + 12;
                 numBaseline = "hanging";
-                isStickyX = true; 
-            }
-            // Clamp to Bottom
-            else if (axisY > this.height - this.padding) {
-                numY = this.height - this.padding - 5;
-                numBaseline = "bottom";
-                isStickyX = true;
+            } else {
+                // Clamp to Top
+                if (axisY < this.padding) {
+                    numY = this.padding + 5;
+                    numBaseline = "hanging";
+                    isStickyX = true; 
+                }
+                // Clamp to Bottom
+                else if (axisY > this.height - this.padding) {
+                    numY = this.height - this.padding - 5;
+                    numBaseline = "bottom";
+                    isStickyX = true;
+                }
             }
 
             for (let x = startNX; x <= xMax + xNumStep * 0.5; x += xNumStep) {
@@ -1103,8 +1118,17 @@ class MatephisPlot {
             if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
 
             // Ticks
-            if (Math.abs(y) > 1e-9 && this.config.showYTicks === true) {
-                this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+            if (this.config.showYTicks === true) {
+                if (this.config.boxPlot) {
+                     // Left Ticks
+                     this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
+                     // Right Ticks (if not partial)
+                     if (!this.config.boxPlotPartial) {
+                         this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                     }
+                } else if (Math.abs(y) > 1e-9) {
+                    this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+                }
             }
         }
 
@@ -1119,17 +1143,22 @@ class MatephisPlot {
             let numAlign = "end";
             let isStickyY = false;
             
-            // Clamp to Left
-            if (axisX < this.padding) {
-                numX = this.padding + 5;
-                numAlign = "start";
-                isStickyY = true;
-            }
-            // Clamp to Right
-            else if (axisX > this.width - this.padding) {
-                numX = this.width - this.padding - 5;
+            if (this.config.boxPlot) {
+                numX = this.padding - 8;
                 numAlign = "end";
-                isStickyY = true;
+            } else {
+                // Clamp to Left
+                if (axisX < this.padding) {
+                    numX = this.padding + 5;
+                    numAlign = "start";
+                    isStickyY = true;
+                }
+                // Clamp to Right
+                else if (axisX > this.width - this.padding) {
+                    numX = this.width - this.padding - 5;
+                    numAlign = "end";
+                    isStickyY = true;
+                }
             }
 
             for (let y = startNY; y <= yMax + yNumStep * 0.5; y += yNumStep) {
@@ -1167,11 +1196,28 @@ class MatephisPlot {
         }
         // Main Axes - To AxesGroup
         const x0 = mapX(0), y0 = mapY(0);
-        if (x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
-        if (y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
+        
+        if (this.config.boxPlot) {
+            // Box Style
+            // Bottom
+            this._line(this.padding, this.height - this.padding, this.width - this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            // Left
+            this._line(this.padding, this.padding, this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            
+            if (!this.config.boxPlotPartial) {
+                // Top
+                this._line(this.padding, this.padding, this.width - this.padding, this.padding, axisColor, 2, "", this.axesGroup);
+                // Right
+                this._line(this.width - this.padding, this.padding, this.width - this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            }
+        } else {
+            // Standard Axes at 0
+            if (x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            if (y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
+        }
 
         // Arrows - To AxesGroup (part of axes)
-        if (this.config.axisArrows) {
+        if (this.config.axisArrows && !this.config.boxPlot) {
             const defs = document.createElementNS(ns, "defs");
             const markerW = 10, markerH = 10;
             const arrowPath = `M 0 0 L 10 5 L 0 10 z`; // Basic triangle
@@ -1238,8 +1284,18 @@ class MatephisPlot {
             const axisWeight = this.config.axisLabelWeight || "bold";
             const axisStyle = this.config.axisLabelStyle || "normal";
             const axisLabelOffset = this.config.axisLabelOffset || 5;
-            this._text(this.width - this.padding + axisLabelOffset, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
-            this._text(x0, this.padding - axisLabelOffset, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            
+            if (this.config.boxPlot) {
+                // Box Layout Labels
+                // X Label: Bottom Right
+                // X Label: Right of Axis (BoxPlot)
+                this._text(this.width - this.padding + 10, this.height - this.padding, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                // Y Label: Top Left
+                this._text(this.padding, this.padding - axisLabelOffset - 10, this.config.axisLabels[1], "start", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            } else {
+                this._text(this.width - this.padding + axisLabelOffset, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                this._text(x0, this.padding - axisLabelOffset, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+            }
         }
 
         // --- 3. Data ---
@@ -1915,6 +1971,7 @@ class MatephisPlot {
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize",
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset",
+            "boxPlot", "boxPlotPartial"
         ];
 
         const VALID_DATA_KEYS = [
@@ -2046,6 +2103,12 @@ class MatephisPlot {
             // Ensure ViewBox is present (critical for scaling)
             if (!clone.hasAttribute("viewBox")) {
                clone.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
+            }
+
+            // Force White Background for Lightbox
+            const bgRect = clone.querySelector(".matephis-plot-bg");
+            if (bgRect) {
+                bgRect.setAttribute("fill", "#fff");
             }
             
             // 4. Append
