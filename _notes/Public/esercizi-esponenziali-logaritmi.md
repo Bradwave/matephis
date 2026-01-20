@@ -137,6 +137,85 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $N(t) = 100 \cdot t^2$
 	- **(c)** $N(t) = 100 \cdot 2^t$
 	- **(d)** $N(t) = 2 \cdot 100^t$
+7. **[F+]** Associa ad ognuna delle seguenti funzioni esponenziali il proprio grafico.
+	- **(i)** $f(x) = -3 \cdot 2^x + 2$
+	- **(ii)** $f(x) = 3 \cdot 2^x - 2$
+	- **(iii)** $f(x) = 3 \cdot \left(\frac 1 2\right)^x - 2$
+	- **(iv)** $f(x) = -3 \cdot \left(\frac 1 2 \right)^x + 2$
+```matephis
+{
+  "legend": true,
+  "data": [
+    { "fn": "-3*2^x+2", "color": "red1", "label": "A" },
+    { "fn": "-3*0.5^x+2", "color": "red1", "dash": [2,2], "label": "B" },
+    { "fn": "3*0.5^x-2", "color": "black1", "label": "C" },
+    { "fn": "3*2^x-2", "color": "black1", "dash": [2,2], "label": "D" }
+  ]
+}
+```
+8. **[F-]** Qual è l'immagine della funzione esponenziale elementare $m(t) = 2^t$?
+	- **(a)** L'insieme di tutti i numeri reali $\mathbb{R}$.
+	- **(b)** L'insieme dei numeri reali positivi.
+	- **(c)** L'insieme dei numeri reali maggiori o uguali a 1.
+	- **(d)** L'insieme dei numeri interi.
+9. **[PD+]** In figura è rappresentato il grafico della funzione $f$. Il grafico di $g(x) = -3 \cdot f(x) + 2$ è
+	- **(a)** crescente, che tende ad avvicinarsi alla soglia.
+	- **(b)** decrescente, che tende ad avvicinarsi alla soglia.
+	- **(c)** crescente, che tende ad allontanarsi dalla soglia.
+	- **(d)** decrescente, che tende ad allontanarsi dalla soglia.
+```matephis
+{
+  "data": [
+    { "fn": "2^x" }
+  ]
+}
+```
+4. **[F+]** Quale delle seguenti funzioni è equivalente a $f(x) = 3 \cdot \left(\frac{1}{3}\right)^x$?
+	- **(a)** $f(x) = 3 \cdot 3^{-x}$
+	- **(b)** $f(x) = \left(\frac{3}{3}\right)^x$
+	- **(c)** $f(x) = 9^x$
+	- **(d)** $f(x) = 3 \cdot x^{1/3}$
+5. Nella forma generale $f(x) = a \cdot b^x + c$, se $0 < b < 1$, cosa accade al grafico della funzione rispetto alla soglia $c$?
+	- **(a)** Si allontana dalla soglia al crescere di $x$.
+	- **(b)** Si avvicina alla soglia al crescere di $x$.
+	- **(c)** La funzione diventa negativa.
+	- **(d)** La funzione oscilla attorno a $c$.
+6. Una popolazione di formiche inizia con 50 batteri e triplica ogni mese. Quale funzione rappresenta il numero di formiche $N$ dopo $t$ mesi?
+	- **(a)** $N(t) = 50 + 3^t$
+	- **(b)** $N(t) = 3 \cdot 50^t$
+	- **(c)** $N(t) = 50 \cdot 3^t$
+	- **(d)** $N(t) = 50 \cdot t^3$
+7. Si consideri il deprezzamento di un'auto che perde il 15% del valore ogni anno. Se $V(t) = A \cdot b^t$, quanto vale la base $b$?
+	- **(a)** $0,15$
+	- **(b)** $-15$
+	- **(c)** $1,15$
+	- **(d)** $0,85$
+8. Nel contesto della fissione nucleare, la relazione $N(t) = N_0 \cdot k^{t / \tau}$ descrive il numero di neutroni. Cosa rappresenta il parametro $k$?
+	- **(a)** Il tempo di generazione (in secondi).
+	- **(b)** Il numero iniziale di neutroni.
+	- **(c)** L'energia cinetica dei frammenti.
+	- **(d)** Il fattore di moltiplicazione efficace (numero medio di neutroni prodotti che causano nuova fissione).
+9. Con riferimento alla domanda precedente, quanto vale $k$ in un reattore nucleare in funzione?
+	- **(a)** 0
+	- **(b)** 1
+	- **(c)** più di 1
+	- **(d)** meno di 1
+10. In figura è rappresentato il grafico della funzione $m$, che descrive la massa di una coltura batterica (espressa in nanogrammi) al variare del tempo $t$ (espresso in ore). Quale delle seguenti affermazioni è corretta?
+	- **(a)** I batteri triplicano ogni ora.
+	- **(b)** La massa iniziale della coltura è 5 ng.
+	- **(c)** Manca sostanza nutritiva nella coltura, i batteri stanno morendo.
+	- **(d)** Alcuni batteri non sono in grado di riprodursi.
+```matephis
+{
+  "xlim": [-5.9,5.9],
+  "ylim": [-4.9,54.9],
+  "axisLabels": ["t","m"],
+  "axisLabelStyle": "italic",
+  "data": [
+    { "fn": "5*2^x+10", "color": "red1" }
+  ] 
+}
+```
 
 ## Problemi
 
