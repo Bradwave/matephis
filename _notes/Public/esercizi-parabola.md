@@ -22,6 +22,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	6. $y = -3x^2 - x + 4$
 	7. $y = x^2 - 2x - 15$
 	8. $y = -x^2 + 2x + 15$
+	9. $y = 0{,}2x^2 - 0{,}5x + 0{,}1$
+	10. $y = \dfrac{5}{4} + \dfrac{4}{3}x - \dfrac{3}{2}x^2$
 2. Scrivi l'equazione delle parabole che rispettano i seguenti requisiti:
 	1. **[E]** il grafico passa per $(0, 3)$, l'asse di simmetria è $x = -\frac 5 4$ e la pendenza della parabola in $(0, 3)$ è $5$;
 	2. **[EE/F]** il grafico intercetta l'asse $y$ in $-1$, l'asse di simmetria è $x = 1$ e il vertice della parabola è $(1, -2)$.
@@ -29,6 +31,51 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	4. **[PD]** la parabola passa per $(2, 2)$, la pendenza della parabola nel punto $(2, 2)$ è $-2$ e l'asse di simmetria è $x = 5$.
 3. **[EE]** Scrivi l'equazione della retta tangente alla parabola di equazione $y = -x^2 + 4x + 2$ nel punto $(0, 2)$. Quindi traccia il grafico della retta e della parabola.
 4. **[D]** Scrivi l'equazione della retta tangente alla parabola di equazione $y = -x^2 + 4x + 2$ nel punto $(1, 5)$, appartenente alla parabola. Quindi traccia il grafico della retta e della parabola.
+5. **[F]** Scrivi l'equazione di una parabola tangente alla retta di equazione $y = x + 5$ nel punto di intersezione con l'asse delle ordinate.
+6. **[TD-]** Scrivi l'equazione della retta tangente alla parabola di equazione $y = x^2 - 2x + 1$ e passante per $(3,2)$. *Può essere utile rispondere prima al quesito 10.*
+7. **[PD]** Esistono rette passanti per $(-1,2)$ e tangenti alla parabola rappresentata nel grafico? Motiva la risposta.
+```matephis
+{
+  "data": [
+    { "fn": "x^2+x-1" }
+  ]
+}
+```
+8. **[EE]** Determina, in modo approssimativo, i punti di intersezione tra la parabola e la retta rappresentate in figura. *Nota: puoi zoomare il grafico.*
+```matephis
+{
+  "interactive": true,
+  "data": [
+    { "fn": "-0.5x^2+x+4", "color": "red1" },
+    { "fn": "2+0.5x", "color": "black1" }
+  ]
+}
+```
+9. **[EE/F]** Determina, con il metodo che più ritieni opportuno, i punti di intersezione tra la parabola di equazione $y = x^2 + x$ e la retta di equazione $y = 3x - 1$. Traccia il grafico della retta e della parabola e verifica la correttezza delle soluzioni.
+10. **[F+]** Determina, con il metodo che più ritieni opportuno, gli eventuali punti di intersezione tra la parabola di equazione $y = x^2 + x$ e la retta rappresentata in figura.
+```matephis
+{
+  "data": [
+    { "fn": "0.2x-3" }
+  ]
+}
+```
+11. **[PD-]** Determina, con il metodo che più ritieni opportuno, gli eventuali punti di intersezione tra la parabola rappresentata in figura e la retta passante per i punti $(-1,1)$ e $(2,1)$.
+```matephis
+{
+  "data": [
+    { "fn": "x^2" }
+  ]
+}
+```
+12. **[EE/F]** Verifica se i seguenti punti appartengono al grafico della parabola di equazione $y = -x^2 + 3x - 2$.
+	1. $(0, 0)$
+	2. $(1, 0)$
+	3. $(-1, -6)$
+	4. $(2, 1)$
+	5. $(2, 0)$
+13. **[EE/F]** Considera la relazione $y = 2x^2-2$. Per quale valore di $x$ la variabile dipendente $y$ vale $5$? Rispondi fornendo anche un'interpretazione grafica.
+14. **[E]** Considera la relazione $y = -x^2 + 3$. Quanto vale $y$ quando $x = 0{,}5$.
 
 ## Quesiti
 
@@ -99,7 +146,24 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 9. **[AD]** Riscrivi l'equazione di una generica parabola $y = a(x - h)^2 + k$ nella forma $y = ax^2 + bx + c$.
 	- A cosa equivalgono $b$ e $c$?
 	- I risultati ottenuti in merito ad asse di simmetria e vertice della parabola di equazione $y = a(x - h)^2 + k$ sono compatibili con quelli noti in merito alla parabola di equazione $y = ax^2 + bx + c$?
-10. **[TD]** Scrivi l'equazione della retta tangente a una generica parabola di equazione $y = ax^2 + bx + c$ nel generico punto $(x_0, y_0)$, appartenente alla parabola. Come varia la pendenza della parabola al variare di $x_0$?
+10. **[ED]** Scrivi l'equazione della retta tangente a una generica parabola di equazione $y = ax^2 + bx + c$ nel generico punto $(x_0, y_0)$, appartenente alla parabola. Come varia la pendenza della parabola al variare di $x_0$?
+11. **[F]** In quale punto della parabola cambia il segno della sua pendenza? In quale punto la pendenza è nulla?
+12. **[PD]** In figura è rappresentato il grafico della posizione $x$ (espressa in metri) di una pallina che viene mossa lungo una linea retta, in funzione del tempo $t$ (espresso in secondi). Descrivi a parole il moto della pallina.
+```matephis
+{
+  "xlim": [0,2],
+  "ylim": [-1,1],
+  "boxPlot": true,
+  "showXTicks": true,
+  "showYTicks": true,
+  "axisLabels": ["t","x"],
+  "axisLabelStyle": "italic",
+  "padding": 40,
+  "data": [
+    { "fn": "-x^2+x+0.5", "domain": [0,5] }
+  ]
+}
+```
 
 ## Quiz
 
@@ -124,7 +188,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```
  2. **[F]** Abbina ognuna delle quattro parabole al fenomeno che descrivono. **Nota:** nel grafico del fenomeno *"A che varia in funzione di B"*, A è tipicamente rappresentato sull'asse delle ordinate e B sull'asse delle ascisse.
 	- **(i)** La posizione verticale (espressa in m) di un pallone lanciato verso l'alto in funzione del tempo (espresso in s).
-	- **(i)** La posizione verticale (espressa in m) di un pallone lasciato cadere da fermo in funzione del tempo (espresso in s).
+	- **(ii)** La posizione verticale (espressa in m) di un pallone lasciato cadere da fermo in funzione del tempo (espresso in s).
 	- **(iii)** Il costo mensile di produzione di un'azienda (espresso in migliaia di euro) in funzione del numero di unità prodotte (espresso in migliaia di unità).
 	- **(iv)** Lo spazio di frenata di un'automobile (espresso in m) in funzione della velocità (espressa in m/s).
 ```matephis
@@ -188,6 +252,25 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
+10. **[F-]** Quale tra i seguenti grafici rappresenta la relazione tra l'area di un quadrato $A$ e il lato $x$?
+	- **(a)** Grafico A
+	- **(b)** Grafico B
+	- **(c)** Grafico C
+	- **(d)** Non è possibile rispondere senza conoscere il valore del lato $x$.
+```matephis
+{
+  "xlim": [-0.9,4.9],
+  "ylim": [-0.9,9.9],
+  "axisLabels": ["x","A"],
+  "axisLabelStyle": "italic",
+  "legend": true,
+  "data": [
+    { "fn": "x^2", "color": "red1", "label": "A", "domain": [0,5] },
+    { "fn": "x^2+x", "color": "red1", "dash": [2,2], "label": "B", "domain": [0,5] },
+    { "fn": "x^2+1", "color": "black1", "label": "C", "domain": [0,5] }
+  ]
+}
+```
 
 ## Problemi
 
@@ -220,7 +303,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Qual è la velocità iniziale di Achille?
 	- Traccia un grafico della posizione di Achille e della tartaruga in funzione del tempo.
 	- Dopo quanti secondi e in che posizione Achille raggiunge la tartaruga?
-6. **[D]** Una vettura si trova inizialmente alla distanza di 100 m prima di un incrocio (posizione $x = 0$). Nel grafico è rappresentata la posizione della vettura $x$ (espressa in metri) rispetto all'incrocio in funzione del tempo $t$ (espressa in secondi).
+6. **[D]** Una vettura si trova inizialmente alla distanza di 100 m prima di un incrocio (posizione $x = 0$). Nel grafico è rappresentata la posizione della vettura $x$ (espressa in metri) rispetto all'incrocio in funzione del tempo $t$ (espresso in secondi).
 	- Descrivi a parole il moto della vettura.
 	- L'auto si ferma all'incrocio? Dopo quanto tempo si ferma o transita presso l'incrocio?
 	- Stima la velocità iniziale della vettura.
@@ -241,6 +324,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- Scrivi la relazione che lega $E$ a $v$.
 	- Traccia un grafico approssimativo dell'energia di un'auto di massa 1500 kg in funzione della velocità.
 	- Al raddoppiare della velocità, come varia l'energia della macchina? Quanto è più pericoloso viaggiare a 120 km/h rispetto a 60 km/h.
+8. *[Rimosso per completezza]*
 
 ### La distanza di sicurezza
 
