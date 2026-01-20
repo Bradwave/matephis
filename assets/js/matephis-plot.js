@@ -122,7 +122,8 @@ class MatephisPlot {
 
         // View state for pan/zoom
         this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
-        this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false };
+        this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false, draggingSelection: null, slopeP1: null, slopeP2: null };
+        this.selectionMode = null; // 'slope', 'tangent', or null (default/point)
 
         // Scroll debounce for interaction handling
         this.lastScrollTime = 0;
@@ -165,9 +166,22 @@ class MatephisPlot {
 
         // Initialize components
         this._initSVG();
-        if (this.config.interactive) {
+        
+        // Force interactions if selection modes are enabled
+        const hasSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection;
+        
+        if (this.config.interactive || hasSelection) {
             this._initControlsOverlay();
             this._initInteractions();
+            
+            if (!this.config.interactive) {
+                // If not globally interactive but has selection, ensure we add basic styles
+                this.wrapper.classList.add('interactive');
+                this.svg.classList.add('interactive');
+                this.svg.classList.remove('static');
+                // Remove lightbox click if it was added
+                this.svg.onclick = null;
+            }
         }
         if (this.config.params && this.config.showSliders !== false) this._initSliders();
 
@@ -179,8 +193,8 @@ class MatephisPlot {
         this.draw();
         this._renderWarnings();
 
-        // Lightbox on click (Only for static plots)
-        if (!this.config.interactive) {
+        // Lightbox on click (Only for static plots AND no selection features)
+        if (!this.config.interactive && !hasSelection) {
             this.svg.onclick = () => this._openLightbox();
         }
 
@@ -254,6 +268,9 @@ class MatephisPlot {
         this.numbersGroup = document.createElementNS(ns, "g"); // Numbers (Configurable)
         this.dataGroup = document.createElementNS(ns, "g");
         this.dataGroup.setAttribute("clip-path", `url(#clip_${this.uid})`); // Clip Data to Plot Area
+        this.selectionGroup = document.createElementNS(ns, "g"); // Selection Overlay (Top of Data, No Clip?) - Maybe clip.
+        // Let's clip selection too, usually desired.
+        this.selectionGroup.setAttribute("clip-path", `url(#clip_${this.uid})`);
         this.labelGroup = document.createElementNS(ns, "g");
         this.legendGroup = document.createElementNS(ns, "g");
 
@@ -285,6 +302,7 @@ class MatephisPlot {
             // Default: Numbers Below Data
             this.svg.appendChild(this.numbersGroup);
             this.svg.appendChild(this.dataGroup);
+            this.svg.appendChild(this.selectionGroup);
         }
 
         this.svg.appendChild(this.labelGroup);
@@ -412,27 +430,109 @@ class MatephisPlot {
             this.draw();
         };
 
-        const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9));
-        const btnMinus = mkBtn("/assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
-        const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
-            if (this.config.xlim) {
-                this.view.xMin = this.config.xlim[0];
-                this.view.xMax = this.config.xlim[1];
-            } else { this.view.xMin = -9.9; this.view.xMax = 9.9; }
+        if (this.config.interactive !== false) {
+            const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9));
+            const btnMinus = mkBtn("/assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
+            const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
+                if (this.config.xlim) {
+                    this.view.xMin = this.config.xlim[0];
+                    this.view.xMax = this.config.xlim[1];
+                } else { this.view.xMin = -9.9; this.view.xMax = 9.9; }
+    
+                if (this.config.ylim) {
+                    this.view.yMin = this.config.ylim[0];
+                    this.view.yMax = this.config.ylim[1];
+                } else { this.view.yMin = -9.9; this.view.yMax = 9.9; }
+                this.draw();
+            });
+            overlay.appendChild(btnPlus);
+            overlay.appendChild(btnMinus);
+            overlay.appendChild(btnReset);
+        }
 
-            if (this.config.ylim) {
-                this.view.yMin = this.config.ylim[0];
-                this.view.yMax = this.config.ylim[1];
-            } else { this.view.yMin = -9.9; this.view.yMax = 9.9; }
-            this.draw();
-        });
-
+        // Full Screen (Always, per user)
         const btnFull = mkBtn("/assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
-
-        overlay.appendChild(btnPlus);
-        overlay.appendChild(btnMinus);
-        overlay.appendChild(btnReset);
         overlay.appendChild(btnFull);
+
+        // Control Buttons Scope
+        let btnPoint, btnSlope, btnTangent;
+
+        // Separator first (if any selection is enabled)
+        if (this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection) {
+             const sep = document.createElement("div");
+             sep.className = "matephis-plot-separator";
+             overlay.appendChild(sep);
+        }
+
+        // Point Selection (Touch)
+        if (this.config.pointSelection) {
+            btnPoint = mkBtn(this.config.pointSelectionIcon || "/assets/img/touch_app.svg", "Point Selection", () => {
+                if (this.selectionMode === 'point') {
+                    this.selectionMode = null;
+                    btnPoint.classList.remove('active');
+                    this.interactions.draggingSelection = null;
+                    this.interactions.currentSelection = null;
+                    this._updateSelectionVisuals(null);
+                } else {
+                    this.selectionMode = 'point';
+                    btnPoint.classList.add('active');
+                    // Deactivate others
+                    if (typeof btnSlope !== 'undefined') btnSlope.classList.remove('active');
+                    if (typeof btnTangent !== 'undefined') btnTangent.classList.remove('active');
+                    // Clear other interactions
+                    this.interactions.slopeP1 = null; this.interactions.slopeP2 = null;
+                    this._updateSelectionVisuals(null);
+                }
+            });
+            overlay.appendChild(btnPoint);
+            
+            // Default Active if set
+            if (this.config.pointSelection === true) {
+                 this.selectionMode = 'point';
+                 btnPoint.classList.add('active');
+            }
+        }
+
+        if (this.config.slopeSelection) {
+            // Determine icon
+            const slopeIcon = this.config.slopeSelectionIcon || "/assets/img/square_foot.svg";
+            btnSlope = mkBtn(slopeIcon, "Slope Selection", () => {
+                if (this.selectionMode === 'slope') {
+                    this.selectionMode = null;
+                    btnSlope.classList.remove('active');
+                    this.interactions.slopeP1 = null; this.interactions.slopeP2 = null;
+                    this._updateSelectionVisuals(null);
+                } else {
+                    this.selectionMode = 'slope';
+                    btnSlope.classList.add('active');
+                    // Deactivate others
+                    if (btnTangent) btnTangent.classList.remove('active');
+                    if (btnPoint) btnPoint.classList.remove('active');
+                    this._updateSelectionVisuals(null);
+                }
+            });
+            overlay.appendChild(btnSlope);
+        }
+
+        if (this.config.tangentSelection) {
+            // Determine icon
+            const tangentIcon = this.config.tangentSelectionIcon || "/assets/img/snowboarding.svg";
+            btnTangent = mkBtn(tangentIcon, "Tangent Selection", () => {
+                     if (this.selectionMode === 'tangent') {
+                         this.selectionMode = null;
+                         btnTangent.classList.remove('active');
+                         this._updateSelectionVisuals(null);
+                     } else {
+                         this.selectionMode = 'tangent';
+                         btnTangent.classList.add('active');
+                         if (btnSlope) btnSlope.classList.remove('active');
+                         if (btnPoint) btnPoint.classList.remove('active');
+                         this.interactions.slopeP1 = null; this.interactions.slopeP2 = null;
+                         this._updateSelectionVisuals(null);
+                     }
+                });
+                overlay.appendChild(btnTangent);
+            }
 
         // Place OUTSIDE the plot stage (SVG), below it.
         // If sliders exist, place before them? Or after? user said "below the plot".
@@ -496,11 +596,304 @@ class MatephisPlot {
     // =========================================================================
 
     /**
+     * Projects point (px, py) onto segment (x1,y1)-(x2,y2).
+     */
+    _projectPointOnSegment(px, py, x1, y1, x2, y2) {
+        const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+        if (l2 === 0) return { x: x1, y: y1, dist: Math.hypot(px - x1, py - y1) };
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const projX = x1 + t * (x2 - x1);
+        const projY = y1 + t * (y2 - y1);
+        return { x: projX, y: projY, dist: Math.hypot(px - projX, py - projY) };
+    }
+
+    /**
+     * Finds the closest point on the graph to (x, y).
+     * @param {number} x
+     * @param {number} y
+     * @param {number} [limitToIndex] - Optional index to restrict search to specific function
+     */
+    _getClosestPointOnGraph(x, y, limitToIndex) {
+        if (!this.plotData || this.plotData.length === 0) return null;
+        let minDist = Infinity;
+        let match = null;
+        const threshold = 40; // Pixel threshold
+
+        this.plotData.forEach(item => {
+            if (limitToIndex !== undefined && item.index !== limitToIndex) return;
+
+            let dist = Infinity, candX = 0, candY = 0;
+            if (item.type === 'point') {
+                dist = Math.hypot(x - item.cx, y - item.cy);
+                candX = item.cx; candY = item.cy;
+            } else {
+                const res = this._projectPointOnSegment(x, y, item.x1, item.y1, item.x2, item.y2);
+                dist = res.dist;
+                candX = res.x; candY = res.y;
+            }
+
+            if (dist < threshold && dist < minDist) {
+                minDist = dist;
+                match = {
+                    ...item,
+                    x: candX, y: candY, dist: dist
+                };
+            }
+        });
+        return match;
+    }
+
+    _getPointAtGraphX(valX, index) {
+        if (!this.config.data || !this.config.data[index]) return null;
+        const item = this.config.data[index];
+        if (!item.fn) return null;
+        
+        try {
+            // Domain Constraint
+            if (item.domain) {
+                 const dMin = this._eval(item.domain[0], "domain min");
+                 const dMax = this._eval(item.domain[1], "domain max");
+                 if (!isNaN(dMin) && !isNaN(dMax)) {
+                     if (valX < dMin) valX = dMin;
+                     if (valX > dMax) valX = dMax;
+                 }
+            }
+            
+            const f = new Function("x", `return ${this._makeFn(item.fn)};`);
+            const valY = f(valX);
+            if (!isFinite(valY)) return null;
+            
+            const px = this.transform.mapX(valX);
+            const py = this.safeMapY ? this.safeMapY(valY) : this.transform.mapY(valY);
+            
+            return {
+                type: 'fn',
+                index: index,
+                x: px, y: py,
+                valX: valX, valY: valY,
+                dist: 0
+            };
+        } catch(e) { return null; }
+    }
+
+    _getSlopeAt(match) {
+        if (!match) return NaN;
+        // 1. Explicit Function
+        if (match.type === 'fn') {
+            const item = this.config.data[match.index];
+            const gx = this.transform.unmapX(match.x);
+            const eps = 1e-4;
+            const f = new Function("x", `return ${this._makeFn(item.fn)};`);
+            try {
+                const y1 = f(gx - eps);
+                const y2 = f(gx + eps);
+                if (!isFinite(y1) || !isFinite(y2)) return NaN;
+                return (y2 - y1) / (2 * eps);
+            } catch(e) { return NaN; }
+        }
+        // 2. Implicit
+        if (match.type === 'implicit') {
+             const item = this.config.data[match.index];
+             const gx = this.transform.unmapX(match.x);
+             const gy = this.transform.unmapY(match.y);
+             const eps = 1e-4;
+             const F = new Function("x", "y", `return ${this._makeFn(item.implicit)};`);
+             try {
+                 const fx = (F(gx + eps, gy) - F(gx - eps, gy)) / (2 * eps);
+                 const fy = (F(gx, gy + eps) - F(gx, gy - eps)) / (2 * eps);
+                 if (Math.abs(fy) < 1e-9) return Infinity; // Vertical tangent
+                 return -fx / fy;
+             } catch(e) { return NaN; }
+        }
+        // 3. Vertical Line
+        if (match.type === 'vertical') {
+            return Infinity;
+        }
+        return NaN;
+    }
+
+    _updateSelectionVisuals(match) {
+        this.selectionGroup.innerHTML = "";
+        
+        // Configurable Selection Style
+        const selColor = this.config.selectionColor;
+        const selRadius = this.config.selectionRadius || 5;
+        const selOutline = this.config.selectionOutlineColor || "white";
+        const selOutlineWidth = this.config.selectionOutlineWidth || 2;        
+        
+        // Helper to draw dot
+        const drawDot = (m, color) => {
+            if (!m) return;
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", m.x); c.setAttribute("cy", m.y); c.setAttribute("r", selRadius);
+            c.setAttribute("fill", color); c.setAttribute("stroke", selOutline); c.setAttribute("stroke-width", selOutlineWidth);
+            this.selectionGroup.appendChild(c);
+        };
+
+        const drawLabel = (x, y, txt, col) => {
+             this._text(x, y, txt, "start", "alphabetic", col, "bold", "normal", this.selectionGroup, 14);
+        };
+
+        // Determine Mode
+        if (this.selectionMode === 'slope') {
+            const p1 = this.interactions.slopeP1;
+            const p2 = this.interactions.slopeP2;
+            
+            const mainColor = selColor || "#B01A00";
+            if (p1) drawDot(p1, mainColor);
+            if (p2) drawDot(p2, mainColor);
+
+            if (p1 && p2) {
+                const cx = p2.x, cy = p1.y;
+                this._line(p1.x, p1.y, cx, cy, mainColor, 1, "5,3", this.selectionGroup);
+                this._line(p2.x, p2.y, cx, cy, mainColor, 1, "5,3", this.selectionGroup);
+                this._line(p1.x, p1.y, p2.x, p2.y, mainColor, 2, "", this.selectionGroup);
+
+                const gx1 = p1.valX !== undefined ? p1.valX : this.transform.unmapX(p1.x);
+                const gy1 = p1.valY !== undefined ? p1.valY : this.transform.unmapY(p1.y);
+                const gx2 = p2.valX !== undefined ? p2.valX : this.transform.unmapX(p2.x);
+                const gy2 = p2.valY !== undefined ? p2.valY : this.transform.unmapY(p2.y);
+                
+                const dx = gx2 - gx1;
+                const dy = gy2 - gy1;
+                const m = dx !== 0 ? dy / dx : Infinity;
+
+                const xLbl = (this.config.axisLabels && this.config.axisLabels[0]) ? `\u0394${this.config.axisLabels[0]}` : "\u0394x";
+                const yLbl = (this.config.axisLabels && this.config.axisLabels[1]) ? `\u0394${this.config.axisLabels[1]}` : "\u0394y";
+
+                const lblSize = 12;
+                this._text((p1.x + cx)/2, cy + 15, `${xLbl}=${dx.toFixed(2)}`, "middle", "top", mainColor, "normal", "normal", this.selectionGroup, lblSize);
+                this._text(cx + 5, (p2.y + cy)/2, `${yLbl}=${dy.toFixed(2)}`, "start", "middle", mainColor, "normal", "normal", this.selectionGroup, lblSize);
+                
+                const mx = (p1.x + p2.x)/2, my = (p1.y + p2.y)/2;
+                let slopeLbl = "";
+                const sName = this.config.slopeLabel || "m";
+                
+                if (this.config.specifySlope) {
+                    const xL = (this.config.axisLabels && this.config.axisLabels[0]) ? this.config.axisLabels[0] : "x";
+                    const yL = (this.config.axisLabels && this.config.axisLabels[1]) ? this.config.axisLabels[1] : "y";
+                    slopeLbl = `${sName}=\u0394${yL}/\u0394${xL}=${m.toFixed(2)}`;
+                } else {
+                    slopeLbl = `${sName}=${m.toFixed(2)}`;
+                }
+                
+                drawLabel(mx + 10, my - 10, slopeLbl, mainColor);
+                
+                drawLabel(p1.x + 10, p1.y - 10, `(${gx1.toFixed(1)}, ${gy1.toFixed(1)})`, mainColor);
+                drawLabel(p2.x + 10, p2.y - 10, `(${gx2.toFixed(1)}, ${gy2.toFixed(1)})`, mainColor);
+            } else if (p1) {
+                const gx = p1.valX !== undefined ? p1.valX : this.transform.unmapX(p1.x);
+                const gy = p1.valY !== undefined ? p1.valY : this.transform.unmapY(p1.y);
+                drawLabel(p1.x + 10, p1.y - 10, `(${gx.toFixed(1)}, ${gy.toFixed(1)})`, mainColor);
+            }
+            return;
+        }
+
+        if (this.selectionMode === 'tangent') {
+            if (!match) return;
+            const mainColor = selColor || "#B01A00";
+            drawDot(match, mainColor);
+            
+            const gx = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
+            const gy = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
+            const m = this._getSlopeAt(match);
+            
+            if (!isNaN(m)) {
+                const { xMin, xMax, yMin, yMax, width, height, padding } = this.transform;
+                const scaleX = (width - 2*padding) / (xMax - xMin);
+                const scaleY = -(height - 2*padding) / (yMax - yMin);
+                const screenSlope = m === Infinity ? Infinity : m * (scaleY / scaleX);
+                
+                let dx, dy;
+                const len = 60;
+                if (!isFinite(screenSlope)) { dx = 0; dy = len; }
+                else {
+                    const angle = Math.atan(screenSlope);
+                    dx = Math.cos(angle) * len; dy = Math.sin(angle) * len;
+                }
+                this._line(match.x - dx, match.y - dy, match.x + dx, match.y + dy, mainColor, 2, "", this.selectionGroup);
+                
+                const sName = this.config.slopeLabel || "m";
+                const mStr = isFinite(m) ? m.toFixed(2) : "∞";
+                let label = "";
+                
+                if (this.config.specifySlope) {
+                    const xL = (this.config.axisLabels && this.config.axisLabels[0]) ? this.config.axisLabels[0] : "x";
+                    const yL = (this.config.axisLabels && this.config.axisLabels[1]) ? this.config.axisLabels[1] : "y";
+                    label = `${sName}=d${yL}/d${xL}=${mStr}`;
+                } else {
+                    label = `${sName}=${mStr}`;
+                }
+
+                drawLabel(match.x + 10, match.y - 10, label, mainColor);
+            }
+             drawLabel(match.x + 10, match.y + 20, `(${gx.toFixed(2)}, ${gy.toFixed(2)})`, mainColor);
+             return;
+        }
+
+        // Default Point Mode
+        if (!match) return;
+        const c = drawDot(match); // uses internal color logic
+        let valX, valY;
+        if (this.transform) {
+            valX = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
+            valY = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
+        }
+        if (valX !== undefined) {
+             const lbl = `(${parseFloat(valX.toFixed(2))}, ${parseFloat(valY.toFixed(2))})`;
+             // Only draw label if not suppressed? No, always draw for simple point.
+             drawLabel(match.x + 10, match.y - 10, lbl, c);
+        }
+    }
+
+    _restoreSelectionVisuals() {
+        // Re-calculate screen positions from stored graph values
+        if (this.interactions.currentSelection) {
+             // Re-project using valX/valY
+             const sel = this.interactions.currentSelection;
+             if (sel.valX !== undefined && sel.valY !== undefined) {
+                 const nx = this.transform.mapX(sel.valX);
+                 const ny = this.safeMapY ? this.safeMapY(sel.valY) : this.transform.mapY(sel.valY);
+                 // Update match object
+                 sel.x = nx; sel.y = ny;
+                 this._updateSelectionVisuals(sel);
+             }
+        } else if (this.interactions.draggingSelection && typeof this.interactions.draggingSelection === 'object') {
+             // Fallback for immediate drag (should generally be same as currentSelection)
+             const sel = this.interactions.draggingSelection;
+             if (sel.valX !== undefined && sel.valY !== undefined) {
+                 const nx = this.transform.mapX(sel.valX);
+                 const ny = this.safeMapY ? this.safeMapY(sel.valY) : this.transform.mapY(sel.valY);
+                 sel.x = nx; sel.y = ny;
+                 this._updateSelectionVisuals(sel);
+             }
+        }
+        
+        if (this.interactions.slopeP1) {
+            const p = this.interactions.slopeP1;
+            p.x = this.transform.mapX(p.valX);
+            p.y = this.transform.mapY(p.valY);
+        }
+        if (this.interactions.slopeP2) {
+            const p = this.interactions.slopeP2;
+            p.x = this.transform.mapX(p.valX);
+            p.y = this.transform.mapY(p.valY);
+        }
+        
+        // Redraw based on mode
+        this._updateSelectionVisuals(this.interactions.currentSelection || null); 
+    }
+
+
+    /**
      * Sets up mouse and touch event handlers for pan/zoom interactions.
      * @private
      */
     _initInteractions() {
-        if (!this.config.interactive) return;
+        // Allow if interactive OR if any selection mode is enabled
+        const allowSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection;
+        if (this.config.interactive === false && !allowSelection) return;
 
         const svg = this.svg;
         let lastX, lastY;
@@ -517,18 +910,145 @@ class MatephisPlot {
             if (Date.now() - this.lastScrollTime < 150) return;
             if (e.pointerType === 'touch' && !e.isPrimary) return;
 
-            this.interactions.isDragging = true;
-            this.interactions.startX = e.clientX;
-            this.interactions.startY = e.clientY;
-            this.interactions.hasMoved = false;
-            lastX = e.clientX;
-            lastY = e.clientY;
-            svg.setPointerCapture(e.pointerId);
-            e.preventDefault();
+            // Check for Selection Mode
+            // Helper to check proximity to existing points (p1, p2)
+            const checkProx = (pt, mx, my) => pt ? Math.hypot(pt.x - mx, pt.y - my) < 30 : false;
+
+            if (this.config.pointSelection || this.selectionMode) {
+                const rect = svg.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                
+                // Priority 1: Slope Mode Interaction
+                if (this.selectionMode === 'slope') {
+                    // Check if adjusting existing points
+                    if (checkProx(this.interactions.slopeP1, mx, my)) {
+                        this.interactions.draggingSelection = 'slopeP1';
+                        // Keep visuals, just drag
+                         svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                    }
+                    if (checkProx(this.interactions.slopeP2, mx, my)) {
+                        this.interactions.draggingSelection = 'slopeP2';
+                         svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                    }
+
+                    const match = this._getClosestPointOnGraph(mx, my);
+                    if (match) {
+                        // Store Graph Coords
+                        match.valX = this.transform.unmapX(match.x);
+                        match.valY = this.transform.unmapY(match.y);
+                        
+                        this.interactions.slopeP1 = match;
+                        this.interactions.slopeP2 = { ...match }; // Copy
+                        this.interactions.draggingSelection = 'slopeP2'; // Drag P2 to expand
+                        this._updateSelectionVisuals(null); // Will read from interactions
+                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                    }
+                }
+
+                // Priority 2: Tangent Mode
+                else if (this.selectionMode === 'tangent') {
+                    const match = this._getClosestPointOnGraph(mx, my);
+                    if (match) {
+                        match.valX = this.transform.unmapX(match.x);
+                        match.valY = this.transform.unmapY(match.y);
+                        this.interactions.draggingSelection = match;
+                        this.interactions.currentSelection = match; // Persist 
+                        this._updateSelectionVisuals(match);
+                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                    }
+                }
+
+                // Priority 3: Point Selection Mode
+                else if (this.selectionMode === 'point') {
+                    const match = this._getClosestPointOnGraph(mx, my);
+                    if (match) {
+                        match.valX = this.transform.unmapX(match.x);
+                        match.valY = this.transform.unmapY(match.y);
+                        this.interactions.draggingSelection = match;
+                        this.interactions.currentSelection = match; // Persist
+                        this._updateSelectionVisuals(match);
+                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                    }
+                }
+            }
+
+            // Deselection (Click on nothing)
+            // Deselection (Click on nothing)
+            // Deselection Logic Moved to PointerUp
+            
+            // Pan Guard
+            if (this.config.interactive !== false) {
+                this.interactions.isDragging = true;
+                this.interactions.startX = e.clientX;
+                this.interactions.startY = e.clientY;
+                this.interactions.hasMoved = false;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                svg.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            }
         };
 
         // Pointer move handler (pan)
         svg.onpointermove = (e) => {
+            // Priority: Selection Drag
+            if (this.interactions.draggingSelection) {
+                 const rect = svg.getBoundingClientRect();
+                 const mx = e.clientX - rect.left;
+                 const my = e.clientY - rect.top;
+                 
+                 // Smart Drag Logic
+                 let match = null;
+                 const ds = this.interactions.draggingSelection;
+                 
+                 // If dragging an explicit function, snap to X
+                 // Need to check the type of thing we are dragging.
+                 let targetType = null;
+                 let targetIdx = null;
+
+                 // ds is either a string ('slopeP1', 'slopeP2') or an object (match).
+                 // If string, we check interactions[ds].
+                 // If object, it is the match.
+                 
+                 let currentObj = null;
+                 if (typeof ds === 'string') {
+                     currentObj = this.interactions[ds];
+                 } else {
+                     currentObj = ds;
+                 }
+                 
+                 if (currentObj && currentObj.type === 'fn') {
+                     // Force X-only follow
+                     const valX = this.transform.unmapX(mx);
+                     match = this._getPointAtGraphX(valX, currentObj.index);
+                 } else {
+                     // Lock to current curve index if exists
+                     const limitIndex = (currentObj && currentObj.index !== undefined) ? currentObj.index : undefined;
+                     match = this._getClosestPointOnGraph(mx, my, limitIndex);
+                     if (match) {
+                        match.valX = this.transform.unmapX(match.x);
+                        match.valY = this.transform.unmapY(match.y);
+                     }
+                 }
+                 
+                 if (match) {
+                     if (ds === 'slopeP1') {
+                         this.interactions.slopeP1 = match;
+                         this._updateSelectionVisuals(null);
+                     } else if (ds === 'slopeP2') {
+                         this.interactions.slopeP2 = match;
+                         this._updateSelectionVisuals(null);
+                     } else {
+                         // Tangent or Point object
+                         this.interactions.draggingSelection = match;
+                         this.interactions.currentSelection = match;
+                         this._updateSelectionVisuals(match);
+                     }
+                 }
+                 return;
+            }
+
             if (!this.interactions.isDragging || isPinching) return;
 
             const dx = e.clientX - lastX;
@@ -552,7 +1072,20 @@ class MatephisPlot {
 
         // Pointer up handler
         svg.onpointerup = (e) => {
+            // Deselection on Release (if no move and no drag target)
+            if (!this.interactions.hasMoved && !this.interactions.draggingSelection) {
+                 if (this.interactions.currentSelection || this.interactions.slopeP1 || this.interactions.slopeP2) {
+                     // Check if we actually clicked ON something (already handled in pointerdown which sets draggingSelection)
+                     // If we are here, draggingSelection is null, meaning we clicked background.
+                     this.interactions.currentSelection = null;
+                     this.interactions.slopeP1 = null;
+                     this.interactions.slopeP2 = null;
+                     this._updateSelectionVisuals(null);
+                 }
+            }
+
             this.interactions.isDragging = false;
+            this.interactions.draggingSelection = null;
             svg.releasePointerCapture(e.pointerId);
             // Removed automatic lightbox on click for interactive plots
         };
@@ -560,6 +1093,7 @@ class MatephisPlot {
         // Wheel Zoom
         svg.onwheel = (e) => {
             if (Date.now() - this.lastScrollTime < 150) return; // Prevent zooming while scrolling page
+            if (this.config.interactive === false) return; // Disable zoom if not interactive
             e.preventDefault();
             const zoomFactor = e.deltaY > 0 ? 1.05 : 0.95; // Gentler zoom (5%)
 
@@ -577,18 +1111,54 @@ class MatephisPlot {
                 const viewW = xMax - xMin;
                 const viewH = yMax - yMin;
 
-                const newW = viewW * zoomFactor;
-                const newH = viewH * zoomFactor;
+                let newW = viewW * zoomFactor;
+                let newH = viewH * zoomFactor;
+
+                // Clamp Zoom Level to limits (zoom out constraint)
+                if (this.config.constrainView) {
+                    if (this.config.xlim) {
+                        const maxW = this.config.xlim[1] - this.config.xlim[0];
+                        if (newW > maxW) newW = maxW;
+                    }
+                    if (this.config.ylim) {
+                        const maxH = this.config.ylim[1] - this.config.ylim[0];
+                        if (newH > maxH) newH = maxH;
+                    }
+                }
 
                 // Maintain ratio around mouseX/Y
                 const xFrac = (mouseX - xMin) / viewW;
                 const yFrac = (mouseY - yMin) / viewH;
 
                 // New Min/Max
-                const newXMin = mouseX - xFrac * newW;
-                const newXMax = newXMin + newW;
-                const newYMin = mouseY - yFrac * newH;
-                const newYMax = newYMin + newH;
+                let newXMin = mouseX - xFrac * newW;
+                let newXMax = newXMin + newW;
+                let newYMin = mouseY - yFrac * newH;
+                let newYMax = newYMin + newH;
+                
+                // Constraints
+                if (this.config.constrainView) {
+                    if (this.config.xlim) {
+                        if (newXMin < this.config.xlim[0]) {
+                            const diff = this.config.xlim[0] - newXMin;
+                            newXMin += diff; newXMax += diff;
+                        }
+                        if (newXMax > this.config.xlim[1]) {
+                            const diff = this.config.xlim[1] - newXMax;
+                            newXMin += diff; newXMax += diff;
+                        }
+                    }
+                    if (this.config.ylim) {
+                        if (newYMin < this.config.ylim[0]) {
+                            const diff = this.config.ylim[0] - newYMin;
+                            newYMin += diff; newYMax += diff;
+                        }
+                        if (newYMax > this.config.ylim[1]) {
+                            const diff = this.config.ylim[1] - newYMax;
+                            newYMin += diff; newYMax += diff;
+                        }
+                    }
+                }
 
                 this.view = { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax };
                 this.draw();
@@ -736,10 +1306,39 @@ class MatephisPlot {
             this.view.yMax = this.transform.yMax;
         }
         if (this.view.xMin !== null) {
-            this.view.xMin += dx;
-            this.view.xMax += dx;
-            this.view.yMin += dy;
-            this.view.yMax += dy;
+            let nextXMin = this.view.xMin + dx;
+            let nextXMax = this.view.xMax + dx;
+            let nextYMin = this.view.yMin + dy;
+            let nextYMax = this.view.yMax + dy;
+
+            // Constraints
+            if (this.config.constrainView) {
+                if (this.config.xlim) {
+                     if (nextXMin < this.config.xlim[0]) {
+                          const shift = this.config.xlim[0] - nextXMin;
+                          nextXMin += shift; nextXMax += shift;
+                     }
+                     if (nextXMax > this.config.xlim[1]) {
+                          const shift = this.config.xlim[1] - nextXMax;
+                          nextXMin += shift; nextXMax += shift;
+                     }
+                }
+                if (this.config.ylim) {
+                     if (nextYMin < this.config.ylim[0]) {
+                          const shift = this.config.ylim[0] - nextYMin;
+                          nextYMin += shift; nextYMax += shift;
+                     }
+                     if (nextYMax > this.config.ylim[1]) {
+                          const shift = this.config.ylim[1] - nextYMax;
+                          nextYMin += shift; nextYMax += shift;
+                     }
+                }
+            }
+
+            this.view.xMin = nextXMin;
+            this.view.xMax = nextXMax;
+            this.view.yMin = nextYMin;
+            this.view.yMax = nextYMax;
             this.draw();
         }
     }
@@ -834,6 +1433,9 @@ class MatephisPlot {
         this.labelGroup.innerHTML = "";
         this.legendGroup.innerHTML = "";
         this.bgGroup.innerHTML = "";
+
+        // Geometry Cache for Interaction
+        this.plotData = [];
 
         // Grid Opacity
         if (this.config.gridOpacity !== undefined) {
@@ -1278,23 +1880,33 @@ class MatephisPlot {
             }
         }
 
-        // Axis Labels
-        if (this.config.axisLabels) {
+        // Axis Labels (and Unit Measures)
+        if (this.config.axisLabels || this.config.axisUnitMeasures) {
             const lblSize = this._getConfigSize('labelSize');
             const axisWeight = this.config.axisLabelWeight || "bold";
             const axisStyle = this.config.axisLabelStyle || "normal";
             const axisLabelOffset = this.config.axisLabelOffset || 5;
             
+            const xL = this.config.axisLabels ? (this.config.axisLabels[0] || "") : "";
+            const yL = this.config.axisLabels ? (this.config.axisLabels[1] || "") : "";
+            const xU = this.config.axisUnitMeasures ? (this.config.axisUnitMeasures[0] || "") : "";
+            const yU = this.config.axisUnitMeasures ? (this.config.axisUnitMeasures[1] || "") : "";
+
+            let xText = xL;
+            if (xU) xText = xL ? `${xL} (${xU})` : xU;
+            let yText = yL;
+            if (yU) yText = yL ? `${yL} (${yU})` : yU;
+
             if (this.config.boxPlot) {
                 // Box Layout Labels
                 // X Label: Bottom Right
                 // X Label: Right of Axis (BoxPlot)
-                this._text(this.width - this.padding + 10, this.height - this.padding, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (xText) this._text(this.width - this.padding + 10, this.height - this.padding, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
                 // Y Label: Top Left
-                this._text(this.padding, this.padding - axisLabelOffset - 10, this.config.axisLabels[1], "start", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (yText) this._text(this.padding, this.padding - axisLabelOffset - 10, yText, "start", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
             } else {
-                this._text(this.width - this.padding + axisLabelOffset, y0, this.config.axisLabels[0], "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
-                this._text(x0, this.padding - axisLabelOffset, this.config.axisLabels[1], "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (xText) this._text(this.width - this.padding + axisLabelOffset, y0, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (yText) this._text(x0, this.padding - axisLabelOffset, yText, "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
             }
         }
 
@@ -1350,6 +1962,9 @@ class MatephisPlot {
                         if (py > 10000) return 10000;
                         return py;
                     };
+                    
+                    // Capture raw domain for plotData
+                    const rawDomain = domain;
 
                     // Helper to check validity (finite + domain)
                     const isValid = (x, y) => {
@@ -1425,6 +2040,7 @@ class MatephisPlot {
                             if (jump < 100) {
                                 if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
                                 d += ` L ${p2X} ${p2Y}`;
+                                this.plotData.push({ type: 'fn', index: idx, x1: p1X, y1: p1Y, x2: p2X, y2: p2Y, domain: rawDomain });
                                 if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
                             } else {
                                 // Break
@@ -1443,6 +2059,7 @@ class MatephisPlot {
                                 // Bridge it!
                                 if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
                                 d += ` L ${p2X} ${p2Y}`;
+                                this.plotData.push({ type: 'fn', index: idx, x1: p1X, y1: p1Y, x2: p2X, y2: p2Y, domain: rawDomain });
                                 if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
                             } else {
                                 started = false;
@@ -1549,7 +2166,13 @@ class MatephisPlot {
                         const pB = [xl + dx * lerp(v0, v1), yb], pR = [xr, yb + dy * lerp(v1, v2)];
                         const pT = [xl + dx * lerp(v3, v2), yt], pL = [xl, yb + dy * lerp(v0, v3)];
 
-                        const seg = (P1, P2) => `M ${mapX(P1[0])} ${mapY(P1[1])} L ${mapX(P2[0])} ${mapY(P2[1])}`;
+
+
+                        const seg = (P1, P2) => {
+                            const X1 = mapX(P1[0]), Y1 = mapY(P1[1]), X2 = mapX(P2[0]), Y2 = mapY(P2[1]);
+                            this.plotData.push({ type: 'implicit', index: idx, x1: X1, y1: Y1, x2: X2, y2: Y2 });
+                            return `M ${X1} ${Y1} L ${X2} ${Y2}`;
+                        };
 
                         switch (c) {
                             case 1: case 14: paths.push(seg(pL, pB)); break;
@@ -1607,6 +2230,15 @@ class MatephisPlot {
                             const l = this._line(px, yStart, px, yEnd, color, width, dash, this.dataGroup);
                             if (item.opacity !== undefined) l.setAttribute("opacity", item.opacity);
                             if (!item.labelAt) labelPos = { x: px, y: yStart + 15 }; // Default label near top of segment
+                            
+                            // Cache Vertical Line
+                            this.plotData.push({
+                                type: 'vertical',
+                                index: idx,
+                                x1: px, y1: yStart,
+                                x2: px, y2: yEnd,
+                                val: valX 
+                            });
                         }
                     }
                 }
@@ -1654,6 +2286,14 @@ class MatephisPlot {
 
                             // Use last point for label if no labelAt
                             if (!item.labelAt) labelPos = { x: px, y: py };
+
+                            // Cache Point
+                            this.plotData.push({
+                                type: 'point',
+                                index: idx,
+                                cx: px, cy: py,
+                                valX: valX, valY: valY
+                            });
                         }
                     }
                 });
@@ -1693,6 +2333,9 @@ class MatephisPlot {
         if (this.config.legend && legendItems.length > 0) {
             this._drawLegend(legendItems);
         }
+
+        // Restore Selection Visuals
+        this._restoreSelectionVisuals();
     }
 
     _drawLegend(items) {
@@ -1970,8 +2613,9 @@ class MatephisPlot {
             "showXTicks", "showYTicks", "secondaryGridOpacity",
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize",
-            "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset",
-            "boxPlot", "boxPlotPartial"
+            "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
+            "boxPlot", "boxPlotPartial", "constrainView",
+            "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope"
         ];
 
         const VALID_DATA_KEYS = [
@@ -2044,6 +2688,11 @@ class MatephisPlot {
         div.appendChild(ul);
 
         this.wrapper.appendChild(div);
+    }
+    
+    // Add visuals restore at end of draw loop
+    _restoreSelectionVisualsCheck() {
+       this._restoreSelectionVisuals();
     }
 
     // =========================================================================

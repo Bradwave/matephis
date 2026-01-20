@@ -210,6 +210,22 @@
   background: #d0d0d0;
 }
 
+.matephis-plot-btn.active {
+  background: var(--accent, #B01A00);
+}
+
+.matephis-plot-btn.active img {
+  opacity: 1;
+  filter: brightness(0) invert(1); /* Make white */
+}
+
+.matephis-plot-separator {
+  width: 1px;
+  height: 24px;
+  background: #ddd;
+  margin: 4px 4px;
+}
+
 .matephis-plot-btn img {
   opacity: 0.6;
   pointer-events: none;
