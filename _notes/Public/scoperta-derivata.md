@@ -22,7 +22,7 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "axisLabelStyle": "italic",
   "showXTicks": true,
   "showYTicks": true,
-  "padding": 55,
+  "padding": 70,
   "interactive": true,
   "data": [
     { "fn": "0.6*sin(pi*x/2.5)^4+2.2", "color": "red1", "domain": [0,6] },
