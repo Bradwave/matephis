@@ -12,7 +12,7 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
 
 ```matephis
 {
-  "cssWidth": 90%,
+  "cssWidth": "90%",
   "align": "center",
   "xlim": [0,5],
   "ylim": [2,3],
