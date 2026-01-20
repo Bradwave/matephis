@@ -26,8 +26,8 @@ tags:
 	- **(d)** (b) e (c)
 	- **(e)** (a) e (c)
 3. In quale dei seguenti casi il lavoro della forza $F$ sul sistema $S$ è negativo?
-	- **(a)** Una valigia è trascinata con forza $F$ attraverso la hall di un albergo. $S$ è un il sistema *valigia*.
-	- **(b)** Una gru esercita una forza $F$ su un blocco di cemento per sollevarlo a velocità costante. $S$ è il sistema *Terra-blocco di cemento*.
+	- **(a)** Una valigia è trascinata con forza $F$ attraverso la hall di un albergo. $S$ è il sistema *valigia*.
+	- **(b)** Una gru esercita una forza $F$ per calare verso il basso un blocco di cemento a velocità costante. $S$ è il sistema *Terra-blocco di cemento*.
 	- **(c)** Un calciatore colpisce un pallone, inizialmente fermo, esercitando su di esso una forza $F$. Il pallone viene quindi messo in movimento. $S$ è il sistema *Terra-Pallone*.
 	- **(d)** La molla di una penna a scatto è mantenuta compressa dal dito di una persona, che esercita sulla molla una forza $F$. $S$ è il sistema *molla*.
 4. Emmy, annoiata dalla lezione di fisica, giocherella con il proprio skateboard miniaturizzato, spingendolo sulla superficie del suo banco per $25 \, \text{cm}$ ed esercitando una forza $\vec F$ di intensità $4{,}2 \, \text{N}$ con inclinazione di $60^\circ$ rispetto al banco. Il lavoro esercitato dalla forza $\vec F$ sul sistema *skateboard* ammonta a
@@ -35,7 +35,7 @@ tags:
 	- **(b)** $525 \, \text{J}$
 	- **(c)** $1050 \, \text{J}$
 	- **(d)** $1{,}050 \, \text{kJ}$
-5. In quali dei seguenti casi il lavoro della forza peso dell'oggetto A, di massa $8 \, \text{kg}$, ammonta a circa $+40 \, \text{J}$? Approssima $g \approx 10 \, \text{m/s}^2$.
+5. In quali dei seguenti casi il lavoro della forza peso dell'oggetto A, di massa $5 \, \text{kg}$, ammonta a circa $+40 \, \text{J}$? Approssima $g \approx 10 \, \text{m/s}^2$.
 	- **(a)** L'oggetto A è sollevato di $0{,}8 \, \text{m}$.
 	- **(b)** L'oggetto A è trascinato orizzontalmente per $0{,}8 \, \text{m}$.
 	- **(c)** L'oggetto A è abbassato, a velocità costante, di $0{,}8 \, \text{m}$.
