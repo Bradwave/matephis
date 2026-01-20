@@ -506,18 +506,40 @@ Il tipo `interpolation` permette di disegnare curve che passano per una serie di
       "points": [[-2,0], [-1,1], [0,0], [1,1], [2,0]], 
       "smoothness": 1, 
       "color": "red", 
-      "label": "Smooth (1.0)" 
+      "label": "Smooth (Default Sampling)",
+      "showPoints": true
     },
     { 
       "type": "interpolation", 
-      "points": [[-2,-1], [-1,0], [0,-1], [1,0], [2,-1]], 
+      "points": [[-2,-1.5], [-1,-0.5], [0,-1.5], [1,-0.5], [2,-1.5]], 
+      "smoothness": 1, 
+      "sampling": 3,
+      "color": "orange", 
+      "label": "Low Sampling (3)",
+      "showPoints": true,
+      "pointColor": "black",
+      "pointRadius": 6
+    },
+    { 
+      "type": "interpolation", 
+      "points": [[-2,-3], [-1,-2], [0,-3], [1,-2], [2,-3]], 
       "smoothness": 0, 
       "color": "blue", 
-      "label": "Linear (0.0)" 
+      "label": "Linear (0.0)",
+      "showPoints": true,
+      "pointStroke": "blue",
+      "pointStrokeWidth": 2,
+      "pointColor": "white"
     }
   ]
 }
 ```
+
+#### Opzioni Interpolazione Avanzate
+*   `sampling`: (Default `10`) Controlla la risoluzione della curva spline (segmenti per coppia di punti). Valori bassi (`2-5`) per performance, valori alti (`20+`) per curve perfette.
+*   `showPoints`: Se `true`, disegna i punti originali sopra la curva.
+*   `pointColor`, `pointRadius`, `pointOpacity`: Stile dei punti.
+*   `pointStroke`, `pointStrokeWidth`: Bordo dei punti.
 
 ### Vincoli di Navigazione
 *   `constrainView`: Se `true`, impedisce di zoomare o traslare oltre i limiti definiti da `xlim` e `ylim`.

@@ -2024,7 +2024,7 @@ class MatephisPlot {
                          
                          if (smoothness > 0) {
                              // Use Curve
-                             const segments = 10;
+                             const segments = item.sampling !== undefined ? item.sampling : 10;
                              finalPoints = this._getCurvePoints(mappedPoints, smoothness, segments);
                          } else {
                              // Use Linear
@@ -2042,6 +2042,29 @@ class MatephisPlot {
                              if (dash) path.setAttribute("stroke-dasharray", dash);
                              if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
                              this.dataGroup.appendChild(path);
+
+                             // Show Points
+                             if (item.showPoints) {
+                                 mappedPoints.forEach((p, i) => {
+                                     // Check visibility bounds? Nah, just draw
+                                     const pColor = item.pointColor ? this._getColor(0, item.pointColor) : color;
+                                     const pRadius = item.pointRadius || 4;
+                                     const pOpacity = item.pointOpacity !== undefined ? item.pointOpacity : (item.opacity !== undefined ? item.opacity : 1);
+                                     
+                                     const c = document.createElementNS(ns, "circle");
+                                     c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); c.setAttribute("r", pRadius);
+                                     c.setAttribute("fill", pColor);
+                                     if (pOpacity !== 1) c.setAttribute("opacity", pOpacity);
+                                     
+                                     if (item.pointStroke) {
+                                         c.setAttribute("stroke", this._getColor(0, item.pointStroke));
+                                         c.setAttribute("stroke-width", item.pointStrokeWidth || 1);
+                                     } else {
+                                         c.setAttribute("stroke", "none");
+                                     }
+                                     this.dataGroup.appendChild(c);
+                                 });
+                             }
 
                              // Cache for Interaction
                              // Generate polyline structure for hit testing
@@ -2759,7 +2782,7 @@ class MatephisPlot {
             "type", "fn", "implicit", "points", "x", "range", "domain",
             "color", "width", "strokeWidth", "dash", "opacity", "fillColor", "strokeColor", "radius",
             "label", "labelAt", "labelOffset", "labelAnchor",
-            "smoothness" // Added interpolation
+            "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth" // interpolation
         ];
 
         // 1. Root Keys
