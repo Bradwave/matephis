@@ -76,6 +76,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	5. $(2, 0)$
 13. **[EE/F]** Considera la relazione $y = 2x^2-2$. Per quale valore di $x$ la variabile dipendente $y$ vale $5$? Rispondi fornendo anche un'interpretazione grafica.
 14. **[E]** Considera la relazione $y = -x^2 + 3$. Quanto vale $y$ quando $x = 0{,}5$.
+15. **[F]** Considera la parabola di equazione $y = -3x^2 + 6x + 2$. Completa, se possibile, le coordinate dei seguenti punti, in modo che appartengano alla parabola.
+	1. $(0,\,\dotsc\,)$
+	2. $(3,\,\dotsc\,)$
+	3. $(-1,\,\dotsc\,)$
+	4. $(\,\dotsc\,,0)$ e $(\,\dotsc\,,0)$
+	5. $(\,\dotsc\,,-1)$ e $(\,\dotsc\,,-1)$
+	6. $(\,\dotsc\,,4)$
 
 ## Quesiti
 
@@ -164,13 +171,6 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-13. **[F]** Considera la parabola di equazione $y = -3x^2 + 6x + 2$. Completa, se possibile, le coordinate dei seguenti punti, in modo che appartengano alla parabola.
-	1. $(0,\,\dotsc\,)$
-	2. $(3,\,\dotsc\,)$
-	3. $(-1,\,\dotsc\,)$
-	4. $(\,\dotsc\,,0)$ e $(\,\dotsc\,,0)$
-	5. $(\,\dotsc\,,-1)$ e $(\,\dotsc\,,-1)$
-	6. $(\,\dotsc\,,4)$
 
 ## Quiz
 
