@@ -1733,8 +1733,14 @@ class MatephisPlot {
             let isStickyX = false;
             
             if (this.config.boxPlot) {
-                numY = this.height - this.padding + 12;
-                numBaseline = "hanging";
+                if (this.config.boxNumbersInside) {
+                    numY = this.height - this.padding - 2;
+                    numBaseline = "bottom";
+                    isStickyX = true;
+                } else {
+                    numY = this.height - this.padding + 12;
+                    numBaseline = "hanging";
+                }
             } else {
                 // Clamp to Top
                 if (axisY < this.padding) {
@@ -1818,8 +1824,14 @@ class MatephisPlot {
             let isStickyY = false;
             
             if (this.config.boxPlot) {
-                numX = this.padding - 8;
-                numAlign = "end";
+                if (this.config.boxNumbersInside) {
+                    numX = this.padding + 4;
+                    numAlign = "start";
+                    isStickyY = true;
+                } else {
+                    numX = this.padding - 8;
+                    numAlign = "end";
+                }
             } else {
                 // Clamp to Left
                 if (axisX < this.padding) {
@@ -2774,7 +2786,7 @@ class MatephisPlot {
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize",
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
-            "boxPlot", "boxPlotPartial", "constrainView",
+            "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope"
         ];
 

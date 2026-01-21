@@ -33,6 +33,8 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
 | `border` | Boolean | `false` | Aggiunge un bordo al contenitore del grafico. |
 | `sliderBorder` | Boolean | `false` | Aggiunge un bordo e padding agli slider. |
+| `boxPlot` | Boolean | `false` | Racchiude il grafico in un box con assi sui bordi. |
+| `boxNumbersInside` | Boolean | `false` | Se `true` e `boxPlot` attivo, mostra i numeri all'interno del box (più piccoli). |
 | `sampleStep` | Number | 2 | Passo di campionamento in pixel. Valori più bassi (es. 1) migliorano la qualità ma riducono le performance. |
 | `fontSize` | Number | 18 | Dimensione base font. |
 | `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i dati. |
