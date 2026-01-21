@@ -28,6 +28,7 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "showYTicks": true,
   "interactive": true,
   "constrainView": true,
+  "pointSelection": true,
   "padding": 55,
   "data": [
     { "fn": "0.6*sin(pi*x/2.5)^4+2.2", "color": "red1", "domain": [0,6] },
