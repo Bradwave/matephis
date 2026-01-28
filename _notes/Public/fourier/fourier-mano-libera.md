@@ -1,5 +1,5 @@
 ---
-title: Parte 3 — Trasformando con Fourier
+title: Parte 4 — Fourier a mano libera
 feed: hide
 tags:
   - attività
@@ -7,13 +7,11 @@ tags:
   - fourier
 code: true
 ---
-
-
 ## Sempre più coefficienti!
 
-Il nostro obiettivo è rappresentare un disegno qualsiasi (realizzato a mano libera e formato da un'unica linea chiusa e continua) attraverso una **serie di Fourier**, ovvero una concatenazione infinita di punti rotanti. Per ragioni tecniche e pratiche, troncheremo la serie di Fourier e concateneremo solamente un numero finito di punti — utilizzeremo, ovvero, un polinomio trigonometrico. Per poter ricostruire il disegno tramite una serie di Fourier è necessario determinare i relativi coefficienti di Fourier, che si calcolano applicando **la trasformata di Fourier** al disegno di partenza.
+Il nostro obiettivo è rappresentare un disegno qualsiasi (realizzato a mano libera e formato da un'unica linea chiusa e continua) attraverso una **serie di Fourier**, ovvero una concatenazione infinita di punti rotanti. Per ragioni tecniche e pratiche, troncheremo la serie di Fourier e concateneremo solamente un numero finito di punti — utilizzeremo ovvero un polinomio trigonometrico. Per poter ricostruire il disegno tramite una serie di Fourier è necessario determinare i relativi coefficienti di Fourier, che si calcolano applicando **la trasformata di Fourier** al disegno di partenza.
 
-Create una copia della tela p5.js su cui avete implementato la visualizzazione dei polinomi trigonometrici (vedi [[Parte 2 — In cammino con p5.js!]]).
+Create una copia della tela p5.js su cui avete implementato la visualizzazione dei polinomi trigonometrici (vedi [[Parte 3 — In cammino con p5.js!]]).
 
 1. Tramite l'applicazione drawxy.matephis.com, create un disegno a piacere. Nella sezione *DFT Analysis* copiate i corrispondenti valori di `v`, `R` e `phi` (che sono stati calcolati tramite una trasformata di Fourier) e incollateli nell'editor. Selezionate il maggior numero possibile di coefficienti di Fourier.
 2. Adattate il codice in modo da visualizzare il polinomio trigonometrico definito da `v`, `R` e `phi`. ***Suggerimento:*** come centro di rotazione si usa il punto di coordinate $(R_0 \cos(\varphi_0), R_0 \sin(\varphi_0))$.
@@ -105,3 +103,65 @@ function multiply(x, y) {
 | Avete smarrito il sentiero?                                                |
 | -------------------------------------------------------------------------- |
 | [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/MhKowFNuU) |
+
+Vorremmo implementare direttamente all'interno della nostra applicazione la possibilità di creare un disegno e rappresentarlo attraverso una serie di Fourier.
+
+Si propone il seguente piano di implementazione:
+- l'utente disegna sulla tela tenendo premuto il tasto sinistro del mouse e vengono salvate le coordinate $x$ e $y$ del mouse in due vettori `drawingX` e `drawingY`;
+- quando il tasto sinistro è rilasciato, si applica la trasformata di Fourier;
+- quando il tasto sinistro è nuovamente premuto si resettano i valori di `drawingX`, `drawingY`, `v`, `R`, `phi`, `pathX` e `pathY` (che contengono le coordinate $x$ e $y$ dell'ultimo punto rotante, ovvero quello che traccia l'immagine del polinomio trigonometrico che approssima la serie di Fourier).
+
+È necessario implementare dei *listener*, delle funzioni "in ascolto", che vengono eseguite quando si verifica un particolare evento, come l'interazione dell'utente con l'applicazione. Occorre che questi *listener* agiscano solo sulla tela e non sullo slider che controlla il numero di coefficienti impiegati.
+
+1. Per implementare le feature desiderate, considerate il seguente spunto.
+
+```javascript
+let canvas; // salviamo la tela in una variabile
+
+/* true se il tasto sinistro è premuto, falso altrimenti */
+let isMousePressed = false;
+
+
+function setup() {
+  canvas = createCanvas(600, 600);
+
+  canvas.mousePressed(canvasMousePressed);
+  canvas.mouseReleased(canvasMouseReleased);
+
+  /* ... */
+}
+
+/* ... */
+
+function mouseDragged() {
+  if (isMousePressed) {
+    /* vengono salvate le coordinate del mouse */
+  }
+}
+
+function canvasMousePressed() {
+  isMousePressed = true;
+  
+  /* ... */
+}
+
+function canvasMouseReleased() {
+  isMousePressed = false;
+  
+  /* ... */
+}
+
+```
+
+Create una copia dell'ultima tela p5.js.
+
+{:start="2"}
+2. Modificate il codice scritto in precedenza in modo da consentire all'utente di creare un disegno e ricostruirlo tramite una serie di Fourier.
+
+| Avete smarrito il sentiero?                                                |
+| -------------------------------------------------------------------------- |
+| [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/PkSBX542-) |
+
+---
+
+Complimenti! Avete costruito un'applicazione che permette di disegnare a mano libera e ricostruire il disegno tramite una serie di Fourier. Questo percorso ci ha portato dalle curve parametriche ai polinomi trigonometrici, fino alla trasformata discreta di Fourier — uno strumento matematico potentissimo, usato in ambiti che vanno dalla compressione audio e video all'analisi dei segnali.

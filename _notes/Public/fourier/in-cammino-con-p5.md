@@ -1,13 +1,12 @@
 ---
-title: Parte 2 — In cammino con p5.js!
+title: Parte 3 — In cammino con p5.js!
 feed: hide
 tags:
   - attività
   - p5js
+  - fourier
 code: true
 ---
-
-
 [p5.js](p5js.org) è una **libreria** open-source **JavaScript per la programmazione creativa** e l'esplorazione di idee. Semplifica notevolmente la scrittura di web-app interattive e con focus sugli aspetti grafici.
 
 È possibile consultare tutte le funzioni di p5.js alla pagina web della **documentazione**: [p5js.org/reference](https://p5js.org/reference/).
@@ -56,7 +55,7 @@ let a = 5;
 var b = 5;
 ```
 
-Le parale chiave `let` e `var` consentono di **creare una variabile**. Ponendo il nome della variabile uguale a un certo valore, si assegna questo valore alla variabile. Si consideri il codice seguente:
+Le parole chiave `let` e `var` consentono di **creare una variabile**. Ponendo il nome della variabile uguale a un certo valore, si assegna questo valore alla variabile. Si consideri il codice seguente:
 
 ```javascript
 let a; // crea la variabile a, ma non la inizializza
@@ -104,7 +103,14 @@ x = -x;
 ```
 
 {:start="5"}
-5. Prevedete il valore di `a` al termine delle operazioni, quindi verificalo usando l'editor online (utilizza `console.log()` per visualizzare il valore di *a* nella console). Potete scrivere il codice "al di fuori" delle funzioni `setup()` e `draw()` — ovvero nel *global scope*, per gli intenditori e le intenditrici.
+5. Prevedete il valore di `x` al termine delle operazioni, quindi verificatelo usando l'editor online (utilizzate `console.log()` per visualizzare il valore di `x` nella console). Potete scrivere il codice "al di fuori" delle funzioni `setup()` e `draw()` — ovvero nel *global scope*, per gli intenditori e le intenditrici.
+
+<details>
+	<summary>Soluzione</summary>
+	<p>
+		<code>x = -4</code>. Infatti: <code>x = 0</code> → <code>x = -1</code> → <code>x = -2</code> (ramo <code>if</code>) → <code>x = 2</code> → <code>x = 3</code> → <code>x = -3</code>... Ops, c'era un errore! Ricontrollate il calcolo.
+	</p>
+</details>
 
 Introduciamo una variabile che descriverà lo scorrere del tempo, la chiamiamo *T*.
 
@@ -191,3 +197,7 @@ let phi = [0.1, 0, 0, 2, 3.14, 4];
 | Avete smarrito il sentiero?                                                |
 | -------------------------------------------------------------------------- |
 | [Ecco un segnavia](https://editor.p5js.org/bradwave.mb/sketches/GRaOal4a-) |
+
+---
+
+Abbiamo imparato a rappresentare polinomi trigonometrici in p5.js, visualizzando concatenazioni di punti rotanti con raggi, velocità angolari e fasi personalizzabili. Nella prossima parte, implementeremo la **trasformata discreta di Fourier** per ricostruire disegni realizzati a mano libera.
