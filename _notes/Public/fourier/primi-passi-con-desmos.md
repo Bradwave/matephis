@@ -36,7 +36,7 @@ Su Desmos, definite la funzione $P(t) = (t, t + 2)$.
 9. Su Desmos, visualizzate il singolo punto $P(T)$, al variare di $T$, definito da uno slider (con opportuni valori massimi e minimi).
 10. Animate il punto $P(T)$ in modo che percorra ripetutamente la traiettoria definita da $P(t)$. Fate in modo che, giunto al termine del percorso, il punto riparta dal punto iniziale. Modificate la velocità dell'animazione.
 
-Osservate ora il semplice disegno in figura
+Osservate ora il seguente disegno:
 
 ```matephis
 {

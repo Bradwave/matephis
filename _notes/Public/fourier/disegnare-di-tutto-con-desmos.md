@@ -10,7 +10,7 @@ tags:
 
 Ci chiediamo: *quali disegni si possono ottenere tramite concatenazioni di punti rotanti?*
 
-Tutti i disegni realizzabili a mano libera, senza staccare la matita dal foglio e formati da una sola curva chiusa possono essere costruiti tramite una concatenazione infinita di punti rotanti. Tale concatenazione è detta **serie di Fourier**, un polinomio trigonometrico con infiniti termini.
+Tutti i disegni realizzabili a mano libera, senza staccare la matita dal foglio e formati da una sola linea chiusa possono essere costruiti tramite una concatenazione infinita di punti rotanti. Tale concatenazione è detta **serie di Fourier**, un polinomio trigonometrico con infiniti termini.
 
 Più formalmente, data la funzione $P(t) = (x, y)$, la cui immagine rappresenta un disegno realizzabile a mano libera, formato da una sola linea chiusa e continua, allora
 
@@ -72,4 +72,4 @@ Tramite l'apposito slider sull'app *drawxy*, riducete drasticamente il numero di
 
 ---
 
-Abbiamo visto come la serie di Fourier consenta di rappresentare qualsiasi disegno chiuso tramite una concatenazione di punti rotanti. Tuttavia, Desmos non è lo strumento ideale per visualizzare animazioni più complesse. Nella prossima parte, se deciderete di proseguire lungo il sentiero, esploreremo **p5.js**, una libreria JavaScript per la programmazione creativa, che ci permetterà di costruire applicazioni web interattive.
+Abbiamo visto come la serie di Fourier consenta di rappresentare qualsiasi disegno chiuso tramite una concatenazione di punti rotanti. Tuttavia, Desmos non è lo strumento ideale per visualizzare animazioni più complesse. Nella prossima parte, esploreremo **p5.js**, una libreria JavaScript per la programmazione creativa, che ci permetterà di costruire applicazioni web interattive.
