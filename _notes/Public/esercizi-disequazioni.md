@@ -84,3 +84,11 @@ tags:
 	4. $x^2 + 4 \geq 0$
 	5. $-3x^2 - 2 > 0$
 	6. $x^2 + 1 \leq 0$
+
+## Quiz
+
+1. Quale delle seguenti disequazioni ammette come soluzione $-2 \leq x \leq 1$
+	- **(a)** $(x + 2)(x - 1) \leq 0$
+	- **(b)** $(x - 2)(x + 1) \leq 0$
+	- **(c)** $(x + 2)(x - 1) \geq 0$
+	- **(d)** $(x - 2)(x + 1) \geq 0$
