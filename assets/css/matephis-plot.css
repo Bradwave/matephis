@@ -181,6 +181,7 @@
 .matephis-plot-toolbar {
   display: flex;
   justify-content: center;
+  align-items: center; /* Fix vertical alignment */
   gap: 8px;
   width: 100%;
   z-index: 10;
@@ -194,12 +195,15 @@
   border-radius: 0;
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: normal !important;
   cursor: pointer;
   user-select: none;
+  box-sizing: border-box !important;
 }
 
 .matephis-plot-btn:hover {
@@ -230,6 +234,21 @@
   opacity: 0.6;
   pointer-events: none;
   /* Let clicks pass to button */
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  flex-shrink: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: none !important;
+  vertical-align: middle !important;
 }
 
 .matephis-plot-btn:hover img {
@@ -268,4 +287,9 @@
 .matephis-plot:has(.matephis-plot-container.align-center)+pre+p:has(> em:only-child) {
   text-align: center;
   padding: 0 var(--space-lg) 0 var(--space-lg);
+}
+
+/* Utility to forcibly hide elements */
+.matephis-hidden {
+  display: none !important;
 }

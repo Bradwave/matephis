@@ -556,13 +556,67 @@ Il tipo `interpolation` permette di disegnare curve che passano per una serie di
 }
 ```
 
+```
+
+## 8. Analisi Derivata
+
+### Tracciamento e Grafico Derivata
+Nuovi strumenti per visualizzare la derivata.
+*   `traceDerivative`: Se `true` e lo strumento pendenza è attivo, apparirà un pulsante "Trace" che lascia una scia di punti $(x, f'(x))$.
+*   `addDerivativePlot`: Aggiunge un secondo grafico sincronizzato sotto il principale per mostrare la derivata.
+*   `derivativeYLim`: Limiti Y opzionali per il grafico derivata.
+*   `derivativeAutoY`: Se `true`, adatta automaticamente l'asse Y della derivata in base ai dati tracciati.
+
+```json
+{
+  "xlim": [-4, 4],
+  "ylim": [-5, 10],
+  "interactive": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
+  "addDerivativePlot": true,
+  "derivativeAutoY": true,
+  "data": [{ "fn": "x^2", "label": "Parabola" }]
+}
+```
+
 ```matephis
 {
-  "interactive": true, 
-  "constrainView": true,
-  "xlim": [-5, 5],
-  "ylim": [-5, 5],
-  "data": [{ "fn": "sin(x)" }]
+  "xlim": [-4, 4],
+  "ylim": [-5, 10],
+  "interactive": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
+  "addDerivativePlot": true,
+  "derivativeAutoY": true,
+  "derivativeTitle": "Analisi Pendenza (Derivata)",
+  "data": [{ "fn": "x^2", "label": "Parabola" }]
+}
+```
+
+### Curva Derivata (Ghost)
+*   `showDerivative`: Mostra la curva della derivata analitica (calcolata numericamente) in background con opacità ridotta.
+*   **Trace UI**: Quando la modalità "Tangente" è attiva, appaiono i pulsanti:
+    *   **Trace**: Attiva/Disattiva il tracciamento dei punti $(x, f'(x))$.
+    *   **Eraser**: Cancella la traccia corrente.
+
+```json
+{
+  "xlim": [-7, 7],
+  "slopeSelection": true,
+  "addDerivativePlot": true,
+  "showDerivative": true,
+  "data": [{ "fn": "sin(x)", "label": "sin(x)" }]
+}
+```
+
+```matephis
+{
+  "xlim": [-7, 7],
+  "slopeSelection": true,
+  "addDerivativePlot": true,
+  "showDerivative": true,
+  "data": [{ "fn": "sin(x)", "label": "sin(x)" }]
 }
 ```
 
