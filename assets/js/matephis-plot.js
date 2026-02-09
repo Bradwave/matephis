@@ -1898,8 +1898,11 @@ class MatephisPlot {
             }
         } else {
             // Standard Axes at 0
-            if (x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
-            if (y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
+            const showY = this.config.showYAxis !== false;
+            const showX = this.config.showXAxis !== false;
+
+            if (showY && x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            if (showX && y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
         }
 
         // Arrows - To AxesGroup (part of axes)
@@ -1942,7 +1945,7 @@ class MatephisPlot {
 
             // Draw Arrows Manually (Markers can be tricky with scaling)
             // X Arrow (Positive)
-            if (y0 >= this.padding && y0 <= this.height - this.padding) {
+            if (this.config.showXAxis !== false && y0 >= this.padding && y0 <= this.height - this.padding) {
                 const axX = this.width - this.padding + 5;
                 const axY = y0;
                 const arrowXPoly = document.createElementNS(ns, "polygon");
@@ -1953,7 +1956,7 @@ class MatephisPlot {
             }
 
             // Y Arrow (Positive)
-            if (x0 >= this.padding && x0 <= this.width - this.padding) {
+            if (this.config.showYAxis !== false && x0 >= this.padding && x0 <= this.width - this.padding) {
                 const ayX = x0;
                 const ayY = this.padding - 5;
                 const arrowYPoly = document.createElementNS(ns, "polygon");
@@ -2782,6 +2785,7 @@ class MatephisPlot {
             "padding", "marginBottom", "grid", "gridOpacity", "axisArrows", "axisLabels",
             "xStep", "yStep", "xStepSecondary", "yStepSecondary", "showSecondaryGrid", "showGrid",
             "xNumberStep", "yNumberStep", "showXNumbers", "showYNumbers",
+            "showXAxis", "showYAxis",
             "showXTicks", "showYTicks", "secondaryGridOpacity",
             "sampleStep", "fontSize", "renderOrder", "params", "showSliders", "data", "labelWeight",
             "numberSize", "labelSize", "legendSize",

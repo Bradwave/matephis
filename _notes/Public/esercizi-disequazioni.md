@@ -84,6 +84,9 @@ tags:
 	4. $x^2 + 4 \geq 0$
 	5. $-3x^2 - 2 > 0$
 	6. $x^2 + 1 \leq 0$
+	7. $(x - 2)(x + 3) < 0$
+	8. $(x + 1)^2 \leq 0$
+	9. $-(x - 1)(x - 2) \geq 0$
 
 ## Quiz
 
@@ -92,3 +95,41 @@ tags:
 	- **(b)** $(x - 2)(x + 1) \leq 0$
 	- **(c)** $(x + 2)(x - 1) \geq 0$
 	- **(d)** $(x - 2)(x + 1) \geq 0$
+2. Quale delle seguenti equazioni ha per soluzione qualunque $x$ appartenente all'intervallo rappresentato in figura?
+	- **(a)** $-2(x - 4)(x + 1) \leq 0$
+	- **(b)** $-2(x - 4)(x + 1) \geq 0$
+	- **(d)** $-2(x + 4)(x - 1) \leq 0$
+	- **(e)** $-2(x + 4)(x - 1) \geq 0$
+```matephis
+{
+  "xlim": [-10,10],
+  "ylim": [-0.5,0.5],
+  "aspectRatio": "5:1",
+  "showGrid": false,
+  "showXTicks": true,
+  "gridOpacity": 0,
+  "showYAxis": false,
+  "showYNumbers": false,
+  "data": [
+    { "fn": "0", "domain": ["-1*Infinity",-4], "color": "red1" },
+    { "fn": "0", "domain": [1,"Infinity"], "color": "red1" },
+    { "points": [[-4,0],[1,0]], "color": "red1" }
+  ]
+}
+```
+1. Quale delle seguenti affermazioni relative ai grafici in figura non è corretta?
+	- **(a)** $A(x) < 0$ per $x \in \mathbb{R} \setminus [-1, 1]$
+	- **(b)** $A(x) \cdot B(x) > 0$ per $x \in (-2, -1) \cup (2, +\infty)$
+	- **(d)** $A(x) > B(x)$ per $x < -1 \lor x > 1$
+	- **(e)** $A(x) \cdot B(x) = 0$ per $x = -2 \lor x = 1 \lor x = 2$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "legend": true,
+  "legendPosition": "bottom-right",
+  "data": [
+    { "fn": "(x-1)*(x+1)", "color": "red1", "label": "A(x)" },
+    { "fn": "(x-1)*(x-2)*(x+2)", "color": "black1", "label": "B(x)" }
+  ]
+}
+```
