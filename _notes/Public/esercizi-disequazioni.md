@@ -87,6 +87,17 @@ tags:
 	7. $(x - 2)(x + 3) < 0$
 	8. $(x + 1)^2 \leq 0$
 	9. $-(x - 1)(x - 2) \geq 0$
+7. Determina i valori di $x$ per cui $A(x) / B(x) < 0$.
+	```matephis
+	{
+	  "xlim": [-3.9,3.9],
+	  "legend": true,
+	  "data": [
+	    { "fn": "-.25*(x+2)*(x+1)*(x-3)", "color": "red1", "label": "A(x)" },
+	    { "fn": "(x+3)*(x-2)", "color": "black1", "label": "B(x)" }
+     ]
+	}
+	```
 
 ## Quiz
 
