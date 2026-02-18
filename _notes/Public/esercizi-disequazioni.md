@@ -128,7 +128,7 @@ tags:
   ]
 }
 ```
-1. Quale delle seguenti affermazioni relative ai grafici in figura non è corretta?
+3. Quali delle seguenti affermazioni relative ai grafici in figura *non* sono corretta?
 	- **(a)** $A(x) < 0$ per $x \in \mathbb{R} \setminus [-1, 1]$
 	- **(b)** $A(x) \cdot B(x) > 0$ per $x \in (-2, -1) \cup (2, +\infty)$
 	- **(d)** $A(x) > B(x)$ per $x < -1 \lor x > 1$
@@ -141,6 +141,20 @@ tags:
   "data": [
     { "fn": "(x-1)*(x+1)", "color": "red1", "label": "A(x)" },
     { "fn": "(x-1)*(x-2)*(x+2)", "color": "black1", "label": "B(x)" }
+  ]
+}
+```
+4. Quale delle seguenti affermazioni *non* è corretta?
+	- **(a)** $f(x) \cdot (3 - x) < 0$ per $x \in (-\infty, -2) \cup (0, 1) \cup (+3, +\infty)$
+	- **(b)** $f(1) = 0$ e $f(2) = 8$
+	- **(c)** $f(x) \cdot (3 - x) \geq 0$ per $x \in (-\infty, 0) \cup (+2, +3)$
+	- **(d)** $f(1) \cdot (3 - x) = 0$ per $\forall x \in \mathbb{R}$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "(x-1)*(x+2)*x", "color": "red1", "label": "f(x)" }
   ]
 }
 ```
