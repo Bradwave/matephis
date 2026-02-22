@@ -346,6 +346,27 @@ class MatephisPlot {
         delete cfg.tangentSelection;
         delete cfg.pointSelection;
         
+        // Pass down actual evaluated params object to derivative plot to fix ReferenceError
+        // We removed cfg.params in previous step, but we need to pass `this.params` directly to instance
+        // Or keep cfg.params but don't draw sliders? The draw sliders logic is controlled by `config.showSliders`?
+        // Actually, deleting cfg.params prevents parsing. Let's keep it, but set a flag to hide sliders if needed.
+        // Or just let it inherit the parent's params object later.
+        
+        // Since we want evaluated values:
+        cfg.params = JSON.parse(JSON.stringify(this.config.params || {}));
+        
+        // Filter out non-function data from the derivative plot
+        // (so that points/shapes from the main plot don't bleed over)
+        if (cfg.data && Array.isArray(cfg.data)) {
+            cfg.data = cfg.data.filter(item => item.fn);
+        }
+        
+        // Disable legend, sliders, and toolbar on derivative plot
+        cfg.legend = false;
+        cfg.showSliders = false;
+        cfg.showToolbar = false;
+        cfg.showPoints = false;
+        
         // Reset Layout Options to avoid double application
         // Since we are inside the parent wrapper, we want to fill it fully.
         delete cfg.width; 
@@ -365,8 +386,8 @@ class MatephisPlot {
         // We want responsive width to parent.
         cfg.cssWidth = "100%"; 
 
-        // Force settings for derivative plot
-        cfg.showDerivative = true;
+        // Apply global configuration for showing the derivative line in the derivative plot
+        cfg.showDerivative = this.config.showDerivativeFunction !== false;
         cfg.hideFunctions = true;
 
         // Apply Derivative Specifics
@@ -408,6 +429,16 @@ class MatephisPlot {
      */
     _syncDerivativePlot() {
         if (!this.derivativePlot) return;
+
+        // Propagate current evaluated params to the derivative plot
+        if (this.params) {
+            this.derivativePlot.params = Object.assign({}, this.params);
+            this.derivativePlot.config.params = this.derivativePlot.config.params || {};
+            for (let k in this.params) {
+                if (!this.derivativePlot.config.params[k]) this.derivativePlot.config.params[k] = {};
+                this.derivativePlot.config.params[k].val = this.params[k];
+            }
+        }
 
         // Sync X Limits (View or Config)
         const currentXMin = (this.view && this.view.xMin !== null) ? this.view.xMin : (this.config.xlim ? this.config.xlim[0] : -9.9);
@@ -502,6 +533,8 @@ class MatephisPlot {
      * @private
      */
     _initControlsOverlay() {
+        if (this.config.showToolbar === false) return; // Allow hiding via config
+
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-toolbar"; // Renamed class for new styling logic
 
@@ -1009,7 +1042,16 @@ class MatephisPlot {
         }
 
         if (this.selectionMode === 'tangent') {
-            if (!match) return;
+            if (!match) {
+                if (this.derivativePlot) {
+                    const idx = this.derivativePlot.config.data.findIndex(d => d.id === 'current-derivative-point');
+                    if (idx >= 0) {
+                        this.derivativePlot.config.data.splice(idx, 1);
+                        this.derivativePlot.draw();
+                    }
+                }
+                return;
+            }
             const mainColor = selColor || "#B01A00";
             drawDot(match, mainColor);
             
@@ -1019,6 +1061,23 @@ class MatephisPlot {
             
              if (!isNaN(m)) {
                 
+                // --- CURRENT DERIVATIVE POINT ---
+                if (this.derivativePlot && isFinite(m)) {
+                     let dotItem = this.derivativePlot.config.data.find(d => d.id === 'current-derivative-point');
+                     if (!dotItem) {
+                         dotItem = {
+                             id: 'current-derivative-point',
+                             type: 'points',
+                             points: [[gx, m]],
+                             color: mainColor,
+                             radius: 4
+                         };
+                         this.derivativePlot.config.data.push(dotItem);
+                     } else {
+                         dotItem.points = [[gx, m]];
+                     }
+                }
+
                 // --- TRACE LOGIC (Moved to Tangent) ---
                 if (this.isTracing && isFinite(m)) {
                     const tx = gx;
@@ -1059,9 +1118,12 @@ class MatephisPlot {
                                      this.derivativePlot.view.yMax = yMax;
                                  }
                              }
-                             this.derivativePlot.draw();
                         }
                     }
+                }
+
+                if (this.derivativePlot) {
+                    this.derivativePlot.draw();
                 }
                 
                 // Render Trace on Main Plot if NO Derivative Plot
@@ -2299,7 +2361,7 @@ class MatephisPlot {
                              this.dataGroup.appendChild(path);
 
                              // Show Points
-                             if (item.showPoints) {
+                             if (item.showPoints && this.config.showPoints !== false) {
                                  mappedPoints.forEach((p, i) => {
                                      // Check visibility bounds? Nah, just draw
                                      const pColor = item.pointColor ? this._getColor(0, item.pointColor) : color;
@@ -2696,8 +2758,8 @@ class MatephisPlot {
                 }
             }
 
-            // Points
-            if (item.points) {
+            // Points (skip if interpolation, it handles its own points)
+            if (item.points && item.type !== 'interpolation' && this.config.showPoints !== false) {
                 item.points.forEach(pt => {
                     let valX = this._eval(pt[0], "point x");
                     let valY = this._eval(pt[1], "point y");
@@ -3077,7 +3139,7 @@ class MatephisPlot {
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
             "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope",
-            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot"
+            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints"
         ];
 
         const VALID_DATA_KEYS = [
