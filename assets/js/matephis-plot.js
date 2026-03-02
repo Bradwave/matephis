@@ -538,12 +538,30 @@ class MatephisPlot {
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-toolbar"; // Renamed class for new styling logic
 
+        let basePath = "";
+        if (MatephisPlot.scriptUrl) {
+            const src = MatephisPlot.scriptUrl;
+            const idx = src.indexOf("assets/js/matephis-plot.js");
+            if (idx !== -1) basePath = src.substring(0, idx);
+            else {
+                const idx2 = src.indexOf("js/matephis-plot.js");
+                if (idx2 !== -1) basePath = src.substring(0, idx2);
+            }
+            // Ensure trailing slash if fallback is needed, but substring above usually keeps the prefix clean
+        }
+
         const mkBtn = (iconPath, title, cb) => {
             const b = document.createElement("button");
             b.className = "matephis-plot-btn";
             b.title = title;
             const img = document.createElement("img");
-            img.src = iconPath;
+            
+            if (iconPath.startsWith('http') || iconPath.startsWith('/') || iconPath.startsWith('data:')) {
+                img.src = iconPath;
+            } else {
+                img.src = basePath + iconPath;
+            }
+            
             img.style.width = "20px";
             img.style.height = "20px";
             img.draggable = false;
@@ -598,9 +616,9 @@ class MatephisPlot {
         };
 
         if (this.config.interactive !== false) {
-            const btnPlus = mkBtn("/assets/img/add.svg", "Zoom In", () => zoom(0.9));
-            const btnMinus = mkBtn("/assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
-            const btnReset = mkBtn("/assets/img/center_focus_weak.svg", "Reset View", () => {
+            const btnPlus = mkBtn("assets/img/add.svg", "Zoom In", () => zoom(0.9));
+            const btnMinus = mkBtn("assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
+            const btnReset = mkBtn("assets/img/center_focus_weak.svg", "Reset View", () => {
                 if (this.config.xlim) {
                     this.view.xMin = this.config.xlim[0];
                     this.view.xMax = this.config.xlim[1];
@@ -620,7 +638,7 @@ class MatephisPlot {
         // Trace Button (Moved logic below to group with Tangent)
 
         // Full Screen (Always, per user)
-        const btnFull = mkBtn("/assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
+        const btnFull = mkBtn("assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
         overlay.appendChild(btnFull);
 
         // Control Buttons Scope
@@ -635,7 +653,7 @@ class MatephisPlot {
 
         // Point Selection (Touch)
         if (this.config.pointSelection) {
-            btnPoint = mkBtn(this.config.pointSelectionIcon || "/assets/img/touch_app.svg", "Point Selection", () => {
+            btnPoint = mkBtn(this.config.pointSelectionIcon || "assets/img/touch_app.svg", "Point Selection", () => {
                 if (this.selectionMode === 'point') {
                     this.selectionMode = null;
                     btnPoint.classList.remove('active');
@@ -664,7 +682,7 @@ class MatephisPlot {
 
         if (this.config.slopeSelection) {
             // Determine icon
-            const slopeIcon = this.config.slopeSelectionIcon || "/assets/img/square_foot.svg";
+            const slopeIcon = this.config.slopeSelectionIcon || "assets/img/square_foot.svg";
             btnSlope = mkBtn(slopeIcon, "Slope Selection", () => {
                 if (this.selectionMode === 'slope') {
                     this.selectionMode = null;
@@ -691,7 +709,7 @@ class MatephisPlot {
             // Group: [Tangent] [Sep] [Trace] [Clean]
 
             // 1. Tangent Button
-            const tangentIcon = this.config.tangentSelectionIcon || "/assets/img/snowboarding.svg";
+            const tangentIcon = this.config.tangentSelectionIcon || "assets/img/snowboarding.svg";
             btnTangent = mkBtn(tangentIcon, "Tangent Selection", () => {
                      if (this.selectionMode === 'tangent') {
                          this.selectionMode = null;
@@ -722,11 +740,11 @@ class MatephisPlot {
                 this.traceSep.className = "matephis-plot-separator matephis-hidden"; // Start hidden
                 overlay.appendChild(this.traceSep);
 
-                this.btnTrace = mkBtn("/assets/img/steppers.svg", "Trace Derivative", () => this.toggleTrace());
+                this.btnTrace = mkBtn("assets/img/steppers.svg", "Trace Derivative", () => this.toggleTrace());
                 this.btnTrace.classList.add("matephis-hidden"); // Start hidden
                 overlay.appendChild(this.btnTrace);
 
-                this.btnClean = mkBtn("/assets/img/eraser.svg", "Clear Trace", () => this.clearTrace());
+                this.btnClean = mkBtn("assets/img/eraser.svg", "Clear Trace", () => this.clearTrace());
                 this.btnClean.classList.add("matephis-hidden"); // Start hidden
                 overlay.appendChild(this.btnClean);
             }
@@ -2361,7 +2379,8 @@ class MatephisPlot {
                              this.dataGroup.appendChild(path);
 
                              // Show Points
-                             if (item.showPoints && this.config.showPoints !== false) {
+                             // Always show interpolation points unless explicitly disabled on the item
+                             if (item.showPoints !== false) {
                                  mappedPoints.forEach((p, i) => {
                                      // Check visibility bounds? Nah, just draw
                                      const pColor = item.pointColor ? this._getColor(0, item.pointColor) : color;
@@ -2759,9 +2778,11 @@ class MatephisPlot {
             }
 
             // Points (skip if interpolation, it handles its own points)
-            if (item.points && item.type !== 'interpolation' && this.config.showPoints !== false) {
-                item.points.forEach(pt => {
-                    let valX = this._eval(pt[0], "point x");
+            if (item.points && item.type !== 'interpolation') {
+                const forceShow = item.id === 'current-derivative-point' || item.id === 'derivative-trace';
+                if (forceShow || this.config.showPoints !== false) {
+                    item.points.forEach(pt => {
+                        let valX = this._eval(pt[0], "point x");
                     let valY = this._eval(pt[1], "point y");
 
                     // Proceed only if we have valid numbers
@@ -2811,6 +2832,7 @@ class MatephisPlot {
                         }
                     }
                 });
+                }
             }
 
             // Labels (if not legend)
@@ -3342,5 +3364,7 @@ class MatephisPlot {
         }
     }
 }
+// Capture script URL for dynamic asset paths
+MatephisPlot.scriptUrl = (typeof document !== 'undefined' && document.currentScript) ? document.currentScript.src : '';
 
 if (typeof module !== 'undefined') module.exports = MatephisPlot;

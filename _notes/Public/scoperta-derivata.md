@@ -7,16 +7,6 @@ tags:
 - funzioni
 plot: true
 ---
-## Roadmap
-
-1. Rapidità di variazione e relazione con la pendenza.
-2. Pendenza di una retta.
-3. Pendenza di una funzione in un punto tramite linearizzazione via zoom.
-4. Pendenza di una funzione in un punto tramite pendenza della retta tangente (surfing).
-5. Definizione di derivata come pendenza della tangente, definita come limite della secante (limite del rapporto incrementale).
-6. Derivata delle funzioni fondamentali per via grafica e algebrica.
-7. Relazione tra derivata e traslazione e dilatazione delle funzioni.
-
 ## Inspira... espira...
 
 In figura è rappresentato il grafico del volume d'aria presente nei polmoni di una persona durante una respirazione regolare.
@@ -107,11 +97,12 @@ Il grafico rappresenta la variazione del potenziale elettrico $V$ (espresso in v
 
 ## Derivate delle funzione fondamentali
 
+### Funzioni polinomiali
+
 Considera la funzione quadratica rappresentata nel grafico seguente. Accarezza la funzione con la mano, assicurandoti che le dita siano tese.
 
 1. Traccia un grafico approssimativo della derivata della funzione, studiando la pendenza della mano mentre accarezzi la funzione.
 2. Attiva il *"surfing"* della funzione e la traccia della derivata. Percorri la funzione e verifica la correttezza del grafico da te tracciato.
-3. Determina la derivata della funzione per $x = 1$ e per $x = -1$.
 
 ```matephis
 {
@@ -129,21 +120,8 @@ Considera la funzione quadratica rappresentata nel grafico seguente. Accarezza l
 }
 ```
 
-Considera la funzione cubica rappresentata nel grafico seguente.
+---
 
-{:start="4"}
-1. Verifica la correttezza del grafico della funzione derivata.
-
-```matephis
-{
-  "cssWidth": "95%",
-  "aspectRatio": "3:2",
-  "xlim": [-4.9, 4.9],
-  "tangentSelection": true,
-  "addDerivativePlot": true,
-  "showDerivative": false,
-  "traceDerivative": true,
-  "legend": true,
-  "data": [{ "fn": "x^3", "label": "$f(x) = x^2" }]
-}
-```
+1. Su Desmos, traccia il grafico della funzione $f(x) = x^3$ e della sua derivata $f^\prime(x)$.
+2. Traccia inoltre il grafico di $g(x) = ax^2$. Fai variare il valore di $a$ fino a quando il grafico di $g(x)$ coincide con quello di $f^\prime(x)$. Quale è il valore $a$?
+3. Ripeti la procedura descritta nei due punti precedenti per $f(x) = x^4$, $g(x) = ax^3$ e per $f(x) = x^5$, $g(x) = ax^4$. Cosa osservi? Scrivi una regola che leghi la funzione alla sua derivata.

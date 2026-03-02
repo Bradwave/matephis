@@ -1,0 +1,182 @@
+/* Presentation Mode Styles */
+body.presentation-mode {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Base styles for slides */
+.slide {
+    padding: 1rem 0;
+    box-sizing: border-box;
+    width: 100%;
+    opacity: 1;
+    filter: blur(0);
+    transition: all .3s ease-in-out;
+}
+
+/* Hide sidebar and nav immediately when in presentation mode */
+.presentation-mode aside.sidebar,
+.presentation-mode .sidebar-toc,
+.presentation-mode .sidebar-related,
+.presentation-mode .footer,
+.presentation-mode .nav-left,
+.presentation-mode .hamburger {
+    display: none !important;
+}
+
+.presentation-mode .nav {
+    pointer-events: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.presentation-mode .nav-right {
+    pointer-events: auto;
+}
+
+/* Center layout elements */
+.presentation-mode .page-layout {
+    display: block !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+}
+
+.presentation-mode main {
+    max-width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    scroll-behavior: smooth;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Presentation UI Container */
+.presentation-ui {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+/* Base override for nav right since we removed it from normal flow */
+.nav-right .presentation-ui {
+    position: fixed;
+}
+
+.presentation-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    height: 34px;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-sm);
+}
+
+.presentation-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.presentation-btn:hover {
+    background: var(--bg2);
+    color: var(--accent);
+}
+
+.presentation-mode .presentation-btn {
+    background: var(--title);
+    color: var(--bg);
+    border-color: var(--title);
+}
+
+.presentation-mode .presentation-btn:hover,
+.presentation-mode .presentation-btn:active {
+    background: #e53935;
+    color: #ffffff;
+    border-color: #e53935;
+}
+
+/* Toggle specific SVGs in Presentation button */
+.icon-pause {
+    display: none;
+}
+.presentation-mode .icon-pause {
+    display: block;
+}
+.presentation-mode .icon-present {
+    display: none;
+}
+
+/* In presentation mode, give all slides base larger text so there's no layout jump */
+.presentation-mode .slide {
+    font-size: 1.15em;
+}
+
+/* Hide non-selected slides */
+.presentation-mode .slide.non-selected {
+    opacity: 0.25;
+    filter: blur(4px);
+    pointer-events: none;
+}
+
+/* Toggled Large Text Mode */
+.large-text .slide {
+    font-size: 1.4em;
+}
+
+.presentation-mode.large-text #text-size-toggle {
+    background: #e53935;
+    color: #ffffff;
+    fill: #ffffff;
+    border-color: #e53935;
+}
+
+.presentation-mode.large-text h1 {
+    font-size: 2.5em;
+}
+
+.presentation-mode.large-text h2 {
+    font-size: 2em;
+}
+
+.presentation-mode.large-text h3 {
+    font-size: 1.6em;
+}
+
+.presentation-mode.large-text p {
+    font-size: 1.2em;
+}
+
+/* Slide Indicator */
+#slide-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--title);
+    color: var(--bg);
+    padding: 6px 10px;
+    height: 34px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-code);
+    font-size: 0.8em;
+    z-index: 1000;
+    display: none;
+    box-shadow: var(--shadow-sm);
+    opacity: 0.7;
+}
+
+.presentation-mode #slide-indicator {
+    display: block;
+}
