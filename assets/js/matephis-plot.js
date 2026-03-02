@@ -168,7 +168,7 @@ class MatephisPlot {
         this._initSVG();
         
         // Force interactions if selection modes are enabled
-        const hasSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection;
+        const hasSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection || this.config.draggablePoints;
         
         if (this.config.interactive || hasSelection) {
             this._initControlsOverlay();
@@ -193,8 +193,8 @@ class MatephisPlot {
         this.draw();
         this._renderWarnings();
 
-        // Lightbox on click (Only for static plots AND no selection features)
-        if (!this.config.interactive && !hasSelection) {
+        // Lightbox on click (Only for static plots AND no selection features AND not draggable points)
+        if (!this.config.interactive && !hasSelection && !this.config.draggablePoints) {
             this.svg.onclick = () => this._openLightbox();
         }
 
@@ -485,6 +485,7 @@ class MatephisPlot {
         }
 
         const sliderUpdaters = [];
+        this.paramUIs = {};
 
         for (let key in this.config.params) {
             const p = this.config.params[key];
@@ -519,15 +520,26 @@ class MatephisPlot {
                 if (!isNaN(eMax)) initMax = eMax;
             }
 
-            const stepVal = p.step || 0.1;
-            const decimals = (stepVal.toString().split('.')[1] || '').length || 2;
+            let initStep = p.step !== undefined ? p.step : 0.1;
+            if (typeof p.step === 'string') {
+                const eStep = parseFloat(this._eval(p.step, `slider ${key} step`));
+                if (!isNaN(eStep)) initStep = eStep;
+            }
+            
+            let decimals = 2;
+            if (p.round !== undefined) {
+                decimals = parseInt(p.round);
+            } else if (p.step !== undefined) {
+                const stepStr = initStep.toString();
+                decimals = stepStr.includes('.') ? stepStr.split('.')[1].length : 0;
+            }
 
             if (typeof initMin === 'number') initMin = parseFloat(initMin.toFixed(decimals));
             if (typeof initMax === 'number') initMax = parseFloat(initMax.toFixed(decimals));
 
             // Min label
             const minLabel = document.createElement("span");
-            minLabel.innerText = initMin;
+            minLabel.innerHTML = typeof p.min === 'string' && p.min.includes('PI') ? p.min.replace(/PI/g, '&pi;') : initMin;
             minLabel.className = "matephis-slider-min";
 
             // Range slider
@@ -535,12 +547,12 @@ class MatephisPlot {
             input.type = "range";
             input.min = initMin;
             input.max = initMax;
-            input.step = p.step || 0.1;
+            input.step = initStep;
             input.value = p.val;
 
             // Max label
             const maxLabel = document.createElement("span");
-            maxLabel.innerText = initMax;
+            maxLabel.innerHTML = typeof p.max === 'string' && p.max.includes('PI') ? p.max.replace(/PI/g, '&pi;') : initMax;
             maxLabel.className = "matephis-slider-max";
 
             const updateBounds = () => {
@@ -568,11 +580,14 @@ class MatephisPlot {
                 }
             };
             sliderUpdaters.push(updateBounds);
+            
+            // Store references for external dragging interactions
+            this.paramUIs[key] = { input, updateBounds, valSpan, decimals };
 
             input.addEventListener("input", (e) => {
                 const v = parseFloat(e.target.value);
                 this.params[key] = v;
-                valSpan.innerText = v; // Update number next to label
+                valSpan.innerText = parseFloat(v.toFixed(decimals));
                 sliderUpdaters.forEach(fn => fn());
                 this.draw();
             });
@@ -594,7 +609,7 @@ class MatephisPlot {
                         : "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg");
                     
                     if (isPlaying) {
-                        const speed = p.speed !== undefined ? p.speed : stepVal;
+                        const speed = p.speed !== undefined ? p.speed : initStep;
                         let lastTime = 0;
                         const fps = p.fps || 60; // default smooth
                         const interval = 1000 / fps;
@@ -610,8 +625,8 @@ class MatephisPlot {
                                 
                                 this.params[key] = v;
                                 input.value = v;
-                                const decimals = (step.toString().split('.')[1] || '').length || 2;
-                                valSpan.innerText = parseFloat(v.toFixed(decimals));
+                                const currentDecimals = (initStep.toString().split('.')[1] || '').length || 2;
+                                valSpan.innerText = parseFloat(v.toFixed(currentDecimals));
                                 sliderUpdaters.forEach(fn => fn());
                                 this.draw();
                                 lastTime = timestamp;
@@ -632,6 +647,15 @@ class MatephisPlot {
             row.appendChild(maxLabel);
 
             controls.appendChild(row);
+
+            // Store references for external dragging interactions
+            if (!this.paramUIs) this.paramUIs = {};
+            this.paramUIs[key] = {
+                 input: input,
+                 valSpan: valSpan,
+                 updateBounds: updateBounds,
+                 decimals: decimals
+            };
         }
         this.wrapper.appendChild(controls);
     }
@@ -971,12 +995,27 @@ class MatephisPlot {
                 candX = res.x; candY = res.y;
             }
 
-            if (dist < threshold && dist < minDist) {
-                minDist = dist;
-                match = {
-                    ...item,
-                    x: candX, y: candY, dist: dist
-                };
+            if (dist < threshold) {
+                let replace = false;
+                if (dist < minDist) {
+                    if (match && match.type === 'point' && item.type !== 'point' && (minDist - dist) < 15) {
+                        replace = false; // Keep point priority
+                    } else {
+                        replace = true;
+                    }
+                } else if (match && match.type !== 'point' && item.type === 'point' && (dist - minDist) < 15) {
+                    replace = true; // Prefer point over line if it's slightly further
+                } else if (dist === minDist && item.type === 'point' && match && match.type !== 'point') {
+                    replace = true; // Exact same distance, prefer point
+                }
+
+                if (replace) {
+                    minDist = dist;
+                    match = {
+                        ...item,
+                        x: candX, y: candY, dist: dist
+                    };
+                }
             }
         });
         return match;
@@ -1332,16 +1371,25 @@ class MatephisPlot {
 
         // Default Point Mode
         if (!match) return;
-        const c = drawDot(match); // uses internal color logic
-        let valX, valY;
-        if (this.transform) {
-            valX = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
-            valY = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
+
+        // Skip drawing selection dot on top of draggable points (the data point is already rendered)
+        const isDraggablePoint = this.config.draggablePoints && match.type === 'point';
+        if (!isDraggablePoint) {
+            drawDot(match);
         }
-        if (valX !== undefined) {
-             const lbl = `(${parseFloat(valX.toFixed(2))}, ${parseFloat(valY.toFixed(2))})`;
-             // Only draw label if not suppressed? No, always draw for simple point.
-             drawLabel(match.x + 10, match.y - 10, lbl, c);
+
+        // Only show coordinates if showCoordinates is enabled
+        if (this.config.showCoordinates) {
+            let valX, valY;
+            if (this.transform) {
+                valX = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
+                valY = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
+            }
+            if (valX !== undefined) {
+                 const lbl = `(${parseFloat(valX.toFixed(2))}, ${parseFloat(valY.toFixed(2))})`;
+                 const mainColor = selColor || "#B01A00";
+                 drawLabel(match.x + 10, match.y - 10, lbl, mainColor);
+            }
         }
     }
 
@@ -1389,8 +1437,8 @@ class MatephisPlot {
      * @private
      */
     _initInteractions() {
-        // Allow if interactive OR if any selection mode is enabled
-        const allowSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection;
+        // Allow if interactive OR if any selection mode is enabled OR if draggablePoints is true
+        const allowSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection || this.config.draggablePoints;
         if (this.config.interactive === false && !allowSelection) return;
 
         const svg = this.svg;
@@ -1409,66 +1457,80 @@ class MatephisPlot {
             if (e.pointerType === 'touch' && !e.isPrimary) return;
 
             // Check for Selection Mode
-            // Helper to check proximity to existing points (p1, p2)
+            // Helper to check proximity
             const checkProx = (pt, mx, my) => pt ? Math.hypot(pt.x - mx, pt.y - my) < 30 : false;
 
-            if (this.config.pointSelection || this.selectionMode) {
-                const rect = svg.getBoundingClientRect();
-                const mx = e.clientX - rect.left;
-                const my = e.clientY - rect.top;
-                
-                // Priority 1: Slope Mode Interaction
-                if (this.selectionMode === 'slope') {
-                    // Check if adjusting existing points
-                    if (checkProx(this.interactions.slopeP1, mx, my)) {
-                        this.interactions.draggingSelection = 'slopeP1';
-                        // Keep visuals, just drag
+            // Same priority check as pointerdown
+            if (this.config.draggablePoints || this.config.pointSelection || this.selectionMode) {
+                 const rect = svg.getBoundingClientRect();
+                 const mx = e.clientX - rect.left;
+                 const my = e.clientY - rect.top;
+
+                 // Priority 0: Draggable Points
+         if (this.config.draggablePoints) {
+             const match = this._getClosestPointOnGraph(mx, my);
+             if (match && match.type === 'point') {
+                 // Even if it's not parametric, we capture it to prevent panning on simple clicks
+                 match.valX = this.transform.unmapX(match.x);
+                 match.valY = this.transform.unmapY(match.y);
+                 this.interactions.draggingSelection = match;
+                 this.interactions.currentSelection = match;
+                 svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+             }
+         }
+
+                 // Priority 1: Slope Mode Interaction
+                 if (this.selectionMode === 'slope') {
+                     // Check if adjusting existing points
+                     if (checkProx(this.interactions.slopeP1, mx, my)) {
+                         this.interactions.draggingSelection = 'slopeP1';
+                         // Keep visuals, just drag
+                          svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                     }
+                     if (checkProx(this.interactions.slopeP2, mx, my)) {
+                         this.interactions.draggingSelection = 'slopeP2';
+                          svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                     }
+
+                     const match = this._getClosestPointOnGraph(mx, my);
+                     if (match) {
+                         // Store Graph Coords
+                         match.valX = this.transform.unmapX(match.x);
+                         match.valY = this.transform.unmapY(match.y);
+                         
+                         this.interactions.slopeP1 = match;
+                         this.interactions.slopeP2 = { ...match }; // Copy
+                         this.interactions.draggingSelection = 'slopeP2'; // Drag P2 to expand
+                         this._updateSelectionVisuals(null); // Will read from interactions
                          svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
-                    }
-                    if (checkProx(this.interactions.slopeP2, mx, my)) {
-                        this.interactions.draggingSelection = 'slopeP2';
+                     }
+                 }
+
+                 // Priority 2: Tangent Mode
+                 else if (this.selectionMode === 'tangent') {
+                     const match = this._getClosestPointOnGraph(mx, my);
+                     if (match) {
+                         match.valX = this.transform.unmapX(match.x);
+                         match.valY = this.transform.unmapY(match.y);
+                         this.interactions.draggingSelection = match;
+                         this.interactions.currentSelection = match; // Persist 
+                         this._updateSelectionVisuals(match);
                          svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
-                    }
+                     }
+                 }
 
-                    const match = this._getClosestPointOnGraph(mx, my);
-                    if (match) {
-                        // Store Graph Coords
-                        match.valX = this.transform.unmapX(match.x);
-                        match.valY = this.transform.unmapY(match.y);
-                        
-                        this.interactions.slopeP1 = match;
-                        this.interactions.slopeP2 = { ...match }; // Copy
-                        this.interactions.draggingSelection = 'slopeP2'; // Drag P2 to expand
-                        this._updateSelectionVisuals(null); // Will read from interactions
-                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
-                    }
-                }
-
-                // Priority 2: Tangent Mode
-                else if (this.selectionMode === 'tangent') {
-                    const match = this._getClosestPointOnGraph(mx, my);
-                    if (match) {
-                        match.valX = this.transform.unmapX(match.x);
-                        match.valY = this.transform.unmapY(match.y);
-                        this.interactions.draggingSelection = match;
-                        this.interactions.currentSelection = match; // Persist 
-                        this._updateSelectionVisuals(match);
-                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
-                    }
-                }
-
-                // Priority 3: Point Selection Mode
-                else if (this.selectionMode === 'point') {
-                    const match = this._getClosestPointOnGraph(mx, my);
-                    if (match) {
-                        match.valX = this.transform.unmapX(match.x);
-                        match.valY = this.transform.unmapY(match.y);
-                        this.interactions.draggingSelection = match;
-                        this.interactions.currentSelection = match; // Persist
-                        this._updateSelectionVisuals(match);
-                        svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
-                    }
-                }
+                 // Priority 3: Point Selection Mode
+                 else if (this.selectionMode === 'point') {
+                     const match = this._getClosestPointOnGraph(mx, my);
+                     if (match) {
+                         match.valX = this.transform.unmapX(match.x);
+                         match.valY = this.transform.unmapY(match.y);
+                         this.interactions.draggingSelection = match;
+                         this.interactions.currentSelection = match; // Persist
+                         this._updateSelectionVisuals(match);
+                         svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+                     }
+                 }
             }
 
             // Deselection (Click on nothing)
@@ -1477,14 +1539,17 @@ class MatephisPlot {
             
             // Pan Guard
             if (this.config.interactive !== false) {
-                this.interactions.isDragging = true;
-                this.interactions.startX = e.clientX;
-                this.interactions.startY = e.clientY;
-                this.interactions.hasMoved = false;
-                lastX = e.clientX;
-                lastY = e.clientY;
-                svg.setPointerCapture(e.pointerId);
-                e.preventDefault();
+                 // Only become "isDragging" (panning) if we didn't already capture a selection
+                 if (!this.interactions.draggingSelection) {
+                     this.interactions.isDragging = true;
+                     this.interactions.startX = e.clientX;
+                     this.interactions.startY = e.clientY;
+                     this.interactions.hasMoved = false;
+                     lastX = e.clientX;
+                     lastY = e.clientY;
+                     svg.setPointerCapture(e.pointerId);
+                 }
+                 e.preventDefault();
             }
         };
 
@@ -1516,6 +1581,99 @@ class MatephisPlot {
                      currentObj = ds;
                  }
                  
+                 // Parametric Dragging for Points
+                 if (currentObj && currentObj.type === 'point' && currentObj.rawExpressions) {
+                     let bestDist = Infinity;
+                     let bestParamKey = null;
+                     let bestParamVal = null;
+                     const targetX = this.transform.unmapX(mx);
+                     const targetY = this.transform.unmapY(my);
+
+                     // Helper to evaluate point at a given parameter value
+                     const evalAtParam = (key, t) => {
+                         const oldVal = this.params[key];
+                         this.params[key] = t;
+                         let evalX, evalY;
+                         try {
+                             const rawValX = this._eval(currentObj.rawExpressions[0], "drag eval x");
+                             if (this.config.complexMode && rawValX && typeof rawValX === 'object') {
+                                 evalX = rawValX.re;
+                                 evalY = rawValX.im;
+                             } else {
+                                 evalX = rawValX;
+                                 evalY = currentObj.rawExpressions.length > 1 ? this._eval(currentObj.rawExpressions[1], "drag eval y") : 0;
+                             }
+                         } catch (e) { evalX = undefined; evalY = undefined; }
+                         this.params[key] = oldVal;
+                         return { evalX, evalY };
+                     };
+
+                     // Find which parameter this point depends on
+                     for (let key in this.params) {
+                         const rx = new RegExp(`(?<![a-zA-Z0-9_])(${key})(?![a-zA-Z0-9_])`);
+                         const isParametric = currentObj.rawExpressions.some(expr => rx.test(expr));
+                         
+                         if (isParametric && this.paramUIs && this.paramUIs[key]) {
+                             const pMin = parseFloat(this.paramUIs[key].input.min);
+                             const pMax = parseFloat(this.paramUIs[key].input.max);
+                             const rawStep = parseFloat(this.paramUIs[key].input.step) || 0;
+                             const pStep = rawStep > 0 ? rawStep : (pMax - pMin) / 100;
+
+                             // Revert to stable linear search over the parameter space
+                             // The local search threshold logic was flawed for anisotropic scales.
+                             // Removing `...this.params` spreading is mostly enough for smoothness.
+                             const stepsCount = rawStep > 0 ? Math.floor((pMax - pMin) / pStep) : 100;
+
+                             for (let i = 0; i <= stepsCount; i++) {
+                                 const t = pMin + i * pStep;
+                                 const clamped = Math.min(t, pMax);
+                                 const { evalX, evalY } = evalAtParam(key, clamped);
+                                 
+                                 if (evalX !== undefined && evalY !== undefined) {
+                                     // Compare distance in transformed graph space
+                                     const distSq = (evalX - targetX) ** 2 + (evalY - targetY) ** 2;
+                                     if (distSq < bestDist) {
+                                         bestDist = distSq;
+                                         bestParamKey = key;
+                                         bestParamVal = clamped;
+                                     }
+                                 }
+                             }
+                         }
+                     }
+
+                     if (bestParamKey !== null && bestParamVal !== null) {
+                         // Update the global parameter
+                         const ui = this.paramUIs[bestParamKey];
+                         const cleanVal = parseFloat(bestParamVal.toFixed(ui.decimals));
+                         
+                         this.params[bestParamKey] = cleanVal;
+                         ui.input.value = cleanVal;
+                         ui.valSpan.innerText = parseFloat(cleanVal.toFixed(ui.decimals));
+                         
+                         // Update all dependent bounds
+                         if (this.paramUIs) {
+                              for(let uk in this.paramUIs) {
+                                   this.paramUIs[uk].updateBounds();
+                              }
+                         }
+
+                         this.draw();
+                         
+                         // Update dragging reference directly to prevent jitter
+                         const freshMatch = this._getClosestPointOnGraph(mx, my, currentObj.index);
+                         if (freshMatch) {
+                              freshMatch.valX = this.transform.unmapX(freshMatch.x);
+                              freshMatch.valY = this.transform.unmapY(freshMatch.y);
+                              this.interactions.draggingSelection = freshMatch;
+                              this.interactions.currentSelection = freshMatch;
+                         }
+                         
+                         e.preventDefault();
+                         return;
+                     }
+                 }
+
                  if (currentObj && currentObj.type === 'fn') {
                      // Force X-only follow
                      const valX = this.transform.unmapX(mx);
@@ -1714,8 +1872,12 @@ class MatephisPlot {
 
         const handleTouchMove = (e) => {
             if (!isTouchActive) return;
-            // PREVENT PAN IF SELECTION IS BEING DRAGGED
-            if (this.interactions.isDragging) return;
+
+            // PREVENT NATIVE PAN IF SELECTION IS BEING DRAGGED OR PANNING
+            if (this.interactions.isDragging || this.interactions.draggingSelection) {
+                if (e.cancelable) e.preventDefault();
+                return;
+            }
 
             if (e.cancelable) e.preventDefault(); // Always prevent default if active
 
@@ -1885,14 +2047,17 @@ class MatephisPlot {
     /**
      * Parses a mathematical expression string into JavaScript.
      * Handles parameter substitution, implicit multiplication, and math functions.
+     * @param {string} str - The mathematical expression
+     * @param {string} [internalParamName=null] - Optional local parameter to avoid substituting as a global
      * @private
      */
-    _makeFn(str) {
+    _makeFn(str, internalParamName = null) {
         let expr = str;
 
         // 1. Implicit Multiplication for Parameters (e.g., "ax" -> "a*x")
         // Must be done BEFORE parameter value substitution
         for (let key in this.params) {
+            if (internalParamName && key === internalParamName) continue;
             // Param followed by variable (x/y/t) or open parenthesis
             // Lookbehind support in JS is good, but simple regex is safer: capture key, then lookahead
             const re = new RegExp(`(?<![a-zA-Z0-9])(${key})(?=[xyt\\(])`, 'g');
@@ -1901,6 +2066,7 @@ class MatephisPlot {
 
         // Replace parameters with their values
         for (let key in this.params) {
+            if (internalParamName && key === internalParamName) continue;
             const re = new RegExp(`\\b${key}\\b`, 'g');
             expr = expr.replace(re, `(${this.params[key]})`);
         }
@@ -1926,10 +2092,9 @@ class MatephisPlot {
         
         // Complex Mode Parsers
         if (this.config.complexMode === true) {
-            let orig = expr;
             // Evaluates r * e^(i*x) or r * exp(i*x) -> {re: r*cos(x), im: r*sin(x)}
             // After standard math replacements: e becomes Math.E, ^ becomes **
-            expr = expr.replace(/([^+\-*/(]+(?:\*))?(?:Math\.E\*\*)?(?:Math\.exp)?\(\s*i\s*\*\s*(.+?)\s*\)/g, (match, r, theta) => {
+            expr = expr.replace(/([^+\-*/(]+(?:\*))?(?:Math\.E\*\*)?(?:Math\.exp)?\(\s*i\s*\*\s*((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))+)\s*\)/g, (match, r, theta) => {
                 const radius = r ? r.replace('*', '') : "1";
                 return `{re: (${radius}) * Math.cos(${theta}), im: (${radius}) * Math.sin(${theta})}`;
             });
@@ -1940,7 +2105,6 @@ class MatephisPlot {
             expr = expr.replace(/([^+\-*/()]+)\s*\+\s*([^+\-*/()]+)\s*\*\s*i/g, "{re: $1, im: $2}");
             // Matches plain i*something
             expr = expr.replace(/(?<!\w)i\s*\*\s*([^+\-*/()]+)/g, "{re: 0, im: $1}");
-            if (orig !== expr) console.log("Complex Parsing: ", orig, " -> ", expr);
         }
         
         return expr;
@@ -2666,8 +2830,17 @@ class MatephisPlot {
                 // 1. Original Function
                 // Hide if configured (e.g. for derivative-only plot)
                 if (this.config.hideFunctions !== true) {
+                    
+                    let fnExpr;
+                    if (item.param && Array.isArray(item.param[0])) {
+                         const pName = item.param[0][0];
+                         fnExpr = this._makeFn(item.fn, pName);
+                    } else {
+                         fnExpr = this._makeFn(item.fn);
+                    }
+                    
                     tasks.push({
-                        fnExpr: this._makeFn(item.fn),
+                        fnExpr: fnExpr,
                         color: this._getColor(idx, item.color),
                         width: item.width || item.strokeWidth || 3,
                         dash: item.dash || "",
@@ -2678,8 +2851,15 @@ class MatephisPlot {
 
                 // 2. Derivative Function
                 if (this.config.showDerivative === true) {
+                    let fnExpr;
+                    if (item.param && Array.isArray(item.param[0])) {
+                         const pName = item.param[0][0];
+                         fnExpr = this._makeFn(item.fn, pName);
+                    } else {
+                         fnExpr = this._makeFn(item.fn);
+                    }
                     tasks.push({
-                        fnExpr: this._makeFn(item.fn),
+                        fnExpr: fnExpr,
                         color: this._getColor(idx, item.color), // same color
                         width: 2, // thinner?
                         dash: "5,5", // dashed
@@ -2703,18 +2883,20 @@ class MatephisPlot {
                         let started = false;
                         
                         let f;
+                        const paramVar = (item.param && Array.isArray(item.param[0])) ? item.param[0][0] : "x";
+
                         if (task.isDerivative) {
                              const baseExpr = task.fnExpr;
-                             const baseF = new Function("x", `return ${baseExpr};`);
-                             f = (x) => {
+                             const baseF = new Function(paramVar, `return ${baseExpr};`);
+                             f = (val) => {
                                  const eps = 1e-4;
-                                 const y1 = baseF(x - eps);
-                                 const y2 = baseF(x + eps);
+                                 const y1 = baseF(val - eps);
+                                 const y2 = baseF(val + eps);
                                  if (!isFinite(y1) || !isFinite(y2)) return NaN;
                                  return (y2 - y1) / (2 * eps);
                              };
                         } else {
-                             f = new Function("x", `return ${task.fnExpr};`);
+                             f = new Function(paramVar, `return ${task.fnExpr};`);
                         }
                         
                         // Test call to catch syntax errors early
@@ -2851,7 +3033,22 @@ class MatephisPlot {
 
                         // Initial Coarse Steps with Domain Edge Handling
                         let rMin = xMin, rMax = xMax;
-                        if (domain) {
+                        
+                        if (item.param && Array.isArray(item.param[0])) {
+                            // Parametric Function Mode. We use param bounds instead of screen X bounds.
+                            const pMinRaw = item.param[0][1];
+                            const pMaxRaw = item.param[0][2];
+                            const pMin = parseFloat(this._eval(pMinRaw, "param min"));
+                            const pMax = parseFloat(this._eval(pMaxRaw, "param max"));
+                            
+                            if (!isNaN(pMin) && !isNaN(pMax)) {
+                                rMin = Math.min(pMin, pMax);
+                                rMax = Math.max(pMin, pMax);
+                            } else {
+                                // Fallback
+                                rMin = 0; rMax = 2 * Math.PI; 
+                            }
+                        } else if (domain) {
                             rMin = Math.max(rMin, domain[0]);
                             rMax = Math.min(rMax, domain[1]);
                         }
@@ -2870,10 +3067,14 @@ class MatephisPlot {
                         };
 
                         if (rMin < rMax) {
-                            // Configurable Sampling Step (pixels)
-                            const sampleStep = this.config.sampleStep || 2;
-                            const coarseSteps = this.width / sampleStep;
-                            const dx = (xMax - xMin) / coarseSteps;
+                            // Configurable Sampling Step
+                            let coarseSteps = this.width / (this.config.sampleStep || 2);
+                            
+                            // If we are strictly parametric, map steps over the parameter range, not screen width, to ensure we get a decent closed curve resolution over 0-2pi 
+                            if (item.param) {
+                                coarseSteps = Math.max(150, coarseSteps);
+                            }
+                            const dx = (rMax - rMin) / coarseSteps;
                             let curr = rMin;
 
                             while (curr < rMax - 1e-9) {
@@ -3117,7 +3318,8 @@ class MatephisPlot {
                                     type: 'point',
                                     index: idx,
                                     cx: px, cy: py,
-                                    valX: valX, valY: valY
+                                    valX: valX, valY: valY,
+                                    rawExpressions: [pt[0], pt.length > 1 ? pt[1] : null].filter(Boolean)
                                 });
                             }
                         }
@@ -3471,14 +3673,14 @@ class MatephisPlot {
             "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints",
             "animate",
             "polar", "polarUnits",
-            "complexMode"
+            "complexMode", "draggablePoints"
         ];
 
         const VALID_DATA_KEYS = [
             "type", "fn", "implicit", "points", "x", "range", "domain",
             "color", "width", "strokeWidth", "dash", "opacity", "fillColor", "strokeColor", "radius",
             "label", "labelAt", "labelOffset", "labelAnchor",
-            "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth" // interpolation
+            "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth", "param" // interpolation
         ];
 
         // 1. Root Keys

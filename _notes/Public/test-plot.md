@@ -763,3 +763,136 @@ Puoi anche definire punti singoli e discreti utilizzando espressioni complesse, 
   ]
 }
 ```
+
+### Parametri Interni (Curve Parametriche)
+Puoi limitare il dominio di valutazione di una funzione e svincolarlo dall'asse X globale specificando un parametro interno con i suoi limiti.
+Questo approccio, unito a `complexMode: true`, rende molto facile tracciare curve parametriche e percorsi chiusi (come i cerchi).
+
+```json
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "data": [
+    { 
+      "fn": "1.5*exp(i*T)", 
+      "param": [["T", 0, "2*PI"]],
+      "color": "purple"
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "data": [
+    { 
+      "fn": "1.5*exp(i*T)", 
+      "param": [["T", 0, "2*PI"]],
+      "color": "purple"
+    }
+  ]
+}
+```
+
+### Drag di Punti Parametrici
+Se hai un grafico interattivo con dei parametri definiti in `params` e imposti `draggablePoints: true`, i punti che dipendono da quel parametro potranno essere trascinati!
+Questo cambierà sia la posizione del punto sia il valore del parametro nello slider in modo collegato.
+
+```json
+{
+  "interactive": true,
+  "draggablePoints": true,
+  "sliderBorder": true,
+  "aspectRatio": 1,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "params": {
+  "T": { "min": 0, "max": "2*PI", "step": "PI/16", "val": 0, "round": 2 }
+  },
+  "data": [
+    { "fn": "cos(x)", "color": "#ccc", "dash": "5,5" },
+    { "points": [["cos(T)", "sin(T)"]], "radius": 6, "fillColor": "red", "label": "Drag me!" },
+    { "implicit": "x^2 + y^2 = 1", "color": "blue" }
+  ]
+}
+```
+
+```matephis
+{
+  "interactive": true,
+  "draggablePoints": true,
+  "sliderBorder": true,
+  "aspectRatio": 1,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "params": {
+    "T": { "min": 0, "max": "2*PI", "step": "PI/16", "val": 0, "round": 2 }
+  },
+  "data": [
+    { "fn": "cos(x)", "color": "#ccc", "dash": "5,5" },
+    { "points": [["cos(T)", "sin(T)"]], "radius": 6, "fillColor": "red", "label": "Drag me!" },
+    { "implicit": "x^2 + y^2 = 1", "color": "blue" }
+  ]
+}
+```
+
+### Parametri Trascinabili (Draggable Points)
+Se definisci le coordinate di un punto come espressioni matematiche dipendenti da un parametro globale (es. `t`), puoi trascinare liberamente quel punto lungo il grafico. Il parametro si aggiornerà in tempo reale in base alla posizione più vicina del cursore.
+
+```json
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "params": {
+    "t": { "min": 0, "max": "2*PI", "step": 0.05, "val": 0, "round": 2 }
+  },
+  "draggablePoints": true,
+  "data": [
+    { 
+      "fn": "1.5*exp(i*T)", 
+      "param": [["T", 0, "2*PI"]],
+      "color": "gray",
+      "dash": "5,5"
+    },
+    {
+      "points": [
+        ["1.5*exp(i*t)", "", "Trascina"]
+      ],
+      "radius": 6,
+      "fillColor": "blue"
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "params": {
+    "t": { "min": 0, "max": "2PI", "step": 0.05, "val": 0, "round": 2 }
+  },
+  "draggablePoints": true,
+  "data": [
+    { 
+      "fn": "1.5*exp(i*T)", 
+      "param": [["T", 0, "2*PI"]],
+      "color": "gray",
+      "dash": "5,5"
+    },
+    {
+      "points": [
+        ["1.5*exp(i*t)", "", "Trascina"]
+      ],
+      "radius": 6,
+      "fillColor": "blue"
+    }
+  ]
+}
+```
