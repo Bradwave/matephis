@@ -620,3 +620,146 @@ Nuovi strumenti per visualizzare la derivata.
 }
 ```
 
+## 9. Nuove Funzionalità Sperimentali
+
+### Animazione Parametri e Limiti Dinamici
+Aggiungi `animate: true` alla configurazione per abilitare un pulsante play/pause accanto agli slider. Cliccando play, il parametro verrà incrementato automaticamente in base al suo `step`.
+Inoltre, i bordi `min` e `max` dei parametri possono ora essere definiti come espressioni matematiche, permettendo dipendenze dinamiche tra slider, che si aggiornano in tempo reale.
+
+```json
+{
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "animate": true,
+  "params": {
+    "A": { "min": 0.5, "max": 2.5, "step": 0.1, "val": 1 },
+    "t": { "min": "-A*2", "max": "A*5", "step": 0.05, "val": 0 }
+  },
+  "data": [
+    { "fn": "A * sin(x - t)", "label": "Onda Propagante" }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "animate": true,
+  "params": {
+    "A": { "min": 0.5, "max": 2.5, "step": 0.1, "val": 1 },
+    "t": { "min": "-A*2", "max": "A*5", "step": 0.05, "val": 0 }
+  },
+  "data": [
+    { "fn": "A * sin(x - t)", "label": "Onda Propagante" }
+  ]
+}
+```
+
+### Griglia Polare
+Imposta `polar: true` per disegnare una griglia radiale e concentrica al posto di quella cartesiana standard. `polarUnits` può essere impostato su `"deg"` per i gradi (mostrerà gradi numerici) o lasciato di default / `"rad"` per etichette in radianti proporzionali a `π`. Utile per mostrare equazioni in coordinate polari e complessi!
+
+```json
+{
+  "polar": true,
+  "polarUnits": "rad",
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "aspectRatio": 1,
+  "params": {
+    "k": { "min": 1, "max": 10, "step": 1, "val": 4 },
+    "t": { "min": 0, "max": "2*PI", "step": 0.1, "val": "2*PI" }
+  },
+  "data": [
+    { "fn": "4 * cos(k * x)", "domain": [0, "t"], "label": "Rosa Polare" }
+  ]
+}
+```
+
+```matephis
+{
+  "polar": true,
+  "polarUnits": "rad",
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "aspectRatio": 1,
+  "params": {
+    "k": { "min": 1, "max": 10, "step": 1, "val": 4 },
+    "t": { "min": 0, "max": "2*PI", "step": 0.05, "val": "2*PI" }
+  },
+  "data": [
+    { "fn": "4 * cos(k * x)", "domain": [0, "t"], "label": "Rosa Polare" }
+  ]
+}
+```
+
+### Supporto Numeri Complessi (Base)
+Aggiungi `complexMode: true` per valutare le funzioni nel campo complesso in modo semplificato. Scrivendo funzioni f(x) e calcolando ad esempio `exp(i * x)`, x viene usato come parametro per muoversi sul piano complesso (Asse X = Reale, Asse Y = Immaginario).
+
+```json
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "data": [
+    { "fn": "exp(i * x)", "domain": [0, "2*pi"] }
+  ]
+}
+```
+
+```matephis
+{
+  "complexMode": true,
+  "xlim": [-2, 2],
+  "ylim": [-2, 2],
+  "data": [
+    { "fn": "exp(i * x)", "domain": [0, "2*pi"] }
+  ]
+}
+```
+
+Puoi anche definire punti singoli e discreti utilizzando espressioni complesse, sia in forma algebrica `a+ib` che in forma polare `r*exp(i*θ)` o `r*e^(i*θ)`.
+
+```json
+{
+  "complexMode": true,
+  "xlim": [-3, 3],
+  "ylim": [-3, 3],
+  "data": [
+    { "fn": "2*exp(i*x)", "domain": [0, "6.28"], "color": "blue" },
+    {
+      "points": [
+        ["1+0.5i", "", "1+0.5i"],
+        ["-1+1i", "", "-1+i"],
+        ["2*exp(i*PI/2)", "", "2*exp(i*PI/2)"],
+        ["1.5*e^(i*PI)", "", "1.5*e^(i*PI)"]
+      ],
+      "radius": 5,
+      "fillColor": "red"
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "complexMode": true,
+  "xlim": [-3, 3],
+  "ylim": [-3, 3],
+  "data": [
+    { "fn": "2*exp(i*x)", "domain": [0, "6.28"], "color": "blue" },
+    {
+      "points": [
+        ["1+0.5i", "", "1+0.5i"],
+        ["-1+1i", "", "-1+i"],
+        ["2*exp(i*PI/2)", "", "2*exp(i*PI/2)"],
+        ["1.5*e^(i*PI)", "", "1.5*e^(i*PI)"]
+      ],
+      "radius": 5,
+      "fillColor": "red"
+    }
+  ]
+}
+```

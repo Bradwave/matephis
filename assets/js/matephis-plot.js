@@ -468,6 +468,24 @@ class MatephisPlot {
         const controls = document.createElement("div");
         controls.className = "matephis-plot-controls";
 
+        let basePath = "";
+        if (MatephisPlot.scriptUrl) {
+            const src = MatephisPlot.scriptUrl;
+            const idx = src.indexOf("assets/js/matephis-plot.js");
+            if (idx !== -1) basePath = src.substring(0, idx);
+            else {
+                const idx2 = src.indexOf("js/matephis-plot.js");
+                if (idx2 !== -1) basePath = src.substring(0, idx2);
+            }
+        }
+
+        for (let key in this.config.params) {
+            // Ensure local params map exists early, useful for initial eval bounds
+            if (this.params[key] === undefined) this.params[key] = this.config.params[key].val;
+        }
+
+        const sliderUpdaters = [];
+
         for (let key in this.config.params) {
             const p = this.config.params[key];
             const row = document.createElement("div");
@@ -489,30 +507,124 @@ class MatephisPlot {
             labelGroup.appendChild(label);
             labelGroup.appendChild(valSpan);
 
+            // Initial Evaluation of Min/Max
+            let initMin = p.min;
+            if (typeof p.min === 'string') {
+                const eMin = parseFloat(this._eval(p.min, `slider ${key} min`));
+                if (!isNaN(eMin)) initMin = eMin;
+            }
+            let initMax = p.max;
+            if (typeof p.max === 'string') {
+                const eMax = parseFloat(this._eval(p.max, `slider ${key} max`));
+                if (!isNaN(eMax)) initMax = eMax;
+            }
+
+            const stepVal = p.step || 0.1;
+            const decimals = (stepVal.toString().split('.')[1] || '').length || 2;
+
+            if (typeof initMin === 'number') initMin = parseFloat(initMin.toFixed(decimals));
+            if (typeof initMax === 'number') initMax = parseFloat(initMax.toFixed(decimals));
+
             // Min label
             const minLabel = document.createElement("span");
-            minLabel.innerText = p.min;
+            minLabel.innerText = initMin;
             minLabel.className = "matephis-slider-min";
 
             // Range slider
             const input = document.createElement("input");
             input.type = "range";
-            input.min = p.min;
-            input.max = p.max;
+            input.min = initMin;
+            input.max = initMax;
             input.step = p.step || 0.1;
             input.value = p.val;
 
             // Max label
             const maxLabel = document.createElement("span");
-            maxLabel.innerText = p.max;
+            maxLabel.innerText = initMax;
             maxLabel.className = "matephis-slider-max";
+
+            const updateBounds = () => {
+                if (typeof p.min === 'string') {
+                    let eMin = parseFloat(this._eval(p.min, `slider ${key} min`));
+                    if (!isNaN(eMin)) {
+                        eMin = parseFloat(eMin.toFixed(decimals));
+                        if (input.min != eMin) {
+                            input.min = eMin;
+                            minLabel.innerText = eMin;
+                            if (this.params[key] < eMin) { this.params[key] = eMin; input.value = eMin; valSpan.innerText = eMin; }
+                        }
+                    }
+                }
+                if (typeof p.max === 'string') {
+                    let eMax = parseFloat(this._eval(p.max, `slider ${key} max`));
+                    if (!isNaN(eMax)) {
+                        eMax = parseFloat(eMax.toFixed(decimals));
+                        if (input.max != eMax) {
+                            input.max = eMax;
+                            maxLabel.innerText = eMax;
+                            if (this.params[key] > eMax) { this.params[key] = eMax; input.value = eMax; valSpan.innerText = eMax; }
+                        }
+                    }
+                }
+            };
+            sliderUpdaters.push(updateBounds);
 
             input.addEventListener("input", (e) => {
                 const v = parseFloat(e.target.value);
                 this.params[key] = v;
                 valSpan.innerText = v; // Update number next to label
+                sliderUpdaters.forEach(fn => fn());
                 this.draw();
             });
+
+            if (this.config.animate === true) {
+                const playBtn = document.createElement("button");
+                playBtn.className = "matephis-plot-play-btn";
+                const img = document.createElement("img");
+                img.src = basePath + "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg";
+                playBtn.appendChild(img);
+                
+                let isPlaying = false;
+                let animFrame = null;
+                
+                playBtn.onclick = () => {
+                    isPlaying = !isPlaying;
+                    img.src = basePath + (isPlaying 
+                        ? "assets/img/pause_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg" 
+                        : "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg");
+                    
+                    if (isPlaying) {
+                        const speed = p.speed !== undefined ? p.speed : stepVal;
+                        let lastTime = 0;
+                        const fps = p.fps || 60; // default smooth
+                        const interval = 1000 / fps;
+                        
+                        const loop = (timestamp) => {
+                            if (!isPlaying) return;
+                            if (!lastTime) lastTime = timestamp;
+                            if (timestamp - lastTime >= interval) {
+                                let v = this.params[key] + speed;
+                                let currentMax = parseFloat(input.max);
+                                let currentMin = parseFloat(input.min);
+                                if (v > currentMax) v = currentMin;
+                                
+                                this.params[key] = v;
+                                input.value = v;
+                                const decimals = (step.toString().split('.')[1] || '').length || 2;
+                                valSpan.innerText = parseFloat(v.toFixed(decimals));
+                                sliderUpdaters.forEach(fn => fn());
+                                this.draw();
+                                lastTime = timestamp;
+                            }
+                            animFrame = requestAnimationFrame(loop);
+                        };
+                        animFrame = requestAnimationFrame(loop);
+                    } else {
+                        if (animFrame) cancelAnimationFrame(animFrame);
+                    }
+                };
+                row.appendChild(playBtn);
+            }
 
             row.appendChild(labelGroup);
             row.appendChild(minLabel);
@@ -910,6 +1022,22 @@ class MatephisPlot {
             
             const f = new Function("x", `return ${this._makeFn(item.fn)};`);
             const valY = f(valX);
+            
+            if (this.config.complexMode === true && valY !== null && typeof valY === 'object' && 're' in valY && 'im' in valY) {
+                if (!isFinite(valY.re) || !isFinite(valY.im)) return null;
+                const px = this.transform.mapX(valY.re);
+                const py = this.safeMapY ? this.safeMapY(valY.im) : this.transform.mapY(valY.im);
+                
+                return {
+                    type: 'fn',
+                    index: index,
+                    x: px, y: py,
+                    valX: valX, valY: valY.im, // To maintain structure, real is on X axis structurally, but evaluated with parameter x
+                    dist: 0,
+                    complex: true
+                };
+            }
+            
             if (!isFinite(valY)) return null;
             
             const px = this.transform.mapX(valX);
@@ -1791,10 +1919,30 @@ class MatephisPlot {
         expr = expr.replace(/\b(e|E)\b/g, "Math.E");
 
         // Convert implicit equations (e.g., "x^2 + y^2 = 1")
-        if (expr.includes("=")) {
+        if (expr.includes("=") && this.config.complexMode !== true) {
             const parts = expr.split("=");
             expr = `(${parts[0]}) - (${parts[1]})`;
         }
+        
+        // Complex Mode Parsers
+        if (this.config.complexMode === true) {
+            let orig = expr;
+            // Evaluates r * e^(i*x) or r * exp(i*x) -> {re: r*cos(x), im: r*sin(x)}
+            // After standard math replacements: e becomes Math.E, ^ becomes **
+            expr = expr.replace(/([^+\-*/(]+(?:\*))?(?:Math\.E\*\*)?(?:Math\.exp)?\(\s*i\s*\*\s*(.+?)\s*\)/g, (match, r, theta) => {
+                const radius = r ? r.replace('*', '') : "1";
+                return `{re: (${radius}) * Math.cos(${theta}), im: (${radius}) * Math.sin(${theta})}`;
+            });
+            // Standard form a + ib or a + bi
+            // Simple replacement for literal numbers or simple variables
+            // Matches something + i*something or something + something*i
+            expr = expr.replace(/([^+\-*/()]+)\s*\+\s*i\s*\*\s*([^+\-*/()]+)/g, "{re: $1, im: $2}");
+            expr = expr.replace(/([^+\-*/()]+)\s*\+\s*([^+\-*/()]+)\s*\*\s*i/g, "{re: $1, im: $2}");
+            // Matches plain i*something
+            expr = expr.replace(/(?<!\w)i\s*\*\s*([^+\-*/()]+)/g, "{re: 0, im: $1}");
+            if (orig !== expr) console.log("Complex Parsing: ", orig, " -> ", expr);
+        }
+        
         return expr;
     }
 
@@ -1806,8 +1954,13 @@ class MatephisPlot {
         if (typeof val === 'number') return val;
         if (typeof val === 'string') {
             try {
-                const fn = new Function(`return ${this._makeFn(val)}`);
-                return fn();
+                const fnStr = this._makeFn(val);
+                const fn = new Function(`return ${fnStr}`);
+                const res = fn();
+                if (this.config.complexMode === true && res && typeof res === 'object' && 're' in res) {
+                    return res;
+                }
+                return res;
             } catch (e) {
                 console.warn(`Error evaluating ${context}: ${val}`, e);
                 return NaN;
@@ -1984,8 +2137,68 @@ class MatephisPlot {
         const yStep = yStepObj.val;
 
         this.secondaryGridGroup.innerHTML = "";
-        // Default opacity is half of the main grid opacity (0.25 if main is 0.5)
         const mainOpacity = (this.config.gridOpacity !== undefined) ? this.config.gridOpacity : 0.5;
+        this.secondaryGridGroup.setAttribute("opacity", (this.config.secondaryGridOpacity !== undefined) ? this.config.secondaryGridOpacity : mainOpacity * 0.5);
+
+        if (this.config.polar === true) {
+            const isDeg = this.config.polarUnits === "deg";
+            const rStep = xStep; // use xStep for radius intervals
+            const maxR = Math.sqrt(Math.max(xMin*xMin, xMax*xMax) + Math.max(yMin*yMin, yMax*yMax));
+            
+            // Concentric circles
+            for (let r = rStep; r <= maxR; r += rStep) {
+                const pxR = (r / (xMax - xMin)) * (this.width - 2 * this.padding); // radius in pixels
+                this._circle(mapX(0), mapY(0), pxR, gridColor, 1.5, "", this.gridGroup);
+                
+                // Numbers along the positive X axis
+                if (this.config.showXNumbers !== false) {
+                    const px = mapX(r);
+                    if (px >= this.padding && px <= this.width - this.padding) {
+                        this._text(px, mapY(0) + 12, formatTick(r, false, rStep), "middle", "hanging", "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
+                    }
+                }
+            }
+            
+            // Radial lines
+            const aStep = isDeg ? 30 : Math.PI / 6;
+            const maxA = isDeg ? 360 : 2 * Math.PI;
+            
+            for (let a = 0; a < maxA - 1e-9; a += aStep) {
+                const rad = isDeg ? a * Math.PI / 180 : a;
+                const endX = mapX(maxR * Math.cos(rad));
+                const endY = mapY(maxR * Math.sin(rad));
+                this._line(mapX(0), mapY(0), endX, endY, gridColor, 1, "4,4", this.gridGroup);
+                
+                // Labels at the edge
+                let lx = maxR * Math.cos(rad);
+                let ly = maxR * Math.sin(rad);
+                
+                let scale = 1;
+                if (lx > xMax) scale = Math.min(scale, xMax / lx);
+                if (lx < xMin) scale = Math.min(scale, Math.abs(xMin / lx));
+                if (ly > yMax) scale = Math.min(scale, yMax / ly);
+                if (ly < yMin) scale = Math.min(scale, Math.abs(yMin / ly));
+                
+                const pxLabel = mapX(lx * scale);
+                const pyLabel = mapY(ly * scale);
+                
+                let align = "middle";
+                let baseline = "middle";
+                if (Math.abs(Math.cos(rad)) > 0.1) align = Math.cos(rad) > 0 ? "start" : "end";
+                if (Math.abs(Math.sin(rad)) > 0.1) baseline = Math.sin(rad) > 0 ? "bottom" : "hanging";
+                
+                const offX = Math.cos(rad) * 10;
+                const offY = -Math.sin(rad) * 10;
+                
+                let lblTxt = isDeg ? `${Math.round(a)}°` : formatTick(a, true, aStep) + " rad";
+                if (a === 0) lblTxt = "0" + (isDeg ? "°" : " rad");
+                
+                if (pxLabel + offX >= this.padding && pxLabel + offX <= this.width - this.padding &&
+                    pyLabel + offY >= this.padding && pyLabel + offY <= this.height - this.padding) {
+                    this._text(pxLabel + offX, pyLabel + offY, lblTxt, align, baseline, "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
+                }
+            }
+        } else {
         this.secondaryGridGroup.setAttribute("opacity", (this.config.secondaryGridOpacity !== undefined) ? this.config.secondaryGridOpacity : mainOpacity * 0.5);
 
         // Secondary defaults to 1/5th of the main step
@@ -2190,6 +2403,7 @@ class MatephisPlot {
                 this._text(numX, py, formatTick(y, yNumStepObj.isPi, yNumStep), numAlign, baseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
             }
         }
+        }
 
         // Origin "0" (Shared)
         if (xMin <= 0 && xMax >= 0 && yMin <= 0 && yMax >= 0) {
@@ -2346,13 +2560,29 @@ class MatephisPlot {
                     // Evaluate points
                     const rawPoints = [];
                     item.points.forEach(pt => {
+                        // Point could be [x, y] or [complexString]
                         const vx = this._eval(pt[0], "interp x");
-                        const vy = this._eval(pt[1], "interp y");
+                        
+                        // If it's a single complex value, treat it as the point
+                        if (this.config.complexMode === true && vx && typeof vx === 'object' && vx.re !== undefined) {
+                            rawPoints.push([vx]);
+                            return;
+                        }
+                        
+                        const vy = pt.length > 1 ? this._eval(pt[1], "interp y") : 0;
                         if (!isNaN(vx) && !isNaN(vy)) rawPoints.push([vx, vy]);
                     });
 
                     if (rawPoints.length > 1) {
-                         const mappedPoints = rawPoints.map(p => [mapX(p[0]), mapY(p[1])]);
+                         const mappedPoints = rawPoints.map(p => {
+                             // If it's purely complex it could just be an array of complex numbers that we split into [re, im] coords.
+                             if (this.config.complexMode === true && p[0] && typeof p[0] === 'object' && p[0].re !== undefined) {
+                                 const re = p[0].re;
+                                 const im = p[0].im;
+                                 return [mapX(re), mapY(im)];
+                             }
+                             return [mapX(p[0]), mapY(p[1])];
+                         });
                          
                          let finalPoints = [];
                          const smoothness = item.smoothness !== undefined ? item.smoothness : 0; // Default 0
@@ -2489,7 +2719,14 @@ class MatephisPlot {
                         
                         // Test call to catch syntax errors early
                         if (!task.isDerivative) {
-                             try { f(0); } catch (e) { throw new Error(`Function '${item.fn}' error: ${e.message}`); }
+                             try { 
+                                 const testVal = f(0); 
+                                 if (this.config.complexMode === true && testVal && typeof testVal === 'object' && ('re' in testVal)) {
+                                     // Valid complex evaluate
+                                 } else if (!isFinite(testVal) && testVal !== undefined && testVal !== null && isNaN(testVal) && typeof testVal !== 'number') {
+                                    // Could be valid, don't throw yet if it's returning objects we didn't expect, but let's be lenient
+                                 }
+                             } catch (e) { throw new Error(`Function '${item.fn}' error: ${e.message}`); }
                         }
 
                         // Adaptive State
@@ -2508,8 +2745,11 @@ class MatephisPlot {
 
                         // Helper to check validity (finite + domain)
                         const isValid = (x, y) => {
-                            if (!isFinite(y)) return false;
                             if (domain && (x < domain[0] || x > domain[1])) return false;
+                            if (this.config.complexMode === true && y && typeof y === 'object') {
+                                return isFinite(y.re) && isFinite(y.im);
+                            }
+                            if (!isFinite(y)) return false;
                             return true;
                         };
 
@@ -2518,13 +2758,20 @@ class MatephisPlot {
                             let ym;
                             try { ym = f(xm); } catch (e) { ym = NaN; }
 
-                            const p1X = mapX(x1), p1Y = safeMapY(y1);
-                            const p2X = mapX(x2), p2Y = safeMapY(y2);
-                            const pmX = mapX(xm), pmY = safeMapY(ym);
+                            let p1X, p1Y, p2X, p2Y, pmX, pmY;
+                            let v1 = isValid(x1, y1);
+                            let v2 = isValid(x2, y2);
+                            let vm = isValid(xm, ym);
 
-                            const v1 = isValid(x1, y1);
-                            const v2 = isValid(x2, y2);
-                            const vm = isValid(xm, ym);
+                            if (this.config.complexMode === true) {
+                                if (v1 && y1 && typeof y1 === 'object') { p1X = mapX(y1.re); p1Y = safeMapY(y1.im); }
+                                if (v2 && y2 && typeof y2 === 'object') { p2X = mapX(y2.re); p2Y = safeMapY(y2.im); }
+                                if (vm && ym && typeof ym === 'object') { pmX = mapX(ym.re); pmY = safeMapY(ym.im); }
+                            } else {
+                                p1X = mapX(x1); p1Y = safeMapY(y1);
+                                p2X = mapX(x2); p2Y = safeMapY(y2);
+                                pmX = mapX(xm); pmY = safeMapY(ym);
+                            }
 
                             // A. Recursion Criteria
                             if (depth < MAX_DEPTH) {
@@ -2613,7 +2860,9 @@ class MatephisPlot {
                         const evalEdge = (x, isMin, isMax) => {
                             let val;
                             try { val = f(x); } catch (e) { }
+                            if (this.config.complexMode === true && val && typeof val === 'object' && isFinite(val.re) && isFinite(val.im)) return val;
                             if (isFinite(val)) return val;
+                            
                             const eps = 1e-6;
                             if (isMin) { try { val = f(x + eps); } catch (e) { } }
                             if (isMax) { try { val = f(x - eps); } catch (e) { } }
@@ -2649,8 +2898,14 @@ class MatephisPlot {
 
                                 if (v1 || v2 || vm) {
                                     if (v1 && !started) {
-                                        const pSX = mapX(curr);
-                                        const pSY = safeMapY(yStart);
+                                        let pSX, pSY;
+                                        if (this.config.complexMode === true && yStart && typeof yStart === 'object') {
+                                             pSX = mapX(yStart.re);
+                                             pSY = safeMapY(yStart.im);
+                                        } else {
+                                             pSX = mapX(curr);
+                                             pSY = safeMapY(yStart);
+                                        }
                                         d += `M ${pSX} ${pSY}`;
                                         started = true;
                                     }
@@ -2783,55 +3038,90 @@ class MatephisPlot {
                 if (forceShow || this.config.showPoints !== false) {
                     item.points.forEach(pt => {
                         let valX = this._eval(pt[0], "point x");
-                    let valY = this._eval(pt[1], "point y");
-
-                    // Proceed only if we have valid numbers
-                    if (!isNaN(valX) && !isNaN(valY)) {
-                        const px = mapX(valX), py = mapY(valY);
-                        // Relaxed bounds check for points slightly off-screen or for drag behavior
-                        if (px >= -50 && px <= this.width + 50 && py >= -50 && py <= this.height + 50) {
-                            const c = document.createElementNS(ns, "circle");
-                            c.setAttribute("cx", px); c.setAttribute("cy", py);
-                            c.setAttribute("r", item.radius || 4);
-                            
-                            const fillColor = item.fillColor ? this._getColor(0, item.fillColor) : color;
-                            const strokeColor = item.strokeColor ? this._getColor(0, item.strokeColor) : "none";
-                            
-                            c.setAttribute("fill", fillColor);
-                            c.setAttribute("stroke", strokeColor);
-                            c.setAttribute("stroke-width", item.strokeWidth || 0);
-                            if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
-                            this.dataGroup.appendChild(c);
-                            
-                            // Per-point Label [x, y, "Label"]
-                            if (pt[2] && typeof pt[2] === 'string') {
-                                const pLabel = pt[2];
-                                const lx = px + 8;
-                                const ly = py - 8;
-                                const fs = this._getConfigSize('labelSize');
-                                const lw = this.config.labelWeight || "normal";
-                                const ls = this.config.labelStyle || "normal";
-                                
-                                if (window.MathJax && pLabel.includes("$")) {
-                                     this._renderMathJax(pLabel, lx, ly, fs, "#333", "start", "alphabetic", this.labelGroup);
-                                } else {
-                                     this._text(lx, ly, pLabel, "start", "alphabetic", "#333", lw, ls, this.labelGroup, fs);
-                                }
-                            }
-
-                            // Use last point for label if no labelAt
-                            if (!item.labelAt) labelPos = { x: px, y: py };
-
-                            // Cache Point
-                            this.plotData.push({
-                                type: 'point',
-                                index: idx,
-                                cx: px, cy: py,
-                                valX: valX, valY: valY
-                            });
+                        
+                        if (this.config.complexMode === true && valX && typeof valX === 'object' && valX.re !== undefined) {
+                             const px = mapX(valX.re);
+                             const py = mapY(valX.im);
+                             const c = document.createElementNS(ns, "circle");
+                             c.setAttribute("cx", px); c.setAttribute("cy", py);
+                             c.setAttribute("r", item.radius || 4);
+                             
+                             const fillColor = item.fillColor ? this._getColor(0, item.fillColor) : color;
+                             const strokeColor = item.strokeColor ? this._getColor(0, item.strokeColor) : "none";
+                             c.setAttribute("fill", fillColor);
+                             c.setAttribute("stroke", strokeColor);
+                             c.setAttribute("stroke-width", item.strokeWidth || 0);
+                             if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
+                             this.dataGroup.appendChild(c);
+                             
+                             if (pt[1] && typeof pt[1] === 'string') {
+                                 const pLabel = pt[1];
+                                 const lx = px + 8;
+                                 const ly = py - 8;
+                                 const fs = this._getConfigSize('labelSize');
+                                 const lw = this.config.labelWeight || "normal";
+                                 const ls = this.config.labelStyle || "normal";
+                                 
+                                 if (window.MathJax && pLabel.includes("$")) {
+                                      this._renderMathJax(pLabel, lx, ly, fs, "#333", "start", "alphabetic", this.labelGroup);
+                                 } else {
+                                      this._text(lx, ly, pLabel, "start", "alphabetic", "#333", lw, ls, this.labelGroup, fs);
+                                 }
+                             }
+                             if (!item.labelAt) labelPos = { x: px, y: py };
+                             this.plotData.push({ type: 'point', index: idx, cx: px, cy: py, valX: valX.re, valY: valX.im });
+                             return;
                         }
-                    }
-                });
+
+                        let valY = pt.length > 1 ? this._eval(pt[1], "point y") : 0;
+
+                        // Proceed only if we have valid numbers
+                        if (!isNaN(valX) && !isNaN(valY)) {
+                            const px = mapX(valX), py = mapY(valY);
+                            // Relaxed bounds check for points slightly off-screen or for drag behavior
+                            if (px >= -50 && px <= this.width + 50 && py >= -50 && py <= this.height + 50) {
+                                const c = document.createElementNS(ns, "circle");
+                                c.setAttribute("cx", px); c.setAttribute("cy", py);
+                                c.setAttribute("r", item.radius || 4);
+                                
+                                const fillColor = item.fillColor ? this._getColor(0, item.fillColor) : color;
+                                const strokeColor = item.strokeColor ? this._getColor(0, item.strokeColor) : "none";
+                                
+                                c.setAttribute("fill", fillColor);
+                                c.setAttribute("stroke", strokeColor);
+                                c.setAttribute("stroke-width", item.strokeWidth || 0);
+                                if (item.opacity !== undefined) c.setAttribute("opacity", item.opacity);
+                                this.dataGroup.appendChild(c);
+                                
+                                // Per-point Label [x, y, "Label"]
+                                if (pt[2] && typeof pt[2] === 'string') {
+                                    const pLabel = pt[2];
+                                    const lx = px + 8;
+                                    const ly = py - 8;
+                                    const fs = this._getConfigSize('labelSize');
+                                    const lw = this.config.labelWeight || "normal";
+                                    const ls = this.config.labelStyle || "normal";
+                                    
+                                    if (window.MathJax && pLabel.includes("$")) {
+                                         this._renderMathJax(pLabel, lx, ly, fs, "#333", "start", "alphabetic", this.labelGroup);
+                                    } else {
+                                         this._text(lx, ly, pLabel, "start", "alphabetic", "#333", lw, ls, this.labelGroup, fs);
+                                    }
+                                }
+
+                                // Use last point for label if no labelAt
+                                if (!item.labelAt) labelPos = { x: px, y: py };
+
+                                // Cache Point
+                                this.plotData.push({
+                                    type: 'point',
+                                    index: idx,
+                                    cx: px, cy: py,
+                                    valX: valX, valY: valY
+                                });
+                            }
+                        }
+                    });
                 }
             }
 
@@ -3101,6 +3391,23 @@ class MatephisPlot {
     }
 
     /**
+     * Creates an SVG circle element.
+     * @private
+     */
+    _circle(cx, cy, r, color, width, dash, parent) {
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", cx);
+        c.setAttribute("cy", cy);
+        c.setAttribute("r", r);
+        c.setAttribute("stroke", color || "#000");
+        c.setAttribute("stroke-width", width !== undefined ? width : 1);
+        c.setAttribute("fill", "none");
+        if (dash) c.setAttribute("stroke-dasharray", dash);
+        parent.appendChild(c);
+        return c;
+    }
+
+    /**
      * Creates an SVG line element.
      * @private
      */
@@ -3161,7 +3468,10 @@ class MatephisPlot {
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
             "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope",
-            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints"
+            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints",
+            "animate",
+            "polar", "polarUnits",
+            "complexMode"
         ];
 
         const VALID_DATA_KEYS = [

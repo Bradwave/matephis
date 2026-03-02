@@ -100,9 +100,9 @@ body.presentation-mode {
 
 .presentation-mode .presentation-btn:hover,
 .presentation-mode .presentation-btn:active {
-    background: #e53935;
-    color: #ffffff;
-    border-color: #e53935;
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
 }
 
 /* Toggle specific SVGs in Presentation button */
@@ -134,10 +134,10 @@ body.presentation-mode {
 }
 
 .presentation-mode.large-text #text-size-toggle {
-    background: #e53935;
-    color: #ffffff;
-    fill: #ffffff;
-    border-color: #e53935;
+    background: var(--accent);
+    color: var(--bg);
+    fill: var(--bg);
+    border-color: var(--accent);
 }
 
 .presentation-mode.large-text h1 {
