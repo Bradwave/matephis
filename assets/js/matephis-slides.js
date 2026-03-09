@@ -78,11 +78,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isSlideshowMode) {
             document.body.classList.add('presentation-mode');
-            if (isLargeTextMode) document.body.classList.add('large-text');
+            if (isLargeTextMode) document.documentElement.classList.add('large-text');
             updateSlides(0); // instant positioning
         } else {
             document.body.classList.remove('presentation-mode');
-            document.body.classList.remove('large-text');
+            document.documentElement.classList.remove('large-text');
             slides.forEach(slide => {
                 slide.classList.remove('non-selected');
             });
@@ -181,9 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('presentation-large-text', isLargeTextMode);
             if (isSlideshowMode) {
                 if (isLargeTextMode) {
-                    document.body.classList.add('large-text');
+                    document.documentElement.classList.add('large-text');
                 } else {
-                    document.body.classList.remove('large-text');
+                    document.documentElement.classList.remove('large-text');
                 }
             }
         });

@@ -2,7 +2,6 @@
 body.presentation-mode {
     overflow-x: hidden;
     scroll-behavior: smooth;
-    transition: all 0.2s ease-in-out;
 }
 
 /* Base styles for slides */
@@ -12,7 +11,7 @@ body.presentation-mode {
     width: 100%;
     opacity: 1;
     filter: blur(0);
-    transition: all .3s ease-in-out;
+    transition: opacity .3s ease-in-out, filter .3s ease-in-out;
 }
 
 /* Hide sidebar and nav immediately when in presentation mode */
@@ -21,7 +20,8 @@ body.presentation-mode {
 .presentation-mode .sidebar-related,
 .presentation-mode .footer,
 .presentation-mode .nav-left,
-.presentation-mode .hamburger {
+.presentation-mode .hamburger,
+.presentation-mode #jekyll-seamless-backlinks {
     display: none !important;
 }
 
@@ -49,7 +49,11 @@ body.presentation-mode {
     flex-direction: column;
     min-height: 100vh;
     scroll-behavior: smooth;
-    transition: all 0.2s ease-in-out;
+}
+
+.presentation-mode .slide {
+    padding-left: 8rem;
+    padding-right: 8rem;
 }
 
 /* Presentation UI Container */
@@ -128,12 +132,7 @@ body.presentation-mode {
 }
 .presentation-mode .icon-present {
     display: none;
-}
-
-/* In presentation mode, give all slides base larger text so there's no layout jump */
-.presentation-mode .slide {
-    font-size: 1.15em;
-}
+}   
 
 /* Hide non-selected slides */
 .presentation-mode .slide.non-selected {
@@ -143,31 +142,16 @@ body.presentation-mode {
 }
 
 /* Toggled Large Text Mode */
-.large-text .slide {
-    font-size: 1.4em;
+html.large-text {
+    font-size: 17.5px; /* 14px × 1.25 */
 }
 
-.presentation-mode.large-text #text-size-toggle {
+.presentation-mode #text-size-toggle.active,
+html.large-text .presentation-mode #text-size-toggle {
     background: var(--accent);
     color: var(--bg);
     fill: var(--bg);
     border-color: var(--accent);
-}
-
-.presentation-mode.large-text h1 {
-    font-size: 2.5em;
-}
-
-.presentation-mode.large-text h2 {
-    font-size: 2em;
-}
-
-.presentation-mode.large-text h3 {
-    font-size: 1.6em;
-}
-
-.presentation-mode.large-text p {
-    font-size: 1.2em;
 }
 
 /* Slide Indicator */
@@ -188,7 +172,7 @@ body.presentation-mode {
     z-index: 1000;
     display: none;
     box-shadow: var(--shadow-sm);
-    /* opacity removed to keep background truly black */
+    opacity: 0.7;
 }
 
 .presentation-mode #slide-indicator {

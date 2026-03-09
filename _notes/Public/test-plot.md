@@ -895,4 +895,132 @@ Se definisci le coordinate di un punto come espressioni matematiche dipendenti d
     }
   ]
 }
+
+## 10. Punti Liberi e Vettori
+
+### Punto a Coordinate Libere
+Aggiungi `"freeCoordinates": true` e un `"name"` a un oggetto `points` per renderlo trascinabile liberamente. Non richiede parametri: il punto si muove dove lo trascini.
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [
+    {
+      "points": [[2, 1]],
+      "freeCoordinates": true,
+      "name": "P",
+      "label": "P",
+      "fillColor": "#d00",
+      "radius": 7
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [
+    {
+      "points": [[2, 1]],
+      "freeCoordinates": true,
+      "name": "P",
+      "label": "P",
+      "fillColor": "#d00",
+      "radius": 7
+    }
+  ]
+}
+```
+
+### Variabili del Punto nelle Espressioni
+Se e' presente un punto libero col nome `"A"`, puoi usare `A.x`, `A.y`, `A.r` e `A.theta` in qualunque espressione matematica. Trascina il punto per vedere gli altri elementi aggiornarsi in tempo reale!
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [
+    {
+      "points": [[3, 0]],
+      "freeCoordinates": true,
+      "name": "A",
+      "label": "A",
+      "fillColor": "blue",
+      "radius": 7
+    },
+    { "implicit": "(x - A.x)^2 + (y - A.y)^2 = 4", "color": "#888", "dash": "4,4" },
+    { "fn": "A.y + (A.theta / PI) * x", "color": "orange", "label": "linea" }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-5, 5],
+  "ylim": [-5, 5],
+  "data": [
+    {
+      "points": [[3, 0]],
+      "freeCoordinates": true,
+      "name": "A",
+      "label": "A",
+      "fillColor": "blue",
+      "radius": 7
+    },
+    { "implicit": "(x - A.x)^2 + (y - A.y)^2 = 4", "color": "#888", "dash": "4,4" },
+    { "fn": "A.y + (A.theta / PI) * x", "color": "orange", "label": "linea" }
+  ]
+}
+```
+
+### Vettori
+Usa `"vector": [[da_x, da_y], [a_x, a_y]]` (entrambi possono contenere espressioni, incluse variabili di punti liberi). Trascina il punto `P` per animare il vettore! Puoi anche usare `"arrow": false` e `"dash": "val"` per segmenti.
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-4, 4],
+  "ylim": [-4, 4],
+  "data": [
+    {
+      "points": [[2, 2]],
+      "freeCoordinates": true,
+      "name": "P",
+      "label": "P.x + iP.y",
+      "fillColor": "#c00",
+      "radius": 7
+    },
+    { "vector": [[0, 0], ["P.x", "P.y"]], "color": "#c00", "width": 2, "label": "v" },
+    { "vector": [["P.x", "P.y"], ["-P.y + P.x", "P.x + P.y"]], "color": "blue", "width": 2, "label": "v perp" },
+    { "vector": [[0, 2], [2, 0]], "color": "green", "arrow": false, "dash": "4,4", "label": "no arrow" }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-4, 4],
+  "ylim": [-4, 4],
+  "data": [
+    {
+      "points": [[2, 2]],
+      "freeCoordinates": true,
+      "name": "P",
+      "label": "P.x + iP.y",
+      "fillColor": "#c00",
+      "radius": 7
+    },
+    { "vector": [[0, 0], ["P.x", "P.y"]], "color": "#c00", "width": 2, "label": "v" },
+    { "vector": [["P.x", "P.y"], ["-P.y + P.x", "P.x + P.y"]], "color": "blue", "width": 2, "label": "v perp" },
+    { "vector": [[0, 2], [2, 0]], "color": "green", "arrow": false, "dash": "4,4", "label": "no arrow" }
+  ]
+}
 ```
