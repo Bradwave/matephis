@@ -218,7 +218,7 @@ Di seguito è rappresentato il grafico della funzione $f(x) = x^3$ e della funzi
   "traceDerivative": true,
   "legend": true,
   "params": {
-    "a": { "min": -5, "max": 5, "step": 0.1, "val": 1 }
+    "a": { "min": -5, "max": 5, "step": 0.1, "val": 0 }
   },
   "data": [
     { "fn": "x^3", "label": "$f(x) = x^3$" },
@@ -228,7 +228,7 @@ Di seguito è rappresentato il grafico della funzione $f(x) = x^3$ e della funzi
 ```
 
 {:start="5"}
-5. Ripeti la procedura descritta nei due punti precedenti per $f(x) = x^4$, $g(x) = ax^3$ e per $f(x) = x^5$, $g(x) = ax^4$. Cosa osservi? Congettura una regola che leghi la funzione alla sua derivata.
+5. Ripeti la procedura descritta nei due punti precedenti per $f(x) = x^4$, $g(x) = ax^3$ e per $f(x) = x^5$, $g(x) = ax^4$ (in quest'ultimo caso la derivata è già visibile, tratteggiata). Cosa osservi? Ipotizza una regola che leghi la funzione alla sua derivata.
 
 ```matephis
 {
@@ -242,7 +242,7 @@ Di seguito è rappresentato il grafico della funzione $f(x) = x^3$ e della funzi
   "traceDerivative": true,
   "legend": true,
   "params": {
-    "a": { "min": -5, "max": 5, "step": 0.1, "val": 1 }
+    "a": { "min": -5, "max": 5, "step": 0.1, "val": 0 }
   },
   "data": [
     { "fn": "x^4", "label": "$f(x) = x^4$" },
@@ -263,10 +263,11 @@ Di seguito è rappresentato il grafico della funzione $f(x) = x^3$ e della funzi
   "traceDerivative": true,
   "legend": true,
   "params": {
-    "a": { "min": -5, "max": 5, "step": 0.1, "val": 1 }
+    "a": { "min": -5, "max": 5, "step": 0.1, "val": 0 }
   },
   "data": [
     { "fn": "x^5", "label": "$f(x) = x^5$" },
+    { "fn": "5x^4", "label": "$f^\\prime(x)$", "color": "red1", "dash": [4,4], "opacity": 0.4 },
     { "fn": "ax^4", "label": "$g(x) = ax^4$", "color": "#5084df" }
   ]
 }

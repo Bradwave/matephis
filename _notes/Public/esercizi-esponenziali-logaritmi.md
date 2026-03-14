@@ -1,5 +1,5 @@
 ---
-title: Esercizi sulla funzione esponenziale
+title: Esercizi su esponenziale e logaritmo
 feed: show
 tags:
   - esercizi
@@ -21,16 +21,31 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	5. $f(x) = 2 \cdot 2^x - 1$
 	6. $f(x) = -2 + \left(\dfrac 1 3\right)^x - 2$
 	7. $f(x) = +5 - 3^x$
-2. **[F]** Quanti sono i punti di intersezione tra il grafico di $f(x) = e^x - 2$ e il grafico di $f(x) = x - 2$?
-3. **[PD-]** Determina, in modo approssimativo, la soluzione o le soluzioni di $e^x -2 = x - 2$.
-4. **[D]** Riscrivi le seguenti funzioni esponenziali nella forma $f(x) = a \cdot e^{\lambda x} + c$.
+2. **[EE]** Disegna il grafico approssimativo delle seguenti funzioni logaritmiche.
+	1. $f(x) = \log_{10}(x)$
+	2. $f(x) = -\log_{10}(x)$
+	3. $f(x) = \ln(x - 1)$
+	4. $f(x) = \ln(x - 1)$
+	5. $f(x) = -\log_2(x + 2)$
+	6. $f(x) = \ln(-x)$
+	7. $f(x) = \log_{\frac 1 2}(x)$
+	8. $f(x) = -\log_{\frac 1 2} (x)$
+3. **[EE/F]** Ricava la funzione inversa delle seguenti funzioni.
+	1. $f(x) = \log_2(x + 2)$
+	2. $f(x) = 3^x + 2$
+	3. $f(x) = 2 \cdot e^{x} - 1$
+	4. $f(x) = -\ln(x)$
+4. **[F]** Quanti sono i punti di intersezione tra il grafico di $f(x) = e^x - 2$ e il grafico di $f(x) = x - 2$?
+5. **[F]** Quanti sono i punti di intersezione tra il grafico di $f(x) = \ln x$ e il grafico di $f(x) = -x - 1$
+6. **[PD-]** Determina, in modo approssimativo, la soluzione o le soluzioni di $e^x -2 = x - 2$.
+7. **[D]** Riscrivi le seguenti funzioni esponenziali nella forma $f(x) = a \cdot e^{\lambda x} + c$.
 	1. $f(x) = 4 \cdot 1{,}2^x$
 	2. $f(x) = 2 \cdot 0{,}8^x - 1$
 	3. $f(x) = -3^x$
 	4. $f(x) = \left(\frac 1 2 \right)^x + \frac 1 2$
 	5. $f(x) = 0{,}1^x - 10$
 	6. $f(x) = 2^{-x} + 1$
-5. **[PD-]** Determina le definizioni algebriche ($f(x) = \dotsc$) delle funzioni il cui grafico è rappresentato in figura.
+8. **[PD-]** Determina le definizioni algebriche ($f(x) = \dotsc$) delle funzioni il cui grafico è rappresentato in figura.
 ```matephis
 {
   "xlim": [-6.9,6.9],
@@ -54,7 +69,18 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-6. **[AD-]** In figura è rappresentato il grafico della funzione $f$. Rappresenta il grafico della funzione $g(x) = 3 \cdot f(x)$.
+7. **[F+]** In figura è rappresentato il grafico della funzione $f$. Rappresenta il grafico della funzione $g(x) = -f(x)$ e della funzione $h(x) = f(-x)$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "log(x)", "color": "red1", "label": "f" }
+  ]
+}
+```
+7. **[AD-]** In figura è rappresentato il grafico della funzione $f$. Rappresenta il grafico della funzione $g(x) = 3 \cdot f(x)$.
 ```matephis
 {
   "xlim": [-4.9,4.9],
@@ -66,6 +92,22 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 }
 ```
 7. **[PD]** Determina graficamente, in modo approssimativo, il numero di soluzioni dell'equazione $3^x = 4 − x^2$ . Verifica successivamente utilizzando uno strumento grafico (es. Desmos).
+8. **[PD]** Risolvi le seguenti equazioni esponenziali e logaritmiche per via algebrica.
+	1. $e^x + 2 = 0$
+	2. $2^x - 16 = 0$
+	3. $\log_2(x) = -3$
+	4. $2^x = 3^x$
+	5. $e^{x - 1} = e^{2x + 2}$
+	6. $\log_{10}(x) = 2$
+	7. $5^x - 50 = 0$
+	8. $\ln(2x - 1) = \ln(x^2 - 1)$
+	9. $3 \cdot e^x - 2 \cdot e^x = 2$
+	10. $\log_{10}(x - 2) - 2 = 0$
+	11. $2^{x + 1} = 8^{x}$
+	12. $2^2 + 10^x = 0$
+	13. $\log_2(x) + \log_2(x - 1) = 0$
+	14. $2\ln(x) - \ln(x + 1) = \ln(2)$
+	15. $2^x - 10 = 0$
 
 ## Quesiti
 
@@ -75,6 +117,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- il grafico di $a \cdot f(x)$ risulta dilatata verticalmente se $a > 1$, compresso verticalmente se $0 < a < 1$, riflesso verticalmente e dilatato/compresso se $a < 0$;
 	- il grafico di $b^x$ è crescente se $b > 1$ ed è decrescente se $0 < b < 1$.
 3. **[F-]** Per quale valore di $b$ la funzione $f(x) = b^x$ è costante?
+4. **[F]** Per quali valori di $b$ la funzione $f(x) = \log_b(x)$ non è definita?
 
 ## Quiz
 
@@ -170,37 +213,37 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-4. **[F+]** Quale delle seguenti funzioni è equivalente a $f(x) = 3 \cdot \left(\frac{1}{3}\right)^x$?
+10. **[F+]** Quale delle seguenti funzioni è equivalente a $f(x) = 3 \cdot \left(\frac{1}{3}\right)^x$?
 	- **(a)** $f(x) = 3 \cdot 3^{-x}$
 	- **(b)** $f(x) = \left(\frac{3}{3}\right)^x$
 	- **(c)** $f(x) = 9^x$
 	- **(d)** $f(x) = 3 \cdot x^{1/3}$
-5. Nella forma generale $f(x) = a \cdot b^x + c$, se $0 < b < 1$, cosa accade al grafico della funzione rispetto alla soglia $c$?
+11. **[F]** Nella forma generale $f(x) = a \cdot b^x + c$, se $0 < b < 1$, cosa accade al grafico della funzione rispetto alla soglia $c$?
 	- **(a)** Si allontana dalla soglia al crescere di $x$.
 	- **(b)** Si avvicina alla soglia al crescere di $x$.
 	- **(c)** La funzione diventa negativa.
 	- **(d)** La funzione oscilla attorno a $c$.
-6. Una popolazione di formiche inizia con 50 batteri e triplica ogni mese. Quale funzione rappresenta il numero di formiche $N$ dopo $t$ mesi?
+12. **[F-]** Una popolazione di formiche inizia con 50 batteri e triplica ogni mese. Quale funzione rappresenta il numero di formiche $N$ dopo $t$ mesi?
 	- **(a)** $N(t) = 50 + 3^t$
 	- **(b)** $N(t) = 3 \cdot 50^t$
 	- **(c)** $N(t) = 50 \cdot 3^t$
 	- **(d)** $N(t) = 50 \cdot t^3$
-7. Si consideri il deprezzamento di un'auto che perde il 15% del valore ogni anno. Se $V(t) = A \cdot b^t$, quanto vale la base $b$?
+13. **[F-]** Si consideri il deprezzamento di un'auto che perde il 15% del valore ogni anno. Se $V(t) = A \cdot b^t$, quanto vale la base $b$?
 	- **(a)** $0,15$
 	- **(b)** $-15$
 	- **(c)** $1,15$
 	- **(d)** $0,85$
-8. Nel contesto della fissione nucleare, la relazione $N(t) = N_0 \cdot k^{t / \tau}$ descrive il numero di neutroni. Cosa rappresenta il parametro $k$?
+14. **[PD]** Nel contesto della fissione nucleare, la relazione $N(t) = N_0 \cdot k^{t / \tau}$ descrive il numero di neutroni. Cosa rappresenta il parametro $k$?
 	- **(a)** Il tempo di generazione (in secondi).
 	- **(b)** Il numero iniziale di neutroni.
 	- **(c)** L'energia cinetica dei frammenti.
 	- **(d)** Il fattore di moltiplicazione efficace (numero medio di neutroni prodotti che causano nuova fissione).
-9. Con riferimento alla domanda precedente, quanto vale $k$ in un reattore nucleare in funzione?
+15. **[PD-]** Con riferimento alla domanda precedente, quanto vale $k$ in un reattore nucleare in funzione?
 	- **(a)** 0
 	- **(b)** 1
 	- **(c)** più di 1
 	- **(d)** meno di 1
-10. In figura è rappresentato il grafico della funzione $m$, che descrive la massa di una coltura batterica (espressa in nanogrammi) al variare del tempo $t$ (espresso in ore). Quale delle seguenti affermazioni è corretta?
+16. **[PD]** In figura è rappresentato il grafico della funzione $m$, che descrive la massa di una coltura batterica (espressa in nanogrammi) al variare del tempo $t$ (espresso in ore). Quale delle seguenti affermazioni è corretta?
 	- **(a)** I batteri triplicano ogni ora.
 	- **(b)** La massa iniziale della coltura è 5 ng.
 	- **(c)** Manca sostanza nutritiva nella coltura, i batteri stanno morendo.
@@ -216,6 +259,111 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ] 
 }
 ```
+17. **[F-]** Associa a ciascuna delle seguenti funzioni il proprio grafico.
+	- **(i)** $f(x) = e^x + 1$
+	- **(ii)** $f(x) = e^x - 1$
+	- **(iii)** $f(x) = \ln(x + 1)$
+	- **(iv)** $f(x) = \ln(x - 1)$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "e^x+1", "color": "red1", "label": "A" },
+    { "fn": "log(x+1)/log(e)", "color": "red1", "dash": "2,2", "label": "B" },
+    { "fn": "log(x-1)/log(e)", "color": "black1", "label": "C" },
+    { "fn": "e^x-1", "color": "black1", "dash": "2,2", "label": "D" }
+  ]
+}
+```
+18. **[F+]** Associa a ciascuna delle seguenti funzioni il proprio grafico.
+	- **(i)** $f(x) = \log_{10}(x)$
+	- **(ii)** $f(x) = -\log_{10}(x)$
+	- **(iii)** $f(x) = \log_{\frac 1 {10}}(-x)$
+	- **(iv)** $f(x) = \log_{10}(-x)$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "log(-x)/log(0.1)", "color": "red1", "label": "A" },
+    { "fn": "log(x)/log(10)", "color": "red1", "dash": "2,2", "label": "B" },
+    { "fn": "-log(x)/log(10)", "color": "black1", "label": "C" },
+    { "fn": "log(-x)/log(10)", "color": "black1", "dash": "2,2", "label": "D" }
+  ]
+}
+```
+19. **[PD-]** Quale dei seguenti è il grafico di $f(x) = -\log_2(x + 1)$?
+	- **(a)** Grafico A
+	- **(b)** Grafico B
+	- **(c)** Grafico C
+	- **(d)** Nessuno dei precedenti.
+```matephis
+{
+  "legend": true,
+  "data": [
+    { "fn": "-log(x-1)/log(2)", "color": "red1", "label": "A" },
+    { "fn": "log(x+1)/log(2)", "color": "red1", "dash": "2,2", "label": "B" },
+    { "fn": "log(-x-1)/log(2)", "color": "black1", "label": "C" }
+  ]
+}
+```
+20. **[F+]** Quale dei seguenti è il grafico di $f(x) = \ln(-x)$?
+	- **(a)** Grafico A
+	- **(b)** Grafico B
+	- **(c)** Grafico C
+	- **(d)** Nessuno dei precedenti.
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "legend": true,
+  "data": [
+    { "fn": "log(x)/log(e)", "color": "red1", "label": "A" },
+    { "fn": "log(-x)/log(e)", "color": "red1", "dash": "2,2", "label": "B" },
+    { "fn": "-log(x)/log(e)", "color": "black1", "label": "C" }
+  ]
+}
+```
+21. **[F]** Quale funzione è rappresentata in figura?
+	- **(a)** $f(x) = \log_2(x)$
+	- **(b)** $f(x) = \log_3(x)$
+	- **(c)** $f(x) = \ln(x)$
+	- **(d)** Nessuna delle precedenti.
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "data": [
+    { "fn": "log(x)/log(3)" }
+  ]
+}
+```
+22. **[F]** In figura è rappresentata la funzione $f(x) = \log_2(x)$. Qual è la soluzione di $log_2(x) = 0{,}2$?
+	- **(a)** $x \approx 1{,}15$
+	- **(b)** $x \approx -1{,}45$
+	- **(c)** $x \approx 0{,}8$
+	- **(d)** Nessuna delle precedenti.
+```matephis
+{
+  "xlim": [-0.9,2.9],
+  "ylim": [-1.9,1.9],
+  "data": [
+    { "fn": "log(x)/log(3)" }
+  ]
+}
+```
+
+```matephis
+{
+  "data": [
+    { "fn": "log(x)" }
+  ]
+}
+```
+
 
 ## Problemi
 
@@ -307,10 +455,11 @@ Rispondi ai seguenti quesiti.
 
 ### 7. La terra trema
 
-**[AD]** La magnitudo $M$ di un terremoto sulla scala Richter è legata all'energia $E$ liberata dal sisma (misurata in joule) dalla relazione esponenziale (in base 10) o, inversamente, logaritmica. Una formula semplificata che lega l'energia alla magnitudo è:
+**[AD]** La relazione empirica standard (conosciuta come formula di Gutenberg-Richter) che lega l'energia irradiata sotto forma di onde sismiche ($E$) e la magnitudo ($M$) è descritta dalla seguente equazione logaritmica:
 
-$$E(M) = 10^{(1{,}5 \cdot M + 4{,}8)}$$
-
+$$\log_{10} E = 4.8 + 1.5M$$
+- Calcola la magnitudo di un terremoto tramite cui sono stati irradiati $3{,}5 \cdot 10^11 \, \text{J}$ di energia.
+- Verifica che $E = 10^{(1{,}5 \cdot M + 4{,}8)}$.
 - Calcola l'energia liberata da un terremoto di magnitudo 4 e da uno di magnitudo 6.
 - Quante volte è più grande l'energia di un terremoto di magnitudo 6 rispetto a uno di magnitudo 4? E rispetto a uno di magnitudo 5?
 - Dimostra che aumentando la magnitudo di 1 unità, l'energia liberata aumenta di un fattore costante. Quanto vale questo fattore? (Approssima il risultato a un numero intero).
@@ -332,3 +481,15 @@ $$E(M) = 10^{(1{,}5 \cdot M + 4{,}8)}$$
 - Quale funzione descrive la percentuale di luce residua rispetto alla superficie in funzione della profondità?
 - A quale profondità l'intensità luminosa è ridotta all'1% di quella iniziale? Scrivi un'equazione per rispondere alla domanda e prova a risolverla graficamente o con WolframAlpha.
 - Traccia un grafico qualitativo di $I(x)$ assumendo $I_0​ = 100$.
+
+### 10. Tornasole
+
+In chimica, si definisce acida una sostanza in grado di cedere ioni positivi. Il $\text{pH}$ è una grandezza fisica impiegata nella misura dell'acidità di una sostanza allo stato liquido o gassoso. Il $\text{pH}$ è definito da
+
+$$\text{pH} = -\log_{10} [H^+] \, ,$$
+
+dove $[H^+]$ rappresenta la concentrazione di ioni $H^+$ (ovvero ioni positivi dell'idrogeno) nella sostanza, misurata in moli per litro. Minore è il $\text{pH}$, maggiore è l'acidità.
+
+- Calcola il $\text{pH}$ dell'aceto, per cui $[H^+] = 0{,}00125 \, \text{moli}/\text{L}$.
+- Calcola la concentrazione degli ioni $H^+$ nella liscivia, avente $\text{pH} = 13{,}5$.
+- Rispetto alla liscivia, di quanto maggiore o minore è la concentrazione degli ioni $H^+$ in una sostanza con $\text{pH} = 14{,}5$?

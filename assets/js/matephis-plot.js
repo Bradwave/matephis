@@ -3020,8 +3020,10 @@ class MatephisPlot {
 
                         const safeMapY = (y) => {
                             const py = mapY(y);
-                            if (py < -10000) return -10000;
-                            if (py > 10000) return 10000;
+                            // SVG paths can handle large coordinates, clip-path handles the rest.
+                            // However, we don't want overflow issues in browsers (typically ~32000 px).
+                            if (py < -30000) return -30000;
+                            if (py > 30000) return 30000;
                             return py;
                         };
 
@@ -3098,8 +3100,8 @@ class MatephisPlot {
                             if (v1 && v2) {
                                 const jump = Math.abs(p2Y - p1Y);
 
-                                // Heuristic: If jump > 100px, assume asymptote/discontinuity and break.
-                                if (jump < 100) {
+                                // Heuristic: If jump is massive, assume asymptote/discontinuity and break.
+                                if (jump < Math.max(100, this.height * 0.8)) {
                                     if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
                                     d += ` L ${p2X} ${p2Y}`;
                                     // Push original data to interaction list only if NOT derivative
@@ -3127,6 +3129,82 @@ class MatephisPlot {
                                     }
                                 } else {
                                     started = false;
+                                }
+                            }
+
+                            // Case 3: Entering Domain (v1 invalid, v2 valid)
+                            else if (!v1 && v2) {
+                                // Hunt for the tail towards v1 from v2 using binary search
+                                let tX = x2;
+                                let tY = y2;
+                                let left = x1;
+                                let right = x2;
+                                for (let i = 0; i < 15; i++) {
+                                    const midX = (left + right) / 2;
+                                    let midY;
+                                    try { midY = f(midX); } catch (e) { midY = NaN; }
+                                    if (isValid(midX, midY)) {
+                                        tX = midX;
+                                        tY = midY;
+                                        right = midX; // move closer to x1
+                                        // Stop early if pushed far off-screen
+                                        const py = safeMapY(tY);
+                                        if (py <= -10000 || py >= 10000) break;
+                                    } else {
+                                        left = midX; // move away from x1
+                                    }
+                                }
+                                
+                                let ptX, ptY;
+                                if (this.config.complexMode === true && tY && typeof tY === 'object') {
+                                    ptX = mapX(tY.re); ptY = safeMapY(tY.im);
+                                } else {
+                                    ptX = mapX(tX); ptY = safeMapY(tY);
+                                }
+                                
+                                if (!started) { d += `M ${ptX} ${ptY}`; started = true; }
+                                d += ` L ${p2X} ${p2Y}`;
+                                if (!task.isDerivative) {
+                                    this.plotData.push({ type: 'fn', index: idx, x1: ptX, y1: ptY, x2: p2X, y2: p2Y, domain: rawDomain });
+                                    if (!item.labelAt) labelPos = { x: p2X, y: p2Y };
+                                }
+                            }
+
+                            // Case 4: Leaving Domain (v1 valid, v2 invalid)
+                            else if (v1 && !v2) {
+                                // Hunt for the tail towards v2 from v1 using binary search
+                                let tX = x1;
+                                let tY = y1;
+                                let left = x1;
+                                let right = x2;
+                                for (let i = 0; i < 15; i++) {
+                                    const midX = (left + right) / 2;
+                                    let midY;
+                                    try { midY = f(midX); } catch (e) { midY = NaN; }
+                                    if (isValid(midX, midY)) {
+                                        tX = midX;
+                                        tY = midY;
+                                        left = midX; // move closer to x2
+                                        const py = safeMapY(tY);
+                                        if (py <= -10000 || py >= 10000) break;
+                                    } else {
+                                        right = midX; // move away from x2
+                                    }
+                                }
+                                
+                                let ptX, ptY;
+                                if (this.config.complexMode === true && tY && typeof tY === 'object') {
+                                    ptX = mapX(tY.re); ptY = safeMapY(tY.im);
+                                } else {
+                                    ptX = mapX(tX); ptY = safeMapY(tY);
+                                }
+
+                                if (!started) { d += `M ${p1X} ${p1Y}`; started = true; }
+                                d += ` L ${ptX} ${ptY}`;
+                                started = false; // Break after leaving domain
+                                if (!task.isDerivative) {
+                                    this.plotData.push({ type: 'fn', index: idx, x1: p1X, y1: p1Y, x2: ptX, y2: ptY, domain: rawDomain });
+                                    if (!item.labelAt) labelPos = { x: ptX, y: ptY };
                                 }
                             }
                             else {
