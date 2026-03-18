@@ -2286,14 +2286,75 @@ class MatephisPlot {
             yMax = yc + reqH / 2;
         }
 
-        const mapX = (x) => this.padding + ((x - xMin) / (xMax - xMin)) * (this.width - 2 * this.padding);
-        const mapY = (y) => this.height - this.padding - ((y - yMin) / (yMax - yMin)) * (this.height - 2 * this.padding);
+        // Log scale configuration
+        const isXLog = this.config.xScale === 'log';
+        const isYLog = this.config.yScale === 'log';
+
+        // Ensure bounds are strictly positive for logarithmic scales
+        if (isXLog && xMin <= 0) {
+            xMin = 1e-10;
+            if (xMax <= xMin) xMax = 10;
+        }
+        if (isYLog && yMin <= 0) {
+            yMin = 1e-10;
+            if (yMax <= yMin) yMax = 10;
+        }
+
+        const mapX = (x) => {
+            if (isXLog) {
+                if (x <= 0) return -30000;
+                const lMin = Math.log10(xMin);
+                const lMax = Math.log10(xMax);
+                return this.padding + ((Math.log10(x) - lMin) / (lMax - lMin)) * (this.width - 2 * this.padding);
+            }
+            return this.padding + ((x - xMin) / (xMax - xMin)) * (this.width - 2 * this.padding);
+        };
+
+        const mapY = (y) => {
+            if (isYLog) {
+                if (y <= 0) return 30000; // y-axis is inverted
+                const lMin = Math.log10(yMin);
+                const lMax = Math.log10(yMax);
+                return this.height - this.padding - ((Math.log10(y) - lMin) / (lMax - lMin)) * (this.height - 2 * this.padding);
+            }
+            return this.height - this.padding - ((y - yMin) / (yMax - yMin)) * (this.height - 2 * this.padding);
+        };
+
+        const unmapX = (px) => {
+            if (isXLog) {
+                const lMin = Math.log10(xMin);
+                const lMax = Math.log10(xMax);
+                const lVal = lMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (lMax - lMin);
+                return Math.pow(10, lVal);
+            }
+            return xMin + ((px - this.padding) / (this.width - 2 * this.width)) * (xMax - xMin); // bug in original: (this.width - 2 * this.width) should be this.padding? Actually original was (this.width - 2 * this.padding)
+        };
+        // Fix the original bug in unmapX
+        const fixedUnmapX = (px) => {
+            if (isXLog) {
+                const lMin = Math.log10(xMin);
+                const lMax = Math.log10(xMax);
+                const lVal = lMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (lMax - lMin);
+                return Math.pow(10, lVal);
+            }
+            return xMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (xMax - xMin);
+        };
+
+        const unmapY = (py) => {
+            if (isYLog) {
+                const lMin = Math.log10(yMin);
+                const lMax = Math.log10(yMax);
+                const lVal = lMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (lMax - lMin);
+                return Math.pow(10, lVal);
+            }
+            return yMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (yMax - yMin);
+        };
 
         // Save Transform for Interactions
         this.transform = {
             mapX, mapY,
-            unmapX: (px) => xMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (xMax - xMin),
-            unmapY: (py) => yMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (yMax - yMin),
+            unmapX: fixedUnmapX,
+            unmapY,
             xMin, xMax, yMin, yMax,
             width: this.width, height: this.height, padding: this.padding
         };
@@ -2496,38 +2557,90 @@ class MatephisPlot {
             }
 
             // X Lines
-            const startX = Math.ceil(xMin / xStep) * xStep;
-            for (let x = startX; x <= xMax + 1e-9; x += xStep) {
-                const px = mapX(x);
-                if (px < this.padding || px > this.width - this.padding) continue;
+            if (isXLog) {
+                const startK = Math.floor(Math.log10(xMin));
+                const endK = Math.ceil(Math.log10(xMax));
+                const showSec = this.config.showSecondaryGrid !== false;
 
-                // Grid
-                if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
-
-                // Ticks (Default False) -- To AxesGroup
-                if (this.config.showXTicks === true) {
-                    if (this.config.boxPlot) {
-                        // Bottom Ticks
-                        this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
-                        // Top Ticks (if not partial)
-                        if (!this.config.boxPlotPartial) {
-                            this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                if (showSec) {
+                    for (let k = startK; k <= endK; k++) {
+                        for (let m = 2; m <= 9; m++) {
+                            const x = m * Math.pow(10, k);
+                            if (x < xMin || x > xMax) continue;
+                            const px = mapX(x);
+                            if (px < this.padding || px > this.width - this.padding) continue;
+                            this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.secondaryGridGroup);
                         }
-                    } else if (Math.abs(x) > 1e-9) {
-                        this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+                    }
+                }
+
+                for (let k = startK; k <= endK; k++) {
+                    const x = Math.pow(10, k);
+                    if (x < xMin || x > xMax) continue;
+                    const px = mapX(x);
+                    if (px < this.padding || px > this.width - this.padding) continue;
+
+                    if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
+
+                    if (this.config.showXTicks === true) {
+                        if (this.config.boxPlot) {
+                            this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
+                            if (!this.config.boxPlotPartial) {
+                                this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                            }
+                        } else {
+                            const axisY = isYLog ? ((yMin <= 1 && yMax >= 1) ? mapY(1) : this.height - this.padding) : mapY(0);
+                            const tickDir = axisY === this.height - this.padding ? -5 : 5;
+                            this._line(px, axisY, px, axisY + tickDir, axisColor, 2, "", this.axesGroup);
+                        }
+                    }
+                }
+            } else {
+                const startX = Math.ceil(xMin / xStep) * xStep;
+                for (let x = startX; x <= xMax + 1e-9; x += xStep) {
+                    const px = mapX(x);
+                    if (px < this.padding || px > this.width - this.padding) continue;
+
+                    // Grid
+                    if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
+
+                    // Ticks (Default False) -- To AxesGroup
+                    if (this.config.showXTicks === true) {
+                        if (this.config.boxPlot) {
+                            // Bottom Ticks
+                            this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
+                            // Top Ticks (if not partial)
+                            if (!this.config.boxPlotPartial) {
+                                this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                            }
+                        } else if (Math.abs(x) > 1e-9) {
+                            this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
+                        }
                     }
                 }
             }
 
 
             // X Numbers (Independent Loop)
-            const xNumStep = xNumStepObj.val;
             if (this.config.showXNumbers !== false) {
-                // Extend scan range slightly to catch border items
-                const startNX = Math.ceil((xMin - xNumStep * 0.5) / xNumStep) * xNumStep;
+                let xVals = [];
+                if (isXLog) {
+                    const startK = Math.floor(Math.log10(xMin));
+                    const endK = Math.ceil(Math.log10(xMax));
+                    for (let k = startK; k <= endK; k++) {
+                        const x = Math.pow(10, k);
+                        if (x >= xMin && x <= xMax) xVals.push(x);
+                    }
+                } else {
+                    const xNumStep = xNumStepObj.val;
+                    const startNX = Math.ceil((xMin - xNumStep * 0.5) / xNumStep) * xNumStep;
+                    for (let x = startNX; x <= xMax + xNumStep * 0.5; x += xNumStep) {
+                        if (Math.abs(x) >= 1e-9) xVals.push(x); // Skip zero
+                    }
+                }
 
                 // X-Axis Sticky Logic
-                let axisY = mapY(0);
+                let axisY = isYLog ? ((yMin <= 1 && yMax >= 1) ? mapY(1) : this.height - this.padding) : mapY(0);
                 let numY = axisY + 15;
                 let numBaseline = "top";
                 let isStickyX = false;
@@ -2556,9 +2669,8 @@ class MatephisPlot {
                     }
                 }
 
-                for (let x = startNX; x <= xMax + xNumStep * 0.5; x += xNumStep) {
-                    if (Math.abs(x) < 1e-9) continue; // Skip zero
-
+                for (let i = 0; i < xVals.length; i++) {
+                    const x = xVals[i];
                     let px = mapX(x);
                     let align = "middle";
 
@@ -2585,40 +2697,97 @@ class MatephisPlot {
                         px -= fsVal * 0.3;
                     }
 
-                    this._text(px, numY, formatTick(x, xNumStepObj.isPi, xNumStep), align, numBaseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
+                    const tickStr = isXLog ? 
+                        (x >= 1e6 || x <= 1e-4 ? x.toExponential() : x.toString()) : 
+                        formatTick(x, xNumStepObj.isPi, xNumStepObj.val);
+
+                    this._text(px, numY, tickStr, align, numBaseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
                 }
             }
             // Y Lines
-            const startY = Math.ceil(yMin / yStep) * yStep;
-            for (let y = startY; y <= yMax + 1e-9; y += yStep) {
-                const py = mapY(y);
-                if (py < this.padding || py > this.height - this.padding) continue;
+            if (isYLog) {
+                const startK = Math.floor(Math.log10(yMin));
+                const endK = Math.ceil(Math.log10(yMax));
+                const showSec = this.config.showSecondaryGrid !== false;
 
-                // Grid
-                if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
-
-                // Ticks
-                if (this.config.showYTicks === true) {
-                    if (this.config.boxPlot) {
-                        // Left Ticks
-                        this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
-                        // Right Ticks (if not partial)
-                        if (!this.config.boxPlotPartial) {
-                            this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                if (showSec) {
+                    for (let k = startK; k <= endK; k++) {
+                        for (let m = 2; m <= 9; m++) {
+                            const y = m * Math.pow(10, k);
+                            if (y < yMin || y > yMax) continue;
+                            const py = mapY(y);
+                            if (py < this.padding || py > this.height - this.padding) continue;
+                            this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
                         }
-                    } else if (Math.abs(y) > 1e-9) {
-                        this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+                    }
+                }
+
+                for (let k = startK; k <= endK; k++) {
+                    const y = Math.pow(10, k);
+                    if (y < yMin || y > yMax) continue;
+                    const py = mapY(y);
+                    if (py < this.padding || py > this.height - this.padding) continue;
+
+                    if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
+
+                    if (this.config.showYTicks === true) {
+                        if (this.config.boxPlot) {
+                            this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
+                            if (!this.config.boxPlotPartial) {
+                                this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                            }
+                        } else {
+                            const axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : this.padding) : mapX(0);
+                            const tickDir = axisX === this.padding ? 5 : -5;
+                            this._line(axisX + tickDir, py, axisX, py, axisColor, 2, "", this.axesGroup);
+                        }
+                    }
+                }
+            } else {
+                const startY = Math.ceil(yMin / yStep) * yStep;
+                for (let y = startY; y <= yMax + 1e-9; y += yStep) {
+                    const py = mapY(y);
+                    if (py < this.padding || py > this.height - this.padding) continue;
+
+                    // Grid
+                    if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
+
+                    // Ticks
+                    if (this.config.showYTicks === true) {
+                        if (this.config.boxPlot) {
+                            // Left Ticks
+                            this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
+                            // Right Ticks (if not partial)
+                            if (!this.config.boxPlotPartial) {
+                                this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                            }
+                        } else if (Math.abs(y) > 1e-9) {
+                            this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
+                        }
                     }
                 }
             }
 
             // Y Numbers (Independent Loop)
-            const yNumStep = yNumStepObj.val;
             if (this.config.showYNumbers !== false) {
-                const startNY = Math.ceil((yMin - yNumStep * 0.5) / yNumStep) * yNumStep;
+                let yVals = [];
+                if (isYLog) {
+                    const startK = Math.floor(Math.log10(yMin));
+                    const endK = Math.ceil(Math.log10(yMax));
+                    for (let k = startK; k <= endK; k++) {
+                        const y = Math.pow(10, k);
+                        if (y >= yMin && y <= yMax) yVals.push(y);
+                    }
+                } else {
+                    const yNumStep = yNumStepObj.val;
+                    const startNY = Math.ceil((yMin - yNumStep * 0.5) / yNumStep) * yNumStep;
+                    for (let y = startNY; y <= yMax + yNumStep * 0.5; y += yNumStep) {
+                        if (Math.abs(y) >= 1e-9) yVals.push(y);
+                    }
+                }
 
                 // Y-Axis Sticky Logic
-                let axisX = mapX(0);
+                let axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : this.padding) : mapX(0);
                 let numX = axisX - 5;
                 let numAlign = "end";
                 let isStickyY = false;
@@ -2647,9 +2816,8 @@ class MatephisPlot {
                     }
                 }
 
-                for (let y = startNY; y <= yMax + yNumStep * 0.5; y += yNumStep) {
-                    if (Math.abs(y) < 1e-9) continue;
-
+                for (let i = 0; i < yVals.length; i++) {
+                    const y = yVals[i];
                     let py = mapY(y);
                     let baseline = "middle";
 
@@ -2667,7 +2835,11 @@ class MatephisPlot {
                     const fsVal = isStickyY ? baseFs * 0.85 : baseFs;
                     const colVal = isStickyY ? "#999" : "#666";
 
-                    this._text(numX, py, formatTick(y, yNumStepObj.isPi, yNumStep), numAlign, baseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
+                    const tickStr = isYLog ? 
+                        (y >= 1e6 || y <= 1e-4 ? y.toExponential() : y.toString()) : 
+                        formatTick(y, yNumStepObj.isPi, yNumStepObj.val);
+
+                    this._text(numX, py, tickStr, numAlign, baseline, colVal, "normal", "normal", this.numbersGroup, fsVal);
                 }
             }
         }

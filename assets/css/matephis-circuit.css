@@ -1,0 +1,81 @@
+/* matephis-circuit.css */
+
+.matephis-circuit-container {
+    position: relative;
+    border: 1px solid transparent;
+    background-color: transparent;
+    font-family: var(--font-plot, monospace);
+    max-width: 70%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.matephis-circuit-container.bordered {
+    border: 1px solid var(--border-color, #e1e1e1);
+}
+
+.matephis-circuit-svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    cursor: pointer;
+}
+
+.matephis-circuit-wire {
+    fill: none;
+    stroke: #333;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+}
+
+.matephis-circuit-comp {
+    fill: none;
+    stroke: #333;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+}
+
+.matephis-circuit-comp-fill {
+    fill: #fff;
+    stroke: #333;
+}
+
+.matephis-circuit-switch {
+    cursor: pointer;
+    transition: stroke 0.2s;
+}
+
+.matephis-circuit-switch:hover {
+    stroke: #666;
+}
+
+.matephis-circuit-label {
+    font-size: 14px;
+    fill: #333;
+    user-select: none;
+}
+
+/* Multi-circuit layout */
+.matephis-circuit-multi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.matephis-circuit-multi-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.matephis-circuit-caption {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 0;
+    text-align: center;
+    font-family: var(--font-plot, monospace);
+}

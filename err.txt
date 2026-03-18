@@ -1,0 +1,9 @@
+c:\Users\bradw\Exprm\matephis\assets\js\matephis-circuit.js:953
+
+
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1281:20)
+    at checkSyntax (node:internal/main/check_syntax:78:3)
+
+Node.js v20.15.0

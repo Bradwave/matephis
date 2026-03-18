@@ -1024,3 +1024,84 @@ Usa `"vector": [[da_x, da_y], [a_x, a_y]]` (entrambi possono contenere espressio
   ]
 }
 ```
+
+## 11. Scale Logaritmiche
+
+### Log Scale (Assi X/Y)
+Impostando `xScale: "log"` o `yScale: "log"` la trasformazione delle coordinate usa esponenti in base 10. `xMin` e `yMin` sono vincolati a essere maggiori di 0. Il rendering della griglia e numerazione si adatta ai multipli di 10.
+
+```json
+{
+  "aspectRatio": "3:1",
+  "xlim": [1, 1000],
+  "ylim": [-3, 3],
+  "xScale": "log",
+  "data": [
+    {
+      "fn": "log(x)",
+      "color": "blue",
+      "label": "log_e(x)"
+    },
+    {
+      "fn": "sin(x)",
+      "color": "red",
+      "label": "sin(x) on log"
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "3:1",
+  "xlim": [1, 1000],
+  "ylim": [-3, 3],
+  "xScale": "log",
+  "data": [
+    {
+      "fn": "log(x)",
+      "color": "blue",
+      "label": "log_e(x)"
+    },
+    {
+      "fn": "sin(x)",
+      "color": "red",
+      "label": "sin(x) on log"
+    }
+  ]
+}
+```
+
+```json
+{
+  "aspectRatio": "1:1",
+  "xlim": [1, 1000],
+  "ylim": [1, 1000000],
+  "xScale": "log",
+  "yScale": "log",
+  "data": [
+    {
+      "fn": "x^2",
+      "color": "purple",
+      "label": "y = x^2"
+    }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "1:1",
+  "xlim": [1, 1000],
+  "ylim": [1, 1000000],
+  "xScale": "log",
+  "yScale": "log",
+  "data": [
+    {
+      "fn": "x^2",
+      "color": "purple",
+      "label": "y = x^2"
+    }
+  ]
+}
+```

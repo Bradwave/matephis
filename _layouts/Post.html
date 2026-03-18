@@ -35,6 +35,9 @@
     {%- if page.plot -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v=1.13" rel="stylesheet" />
     {%- endif -%}
+    {%- if page.circuit -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-circuit.css?v=1.0" rel="stylesheet" />
+    {%- endif -%}
     {%- if page.slides -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-slides.css?v=1.0" rel="stylesheet" />
     {%- endif -%}
@@ -256,6 +259,9 @@
     </div>
     {%- if page.plot -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=1.13"></script>
+    {%- endif -%}
+    {%- if page.circuit -%}
+    <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.0"></script>
     {%- endif -%}
     {%- if page.slides -%}
     <script src="{{ site.baseurl }}/assets/js/seamless-scroll-polyfill-bundle.min.js"></script>
