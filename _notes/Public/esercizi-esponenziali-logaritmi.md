@@ -118,6 +118,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- il grafico di $b^x$ è crescente se $b > 1$ ed è decrescente se $0 < b < 1$.
 3. **[F-]** Per quale valore di $b$ la funzione $f(x) = b^x$ è costante?
 4. **[F]** Per quali valori di $b$ la funzione $f(x) = \log_b(x)$ non è definita?
+5. Spiega una delle ragioni storiche o delle necessità pratiche di calcolo che hanno condotto all'invenzione dei logaritmi.
+6. Spiega per quale motivo, dal punto di vista grafico, le funzioni logaritmiche del tipo $f(x)=log_a​(x)$ intersecano l'asse delle ascisse sempre nel punto $(1,0)$ indipendentemente dalla base a (con $a > 0$ e $a \neq 1$).
 
 ## Quiz
 
@@ -355,15 +357,53 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-
+23. **[E]** Qual è il dominio di $f(x) = \ln(x - 2)$?
+	- **(a)** $\{\forall x \in \mathbb R : x > 2\}$
+	- **(b)** $\{\forall x \in \mathbb R : x < 2\}$
+	- **(c)** $\mathbb R$
+	- **(d)** $\{\forall x \in \mathbb R : x \geq 2\}$
+24. **[F+]** Che tipo di crescita è rappresentata nel grafico?
+	- **(a)** Lineare
+	- **(b)** Esponenziale
+	- **(c)** Logaritmica
 ```matephis
 {
+  "aspectRatio": "3:2",
+  "xlim": [1, 1000],
+  "ylim": [1, 1000000],
+  "xScale": "log",
   "data": [
-    { "fn": "log(x)" }
+    {
+      "fn": "log(x)/log(2)"
+    }
   ]
 }
 ```
-
+25. **[PD-]** Quale delle seguenti affermazioni descrive correttamente il grafico della funzione $f(x) = −ln(x−1)$ rispetto al grafico elementare della funzione $g(x) = ln(x)$?
+	- **(a)** È traslato verso destra di 1 unità e riflesso rispetto all'asse $x$.
+	- **(b)** È traslato verso sinistra di 1 unità e riflesso rispetto all'asse $y$.
+	- **(c)** È traslato verso il basso di 1 unità.
+	- **(d)** È riflesso rispetto all'asse y e traslato verso l'alto di 1 unità.
+26. **[F-]** Qual è il dominio della funzione logaritmica f(x)=ln(−x)?
+	- **(a)** $\{\forall x \in \mathbb R : x > 0\}$
+	- **(b)** $\{\forall x \in \mathbb R : x \neq 0\}$
+	- **(c)** $\{\forall x \in \mathbb R : x > 0\}$
+	- **(d)** $\emptyset$ (ovvero l'insieme vuoto), perché l'argomento del logaritmo non può presentare il segno meno.
+27. **[F+]** Quante soluzioni ammette l'equazione $\ln x = -x$?
+	- **(a)** Nessuna
+	- **(b)** Una
+	- **(c)** Due
+	- **(d)** Non è possibile risolvere l'equazione per via algebrica, quindi non è nemmeno determinare il numero di soluzioni.
+28. **[F]** Nel calcolo del livello di intensità sonora $L(I) = 10 \cdot \log_{10}​(I/10^{−12}​)$, se l'intensità sonora $I$ viene centuplicata, il livello $L$ misurato in decibel
+    - **(a)** aumenta di un valore additivo pari a 20 dB.
+    - **(b)** aumenta di 100 dB.
+    - **(c)** centuplica a sua volta.
+    - **(d)** raddoppia.
+29. **[PD]** Sapendo che per valutare l'energia di un terremoto vale la relazione empirica di Gutenberg-Richter $\log_{10}​E = 4.8+1.5M$, un aumento della magnitudo $M$ di esattamente 2 unità corrisponde a un'energia irradiata $E$ che:
+	- **(a)** Aumenta in modo additivo di 101,5 Joule.
+	- **(b)** Raddoppia in valore assoluto.
+	- **(c)** Aumenta di un fattore moltiplicativo pari a 103 (ovvero diventa 1000 volte più grande).
+	- **(d)** Aumenta di un fattore costante 1,5.
 
 ## Problemi
 

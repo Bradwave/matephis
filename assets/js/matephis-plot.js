@@ -4236,7 +4236,7 @@ class MatephisPlot {
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope",
             "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints",
             "animate",
-            "polar", "polarUnits",
+            "polar", "polarUnits", "xScale", "yScale",
             "complexMode", "draggablePoints"
         ];
 
