@@ -648,7 +648,7 @@ class MatephisCircuit {
                     g.appendChild(createWire(padding*0.8, 0, dist/2, 0));
                     g.appendChild(circle);
                     g.appendChild(path);
-                } else if (elType === 'amperometer' || elType === 'voltmeter') {
+                } else if (elType === 'amperometer' || elType === 'ammeter' || elType === 'voltmeter') {
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     circle.setAttribute("cx", 0);
                     circle.setAttribute("cy", 0);
@@ -656,10 +656,10 @@ class MatephisCircuit {
                     circle.setAttribute("class", "matephis-circuit-comp-fill");
                     circle.setAttribute("stroke-width", strokeW);
 
-                    const text = createLabel(0, 0, elType === 'amperometer' ? 'A' : 'V');
+                    const text = createLabel(0, 0, (elType === 'amperometer' || elType === 'ammeter') ? 'A' : 'V');
                     // Reset rotation for text so it reads upright
                     text.setAttribute("transform", `rotate(${-angle})`);
-                    text.setAttribute("class", "matephis-circuit-label matephis-circuit-strong");
+                    text.setAttribute("class", "matephis-circuit-label");
 
                     g.appendChild(createWire(-dist/2, 0, -padding*0.8, 0));
                     g.appendChild(createWire(padding*0.8, 0, dist/2, 0));
@@ -997,3 +997,4 @@ class MatephisCircuit {
     }
 }
 window.MatephisCircuit = MatephisCircuit;
+if (typeof module !== 'undefined') module.exports = MatephisCircuit;

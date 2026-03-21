@@ -53,7 +53,9 @@
 .matephis-circuit-label {
     font-size: 14px;
     fill: #333;
+    stroke: none;
     user-select: none;
+    font-weight: normal;
 }
 
 /* Multi-circuit layout */

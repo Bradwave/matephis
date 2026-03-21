@@ -3,7 +3,6 @@ title: Matephis Circuit System
 feed: hide
 tags:
   - test
-  - circuiti
 circuit: true
 ---
 

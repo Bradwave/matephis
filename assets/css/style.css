@@ -702,6 +702,10 @@ li {
   line-height: 1.6;
 }
 
+ol li::marker {
+  color: #8a8a8a;
+}
+
 strong {
   font-weight: 700;
 }
@@ -1134,6 +1138,39 @@ td {
 }
 
 /* Most Vibrant Red */
+
+/* --- Solution Tags --- */
+
+@keyframes solution-reveal {
+  0%   { filter: blur(4px); opacity: 0.4; }
+  15%  { filter: blur(0);   opacity: 1;   }
+  85%  { filter: blur(0);   opacity: 1;   }
+  100% { filter: blur(4px); opacity: 0.4; }
+}
+
+.solution-tag {
+  display: block;
+  text-align: right;
+  font-family: var(--font-title);
+  font-size: 0.9em;
+  font-weight: bold;
+  color: var(--text);
+  margin-top: 0.25em;
+}
+
+.solution-text {
+  filter: blur(4px);
+  opacity: 0.4;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: none;
+  font-weight: normal;
+}
+
+.solution-text:focus {
+  animation: solution-reveal 5.3s ease forwards;
+}
 
 .tooltip .right::after {
   content: '';
