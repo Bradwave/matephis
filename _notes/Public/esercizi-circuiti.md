@@ -66,6 +66,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 18. **[F+]** Quali sono i requisiti fondamentali affinché un circuito sia attraversato da corrente elettrica?
 19. **[PD+]** Quali sono le differenze tra le lampade a incandescenza e le lampade al neon?
 20. **[E]** Qual è la relazione tra il verso della corrente elettrica e il verso di percorrenza degli elettroni?
+21. **[F+]** Da cosa dipende la resistenza di un resistore? Volendo collegare una centrale elettrica a una fabbrica, come deve essere fatto il cavo? Volendo costruire una serpentina elettrica riscaldante, come deve essere fatta la resistenza?
 
 ## Quiz
 

@@ -1168,6 +1168,10 @@ td {
   font-weight: normal;
 }
 
+.solution-text * {
+  pointer-events: none;
+}
+
 .solution-text:focus {
   animation: solution-reveal 5.3s ease forwards;
 }
