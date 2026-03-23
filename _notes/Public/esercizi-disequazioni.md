@@ -446,3 +446,12 @@ dove $t$ è il tempo trascorso in secondi dal momento del salto. Scrivi e risolv
   ]
 }
 ```
+**5. La città ideale** **[D-]** Il governatore di una provincia dell'antichità ha ricevuto dall'imperatore un budget sufficiente per costruire esattamente 4000 metri di mura difensive. Il suo obiettivo è fondare una nuova città e racchiudere all'interno delle mura la *massima area possibile* per ospitare i campi coltivati e le abitazioni.
+
+Il suo capo architetto gli propone di costruire la città a forma di quadrato perfetto, sostenendo che sia la forma più regolare e capiente. Il governatore, però, ha studiato i testi dei matematici greci e conosce la disuguaglianza isoperimetrica, secondo cui per un dato perimetro $L$ e un'area $A$ vale sempre la relazione:
+
+$$L^2 \geq 4\pi A$$
+
+- Calcola l'area della città se venisse costruita a forma di quadrato con i 4000 metri di mura.  
+2. Utilizzando la disuguaglianza isoperimetrica, calcola l'area massima assoluta che i 4000 metri di mura potrebbero racchiudere. Quale forma geometrica permette di raggiungere questo limite?
+3. Senza usare i dati del problema, dimostra algebricamente tramite la disuguaglianza che, per un **qualsiasi** perimetro $L$ prefissato, l'area di un quadrato ($A_q$) sarà **sempre** strettamente minore dell'area di un cerchio ($A_c$). 

@@ -97,6 +97,7 @@
   --title: #000000;
   --accent: #B01A00;
   --border: #e1e1e1;
+  --secondary-text: #8a8a8a;
   /* Updated to match drawingfourier border */
 
   --font: "Noto Sans", sans-serif;
@@ -703,7 +704,7 @@ li {
 }
 
 ol li::marker {
-  color: #8a8a8a;
+  color: var(--secondary-text);
 }
 
 strong {
@@ -1148,17 +1149,21 @@ td {
   100% { filter: blur(4px); opacity: 0.4; }
 }
 
-.solution-tag {
+.solution-tag,
+.hint-tag {
   display: block;
   text-align: right;
   font-family: var(--font-title);
   font-size: 0.9em;
   font-weight: bold;
-  color: var(--text);
+  color: var(--secondary-text);
   margin-top: 0.25em;
+  margin-right: 10px;
+  opacity: 0.75;
 }
 
-.solution-text {
+.solution-text,
+.hint-text {
   filter: blur(4px);
   opacity: 0.4;
   cursor: pointer;
@@ -1172,7 +1177,8 @@ td {
   pointer-events: none;
 }
 
-.solution-text:focus {
+.solution-text:focus,
+.hint-text:focus {
   animation: solution-reveal 5.3s ease forwards;
 }
 

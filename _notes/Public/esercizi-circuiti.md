@@ -867,7 +867,7 @@ Dove non diversamente specificato, si suppongano identiche le componenti elettri
 }
 ```
 [sol: (c)]
-31. [F+] Con riferimento all'esercizio precedente, ordina le differenze di potenziale ai capi di ciascuna delle cinque lampadine nei tre circuiti. Assumi che la differenza di potenziale ai capi degli amperometri sia zero.
+31. **[F+]** Con riferimento all'esercizio precedente, ordina le differenze di potenziale ai capi di ciascuna delle cinque lampadine nei tre circuiti. Assumi che la differenza di potenziale ai capi degli amperometri sia zero.
 	- **(a)** $\Delta V_1 > \Delta V_2 = \Delta V_3 > \Delta V_4 = \Delta V_5$
 	- **(b)** $\Delta V_2 > \Delta V_3 > \Delta V_1 > \Delta V_4 > \Delta V_5$
 	- **(c)** $\Delta V_2 = \Delta V_3 > \Delta V_1 > \Delta V_4 = \Delta V_5$
