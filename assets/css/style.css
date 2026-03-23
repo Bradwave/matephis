@@ -1179,7 +1179,7 @@ td {
 
 .solution-text:focus,
 .hint-text:focus {
-  animation: solution-reveal 5.3s ease forwards;
+  animation: solution-reveal 10.3s ease forwards;
 }
 
 .tooltip .right::after {
