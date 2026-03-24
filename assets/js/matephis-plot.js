@@ -761,6 +761,29 @@ class MatephisPlot {
             this.draw();
         };
 
+        // Derivative Toggle
+        if (this.config.derivativeToggle) {
+            const btnDeriv = mkBtn("assets/img/show_chart_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Toggle Derivative", () => {
+                this.config.showDerivativeFunction = this.config.showDerivativeFunction === false;
+                if (this.derivativePlot) {
+                    this.derivativePlot.config.showDerivative = this.config.showDerivativeFunction !== false;
+                    this.derivativePlot.draw();
+                }
+                btnDeriv.classList.toggle('active', this.config.showDerivativeFunction !== false);
+                this.draw();
+            });
+            if (this.config.showDerivativeFunction !== false) {
+                btnDeriv.classList.add('active');
+            }
+            overlay.appendChild(btnDeriv);
+
+            if (this.config.interactive !== false) {
+                const sep = document.createElement("div");
+                sep.className = "matephis-plot-separator";
+                overlay.appendChild(sep);
+            }
+        }
+
         if (this.config.interactive !== false) {
             const btnPlus = mkBtn("assets/img/add.svg", "Zoom In", () => zoom(0.9));
             const btnMinus = mkBtn("assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
@@ -4234,7 +4257,7 @@ class MatephisPlot {
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
             "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope",
-            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints",
+            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints", "derivativeToggle",
             "animate",
             "polar", "polarUnits", "xScale", "yScale",
             "complexMode", "draggablePoints"

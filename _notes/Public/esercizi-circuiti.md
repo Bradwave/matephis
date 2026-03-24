@@ -755,7 +755,7 @@ Dove non diversamente specificato, si suppongano identiche le componenti elettri
 }
 ```
 25. **[PD]** Qual è la resistenza totale del seguente circuito?
-	- **(a)** 2.0 Ω
+	- **(a)** 4.0 Ω
 	- **(b)** 7.0 Ω
 	- **(c)**  9.0 Ω
 	- **(d)** 1.6 Ω
@@ -763,7 +763,7 @@ Dove non diversamente specificato, si suppongano identiche le componenti elettri
 {
   "segments": [
     { "start": [0, 0], "end": [3, 0], "components": [{ "type": "voltage_source", "label": "12.0 V" }] },
-    { "end": [3, 3], "components": [{ "type": "resistor", "label": "4,0 Ω", "labelSide": "right" }] },
+    { "end": [3, 3], "components": [{ "type": "resistor", "label": "4.0 Ω", "labelSide": "right" }] },
     { "end": [0, 3], "components": [{ "type": "resistor", "label": "3.0 Ω", "labelSide": "bottom" }] },
     { "end": [0, 0], "components": [{ "type": "resistor", "label": "2.0 Ω", "labelSide": "left" }] },
     { "start": [0, 0], "end": [3, 3] }
@@ -790,7 +790,7 @@ Dove non diversamente specificato, si suppongano identiche le componenti elettri
         ]
 }
 ```
-[sol: (a) e (d)]
+[sol: (c) e (d)]
 27. **[F+]** Con riferimento all'esercizio precedente, confronta la differenza di potenziale tra le lampadine A e B dopo la chiusura dell'interruttore. Quale affermazione è corretta?
 	- **(a)** La differenza di potenziale è maggiore ai capi della lampadina A.
 	- **(b)** La differenza di potenziale è maggiore ai capi della lampadina B.
