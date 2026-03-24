@@ -1494,6 +1494,73 @@ li a[href^="https://"] {
   color: var(--accent);
 }
 
+/* Sidebar Layout Toggle */
+.page-layout {
+  position: relative;
+}
+
+.sidebar-toc {
+  position: relative;
+}
+
+.toc-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: var(--secondary-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 0;
+}
+
+.toc-toggle:hover {
+  color: var(--accent);
+}
+
+.toc-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Sidebar Hidden State */
+.page-layout.sidebar-hidden {
+  grid-template-columns: 1fr 0px;
+  gap: 0;
+}
+
+.page-layout.sidebar-hidden .sidebar {
+  border-left: none;
+  padding-left: 0;
+  overflow: visible; /* Keep the toggle visible if container exists */
+}
+
+.page-layout.sidebar-hidden .sidebar > *:not(.sidebar-toc) {
+  display: none;
+}
+
+.page-layout.sidebar-hidden .sidebar-toc {
+  display: block !important;
+}
+
+.page-layout.sidebar-hidden .sidebar-toc > *:not(.toc-toggle) {
+  display: none;
+}
+
+.page-layout.sidebar-hidden main {
+  max-width: 100%;
+}
+
+.page-layout.sidebar-hidden .toc-toggle svg {
+  transform: rotate(180deg);
+}
+
 /* Single Column Layout (Homepage, etc) */
 .page-layout.single-column {
   display: block;
@@ -1513,6 +1580,10 @@ li a[href^="https://"] {
   html {
     font-size: 15px;
     /* Indicated increase +1px */
+  }
+
+  .toc-toggle {
+    display: none;
   }
 
   .page-layout {

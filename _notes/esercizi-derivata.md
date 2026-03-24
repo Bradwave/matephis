@@ -16,22 +16,25 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ```matephis
 {
-  "padding": 0,
+  "padding": 10,
+  "marginBottom": 5,
   "aspectRatio": "2:1",
-  "xlim": [-0.85,0.85],
-  "ylim": [-1.4, 2.9],
-  "derivateToggle": true,
+  "xlim": [-3.9,3.9],
+  "ylim": [-2.3, 2.3],
+  "derivativeToggle": true,
   "data": [
-    { "fn": "sin(2*pi*x)^2+cos(3*pi*x)" }
+    { "fn": "0.5*sin(0.5*pi*x)^2+0.5*cos(0.75*pi*x)" }
   ]
 }
 ```
 ```matephis
 {
-  "padding": 0,
+  "padding": 10,
+  "marginBottom": 5,
   "aspectRatio": "2:1",
   "xlim": [-2.9,2.9],
-  "ylim": [-0.9,3.9],
+  "ylim": [-1.9,2.9],
+  "derivativeToggle": true,
   "data": [
     { "fn": "x^2-x" }
   ]
@@ -39,12 +42,14 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```
 ```matephis
 {
-  "padding": 0,
+  "padding": 10,
+  "marginBottom": 5,
   "aspectRatio": "2:1",
   "xlim": [-1.4,1.4],
-  "ylim": [-2.9,2.9],
+  "ylim": [-3.4,3.4],
+  "derivativeToggle": true,
   "data": [
-    { "fn": "x + 0.4*cos(2*pi*x)" }
+    { "fn": "0.5*x + 0.4*cos(2*pi*x)" }
   ]
 }
 ```

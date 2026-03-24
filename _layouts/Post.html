@@ -147,7 +147,10 @@
                 <aside class="sidebar">
                     {% if show_toc %}
                     <div class="sidebar-toc">
-                        <h4>Indice</h4>
+                        <h4 id="toc-header">Indice</h4>
+                        <button class="toc-toggle" id="toc-toggle" title="Toggle Sidebar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
                         <ul id="toc-list">
                             <!-- JS will populate this -->
                         </ul>
@@ -206,9 +209,12 @@
                     if (!tocList) return;
 
                     const headers = document.querySelectorAll('main h2, main h3');
+                    const toggleBtn = document.getElementById('toc-toggle');
+                    const tocContainer = document.querySelector('.sidebar-toc');
+
                     if (headers.length === 0) {
-                        const tocContainer = document.querySelector('.sidebar-toc');
                         if (tocContainer) tocContainer.style.display = 'none';
+                        if (toggleBtn) toggleBtn.style.display = 'none';
                         
                         const relatedContainer = document.querySelector('.sidebar-related');
                         if (relatedContainer) {
@@ -253,6 +259,23 @@
                     }, { rootMargin: '-10% 0px -80% 0px' }); // Highlight when near top
 
                     headers.forEach(h => observer.observe(h));
+
+                    // Toggle Sidebar
+                    const layout = document.querySelector('.page-layout');
+                    if (toggleBtn && layout) {
+                        // Restore state
+                        if (localStorage.getItem('sidebar-hidden') === 'true') {
+                            layout.classList.add('sidebar-hidden');
+                        }
+                        
+                        toggleBtn.addEventListener('click', () => {
+                            layout.classList.toggle('sidebar-hidden');
+                            localStorage.setItem('sidebar-hidden', layout.classList.contains('sidebar-hidden'));
+                            
+                            // Trigger window resize event to redraw any responsive elements (like plots)
+                            window.dispatchEvent(new Event('resize'));
+                        });
+                    }
                 });
             </script>
         </div>

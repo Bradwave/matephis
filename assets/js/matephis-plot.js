@@ -178,7 +178,7 @@ class MatephisPlot {
         // Force interactions if selection modes are enabled
         const hasSelection = this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection || this.config.draggablePoints;
 
-        if (this.config.interactive || hasSelection || this._hasFreePoints) {
+        if (this.config.interactive || hasSelection || this._hasFreePoints || this.config.derivativeToggle) {
             this._initControlsOverlay();
             this._initInteractions();
 
@@ -478,8 +478,8 @@ class MatephisPlot {
         const controls = document.createElement("div");
         controls.className = "matephis-plot-controls";
 
-        let basePath = "";
-        if (MatephisPlot.scriptUrl) {
+        let basePath = MatephisPlot.basePath || "";
+        if (!basePath && MatephisPlot.scriptUrl) {
             const src = MatephisPlot.scriptUrl;
             const idx = src.indexOf("assets/js/matephis-plot.js");
             if (idx !== -1) basePath = src.substring(0, idx);
@@ -606,7 +606,9 @@ class MatephisPlot {
                 const playBtn = document.createElement("button");
                 playBtn.className = "matephis-plot-play-btn";
                 const img = document.createElement("img");
-                img.src = basePath + "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg";
+                let finalPath = basePath;
+                if (finalPath && !finalPath.endsWith("/")) finalPath += "/";
+                img.src = finalPath + "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg";
                 playBtn.appendChild(img);
 
                 let isPlaying = false;
@@ -684,8 +686,8 @@ class MatephisPlot {
         const overlay = document.createElement("div");
         overlay.className = "matephis-plot-toolbar"; // Renamed class for new styling logic
 
-        let basePath = "";
-        if (MatephisPlot.scriptUrl) {
+        let basePath = MatephisPlot.basePath || "";
+        if (!basePath && MatephisPlot.scriptUrl) {
             const src = MatephisPlot.scriptUrl;
             const idx = src.indexOf("assets/js/matephis-plot.js");
             if (idx !== -1) basePath = src.substring(0, idx);
@@ -705,7 +707,9 @@ class MatephisPlot {
             if (iconPath.startsWith('http') || iconPath.startsWith('/') || iconPath.startsWith('data:')) {
                 img.src = iconPath;
             } else {
-                img.src = basePath + iconPath;
+                let finalPath = basePath;
+                if (finalPath && !finalPath.endsWith("/")) finalPath += "/";
+                img.src = finalPath + iconPath;
             }
 
             img.style.width = "20px";
@@ -764,27 +768,35 @@ class MatephisPlot {
         // Derivative Toggle
         if (this.config.derivativeToggle) {
             const btnDeriv = mkBtn("assets/img/show_chart_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg", "Toggle Derivative", () => {
-                this.config.showDerivativeFunction = this.config.showDerivativeFunction === false;
+                const targetPlot = this.derivativePlot || this;
+                const configKey = this.derivativePlot ? 'showDerivativeFunction' : 'showDerivative';
+
+                // Toggle visibility
+                this.config[configKey] = !this.config[configKey];
                 if (this.derivativePlot) {
-                    this.derivativePlot.config.showDerivative = this.config.showDerivativeFunction !== false;
+                    this.derivativePlot.config.showDerivative = this.config.showDerivativeFunction;
                     this.derivativePlot.draw();
+                } else {
+                    this.draw();
                 }
-                btnDeriv.classList.toggle('active', this.config.showDerivativeFunction !== false);
-                this.draw();
+                btnDeriv.classList.toggle('active', this.config[configKey]);
             });
-            if (this.config.showDerivativeFunction !== false) {
+
+            // Initial active state
+            const initialActive = this.derivativePlot ? this.config.showDerivativeFunction : this.config.showDerivative;
+            if (initialActive) {
                 btnDeriv.classList.add('active');
             }
             overlay.appendChild(btnDeriv);
 
-            if (this.config.interactive !== false) {
+            if (this.config.interactive) {
                 const sep = document.createElement("div");
                 sep.className = "matephis-plot-separator";
                 overlay.appendChild(sep);
             }
         }
 
-        if (this.config.interactive !== false) {
+        if (this.config.interactive) {
             const btnPlus = mkBtn("assets/img/add.svg", "Zoom In", () => zoom(0.9));
             const btnMinus = mkBtn("assets/img/remove.svg", "Zoom Out", () => zoom(1.1));
             const btnReset = mkBtn("assets/img/center_focus_weak.svg", "Reset View", () => {
@@ -802,13 +814,13 @@ class MatephisPlot {
             overlay.appendChild(btnPlus);
             overlay.appendChild(btnMinus);
             overlay.appendChild(btnReset);
+
+            // Full Screen
+            const btnFull = mkBtn("assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
+            overlay.appendChild(btnFull);
         }
 
         // Trace Button (Moved logic below to group with Tangent)
-
-        // Full Screen (Always, per user)
-        const btnFull = mkBtn("assets/img/open_in_full.svg", "Full Screen", () => this._openLightbox());
-        overlay.appendChild(btnFull);
 
         // Control Buttons Scope
         let btnPoint, btnSlope, btnTangent;
@@ -1182,6 +1194,17 @@ class MatephisPlot {
     _updateSelectionVisuals(match) {
         this.selectionGroup.innerHTML = "";
 
+        // Calculate dynamic precision based on zoom level
+        let prec = 2;
+        if (this.transform) {
+            const range = this.transform.xMax - this.transform.xMin;
+            const pxSize = this.width - 2 * this.padding;
+            if (pxSize > 0) {
+                // Determine representation size per pixel and adjust precision
+                prec = Math.min(10, Math.max(2, Math.ceil(-Math.log10(range / pxSize))));
+            }
+        }
+
         // Configurable Selection Style
         const selColor = this.config.selectionColor;
         const selRadius = this.config.selectionRadius || 5;
@@ -1206,10 +1229,11 @@ class MatephisPlot {
             const p1 = this.interactions.slopeP1;
             const p2 = this.interactions.slopeP2;
 
-            const mainColor = selColor || "#B01A00";
-            if (p1) drawDot(p1, mainColor);
-            if (p2) drawDot(p2, mainColor);
-
+            let mainColor = selColor || "#B01A00";
+            if (p1 && p1.index !== undefined && this.config.data[p1.index]) {
+                const item = this.config.data[p1.index];
+                if (item.derivativeColor) mainColor = this._getColor(p1.index, item.derivativeColor);
+            }
             if (p1 && p2) {
                 const cx = p2.x, cy = p1.y;
                 this._line(p1.x, p1.y, cx, cy, mainColor, 1, "5,3", this.selectionGroup);
@@ -1229,8 +1253,8 @@ class MatephisPlot {
                 const yLbl = (this.config.axisLabels && this.config.axisLabels[1]) ? `\u0394${this.config.axisLabels[1]}` : "\u0394y";
 
                 const lblSize = 12;
-                this._text((p1.x + cx) / 2, cy + 15, `${xLbl}=${dx.toFixed(2)}`, "middle", "top", mainColor, "normal", "normal", this.selectionGroup, lblSize);
-                this._text(cx + 5, (p2.y + cy) / 2, `${yLbl}=${dy.toFixed(2)}`, "start", "middle", mainColor, "normal", "normal", this.selectionGroup, lblSize);
+                this._text((p1.x + cx) / 2, cy + 15, `${xLbl}=${dx.toFixed(prec)}`, "middle", "top", mainColor, "normal", "normal", this.selectionGroup, lblSize);
+                this._text(cx + 5, (p2.y + cy) / 2, `${yLbl}=${dy.toFixed(prec)}`, "start", "middle", mainColor, "normal", "normal", this.selectionGroup, lblSize);
 
                 const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
                 let slopeLbl = "";
@@ -1239,23 +1263,25 @@ class MatephisPlot {
                 if (this.config.specifySlope) {
                     const xL = (this.config.axisLabels && this.config.axisLabels[0]) ? this.config.axisLabels[0] : "x";
                     const yL = (this.config.axisLabels && this.config.axisLabels[1]) ? this.config.axisLabels[1] : "y";
-                    slopeLbl = `${sName}=\u0394${yL}/\u0394${xL}=${m.toFixed(2)}`;
+                    slopeLbl = `${sName}=\u0394${yL}/\u0394${xL}=${m.toFixed(prec)}`;
                 } else {
-                    slopeLbl = `${sName}=${m.toFixed(2)}`;
+                    slopeLbl = `${sName}=${m.toFixed(prec)}`;
                 }
 
                 drawLabel(mx + 10, my - 10, slopeLbl, mainColor);
 
-                drawLabel(p1.x + 10, p1.y - 10, `(${gx1.toFixed(1)}, ${gy1.toFixed(1)})`, mainColor);
-                drawLabel(p2.x + 10, p2.y - 10, `(${gx2.toFixed(1)}, ${gy2.toFixed(1)})`, mainColor);
+                drawLabel(p1.x + 10, p1.y - 10, `(${gx1.toFixed(prec)}, ${gy1.toFixed(prec)})`, mainColor);
+                drawLabel(p2.x + 10, p2.y - 10, `(${gx2.toFixed(prec)}, ${gy2.toFixed(prec)})`, mainColor);
 
                 // Trace logic moved to Tangent mode
 
             } else if (p1) {
                 const gx = p1.valX !== undefined ? p1.valX : this.transform.unmapX(p1.x);
                 const gy = p1.valY !== undefined ? p1.valY : this.transform.unmapY(p1.y);
-                drawLabel(p1.x + 10, p1.y - 10, `(${gx.toFixed(1)}, ${gy.toFixed(1)})`, mainColor);
+                drawLabel(p1.x + 10, p1.y - 10, `(${gx.toFixed(prec)}, ${gy.toFixed(prec)})`, mainColor);
             }
+            if (p1) drawDot(p1, mainColor);
+            if (p2) drawDot(p2, mainColor);
             return;
         }
 
@@ -1270,8 +1296,12 @@ class MatephisPlot {
                 }
                 return;
             }
-            const mainColor = selColor || "#B01A00";
-            drawDot(match, mainColor);
+            let mainColor = selColor || "#B01A00";
+            if (match && match.index !== undefined && this.config.data[match.index]) {
+                const item = this.config.data[match.index];
+                if (item.derivativeColor) mainColor = this._getColor(match.index, item.derivativeColor);
+            }
+
 
             const gx = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
             const gy = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
@@ -1282,17 +1312,23 @@ class MatephisPlot {
                 // --- CURRENT DERIVATIVE POINT ---
                 if (this.derivativePlot && isFinite(m)) {
                     let dotItem = this.derivativePlot.config.data.find(d => d.id === 'current-derivative-point');
-                    if (!dotItem) {
-                        dotItem = {
-                            id: 'current-derivative-point',
-                            type: 'points',
-                            points: [[gx, m]],
-                            color: mainColor,
-                            radius: 4
-                        };
-                        this.derivativePlot.config.data.push(dotItem);
-                    } else {
-                        dotItem.points = [[gx, m]];
+                    const shouldShowDerivativePoint = this.config.showDerivativePoint !== false || this.isTracing;
+
+                    if (shouldShowDerivativePoint) {
+                        if (!dotItem) {
+                            dotItem = {
+                                id: 'current-derivative-point',
+                                type: 'points',
+                                points: [[gx, m]],
+                                color: mainColor,
+                                radius: 4
+                            };
+                            this.derivativePlot.config.data.push(dotItem);
+                        } else {
+                            dotItem.points = [[gx, m]];
+                        }
+                    } else if (dotItem) {
+                        this.derivativePlot.config.data = this.derivativePlot.config.data.filter(d => d.id !== 'current-derivative-point');
                     }
                 }
 
@@ -1384,7 +1420,7 @@ class MatephisPlot {
                 this._line(match.x - dx, match.y - dy, match.x + dx, match.y + dy, mainColor, 2, "", this.selectionGroup);
 
                 const sName = this.config.slopeLabel || "m";
-                const mStr = isFinite(m) ? m.toFixed(2) : "∞";
+                const mStr = isFinite(m) ? m.toFixed(prec) : "∞";
                 let label = "";
 
                 if (this.config.specifySlope) {
@@ -1398,7 +1434,8 @@ class MatephisPlot {
                 drawLabel(match.x + 10, match.y - 10, label, mainColor);
             }
 
-            drawLabel(match.x + 10, match.y + 20, `(${gx.toFixed(2)}, ${gy.toFixed(2)})`, mainColor);
+            drawDot(match, mainColor);
+            drawLabel(match.x + 10, match.y + 20, `(${gx.toFixed(prec)}, ${gy.toFixed(prec)})`, mainColor);
             return;
         }
 
@@ -1412,14 +1449,14 @@ class MatephisPlot {
         }
 
         // Only show coordinates if showCoordinates is enabled
-        if (this.config.showCoordinates) {
+        if (this.config.showCoordinates !== false) {
             let valX, valY;
             if (this.transform) {
                 valX = match.valX !== undefined ? match.valX : this.transform.unmapX(match.x);
                 valY = match.valY !== undefined ? match.valY : this.transform.unmapY(match.y);
             }
             if (valX !== undefined) {
-                const lbl = `(${parseFloat(valX.toFixed(2))}, ${parseFloat(valY.toFixed(2))})`;
+                const lbl = `(${parseFloat(valX.toFixed(prec))}, ${parseFloat(valY.toFixed(prec))})`;
                 const mainColor = selColor || "#B01A00";
                 drawLabel(match.x + 10, match.y - 10, lbl, mainColor);
             }
@@ -1586,7 +1623,7 @@ class MatephisPlot {
             // Deselection Logic Moved to PointerUp
 
             // Pan Guard
-            if (this.config.interactive !== false) {
+            if (this.config.interactive) {
                 // Only become "isDragging" (panning) if we didn't already capture a selection
                 if (!this.interactions.draggingSelection) {
                     this.interactions.isDragging = true;
@@ -1811,7 +1848,7 @@ class MatephisPlot {
         // Wheel Zoom
         svg.onwheel = (e) => {
             if (Date.now() - this.lastScrollTime < 150) return; // Prevent zooming while scrolling page
-            if (this.config.interactive === false) return; // Disable zoom if not interactive
+            if (!this.config.interactive) return; // Disable zoom if not interactive
             e.preventDefault();
             const zoomFactor = e.deltaY > 0 ? 1.05 : 0.95; // Gentler zoom (5%)
 
@@ -1918,7 +1955,7 @@ class MatephisPlot {
 
             // 2. Lock & Initialize
             if (e.touches.length > 0) {
-                if (e.cancelable) e.preventDefault(); // Lock scroll
+                if (this.config.interactive && e.cancelable) e.preventDefault(); // Lock scroll
 
                 isTouchActive = true;
                 if (this.transform) {
@@ -1940,6 +1977,8 @@ class MatephisPlot {
                 if (e.cancelable) e.preventDefault();
                 return;
             }
+
+            if (!this.config.interactive) return; // Disable touch zoom/pan if not interactive
 
             if (e.cancelable) e.preventDefault(); // Always prevent default if active
 
@@ -3158,7 +3197,7 @@ class MatephisPlot {
                     }
                     tasks.push({
                         fnExpr: fnExpr,
-                        color: this._getColor(idx, item.color), // same color
+                        color: item.derivativeColor ? this._getColor(idx, item.derivativeColor) : this._getColor(idx, item.color),
                         width: 2, // thinner?
                         dash: "5,5", // dashed
                         opacity: 0.5, // fainter
@@ -4256,8 +4295,8 @@ class MatephisPlot {
             "numberSize", "labelSize", "legendSize",
             "axisLabelWeight", "axisLabelStyle", "labelStyle", "axisLabelOffset", "axisUnitMeasures",
             "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
-            "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope",
-            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints", "derivativeToggle",
+            "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope", "showCoordinates",
+            "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints", "derivativeToggle", "derivativeYLim", "showDerivativePoint",
             "animate",
             "polar", "polarUnits", "xScale", "yScale",
             "complexMode", "draggablePoints"
@@ -4266,7 +4305,7 @@ class MatephisPlot {
         const VALID_DATA_KEYS = [
             "type", "fn", "implicit", "points", "x", "vector", "angle", "range", "domain",
             "color", "width", "strokeWidth", "dash", "opacity", "fillColor", "strokeColor", "radius",
-            "label", "labelAt", "labelOffset", "labelAnchor",
+            "label", "labelAt", "labelOffset", "labelAnchor", "derivativeColor",
             "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth", "param",
             "freeCoordinates", "name", "from", "to", "arrow" // interpolation
         ];
