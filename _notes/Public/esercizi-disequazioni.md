@@ -2,6 +2,7 @@
 title: Esercizi sulle disequazioni
 feed: show
 plot: true
+draw: true
 tags:
   - esercizi
   - disequazioni

@@ -41,6 +41,9 @@
     {%- if page.slides -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-slides.css?v=1.1" rel="stylesheet" />
     {%- endif -%}
+    {%- if page.draw -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-draw.css?v=1.0" rel="stylesheet" />
+    {%- endif -%}
     {%- if site.mathjax -%}
     <script>
         MathJax = {
@@ -263,14 +266,8 @@
                     // Toggle Sidebar
                     const layout = document.querySelector('.page-layout');
                     if (toggleBtn && layout) {
-                        // Restore state
-                        if (localStorage.getItem('sidebar-hidden') === 'true') {
-                            layout.classList.add('sidebar-hidden');
-                        }
-                        
                         toggleBtn.addEventListener('click', () => {
                             layout.classList.toggle('sidebar-hidden');
-                            localStorage.setItem('sidebar-hidden', layout.classList.contains('sidebar-hidden'));
                             
                             // Trigger window resize event to redraw any responsive elements (like plots)
                             window.dispatchEvent(new Event('resize'));
@@ -289,6 +286,41 @@
     {%- if page.slides -%}
     <script src="{{ site.baseurl }}/assets/js/seamless-scroll-polyfill-bundle.min.js"></script>
     <script src="{{ site.baseurl }}/assets/js/matephis-slides.js?v=1.1"></script>
+    {%- endif -%}
+    {%- if page.draw -%}
+    <script src="{{ site.baseurl }}/assets/js/matephis-draw.js?v=1.0"></script>
+    {%- endif -%}
+    {%- if page.draw -%}
+    <div class="draw-ui">
+        <button id="stylus-btn" class="draw-btn" title="Toggle Drawing">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m499-287 335-335-52-52-335 335 52 52Zm-261 87q-100-5-149-42T40-349q0-65 53.5-105.5T242-503q39-3 58.5-12.5T320-542q0-26-29.5-39T193-600l7-80q103 8 151.5 41.5T400-542q0 53-38.5 83T248-423q-64 5-96 23.5T120-349q0 35 28 50.5t94 18.5l-4 80Zm280 7L353-358l429-429 166 165-430 429Zm0 0-208 43 43-208 165 165Z"/></svg>
+        </button>
+        <div id="draw-toolbar" class="draw-toolbar">
+            <button id="eraser-btn" class="draw-btn" title="Eraser">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M690-240h190v80H610l80-80Zm-500 80L48-302l552-572 312 312-392 402H190Zm296-80 314-322-198-198-442 456 64 64h262Zm-6-240Z"/></svg>
+            </button>
+            <button id="pen3-btn" class="draw-btn" title="Smaller Pen/Eraser">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M218-218q-17-17-17-42t17-42l440-440q17-18 42-17.5t42 17.5q17 17 17.5 42T742-658L302-218q-17 17-42 17.5T218-218Z"/></svg>
+            </button>
+            <button id="pen4-btn" class="draw-btn" title="Bigger Pen/Eraser">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M200-300q0-42 29-71l360-360q29-29 71-29t71 29q29 29 29 71t-29 71L371-229q-29 29-71 29t-71-29q-29-29-29-71Z"/></svg>
+            </button>
+            <button id="palette-btn" class="draw-btn" title="Cycle Colors">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 32.5-156t88-127Q256-817 330-848.5T488-880q80 0 151 27.5t124.5 76q53.5 48.5 85 115T880-518q0 115-70 176.5T640-280h-74q-9 0-12.5 5t-3.5 11q0 12 15 34.5t15 51.5q0 50-27.5 74T480-80Zm0-400Zm-177 23q17-17 17-43t-17-43q-17-17-43-17t-43 17q-17 17-17 43t17 43q17 17 43 17t43-17Zm120-160q17-17 17-43t-17-43q-17-17-43-17t-43 17q-17 17-17 43t17 43q17 17 43 17t43-17Zm200 0q17-17 17-43t-17-43q-17-17-43-17t-43 17q-17 17-17 43t17 43q17 17 43 17t43-17Zm120 160q17-17 17-43t-17-43q-17-17-43-17t-43 17q-17 17-17 43t17 43q17 17 43 17t43-17ZM480-160q9 0 14.5-5t5.5-13q0-14-15-33t-15-57q0-42 29-67t71-25h70q66 0 113-38.5T800-518q0-121-92.5-201.5T488-800q-136 0-232 93t-96 227q0 133 93.5 226.5T480-160Z"/></svg>
+            </button>
+            <button id="clear-btn" class="draw-btn" title="Clear Canvas">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M240-80v-252q0-74 21-142.5T327-611q-38-9-62.5-41T240-724v-42q0-48 41.5-80.5T368-874l392 39v191l-72 8q14 49 37 88t55 56l-40 70q-53-31-82-85.5T612-629l-44 4q8 50 30.5 101t45.5 92q18 32 27 67t9 71v214H240Zm80-676v32q0 18 13 29t31 9l316-30v-48l-316-30q-18-2-31 9t-13 29Zm0 596h280v-134q0-26-6.5-51T574-393q-31-54-54-111.5T488-617l-60 5-26 34q-40 53-61 116.5T320-332v172Zm0 0h280-280Z"/></svg>
+            </button>
+            <button id="lock-btn" class="draw-btn active" title="Toggle Scroll Lock">
+                <svg class="icon-lock" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/></svg>
+                <svg class="icon-lock-open" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" style="display:none;"><path d="M160-80v-560h440v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85h-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h120v560H160Zm80-80h480v-400H240v400Zm296.5-143.5Q560-327 560-360t-23.5-56.5Q513-440 480-440t-56.5 23.5Q400-393 400-360t23.5 56.5Q447-280 480-280t56.5-23.5ZM240-160v-400 400Z"/></svg>
+            </button>
+        </div>
+    </div>
+    <div id="draw-canvas-container">
+        <canvas id="draw-canvas"></canvas>
+    </div>
+    <div id="draw-cursor-preview" class="draw-cursor-preview"></div>
     {%- endif -%}
 </body>
 

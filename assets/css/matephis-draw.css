@@ -1,0 +1,125 @@
+/* Drawing Feature Styles */
+
+.draw-ui {
+    display: flex;
+    flex-direction: row-reverse; /* Icons grow to the left from the top-right corner */
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000; /* Higher than nav and other elements */
+    pointer-events: none; /* Allow clicking through the container */
+}
+
+.draw-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    height: 34px;
+    width: 34px;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-sm);
+    pointer-events: auto; /* Enable clicks on buttons */
+    transition: all 0.2s ease;
+}
+
+.draw-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.draw-btn:hover {
+    background: var(--bg2);
+    color: var(--accent);
+}
+
+.draw-btn.active {
+    background: var(--title);
+    color: var(--bg);
+    border-color: var(--title);
+}
+
+.draw-btn.active svg {
+    fill: currentColor;
+}
+
+/* Drawing Toolbar */
+.draw-toolbar {
+    display: none; /* Hidden by default */
+    align-items: center;
+    gap: 8px;
+    flex-direction: row-reverse;
+}
+
+.draw-toolbar.visible {
+    display: flex;
+}
+
+
+/* Drawing Canvas Layer */
+#draw-canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1900; /* Just below the UI */
+    pointer-events: none; /* Click through when not drawing */
+    display: none; /* Hidden by default */
+}
+
+#draw-canvas-container.active {
+    display: block;
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+#draw-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Scroll Lock - Preserves Scrollbar */
+html.draw-scroll-lock {
+    overflow: hidden !important;
+}
+
+body.draw-scroll-lock {
+    position: fixed !important;
+    overflow-y: scroll !important;
+    width: 100% !important;
+    touch-action: none !important;
+}
+
+/* Brush/Eraser Preview */
+.draw-cursor-preview {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 100000;
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    display: none;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    background-color: transparent;
+}
+
+#draw-canvas-container.active ~ .draw-cursor-preview {
+    display: block;
+}
+
+/* Ensure images in buttons don't have default styles */
+.draw-btn img {
+    display: block;
+    margin: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}

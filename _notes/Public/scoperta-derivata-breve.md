@@ -2,6 +2,7 @@
 title: Attività sulla derivata
 feed: hide
 plot: true
+draw: true
 ---
 ## 1. Comprendere attraverso i punti di una funzione quando essa cresce o decresce
 
