@@ -266,14 +266,41 @@ class MatephisPlot {
         }
         this.height = Math.max(50, this.height); // Safe min height
 
-        // Padding (Configurable / Smart Default)
-        if (this.config.padding !== undefined) {
+        // Padding (Configurable / Smart Default / Auto)
+        const noNumbers = this.config.showXNumbers === false && this.config.showYNumbers === false;
+        const noLabels = !this.config.axisLabels;
+        const defaultPad = (noNumbers && noLabels) ? 10 : 20;
+
+        if (this.config.padding !== undefined && this.config.padding !== 'auto') {
             this.padding = this.config.padding;
         } else {
-            // Smart default: 10px if no numbers/labels, else 30px (reduced from 35)
-            const noNumbers = this.config.showXNumbers === false && this.config.showYNumbers === false;
-            const noLabels = !this.config.axisLabels;
-            this.padding = (noNumbers && noLabels) ? 10 : 20;
+            this.padding = defaultPad;
+        }
+
+        // Initialize independent paddings
+        this.padL = this.padR = this.padT = this.padB = this.padding;
+
+        if (this.config.padding === 'auto') {
+            const hasXLab = this.config.axisLabels && this.config.axisLabels[0];
+            const hasYLab = (this.config.axisLabels && this.config.axisLabels[1]) || (this.config.isDerivativePlot && this.config.slopeLabel);
+            const hasXUnit = this.config.axisUnitMeasures && this.config.axisUnitMeasures[0];
+            const hasYUnit = (this.config.axisUnitMeasures && this.config.axisUnitMeasures[1]) || (this.config.isDerivativePlot && this.config.slopeUnitMeasure);
+
+            // Left Space (Primary for Y-numbers)
+            if (this.config.boxPlot && !this.config.boxNumbersInside) this.padL = 45;
+            
+            // Bottom Space (Primary for X-numbers)
+            if (this.config.boxPlot && !this.config.boxNumbersInside) this.padB = 40;
+
+            // Top Space (Primary for Y-label)
+            if (hasYLab || hasYUnit) {
+                this.padT = this.config.boxPlot ? 45 : 35;
+            }
+
+            // Right Space (Primary for X-label)
+            if (hasXLab || hasXUnit) {
+                this.padR = 55;
+            }
         }
 
         const ns = "http://www.w3.org/2000/svg";
@@ -311,10 +338,10 @@ class MatephisPlot {
         const clipPath = document.createElementNS(ns, "clipPath");
         clipPath.setAttribute("id", `clip_${this.uid}`);
         this.clipRect = document.createElementNS(ns, "rect");
-        this.clipRect.setAttribute("x", this.padding);
-        this.clipRect.setAttribute("y", this.padding);
-        this.clipRect.setAttribute("width", Math.max(0, this.width - this.padding * 2));
-        this.clipRect.setAttribute("height", Math.max(0, this.height - this.padding * 2));
+        this.clipRect.setAttribute("x", this.padL);
+        this.clipRect.setAttribute("y", this.padT);
+        this.clipRect.setAttribute("width", Math.max(0, this.width - this.padL - this.padR));
+        this.clipRect.setAttribute("height", Math.max(0, this.height - this.padT - this.padB));
         clipPath.appendChild(this.clipRect);
         defs.appendChild(clipPath);
         // Arrow marker (reusable, overridden per vector via color)
@@ -1229,8 +1256,9 @@ class MatephisPlot {
         // Calculate dynamic precision based on zoom level
         let prec = 2;
         if (this.transform) {
-            const range = this.transform.xMax - this.transform.xMin;
-            const pxSize = this.width - 2 * this.padding;
+            const { xMin, xMax, padL, padR } = this.transform;
+            const range = xMax - xMin;
+            const pxSize = this.width - padL - padR;
             if (pxSize > 0) {
                 // Determine representation size per pixel and adjust precision
                 prec = Math.min(10, Math.max(2, Math.ceil(-Math.log10(range / pxSize))));
@@ -1437,9 +1465,9 @@ class MatephisPlot {
                     }
                 }
 
-                const { xMin, xMax, yMin, yMax, width, height, padding } = this.transform;
-                const scaleX = (width - 2 * padding) / (xMax - xMin);
-                const scaleY = -(height - 2 * padding) / (yMax - yMin);
+                const { xMin, xMax, yMin, yMax, width, height, padL, padR, padT, padB } = this.transform;
+                const scaleX = (width - padL - padR) / (xMax - xMin);
+                const scaleY = -(height - padT - padB) / (yMax - yMin);
                 const screenSlope = m === Infinity ? Infinity : m * (scaleY / scaleX);
 
                 let dx, dy;
@@ -2328,6 +2356,8 @@ class MatephisPlot {
     }
 
     draw() {
+        const padL = this.padL, padR = this.padR, padT = this.padT, padB = this.padB;
+
         // Clear dynamic groups
         this.gridGroup.innerHTML = "";
         this.dataGroup.innerHTML = "";
@@ -2371,8 +2401,8 @@ class MatephisPlot {
 
         // Equal Aspect
         if (this.config.equalAspect) {
-            const plotW = this.width - 2 * this.padding;
-            const plotH = this.height - 2 * this.padding;
+            const plotW = this.width - padL - padR;
+            const plotH = this.height - padT - padB;
             const ppU = plotW / (xMax - xMin);
             const reqH = plotH / ppU;
             const yc = (yMin + yMax) / 2;
@@ -2399,9 +2429,9 @@ class MatephisPlot {
                 if (x <= 0) return -30000;
                 const lMin = Math.log10(xMin);
                 const lMax = Math.log10(xMax);
-                return this.padding + ((Math.log10(x) - lMin) / (lMax - lMin)) * (this.width - 2 * this.padding);
+                return padL + ((Math.log10(x) - lMin) / (lMax - lMin)) * (this.width - padL - padR);
             }
-            return this.padding + ((x - xMin) / (xMax - xMin)) * (this.width - 2 * this.padding);
+            return padL + ((x - xMin) / (xMax - xMin)) * (this.width - padL - padR);
         };
 
         const mapY = (y) => {
@@ -2409,39 +2439,29 @@ class MatephisPlot {
                 if (y <= 0) return 30000; // y-axis is inverted
                 const lMin = Math.log10(yMin);
                 const lMax = Math.log10(yMax);
-                return this.height - this.padding - ((Math.log10(y) - lMin) / (lMax - lMin)) * (this.height - 2 * this.padding);
+                return this.height - padB - ((Math.log10(y) - lMin) / (lMax - lMin)) * (this.height - padB - padT);
             }
-            return this.height - this.padding - ((y - yMin) / (yMax - yMin)) * (this.height - 2 * this.padding);
+            return this.height - padB - ((y - yMin) / (yMax - yMin)) * (this.height - padB - padT);
         };
 
-        const unmapX = (px) => {
-            if (isXLog) {
-                const lMin = Math.log10(xMin);
-                const lMax = Math.log10(xMax);
-                const lVal = lMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (lMax - lMin);
-                return Math.pow(10, lVal);
-            }
-            return xMin + ((px - this.padding) / (this.width - 2 * this.width)) * (xMax - xMin); // bug in original: (this.width - 2 * this.width) should be this.padding? Actually original was (this.width - 2 * this.padding)
-        };
-        // Fix the original bug in unmapX
         const fixedUnmapX = (px) => {
             if (isXLog) {
                 const lMin = Math.log10(xMin);
                 const lMax = Math.log10(xMax);
-                const lVal = lMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (lMax - lMin);
+                const lVal = lMin + ((px - padL) / (this.width - padL - padR)) * (lMax - lMin);
                 return Math.pow(10, lVal);
             }
-            return xMin + ((px - this.padding) / (this.width - 2 * this.padding)) * (xMax - xMin);
+            return xMin + ((px - padL) / (this.width - padL - padR)) * (xMax - xMin);
         };
 
         const unmapY = (py) => {
             if (isYLog) {
                 const lMin = Math.log10(yMin);
                 const lMax = Math.log10(yMax);
-                const lVal = lMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (lMax - lMin);
+                const lVal = lMin + ((this.height - padB - py) / (this.height - padB - padT)) * (lMax - lMin);
                 return Math.pow(10, lVal);
             }
-            return yMin + ((this.height - this.padding - py) / (this.height - 2 * this.padding)) * (yMax - yMin);
+            return yMin + ((this.height - padB - py) / (this.height - padB - padT)) * (yMax - yMin);
         };
 
         // Save Transform for Interactions
@@ -2450,7 +2470,7 @@ class MatephisPlot {
             unmapX: fixedUnmapX,
             unmapY,
             xMin, xMax, yMin, yMax,
-            width: this.width, height: this.height, padding: this.padding
+            width: this.width, height: this.height, padL, padR, padT, padB
         };
 
         // --- 1. Background ---
@@ -2492,8 +2512,8 @@ class MatephisPlot {
             return step;
         };
 
-        const autoXStep = calculateNiceStep(xMax - xMin, this.width - 2 * this.padding);
-        const autoYStep = calculateNiceStep(yMax - yMin, this.height - 2 * this.padding);
+        const autoXStep = calculateNiceStep(xMax - xMin, this.width - padL - padR);
+        const autoYStep = calculateNiceStep(yMax - yMin, this.height - padT - padB);
 
         // Step Parsers
         const parseStep = (val, def) => {
@@ -2569,13 +2589,13 @@ class MatephisPlot {
 
             // Concentric circles
             for (let r = rStep; r <= maxR; r += rStep) {
-                const pxR = (r / (xMax - xMin)) * (this.width - 2 * this.padding); // radius in pixels
+                const pxR = (r / (xMax - xMin)) * (this.width - padL - padR); // radius in pixels
                 this._circle(mapX(0), mapY(0), pxR, gridColor, 1.5, "", this.gridGroup);
 
                 // Numbers along the positive X axis
                 if (this.config.showXNumbers !== false) {
                     const px = mapX(r);
-                    if (px >= this.padding && px <= this.width - this.padding) {
+                    if (px >= padL && px <= this.width - padR) {
                         this._text(px, mapY(0) + 12, formatTick(r, false, rStep), "middle", "hanging", "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
                     }
                 }
@@ -2615,8 +2635,8 @@ class MatephisPlot {
                 let lblTxt = isDeg ? `${Math.round(a)}°` : formatTick(a, true, aStep) + " rad";
                 if (a === 0) lblTxt = "0" + (isDeg ? "°" : " rad");
 
-                if (pxLabel + offX >= this.padding && pxLabel + offX <= this.width - this.padding &&
-                    pyLabel + offY >= this.padding && pyLabel + offY <= this.height - this.padding) {
+                if (pxLabel + offX >= padL && pxLabel + offX <= this.width - padR &&
+                    pyLabel + offY >= padT && pyLabel + offY <= this.height - padB) {
                     this._text(pxLabel + offX, pyLabel + offY, lblTxt, align, baseline, "#666", "normal", "normal", this.numbersGroup, this._getConfigSize('numberSize'));
                 }
             }
@@ -2634,8 +2654,8 @@ class MatephisPlot {
                 const startSX = Math.ceil(xMin / sxStep) * sxStep;
                 for (let x = startSX; x <= xMax + 1e-9; x += sxStep) {
                     const px = mapX(x);
-                    if (px < this.padding || px > this.width - this.padding) continue;
-                    this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.secondaryGridGroup);
+                    if (px < padL || px > this.width - padR) continue;
+                    this._line(px, padT, px, this.height - padB, gridColor, 1.5, "", this.secondaryGridGroup);
                 }
             }
 
@@ -2645,8 +2665,8 @@ class MatephisPlot {
                 const startSY = Math.ceil(yMin / syStep) * syStep;
                 for (let y = startSY; y <= yMax + 1e-9; y += syStep) {
                     const py = mapY(y);
-                    if (py < this.padding || py > this.height - this.padding) continue;
-                    this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
+                    if (py < padT || py > this.height - padB) continue;
+                    this._line(padL, py, this.width - padR, py, gridColor, 1.5, "", this.secondaryGridGroup);
                 }
             }
 
@@ -2672,19 +2692,19 @@ class MatephisPlot {
                     const x = Math.pow(10, k);
                     if (x < xMin || x > xMax) continue;
                     const px = mapX(x);
-                    if (px < this.padding || px > this.width - this.padding) continue;
+                    if (px < padL || px > this.width - padR) continue;
 
-                    if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
+                    if (this.config.grid !== false) this._line(px, padT, px, this.height - padB, gridColor, 1.5, "", this.gridGroup);
 
                     if (this.config.showXTicks === true) {
                         if (this.config.boxPlot) {
-                            this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
+                            this._line(px, this.height - padB, px, this.height - padB - 5, axisColor, 2, "", this.axesGroup);
                             if (!this.config.boxPlotPartial) {
-                                this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                                this._line(px, padT, px, padT + 5, axisColor, 2, "", this.axesGroup);
                             }
                         } else {
-                            const axisY = isYLog ? ((yMin <= 1 && yMax >= 1) ? mapY(1) : this.height - this.padding) : mapY(0);
-                            const tickDir = axisY === this.height - this.padding ? -5 : 5;
+                            const axisY = isYLog ? ((yMin <= 1 && yMax >= 1) ? mapY(1) : this.height - padB) : mapY(0);
+                            const tickDir = axisY === this.height - padB ? -5 : 5;
                             this._line(px, axisY, px, axisY + tickDir, axisColor, 2, "", this.axesGroup);
                         }
                     }
@@ -2693,19 +2713,18 @@ class MatephisPlot {
                 const startX = Math.ceil(xMin / xStep) * xStep;
                 for (let x = startX; x <= xMax + 1e-9; x += xStep) {
                     const px = mapX(x);
-                    if (px < this.padding || px > this.width - this.padding) continue;
-
+                    if (px < padL || px > this.width - padR) continue;
                     // Grid
-                    if (this.config.grid !== false) this._line(px, this.padding, px, this.height - this.padding, gridColor, 1.5, "", this.gridGroup);
+                    if (this.config.grid !== false) this._line(px, padT, px, this.height - padB, gridColor, 1.5, "", this.gridGroup);
 
                     // Ticks (Default False) -- To AxesGroup
                     if (this.config.showXTicks === true) {
                         if (this.config.boxPlot) {
                             // Bottom Ticks
-                            this._line(px, this.height - this.padding, px, this.height - this.padding - 5, axisColor, 2, "", this.axesGroup);
+                            this._line(px, this.height - padB, px, this.height - padB - 5, axisColor, 2, "", this.axesGroup);
                             // Top Ticks (if not partial)
                             if (!this.config.boxPlotPartial) {
-                                this._line(px, this.padding, px, this.padding + 5, axisColor, 2, "", this.axesGroup);
+                                this._line(px, padT, px, padT + 5, axisColor, 2, "", this.axesGroup);
                             }
                         } else if (Math.abs(x) > 1e-9) {
                             this._line(px, mapY(0), px, mapY(0) + 5, axisColor, 2, "", this.axesGroup);
@@ -2770,15 +2789,15 @@ class MatephisPlot {
 
                     // Clamping Logic (Visual - 4px threshold)
                     // This keeps specific numbers inside if they hit the side walls
-                    if (Math.abs(px - this.padding) < 4) {
-                        px = this.padding;
+                    if (Math.abs(px - padL) < 4) {
+                        px = padL;
                         align = "start";
-                    } else if (Math.abs(px - (this.width - this.padding)) < 4) {
-                        px = this.width - this.padding;
+                    } else if (Math.abs(px - (this.width - padR)) < 4) {
+                        px = this.width - padR;
                         align = "end";
                     }
 
-                    if (px < this.padding || px > this.width - this.padding) continue;
+                    if (px < padL || px > this.width - padR) continue;
 
                     // Font size for shift calc
                     const baseFs = this._getConfigSize('numberSize');
@@ -2810,8 +2829,8 @@ class MatephisPlot {
                             const y = m * Math.pow(10, k);
                             if (y < yMin || y > yMax) continue;
                             const py = mapY(y);
-                            if (py < this.padding || py > this.height - this.padding) continue;
-                            this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.secondaryGridGroup);
+                            if (py < padT || py > this.height - padB) continue;
+                            this._line(padL, py, this.width - padR, py, gridColor, 1.5, "", this.secondaryGridGroup);
                         }
                     }
                 }
@@ -2820,19 +2839,19 @@ class MatephisPlot {
                     const y = Math.pow(10, k);
                     if (y < yMin || y > yMax) continue;
                     const py = mapY(y);
-                    if (py < this.padding || py > this.height - this.padding) continue;
+                    if (py < padT || py > this.height - padB) continue;
 
-                    if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
+                    if (this.config.grid !== false) this._line(padL, py, this.width - padR, py, gridColor, 1.5, "", this.gridGroup);
 
                     if (this.config.showYTicks === true) {
                         if (this.config.boxPlot) {
-                            this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
+                            this._line(padL, py, padL + 5, py, axisColor, 2, "", this.axesGroup);
                             if (!this.config.boxPlotPartial) {
-                                this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                                this._line(this.width - padR, py, this.width - padR - 5, py, axisColor, 2, "", this.axesGroup);
                             }
                         } else {
-                            const axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : this.padding) : mapX(0);
-                            const tickDir = axisX === this.padding ? 5 : -5;
+                            const axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : padL) : mapX(0);
+                            const tickDir = axisX === padL ? 5 : -5;
                             this._line(axisX + tickDir, py, axisX, py, axisColor, 2, "", this.axesGroup);
                         }
                     }
@@ -2841,19 +2860,19 @@ class MatephisPlot {
                 const startY = Math.ceil(yMin / yStep) * yStep;
                 for (let y = startY; y <= yMax + 1e-9; y += yStep) {
                     const py = mapY(y);
-                    if (py < this.padding || py > this.height - this.padding) continue;
+                    if (py < padT || py > this.height - padB) continue;
 
                     // Grid
-                    if (this.config.grid !== false) this._line(this.padding, py, this.width - this.padding, py, gridColor, 1.5, "", this.gridGroup);
+                    if (this.config.grid !== false) this._line(padL, py, this.width - padR, py, gridColor, 1.5, "", this.gridGroup);
 
                     // Ticks
                     if (this.config.showYTicks === true) {
                         if (this.config.boxPlot) {
                             // Left Ticks
-                            this._line(this.padding, py, this.padding + 5, py, axisColor, 2, "", this.axesGroup);
+                            this._line(padL, py, padL + 5, py, axisColor, 2, "", this.axesGroup);
                             // Right Ticks (if not partial)
                             if (!this.config.boxPlotPartial) {
-                                this._line(this.width - this.padding, py, this.width - this.padding - 5, py, axisColor, 2, "", this.axesGroup);
+                                this._line(this.width - padR, py, this.width - padR - 5, py, axisColor, 2, "", this.axesGroup);
                             }
                         } else if (Math.abs(y) > 1e-9) {
                             this._line(mapX(0) - 5, py, mapX(0), py, axisColor, 2, "", this.axesGroup);
@@ -2881,30 +2900,30 @@ class MatephisPlot {
                 }
 
                 // Y-Axis Sticky Logic
-                let axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : this.padding) : mapX(0);
+                let axisX = isXLog ? ((xMin <= 1 && xMax >= 1) ? mapX(1) : padL) : mapX(0);
                 let numX = axisX - 5;
                 let numAlign = "end";
                 let isStickyY = false;
 
                 if (this.config.boxPlot) {
                     if (this.config.boxNumbersInside) {
-                        numX = this.padding + 4;
+                        numX = padL + 4;
                         numAlign = "start";
                         isStickyY = true;
                     } else {
-                        numX = this.padding - 8;
+                        numX = padL - 8;
                         numAlign = "end";
                     }
                 } else {
                     // Clamp to Left
-                    if (axisX < this.padding) {
-                        numX = this.padding + 5;
+                    if (axisX < padL) {
+                        numX = padL + 5;
                         numAlign = "start";
                         isStickyY = true;
                     }
                     // Clamp to Right
-                    else if (axisX > this.width - this.padding) {
-                        numX = this.width - this.padding - 5;
+                    else if (axisX > this.width - padR) {
+                        numX = this.width - padR - 5;
                         numAlign = "end";
                         isStickyY = true;
                     }
@@ -2953,23 +2972,23 @@ class MatephisPlot {
         if (this.config.boxPlot) {
             // Box Style
             // Bottom
-            this._line(this.padding, this.height - this.padding, this.width - this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            this._line(padL, this.height - padB, this.width - padR, this.height - padB, axisColor, 2, "", this.axesGroup);
             // Left
-            this._line(this.padding, this.padding, this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+            this._line(padL, padT, padL, this.height - padB, axisColor, 2, "", this.axesGroup);
 
             if (!this.config.boxPlotPartial) {
                 // Top
-                this._line(this.padding, this.padding, this.width - this.padding, this.padding, axisColor, 2, "", this.axesGroup);
+                this._line(padL, padT, this.width - padR, padT, axisColor, 2, "", this.axesGroup);
                 // Right
-                this._line(this.width - this.padding, this.padding, this.width - this.padding, this.height - this.padding, axisColor, 2, "", this.axesGroup);
+                this._line(this.width - padR, padT, this.width - padR, this.height - padB, axisColor, 2, "", this.axesGroup);
             }
         } else {
             // Standard Axes at 0
             const showY = this.config.showYAxis !== false;
             const showX = this.config.showXAxis !== false;
 
-            if (showY && x0 >= this.padding && x0 <= this.width - this.padding) this._line(x0, this.padding, x0, this.height - this.padding, axisColor, 2, "", this.axesGroup);
-            if (showX && y0 >= this.padding && y0 <= this.height - this.padding) this._line(this.padding, y0, this.width - this.padding, y0, axisColor, 2, "", this.axesGroup);
+            if (showY && x0 >= padL && x0 <= this.width - padR) this._line(x0, padT, x0, this.height - padB, axisColor, 2, "", this.axesGroup);
+            if (showX && y0 >= padT && y0 <= this.height - padB) this._line(padL, y0, this.width - padR, y0, axisColor, 2, "", this.axesGroup);
         }
 
         // Arrows - To AxesGroup (part of axes)
@@ -3012,8 +3031,8 @@ class MatephisPlot {
 
             // Draw Arrows Manually (Markers can be tricky with scaling)
             // X Arrow (Positive)
-            if (this.config.showXAxis !== false && y0 >= this.padding && y0 <= this.height - this.padding) {
-                const axX = this.width - this.padding + 5;
+            if (this.config.showXAxis !== false && y0 >= padT && y0 <= this.height - padB) {
+                const axX = this.width - padR + 5;
                 const axY = y0;
                 const arrowXPoly = document.createElementNS(ns, "polygon");
                 // Tip at axX, base back 8px, width 6px
@@ -3023,9 +3042,9 @@ class MatephisPlot {
             }
 
             // Y Arrow (Positive)
-            if (this.config.showYAxis !== false && x0 >= this.padding && x0 <= this.width - this.padding) {
+            if (this.config.showYAxis !== false && x0 >= padL && x0 <= this.width - padR) {
                 const ayX = x0;
-                const ayY = this.padding - 5;
+                const ayY = padT - 5;
                 const arrowYPoly = document.createElementNS(ns, "polygon");
                 // Tip at ayY, base down 8px, width 6px
                 arrowYPoly.setAttribute("points", `${ayX},${ayY} ${ayX - 4},${ayY + 8} ${ayX + 4},${ayY + 8}`);
@@ -3063,12 +3082,12 @@ class MatephisPlot {
                 // Box Layout Labels
                 // X Label: Bottom Right
                 // X Label: Right of Axis (BoxPlot)
-                if (xText) this._text(this.width - this.padding + 10, this.height - this.padding, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (xText) this._text(this.width - padR + 10, this.height - padB, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
                 // Y Label: Top Left
-                if (yText) this._text(this.padding, this.padding - axisLabelOffset - 10, yText, "start", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (yText) this._text(padL, padT - axisLabelOffset - 10, yText, "start", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
             } else {
-                if (xText) this._text(this.width - this.padding + axisLabelOffset, y0, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
-                if (yText) this._text(x0, this.padding - axisLabelOffset, yText, "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (xText) this._text(this.width - padR + axisLabelOffset, y0, xText, "start", "middle", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
+                if (yText) this._text(x0, padT - axisLabelOffset, yText, "middle", "bottom", axisColor, axisWeight, axisStyle, this.axesGroup, lblSize, false);
             }
         }
 
@@ -4067,9 +4086,11 @@ class MatephisPlot {
     }
 
     _drawLegend(items) {
+        const padL = this.padL, padR = this.padR, padT = this.padT, padB = this.padB;
+
         // Default Top-Right
-        let x = this.width - this.padding - 10;
-        let y = this.padding + 10;
+        let x = this.width - padR - 10;
+        let y = padT + 10;
 
         const pos = this.config.legendPosition || 'top-right';
 
@@ -4131,13 +4152,14 @@ class MatephisPlot {
 
         // X/Y calculations based on totalH
         if (pos === 'top-left') {
-            x = this.padding + 10 + w;
+            x = padL + 10 + w;
+            y = padT + 10;
         } else if (pos === 'bottom-right') {
-            x = this.width - this.padding - 10;
-            y = this.height - this.padding - 10 - totalH;
+            x = this.width - padR - 10;
+            y = this.height - padB - 10 - totalH;
         } else if (pos === 'bottom-left') {
-            x = this.padding + 10 + w;
-            y = this.height - this.padding - 10 - totalH;
+            x = padL + 10 + w;
+            y = this.height - padB - 10 - totalH;
         }
 
         rect.setAttribute("x", x - w);
