@@ -33,6 +33,22 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
 }
 
+// Centralized Icon Registry for Toolbars (Inlined to avoid broken local paths in plugins/Obsidian)
+const MatephisIcons = {
+    add: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>`,
+    remove: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M200-440v-80h560v80H200Z"/></svg>`,
+    reset: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M120-120v-240h80v160h160v80H120Zm480 0v-80h160v-160h80v240H600ZM120-600v-240h240v80H200v160h-80Zm640 0v-160H600v-80h240v240h-80ZM480-320q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm0-80q33 0 56.5-23.5T560-480q0-33-23.5-56.5T480-560q-33 0-56.5 23.5T400-480q0 33 23.5 56.5T480-400Zm0-80Z"/></svg>`,
+    fullscreen: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/></svg>`,
+    chart: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m140-220-60-60 300-300 160 160 284-320 56 56-340 384-160-160-240 240Z"/></svg>`,
+    point: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M800-80H361L107-403l64-67 129 78v-368h81v512l-97-60 116 148h320v-280H461v-80h339v440ZM167-620q-13-22-20-47.5t-7-52.5q0-83 58.5-141.5T340-920q83 0 141.5 58.5T540-720q0 27-7 52.5T513-620l-69-40q8-14 12-28.5t4-31.5q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 17 4 31.5t12 28.5l-69 40Zm393 320Z"/></svg>`,
+    slope: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M120-120v-742l164 164-54 54 28 28 54-54 104 104-54 54 28 28 54-54 104 104-54 54 28 28 54-54 104 104-54 54 28 28 54-54 104 104-54 54 28 28 54-54 154 154H120Zm120-120h332L240-572v332Z"/></svg>`,
+    tangent: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M751-60q-9 0-18.5-1T714-64L209-172q-44-9-76.5-35.5T83-272q-2-4-2-18 3-12 13-19t23-5q7 2 12 6.5t8 10.5q12 25 33.5 43t50.5 24l19 4 140-94-39-172 117-188h-94l-76 122-68-42 100-160h228q27 0 43.5 15t22.5 28l21 48q20 48 64.5 78.5T800-560v80q-70 0-128-33.5T579-602l-72 115 133 107 40 248 46 9q6 2 12.5 2.5t12.5.5q24 0 43-8t36-22q5-5 26-6 13 2 19.5 13t4.5 22q-1 5-3.5 9t-6.5 8q-25 22-56 33t-63 11Zm-155-90-30-186-114-81 18 133-121 81 247 53Zm44-610q-33 0-56.5-23.5T560-840q0-33 23.5-56.5T640-920q33 0 56.5 23.5T720-840q0 33-23.5 56.5T640-760Z"/></svg>`,
+    trace: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M115-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm113.5-56.5Q240-463 240-480t-11.5-28.5Q217-520 200-520t-28.5 11.5Q160-497 160-480t11.5 28.5Q183-440 200-440t28.5-11.5ZM395-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm113.5-56.5Q520-463 520-480t-11.5-28.5Q497-520 480-520t-28.5 11.5Q440-497 440-480t11.5 28.5Q463-440 480-440t28.5-11.5ZM675-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Z"/></svg>`,
+    eraser: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M690-240h190v80H610l80-80Zm-500 80L48-302l552-572 312 312-392 402H190Zm296-80 314-322-198-198-442 456 64 64h262Zm-6-240Z"/></svg>`,
+    play: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/></svg>`,
+    pause: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M520-200v-560h240v560H520Zm-320 0v-560h240v560H200Zm400-80h80v-400h-80v400Zm-320 0h80v-400h-80v400Zm0-400v400-400Zm320 0v400-400Z"/></svg>`
+};
+
 class MatephisPlot {
     // =========================================================================
     // STATIC INITIALIZATION
@@ -368,7 +384,7 @@ class MatephisPlot {
         // Filter out non-function data from the derivative plot
         // (so that points/shapes from the main plot don't bleed over)
         if (cfg.data && Array.isArray(cfg.data)) {
-            cfg.data = cfg.data.filter(item => item.fn);
+            cfg.data = cfg.data.filter(item => item.fn || item.type === 'interpolation');
         }
 
         // Disable legend, sliders, and toolbar on derivative plot
@@ -377,34 +393,27 @@ class MatephisPlot {
         cfg.showToolbar = false;
         cfg.showPoints = false;
 
-        // Reset Layout Options to avoid double application
-        // Since we are inside the parent wrapper, we want to fill it fully.
-        delete cfg.width;
+        // Layout: Align with main plot physical width but allow responsive scaling
+        cfg.width = this.width;
+        cfg.cssWidth = "100%";
+        delete cfg.fullWidth; 
         delete cfg.height;
-        delete cfg.cssWidth;
-        delete cfg.fullWidth; // Important: prevents setting max-width on child
         delete cfg.align;
         delete cfg.marginLeft;
         delete cfg.marginRight;
         delete cfg.marginBottom;
-        delete cfg.border; // Avoid double border
+        delete cfg.border;
 
-        // Force full width in container
-        cfg.fullWidth = true; // Actually we want width: 100% style, which constructor handles if fullWidth or cssWidth is set.
-        // Let's rely on default behavior: if no width/cssWidth, it defaults to fixed width?
-        // Wait, default is 600.
-        // We want responsive width to parent.
-        cfg.cssWidth = "100%";
-
-        // Apply global configuration for showing the derivative line in the derivative plot
         cfg.showDerivative = this.config.showDerivativeFunction !== false;
         cfg.hideFunctions = true;
+        cfg.isDerivativePlot = true;
 
         // Apply Derivative Specifics
-        cfg.aspectRatio = (cfg.derivativeAspectRatio !== undefined) ? cfg.derivativeAspectRatio : 2;
+        cfg.aspectRatio = (cfg.derivativeAspectRatio !== undefined) ? cfg.derivativeAspectRatio : 2.5;
+        cfg.height = cfg.width / cfg.aspectRatio;
+
         if (cfg.derivativeYLim) cfg.ylim = cfg.derivativeYLim;
         else if (cfg.derivativeAutoY) {
-            // Start with default, will update on draw
             cfg.ylim = [-10, 10];
         }
 
@@ -605,20 +614,14 @@ class MatephisPlot {
             if (this.config.animate === true) {
                 const playBtn = document.createElement("button");
                 playBtn.className = "matephis-plot-play-btn";
-                const img = document.createElement("img");
-                let finalPath = basePath;
-                if (finalPath && !finalPath.endsWith("/")) finalPath += "/";
-                img.src = finalPath + "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg";
-                playBtn.appendChild(img);
+                playBtn.innerHTML = MatephisIcons.play;
 
                 let isPlaying = false;
                 let animFrame = null;
 
                 playBtn.onclick = () => {
                     isPlaying = !isPlaying;
-                    img.src = basePath + (isPlaying
-                        ? "assets/img/pause_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
-                        : "assets/img/play_arrow_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg");
+                    playBtn.innerHTML = isPlaying ? MatephisIcons.pause : MatephisIcons.play;
 
                     if (isPlaying) {
                         const speed = p.speed !== undefined ? p.speed : initStep;
@@ -698,24 +701,53 @@ class MatephisPlot {
             // Ensure trailing slash if fallback is needed, but substring above usually keeps the prefix clean
         }
 
-        const mkBtn = (iconPath, title, cb) => {
+        const mkBtn = (iconOrName, title, cb) => {
             const b = document.createElement("button");
             b.className = "matephis-plot-btn";
             b.title = title;
-            const img = document.createElement("img");
-
-            if (iconPath.startsWith('http') || iconPath.startsWith('/') || iconPath.startsWith('data:')) {
-                img.src = iconPath;
-            } else {
-                let finalPath = basePath;
-                if (finalPath && !finalPath.endsWith("/")) finalPath += "/";
-                img.src = finalPath + iconPath;
+            
+            // Handle inline icons or paths
+            let iconCode = iconOrName;
+            if (MatephisIcons[iconOrName]) {
+                iconCode = MatephisIcons[iconOrName];
+            } else if (iconOrName.includes("assets/img/")) {
+                // Fallback mapping for old path-based calls
+                const nameMap = {
+                    "show_chart": "chart", "add": "add", "remove": "remove", "center_focus_weak": "reset",
+                    "open_in_full": "fullscreen", "touch_app": "point", "square_foot": "slope",
+                    "snowboarding": "tangent", "steppers": "trace", "eraser": "eraser"
+                };
+                for (let key in nameMap) {
+                    if (iconOrName.includes(key)) {
+                        iconCode = MatephisIcons[nameMap[key]];
+                        break;
+                    }
+                }
             }
 
-            img.style.width = "20px";
-            img.style.height = "20px";
-            img.draggable = false;
-            b.appendChild(img);
+            if (iconCode.startsWith("<svg")) {
+                b.innerHTML = iconCode;
+                const svg = b.querySelector("svg");
+                if (svg) {
+                    svg.style.width = "20px";
+                    svg.style.height = "20px";
+                    svg.style.pointerEvents = "none";
+                }
+            } else {
+                // Legacy Image Fallback
+                const img = document.createElement("img");
+                if (iconCode.startsWith('http') || iconCode.startsWith('/') || iconCode.startsWith('data:')) {
+                    img.src = iconCode;
+                } else {
+                    let finalPath = basePath;
+                    if (finalPath && !finalPath.endsWith("/")) finalPath += "/";
+                    img.src = finalPath + iconCode;
+                }
+                img.style.width = "20px";
+                img.style.height = "20px";
+                img.draggable = false;
+                b.appendChild(img);
+            }
 
             b.onclick = (e) => {
                 e.stopPropagation(); // Prevent plot click
@@ -3003,16 +3035,24 @@ class MatephisPlot {
         }
 
         // Axis Labels (and Unit Measures)
-        if (this.config.axisLabels || this.config.axisUnitMeasures) {
+        if (this.config.axisLabels || this.config.axisUnitMeasures || this.config.isDerivativePlot) {
             const lblSize = this._getConfigSize('labelSize');
             const axisWeight = this.config.axisLabelWeight || "bold";
             const axisStyle = this.config.axisLabelStyle || "normal";
             const axisLabelOffset = this.config.axisLabelOffset || 5;
 
             const xL = this.config.axisLabels ? (this.config.axisLabels[0] || "") : "";
-            const yL = this.config.axisLabels ? (this.config.axisLabels[1] || "") : "";
+            let yL = this.config.axisLabels ? (this.config.axisLabels[1] || "") : "";
             const xU = this.config.axisUnitMeasures ? (this.config.axisUnitMeasures[0] || "") : "";
-            const yU = this.config.axisUnitMeasures ? (this.config.axisUnitMeasures[1] || "") : "";
+            let yU = this.config.axisUnitMeasures ? (this.config.axisUnitMeasures[1] || "") : "";
+
+            // For derivative Plot, use slopeLabel if present, or default to y' if no axisLabels
+            if (this.config.isDerivativePlot) {
+                if (this.config.slopeLabel) yL = this.config.slopeLabel;
+                else if (!this.config.axisLabels) yL = "y'";
+                
+                if (this.config.slopeUnitMeasure) yU = this.config.slopeUnitMeasure;
+            }
 
             let xText = xL;
             if (xU) xText = xL ? `${xL} (${xU})` : xU;
@@ -3061,104 +3101,133 @@ class MatephisPlot {
                     // Evaluate points
                     const rawPoints = [];
                     item.points.forEach(pt => {
-                        // Point could be [x, y] or [complexString]
                         const vx = this._eval(pt[0], "interp x");
-
                         // If it's a single complex value, treat it as the point
                         if (this.config.complexMode === true && vx && typeof vx === 'object' && vx.re !== undefined) {
-                            rawPoints.push([vx]);
+                            rawPoints.push([vx.re, vx.im]);
                             return;
                         }
-
                         const vy = pt.length > 1 ? this._eval(pt[1], "interp y") : 0;
                         if (!isNaN(vx) && !isNaN(vy)) rawPoints.push([vx, vy]);
                     });
 
                     if (rawPoints.length > 1) {
-                        const mappedPoints = rawPoints.map(p => {
-                            // If it's purely complex it could just be an array of complex numbers that we split into [re, im] coords.
-                            if (this.config.complexMode === true && p[0] && typeof p[0] === 'object' && p[0].re !== undefined) {
-                                const re = p[0].re;
-                                const im = p[0].im;
-                                return [mapX(re), mapY(im)];
-                            }
-                            return [mapX(p[0]), mapY(p[1])];
-                        });
+                        const smoothness = item.smoothness !== undefined ? item.smoothness : 0;
+                        const sampling = item.sampling !== undefined ? item.sampling : 10;
 
-                        let finalPoints = [];
-                        const smoothness = item.smoothness !== undefined ? item.smoothness : 0; // Default 0
-
-                        if (smoothness > 0) {
-                            // Use Curve
-                            const segments = item.sampling !== undefined ? item.sampling : 10;
-                            finalPoints = this._getCurvePoints(mappedPoints, smoothness, segments);
-                        } else {
-                            // Use Linear
-                            finalPoints = mappedPoints;
-                        }
-
-                        // Convert to Path
-                        if (finalPoints.length > 0) {
-                            const d = "M " + finalPoints.map(p => `${p[0]},${p[1]}`).join(" L ");
-                            const path = document.createElementNS(ns, "path");
-                            path.setAttribute("d", d);
-                            path.setAttribute("fill", "none");
-                            path.setAttribute("stroke", color);
-                            path.setAttribute("stroke-width", width);
-                            if (dash) path.setAttribute("stroke-dasharray", dash);
-                            if (item.opacity !== undefined) path.setAttribute("opacity", item.opacity);
-                            this.dataGroup.appendChild(path);
-
-                            // Show Points
-                            // Always show interpolation points unless explicitly disabled on the item
-                            if (item.showPoints !== false) {
-                                mappedPoints.forEach((p, i) => {
-                                    // Check visibility bounds? Nah, just draw
-                                    const pColor = item.pointColor ? this._getColor(0, item.pointColor) : color;
-                                    const pRadius = item.pointRadius || 4;
-                                    const pOpacity = item.pointOpacity !== undefined ? item.pointOpacity : (item.opacity !== undefined ? item.opacity : 1);
-
-                                    const c = document.createElementNS(ns, "circle");
-                                    c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); c.setAttribute("r", pRadius);
-                                    c.setAttribute("fill", pColor);
-                                    if (pOpacity !== 1) c.setAttribute("opacity", pOpacity);
-
-                                    if (item.pointStroke) {
-                                        c.setAttribute("stroke", this._getColor(0, item.pointStroke));
-                                        c.setAttribute("stroke-width", item.pointStrokeWidth || 1);
-                                    } else {
-                                        c.setAttribute("stroke", "none");
-                                    }
-                                    this.dataGroup.appendChild(c);
-                                });
-                            }
-
-                            // Cache for Interaction
-                            // Generate polyline structure for hit testing
-                            const cachedPoly = finalPoints.map(p => ({
-                                x: p[0], y: p[1],
-                                valX: this.transform.unmapX(p[0]),
-                                valY: this.transform.unmapY(p[1])
-                            }));
-
-                            this.plotData.push({
-                                type: 'interpolation',
-                                isInterpolation: true,
-                                index: idx,
-                                polyline: cachedPoly
+                        // Create Tasks: Original and/or Derivative
+                        const tasks = [];
+                        if (this.config.hideFunctions !== true) {
+                            tasks.push({
+                                isDerivative: false,
+                                color: color,
+                                width: width,
+                                dash: dash,
+                                opacity: item.opacity
                             });
-
-                            if (!item.labelAt) {
-                                const last = finalPoints[finalPoints.length - 1];
-                                labelPos = { x: last[0], y: last[1] };
-                            }
                         }
+                        if (this.config.showDerivative === true) {
+                            tasks.push({
+                                isDerivative: true,
+                                color: item.derivativeColor ? this._getColor(idx, item.derivativeColor) : color,
+                                width: 2,
+                                dash: "5,5",
+                                opacity: 0.8 // fainer but visible
+                            });
+                        }
+
+                        tasks.forEach(task => {
+                            let plotPoints = [];
+                            if (task.isDerivative) {
+                                // Calculate slopes between raw points
+                                // For linear (smoothness 0): step function
+                                // For curve (smoothness > 0): calculate derivative of spline
+                                if (smoothness > 0) {
+                                    // Generate high-res spline in MATH coordinates
+                                    const mathSpline = this._getCurvePoints(rawPoints, smoothness, sampling);
+                                    // Calculate slopes by finite difference
+                                    for (let i = 0; i < mathSpline.length - 1; i++) {
+                                        const p1 = mathSpline[i], p2 = mathSpline[i + 1];
+                                        const dx = p2[0] - p1[0];
+                                        const dy = p2[1] - p1[1];
+                                        const m = (Math.abs(dx) < 1e-12) ? 0 : dy / dx;
+                                        plotPoints.push([mapX(p1[0]), mapY(m)]);
+                                        if (i === mathSpline.length - 2) plotPoints.push([mapX(p2[0]), mapY(m)]);
+                                    }
+                                } else {
+                                    // Linear: Step function of slopes
+                                    for (let i = 0; i < rawPoints.length - 1; i++) {
+                                        const p1 = rawPoints[i], p2 = rawPoints[i + 1];
+                                        const dx = p2[0] - p1[0];
+                                        const dy = p2[1] - p1[1];
+                                        const m = (Math.abs(dx) < 1e-12) ? 0 : dy / dx;
+                                        // Current segment slope
+                                        plotPoints.push([mapX(p1[0]), mapY(m)]);
+                                        plotPoints.push([mapX(p2[0]), mapY(m)]);
+                                    }
+                                }
+                            } else {
+                                const mappedPoints = rawPoints.map(p => [mapX(p[0]), mapY(p[1])]);
+                                if (smoothness > 0) {
+                                    plotPoints = this._getCurvePoints(mappedPoints, smoothness, sampling);
+                                } else {
+                                    plotPoints = mappedPoints;
+                                }
+                            }
+
+                            if (plotPoints.length > 0) {
+                                const d = "M " + plotPoints.map(p => `${p[0]},${p[1]}`).join(" L ");
+                                const path = document.createElementNS(ns, "path");
+                                path.setAttribute("d", d);
+                                path.setAttribute("fill", "none");
+                                path.setAttribute("stroke", task.color);
+                                path.setAttribute("stroke-width", task.width);
+                                if (task.dash) path.setAttribute("stroke-dasharray", task.dash);
+                                if (task.opacity !== undefined) path.setAttribute("opacity", task.opacity);
+                                this.dataGroup.appendChild(path);
+
+                                if (!task.isDerivative) {
+                                    // Cache for Interaction (Original curve only)
+                                    const cachedPoly = plotPoints.map(p => ({
+                                        x: p[0], y: p[1],
+                                        valX: this.transform.unmapX(p[0]),
+                                        valY: this.transform.unmapY(p[1])
+                                    }));
+                                    this.plotData.push({ type: 'interpolation', isInterpolation: true, index: idx, polyline: cachedPoly });
+
+                                    // Point Rendering (Original only)
+                                    if (item.showPoints !== false) {
+                                        rawPoints.forEach(rp => {
+                                            const px = mapX(rp[0]), py = mapY(rp[1]);
+                                            const pColor = item.pointColor ? this._getColor(0, item.pointColor) : color;
+                                            const pRadius = item.pointRadius || 4;
+                                            const pOpacity = item.pointOpacity !== undefined ? item.pointOpacity : (item.opacity !== undefined ? item.opacity : 1);
+                                            const c = document.createElementNS(ns, "circle");
+                                            c.setAttribute("cx", px); c.setAttribute("cy", py); c.setAttribute("r", pRadius);
+                                            c.setAttribute("fill", pColor);
+                                            if (pOpacity !== 1) c.setAttribute("opacity", pOpacity);
+                                            if (item.pointStroke) {
+                                                c.setAttribute("stroke", this._getColor(0, item.pointStroke));
+                                                c.setAttribute("stroke-width", item.pointStrokeWidth || 1);
+                                            } else { c.setAttribute("stroke", "none"); }
+                                            this.dataGroup.appendChild(c);
+                                        });
+                                    }
+
+                                    // Label position (on original)
+                                    if (!item.labelAt) {
+                                        const last = plotPoints[plotPoints.length - 1];
+                                        labelPos = { x: last[0], y: last[1] };
+                                    }
+                                }
+                            }
+                        });
                     }
-                } catch (e) { console.warn("Interp Error", e); }
+                } catch (e) {
+                    console.warn("Interp Error", e);
+                }
             }
 
-            // Function
-            // Function (Adaptive Sampling)
             // Function (Adaptive Sampling)
             if (item.fn) {
                 // Prepare tasks: [Original, Derivative?]
@@ -4297,7 +4366,7 @@ class MatephisPlot {
             "boxPlot", "boxPlotPartial", "constrainView", "boxNumbersInside",
             "pointSelection", "slopeSelection", "tangentSelection", "slopeLabel", "specifySlope", "showCoordinates",
             "derivativeTitle", "derivativeAutoY", "hideFunctions", "derivativeYScale", "showDerivative", "traceDerivative", "addDerivativePlot", "showDerivativeFunction", "showToolbar", "showDerivativeToolbar", "showPoints", "derivativeToggle", "derivativeYLim", "showDerivativePoint",
-            "animate",
+            "animate", "isDerivativePlot", "slopeUnitMeasure",
             "polar", "polarUnits", "xScale", "yScale",
             "complexMode", "draggablePoints"
         ];
