@@ -246,7 +246,8 @@
   background: var(--accent, #B01A00);
 }
 
-.matephis-plot-btn.active img {
+.matephis-plot-btn.active img,
+.matephis-plot-btn.active svg {
   opacity: 1;
   filter: brightness(0) invert(1); /* Make white */
 }

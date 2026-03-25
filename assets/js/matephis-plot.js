@@ -1445,6 +1445,10 @@ class MatephisPlot {
                     let d = "";
                     let started = false;
                     this.derivativeTrace.forEach(pt => {
+                        if (!pt) {
+                            started = false;
+                            return;
+                        }
                         const px = this.transform.mapX(pt.x);
                         const py = this.safeMapY ? this.safeMapY(pt.y) : this.transform.mapY(pt.y);
                         if (px >= 0 && px <= this.width && py >= 0 && py <= this.height) {
@@ -1887,6 +1891,19 @@ class MatephisPlot {
 
         // Pointer up handler
         svg.onpointerup = (e) => {
+            // Gap for trace
+            if (this.isTracing && this.derivativeTrace.length > 0) {
+                const lastIdx = this.derivativeTrace.length - 1;
+                if (this.derivativeTrace[lastIdx] !== null) {
+                    this.derivativeTrace.push(null);
+                    if (this.derivativePlot) {
+                        const traceItem = this.derivativePlot.config.data.find(d => d.id === 'derivative-trace');
+                        if (traceItem) traceItem.points.push(null);
+                        // don't need to call draw, handled sequentially
+                    }
+                }
+            }
+
             // Deselection on Release (if no move and no drag target)
             if (!this.interactions.hasMoved && !this.interactions.draggingSelection) {
                 if (this.interactions.currentSelection || this.interactions.slopeP1 || this.interactions.slopeP2) {
@@ -3743,6 +3760,7 @@ class MatephisPlot {
 
                 if (forceShow || this.config.showPoints !== false) {
                     item.points.forEach((pt, ptIdx) => {
+                        if (!pt) return;
 
                         // --- Free-coordinate point ---
                         if (isFree) {

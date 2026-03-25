@@ -22,6 +22,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-3.9,3.9],
   "ylim": [-2.3, 2.3],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "fn": "0.5*sin(0.5*pi*x)^2+0.5*cos(0.75*pi*x)" }
   ]
