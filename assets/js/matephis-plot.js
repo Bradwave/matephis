@@ -1878,11 +1878,11 @@ class MatephisPlot {
             if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.interactions.hasMoved = true;
 
             if (this.transform && this.interactions.hasMoved) {
-                const { xMin, xMax, yMin, yMax, width, height, padding } = this.transform;
+                const { xMin, xMax, yMin, yMax, width, height, padL, padR, padT, padB } = this.transform;
                 const viewW = xMax - xMin;
                 const viewH = yMax - yMin;
-                const plotW = width - 2 * padding;
-                const plotH = height - 2 * padding;
+                const plotW = width - padL - padR;
+                const plotH = height - padT - padB;
                 const dxUnits = (dx / plotW) * viewW;
                 const dyUnits = (dy / plotH) * viewH;
                 this._updateRange(-dxUnits, dyUnits);
