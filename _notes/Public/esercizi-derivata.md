@@ -185,7 +185,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	   - **(b)** $f$ presenta un punto di flesso per $x = 1$.
 	   - **(c)** $f$ ha pendenza nulla per $x = 1$.
 	   - **(d)** $f$ ha concavità rivolta verso il basso per $x < 1$.
-```
+```matephis
 {
   "aspectRatio": "3:2",
   "xlim": [-1.9,5.9],
