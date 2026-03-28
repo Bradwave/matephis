@@ -87,14 +87,14 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "marginBottom": 5,
   "aspectRatio": "2:1",
   "xlim": [-3.4,3.4],
-  "ylim": [-0.4,1.4],
+  "ylim": [-1.4,1.4],
   "derivativeToggle": true,
   "data": [
     { "fn": "e^(-x^2)" }
   ]
 }
 ```
-2. Calcola la derivata delle seguenti funzioni.
+2. **[EE]** Calcola la derivata delle seguenti funzioni.
 	1. $f(x) = x^2 + 3$ [sol: $f^\prime(x) = 2x$]
 	2. $f(x) = x - \sin x$ [sol: $f^\prime(x) = 1 - \cos x$]
 	3. $f(x) = 3x^3 - 2x + 1$ [sol: $f^\prime(x) = 9x^2 - 2$]
@@ -123,7 +123,12 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	  [sol: $f^{\prime\prime} = 1$]
 	- Cosa si può affermare in merito alla concavità della funzione $f$?
 	  [sol: Essendo la derivata seconda positiva e costante, la concavità di $f$ è sempre rivolta verso l'alto (è "felice").]
-4. **[EE/F]** Calcola la derivata delle seguenti funzioni.
+4. **[EE/F]** Ripeti gli step descritti nell'esercizio precedente per le seguenti funzioni.
+	1. $f(x) = x^2 - 4x$ [sol: $f^\prime(x) = 2x - 4$; minimo $(2, -4)$; concavità rivolta verso l'alto.]
+	2. $f(x) = -2x^2 - 1$ [sol: $f^\prime(x) = -4x$; massimo (0, -1)$; concavità rivolta verso il basso.]
+	3. $f(x) = x^3 - 2$ [sol: $f^\prime(x) = 3x^2$; non ha max o min; concavità negativa per $x < 0$, positiva per $x > 0$.]
+	4. $f(x) = \dfrac{1}{3}x^3 - x$ [sol: $f^\prime(x) = x^2 - 1$; max $(-1, 2/3)$, min $(1,-2/3)$; concavità negativa per per $x < 0$, positiva per $x > 0$.]
+5. **[EE/F]** Calcola la derivata delle seguenti funzioni.
 	1. $f(x) = x \cdot \sin x$ [sol: $f^\prime(x) = \sin x + x \cdot \cos x$]
 	2. $f(x) = x^2 \cdot e^x$ [sol: $f^\prime(x) = 2x \cdot e^x + x^2 \cdot e^x = e^x(2x + x^2)$]
 	3. $f(x) = \ln(x) \cdot (2x^3)$ [sol: $f^\prime(x) = 2x^2 + \ln(x) \cdot (6x^2) = 2x^2(1 + 3\ln x)$]
@@ -134,9 +139,22 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	8. $f(x) = e^x - 2x \cdot e^x$ [sol: $f^\prime(x) = e^x - 2 \cdot e^x - 2x \cdot e^x = -e^x (1 + 2x)$]
 	9. $f(x) = 2x^2 - 3x + x \cdot \ln(x)$ [sol: $f^\prime(x) = 4x - 3 + \ln x + 1 = \ln x + 4x - 2$]
 	10. $f(x) = \sin x - x \cos x$ [sol: $f^\prime(x) = \cos x - \cos x + x \cdot \sin x = x \cdot \sin x$]
+6. **[PD-]** Per ciascuna delle seguenti descrizioni, stabilisci se la derivata prima e la derivata seconda sono positive, negative o nulle.
+	- La funzione decresce e la sua pendenza diventa sempre meno ripida.
+	  [sol: $f^\prime < 0$, $f^{\prime\prime} > 0]
+	- La funzione cresce e la sua pendenza diventa sempre più ripida.
+	  [sol: $f^\prime > 0$, $f^{\prime\prime} > 0$]
+	- La funzione decresce e la sua pendenza diventa sempre più ripida.
+	  [sol: $f^\prime < 0$, $f^{\prime\prime} < 0$]
+	- La funzione cresce in modo costante.
+	  [sol: $f^\prime > 0$, $f^{\prime\prime} = 0]
+	- La funzione è costante.
+	  [sol: $f^\prime = 0$, $f^{\prime\prime} = 0]
 
 ## Quesiti
 
+1. **[EE]** Come si definisce la retta tangente a una funzione in un punto?
+2. **[EE]** Come si definisce la derivata di una funzione in un punto.
 
 ## Quiz
 
@@ -170,26 +188,28 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $f^\prime(x) = -3x^2 + 14x - 14$
 	- **(c)** $f^\prime(x) = 3x^3 + 14x^2 - 14$
 	- **(d)** $f^\prime(x) = -3\sin(x) - 14$
+[sol: (c)]
 ```matephis
 {
   "aspectRatio": "3:2",
   "xlim": [-1.9,5.9],
-  "ylim": [-2.4,2.4],
+  "ylim": [-2.4,2.3],
   "data": [
     { "fn": "(x-1)*(x-2)*(x-4)" }
   ]
 }
 ```
 4. **[AD-]** Nel grafico è rappresentata la derivata seconda della funzione $f$. Quale delle seguenti affermazioni **non** è corretta.
-	   - **(a)** $f^\prime$ è decrescente per $x < 1$, crescente per $x > 1$.
-	   - **(b)** $f$ presenta un punto di flesso per $x = 1$.
-	   - **(c)** $f$ ha pendenza nulla per $x = 1$.
-	   - **(d)** $f$ ha concavità rivolta verso il basso per $x < 1$.
+	- **(a)** $f^\prime$ è decrescente per $x < 1$, crescente per $x > 1$.
+	- **(b)** $f$ presenta un punto di flesso per $x = 1$.
+	- **(c)** $f$ ha pendenza nulla per $x = 1$.
+	- **(d)** $f$ ha concavità rivolta verso il basso per $x < 1$.
+[sol: (c)]
 ```matephis
 {
   "aspectRatio": "3:2",
   "xlim": [-1.9,5.9],
-  "ylim": [-2.4,2.4],
+  "ylim": [-2.4,2.3],
   "axisLabels": ["x","f''"],
   "padding": "auto",
   "data": [
@@ -197,7 +217,54 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-[sol: ]
+5. **[F]** Nel grafico è rappresentata la funzione $f$. Quale delle seguenti affermazioni è corretta?
+	- **(a)** $f^\prime$ è decrescente per $x < 2$.
+	- **(b)** $f^\prime$ ha un massimo per $x = 2$.
+	- **(c)** $f^\prime$ è negativa per $x < 2$.
+	- **(d)** Nessuna delle risposte è corretta.
+[sol: (a)]
+```matephis
+{
+  "aspectRatio": "3:2",
+  "xlim": [-1.9,5.9],
+  "ylim": [-2.4,2.3],
+  "data": [
+    { "fn": "-1*(x-2)^2+1" }
+  ]
+}
+```
+6. **[F-]** Quale delle seguenti affermazioni sulla funzione $f(x) = e^{x}$ è corretta?
+	- **(a)** La sua derivata è sempre positiva.
+	- **(b)** La funzione presenta un minimo nell'origine.
+	- **(c)** La sua derivata è sempre negativa.
+	- **(d)** La sua derivata seconda è sempre negativa.
+[sol: (a)]
+7. **[AD-]** Nel grafico della derivata $f^\prime$ di una funzione, si osserva che $f^\prime$ interseca l'asse delle ascisse passandovi da valori negativi a valori positivi in $x = 3$. Cosa si può dedurre sulla funzione originale $f$?
+	- **(a)** $f$ ha un punto di flesso in $x = 3$.
+	- **(b)** $f$ ha un punto di massimo locale in $x = 3$.
+	- **(c)** $f$ ha un punto di minimo locale in $x = 3$.
+	- **(d)** Non ci sono informazioni sufficienti.
+[sol: (c)]
+8. **[EE]** Quanto vale la derivata della funzione $f$ rappresentata nel grafico nel punto $(2, 2)$?
+	- **(a)** $f^\prime(2) = -\frac 1 2$
+	- **(b)** $f^\prime(2) = 4$
+	- **(c)** $f^\prime(2) = -2$
+	- **(d)** $f^\prime(2) = 2x$
+[sol: (b)]
+```matephis
+{
+  "aspectRatio": "3:2",
+  "xlim": [-1.9,5.9],
+  "ylim": [-0.9,4.9],
+  "interactive": true,
+  "pointSelection": true,
+  "slopeSelection": true,
+  "data": [
+    { "fn": "-1*(x - 4)^2 + 6" },
+    { "points": [[2, 2]], "fillColor": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
+  ]
+}
+```
 
 ## Problemi
 
