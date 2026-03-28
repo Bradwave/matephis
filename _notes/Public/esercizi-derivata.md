@@ -158,10 +158,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "ylim": [-4.9,4.9],
   "legend": "true",
   "data": [
-    { "fn": "-3x^2+1", "color": "black1", "dash": [4,4], "label": "A" }
+    { "fn": "-3x^2+1", "color": "black1", "dash": [4,4], "label": "A" },
     { "fn": "e^x", "color": "red1", "dash": [4,4], "label": "B" },
 	{ "fn": "2x", "color": "red1", "label": "C" },
-	{ "fn": "-3", "color": "black1", "label": "D" },
+	{ "fn": "-3", "color": "black1", "label": "D" }
   ]
 }
 ```
@@ -175,13 +175,29 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:2",
   "xlim": [-1.9,5.9],
   "ylim": [-2.4,2.4],
-  "legend": true,
   "data": [
     { "fn": "(x-1)*(x-2)*(x-4)" }
   ]
 }
 ```
-4. 
+4. **[AD-]** Nel grafico è rappresentata la derivata seconda della funzione $f$. Quale delle seguenti affermazioni **non** è corretta.
+	   - **(a)** $f^\prime$ è decrescente per $x < 1$, crescente per $x > 1$.
+	   - **(b)** $f$ presenta un punto di flesso per $x = 1$.
+	   - **(c)** $f$ ha pendenza nulla per $x = 1$.
+	   - **(d)** $f$ ha concavità rivolta verso il basso per $x < 1$.
+```
+{
+  "aspectRatio": "3:2",
+  "xlim": [-1.9,5.9],
+  "ylim": [-2.4,2.4],
+  "axisLabels": ["x","f''"],
+  "padding": "auto",
+  "data": [
+    { "fn": "x-1" }
+  ]
+}
+```
+[sol: ]
 
 ## Problemi
 
