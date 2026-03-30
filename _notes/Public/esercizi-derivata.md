@@ -2,6 +2,7 @@
 title: Esercizi sulla derivata
 feed: show
 plot: true
+draw: true
 tags:
   - funzioni
   - derivata
@@ -37,6 +38,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-2.9,2.9],
   "ylim": [-1.9,2.9],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "fn": "x^2-x" }
   ]
@@ -50,6 +53,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-1.4,1.4],
   "ylim": [-3.4,3.4],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "fn": "0.5*x + 0.4*cos(2*pi*x)" }
   ]
@@ -63,6 +68,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-2.9,2.9],
   "ylim": [-3.4,3.4],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "type": "interpolation", "points": [[-4, -1], [-2,-1], [-1,1], [0,1], [2,-1.5], [4,-1.5]], "smoothness": 0, "color": "red1", "showPoints": false }
   ]
@@ -76,6 +83,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.1,2.9],
   "ylim": [-3.9,3.9],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "fn": "log(x)" }
   ]
@@ -89,6 +98,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-3.4,3.4],
   "ylim": [-1.4,1.4],
   "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
   "data": [
     { "fn": "e^(-x^2)" }
   ]
@@ -150,11 +161,38 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	  [sol: $f^\prime > 0$, $f^{\prime\prime} = 0]
 	- La funzione è costante.
 	  [sol: $f^\prime = 0$, $f^{\prime\prime} = 0]
+7. **[F+]** Rispondi ai seguenti quesiti, relativi alla funzione $f$ rappresentata nel grafico.
+	- Quanto vale $f^\prime(x)$ per $x < 0$? E per $x > 1$?
+	  [sol: $f^\prime(x)$ = -1$ per $x < 0$; $f^\prime(x) = +1$ per $x > 0$.]
+	- Traccia il grafico di $f^\prime$.
+	- Esiste la tangente a $f$ in $(0,0)$? La funzione è derivabile in $x = 0$? Motiva le risposte.
+	  [sol: No, perché la funzione non si può approssimare con una sola retta in $(0, 0$); zoomando la funzione non assomiglia ad una retta. Pertanto non è derivabile.]
+	- Traccia il grafico della derivata seconda di $f$.
+	  [sol: Funzione costante nulla, non definita in $x = 0$.]
+```matephis
+{
+  "padding": 10,
+  "marginBottom": 5,
+  "aspectRatio": "1:1",
+  "xlim": [-4.9,4.9],
+  "ylim": [-4.9,4.9],
+  "interactive": true,
+  "derivativeToggle": true,
+  "tangentSelection": true,
+  "traceDerivative": true,
+  "data": [
+    { "fn": "abs(x)" }
+  ]
+}
+```
 
 ## Quesiti
 
 1. **[EE]** Come si definisce la retta tangente a una funzione in un punto?
 2. **[EE]** Come si definisce la derivata di una funzione in un punto.
+3. **[PD-]** Esiste una funzione continua con derivata non continua? Se sì, presenta un esempio, altrimenti motiva la risposta.
+4. **[PD+]** Esiste una funzione continua con derivata che presenta unicamente discontinuità eliminabili? Se sì, presenta un esempio, altrimenti motiva la risposta.
+5. **[AD]** Data una funzione $f$, esiste un'unica funzione $g$ tale che $g^\prime = f$? Motiva la risposta.
 
 ## Quiz
 
@@ -268,7 +306,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ## Problemi
 
-**Campo e potenziale** **[PD]** Nel grafico è rappresentato il potenziale elettrico $V$ (espresso in volt) in funzione della posizione $x$ (espressa in metri) lungo un cavo.
+**1. Potenziale elettrico** **[PD]** Nel grafico è rappresentato il potenziale elettrico $V$ (espresso in volt) in funzione della posizione $x$ (espressa in metri) lungo un cavo.
 ```matephis
 {
   "cssWidth": "95%",
