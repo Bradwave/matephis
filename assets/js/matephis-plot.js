@@ -1076,6 +1076,13 @@ class MatephisPlot {
         let match = null;
         const threshold = 40; // Pixel threshold
 
+        // Snapping logic: If we are near a point's X coordinate, prioritize that X
+        let targetX = x;
+        if (this.config.snapToPoints !== false) {
+            const snappedXVal = this._getSnappingX(this.transform.unmapX(x), 15);
+            targetX = this.transform.mapX(snappedXVal);
+        }
+
         this.plotData.forEach(item => {
             if (limitToIndex !== undefined && item.index !== limitToIndex) return;
 
@@ -1084,19 +1091,63 @@ class MatephisPlot {
                 dist = Math.hypot(x - item.cx, y - item.cy);
                 candX = item.cx; candY = item.cy;
             } else if (item.type === 'interpolation' && item.polyline) {
-                for (let i = 0; i < item.polyline.length - 1; i++) {
-                    const p1 = item.polyline[i];
-                    const p2 = item.polyline[i + 1];
-                    const res = this._projectPointOnSegment(x, y, p1.x, p1.y, p2.x, p2.y);
-                    if (res.dist < dist) {
-                        dist = res.dist;
-                        candX = res.x; candY = res.y;
+                // For interpolation, we might want to snap to the specific X
+                if (targetX !== x) {
+                    // Try to find point on polyline with snapped X
+                    for (let i = 0; i < item.polyline.length - 1; i++) {
+                        const p1 = item.polyline[i];
+                        const p2 = item.polyline[i + 1];
+                        const minX = Math.min(p1.valX, p2.valX);
+                        const maxX = Math.max(p1.valX, p2.valX);
+                        const valX = this.transform.unmapX(targetX);
+                        if (valX >= minX && valX <= maxX) {
+                            candX = targetX;
+                            if (Math.abs(p2.valX - p1.valX) > 1e-9) {
+                                const t = (valX - p1.valX) / (p2.valX - p1.valX);
+                                candY = p1.y + t * (p2.y - p1.y);
+                            } else {
+                                candY = p1.y;
+                            }
+                            dist = Math.hypot(x - candX, y - candY);
+                            break;
+                        }
+                    }
+                }
+                
+                if (candX === 0) { // Fallback to closest projection
+                    for (let i = 0; i < item.polyline.length - 1; i++) {
+                        const p1 = item.polyline[i];
+                        const p2 = item.polyline[i + 1];
+                        const res = this._projectPointOnSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                        if (res.dist < dist) {
+                            dist = res.dist;
+                            candX = res.x; candY = res.y;
+                        }
                     }
                 }
             } else {
-                const res = this._projectPointOnSegment(x, y, item.x1, item.y1, item.x2, item.y2);
-                dist = res.dist;
-                candX = res.x; candY = res.y;
+                // Function or implicit
+                if (item.type === 'fn' && targetX !== x) {
+                    const valX = this.transform.unmapX(targetX);
+                    // Check domain
+                    if (!item.domain || (valX >= item.domain[0] && valX <= item.domain[1])) {
+                        const f = new Function("x", `return ${this._makeFn(this.config.data[item.index].fn)};`);
+                        try {
+                            const valY = f(valX);
+                            if (isFinite(valY)) {
+                                candX = targetX;
+                                candY = this.safeMapY ? this.safeMapY(valY) : this.transform.mapY(valY);
+                                dist = Math.hypot(x - candX, y - candY);
+                            }
+                        } catch(e) {}
+                    }
+                }
+                
+                if (candX === 0) {
+                    const res = this._projectPointOnSegment(x, y, item.x1, item.y1, item.x2, item.y2);
+                    dist = res.dist;
+                    candX = res.x; candY = res.y;
+                }
             }
 
             if (dist < threshold) {
@@ -1125,8 +1176,69 @@ class MatephisPlot {
         return match;
     }
 
+    /**
+     * Snap valX to the X-coordinate of any existing point if within pixel threshold.
+     * @private
+     */
+    _getSnappingX(valX, thresholdPx = 15) {
+        if (!this.config.data) return valX;
+        const mousePx = this.transform.mapX(valX);
+        let bestX = valX;
+        let bestDist = thresholdPx;
+
+        this.config.data.forEach(item => {
+            // Check points and interpolation control points
+            if ((item.type === 'points' || item.type === 'interpolation' || item.points) && item.points) {
+                item.points.forEach(pt => {
+                    const ptX = this._eval(pt[0], "snap check");
+                    if (!isNaN(ptX)) {
+                        const px = this.transform.mapX(ptX);
+                        const dist = Math.abs(px - mousePx);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestX = ptX;
+                        }
+                    }
+                });
+            }
+            // Check simple implicit points if they have coordinates
+            if (item.x !== undefined) {
+                const ptX = this._eval(item.x, "snap check x");
+                if (!isNaN(ptX)) {
+                    const px = this.transform.mapX(ptX);
+                    const dist = Math.abs(px - mousePx);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestX = ptX;
+                    }
+                }
+            }
+        });
+
+        // Also check freePoints
+        if (this.freePoints) {
+            for (let label in this.freePoints) {
+                const ptX = this.freePoints[label].x;
+                const px = this.transform.mapX(ptX);
+                const dist = Math.abs(px - mousePx);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestX = ptX;
+                }
+            }
+        }
+
+        return bestX;
+    }
+
     _getPointAtGraphX(valX, index) {
         if (!this.config.data || !this.config.data[index]) return null;
+        
+        // Snapping: If we are near a point's X, use that X
+        if (this.config.snapToPoints !== false) {
+            valX = this._getSnappingX(valX, 15);
+        }
+
         const item = this.config.data[index];
         // Support for interpolation items in follow mode
         const plotItem = (this.plotData) ? this.plotData.find(pi => pi.index === index) : null;
