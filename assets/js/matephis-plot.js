@@ -46,7 +46,8 @@ const MatephisIcons = {
     trace: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M115-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm113.5-56.5Q240-463 240-480t-11.5-28.5Q217-520 200-520t-28.5 11.5Q160-497 160-480t11.5 28.5Q183-440 200-440t28.5-11.5ZM395-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm113.5-56.5Q520-463 520-480t-11.5-28.5Q497-520 480-520t-28.5 11.5Q440-497 440-480t11.5 28.5Q463-440 480-440t28.5-11.5ZM675-395q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Z"/></svg>`,
     eraser: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M690-240h190v80H610l80-80Zm-500 80L48-302l552-572 312 312-392 402H190Zm296-80 314-322-198-198-442 456 64 64h262Zm-6-240Z"/></svg>`,
     play: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/></svg>`,
-    pause: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M520-200v-560h240v560H520Zm-320 0v-560h240v560H200Zm400-80h80v-400h-80v400Zm-320 0h80v-400h-80v400Zm0-400v400-400Zm320 0v400-400Z"/></svg>`
+    pause: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M520-200v-560h240v560H520Zm-320 0v-560h240v560H200Zm400-80h80v-400h-80v400Zm-320 0h80v-400h-80v400Zm0-400v400-400Zm320 0v400-400Z"/></svg>`,
+    snap: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-40v-167l-44 43-56-56 140-140 140 140-56 56-44-43v167h-80ZM220-340l-56-56 43-44H40v-80h167l-43-44 56-56 140 140-140 140Zm520 0L600-480l140-140 56 56-43 44h167v80H753l43 44-56 56Zm-260-80q-25 0-42.5-17.5T420-480q0-25 17.5-42.5T480-540q25 0 42.5 17.5T540-480q0 25-17.5 42.5T480-420Zm0-180L340-740l56-56 44 43v-167h80v167l44-43 56 56-140 140Z"/></svg>`
 };
 
 class MatephisPlot {
@@ -147,6 +148,7 @@ class MatephisPlot {
         this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.interactions = { isDragging: false, startX: 0, startY: 0, hasMoved: false, draggingSelection: null, slopeP1: null, slopeP2: null, draggingFreePoint: null };
         this.selectionMode = null; // 'slope', 'tangent', or null (default/point)
+        this.isSnapping = true; // Snap to points on by default
 
         // Scroll debounce for interaction handling
         this.lastScrollTime = 0;
@@ -807,6 +809,14 @@ class MatephisPlot {
             this._updateSelectionVisuals(this.interactions.currentSelection);
         };
 
+        // Helper to toggle snapping
+        this.toggleSnapping = () => {
+            this.isSnapping = !this.isSnapping;
+            if (this.btnSnap) {
+                this.btnSnap.classList.toggle('active', this.isSnapping);
+            }
+        };
+
         const zoom = (factor) => {
             if (!this.transform) return;
             const { xMin, xMax, yMin, yMax } = this.transform;
@@ -884,11 +894,15 @@ class MatephisPlot {
         // Control Buttons Scope
         let btnPoint, btnSlope, btnTangent;
 
-        // Separator first (if any selection is enabled)
         if (this.config.pointSelection || this.config.slopeSelection || this.config.tangentSelection) {
             const sep = document.createElement("div");
             sep.className = "matephis-plot-separator";
             overlay.appendChild(sep);
+
+            this.btnSnap = mkBtn("snap", "Toggle Snapping", () => this.toggleSnapping());
+            this.btnSnap.classList.add('matephis-snap-btn');
+            if (this.isSnapping) this.btnSnap.classList.add('active');
+            overlay.appendChild(this.btnSnap);
         }
 
         // Point Selection (Touch)
@@ -1078,7 +1092,7 @@ class MatephisPlot {
 
         // Snapping logic: If we are near a point's X coordinate, prioritize that X
         let targetX = x;
-        if (this.config.snapToPoints !== false) {
+        if (this.isSnapping && this.config.snapToPoints !== false) {
             const snappedXVal = this._getSnappingX(this.transform.unmapX(x), 15);
             targetX = this.transform.mapX(snappedXVal);
         }
@@ -1235,7 +1249,7 @@ class MatephisPlot {
         if (!this.config.data || !this.config.data[index]) return null;
         
         // Snapping: If we are near a point's X, use that X
-        if (this.config.snapToPoints !== false) {
+        if (this.isSnapping && this.config.snapToPoints !== false) {
             valX = this._getSnappingX(valX, 15);
         }
 

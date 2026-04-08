@@ -92,6 +92,10 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
 }
 ```
 
+> [!DETAILS] Derivata:
+> 
+> $$y = 3$$
+
 ---
 
 ```matephis
@@ -118,6 +122,10 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   ]
 }
 ```
+
+> [!DETAILS] Derivata:
+> 
+> $$y = 2x$$
 
 ---
 
@@ -146,6 +154,10 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
 }
 ```
 
+> [!DETAILS] Derivata:
+> 
+> $$y = 3x^2$$
+
 ---
 
 ```matephis
@@ -169,11 +181,15 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "derivativeYLim": [-4.9,4.9],
   "legend": true,
   "data": [
-    { "fn": "sin(x)", "label": "$y = x^4$", "derivativeColor": "summer3" },
+    { "fn": "sin(x)", "label": "$y = \\sin(x)$", "derivativeColor": "summer3" },
     { "points": [["-2*pi","sin(-2*pi)"],[-1,"sin(-1)"],[0,0],[1,"sin(1)"],["1.5*pi","sin(1.5*pi)"],["pi",0]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
+
+> [!DETAILS] Derivata:
+> 
+> $$y = cos(x)$$
 
 ---
 
@@ -197,11 +213,15 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "derivativeYLim": [-9.9,9.9],
   "legend": true,
   "data": [
-    { "fn": "e^x", "label": "$y = x^5$", "derivativeColor": "summer3" },
+    { "fn": "e^x", "label": "$y = e^x$", "derivativeColor": "summer3" },
     { "points": [[-5,"e^(-5)"],[-2,"e^(-2)"],[0,1],[1,"e"],[2,"e^2"]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
+
+> [!DETAILS] Derivata:
+> 
+> $$y = e^x$$
 
 ---
 
