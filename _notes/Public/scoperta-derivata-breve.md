@@ -3,6 +3,7 @@ title: Attività sulla derivata
 feed: hide
 plot: true
 draw: true
+slides: true
 ---
 ## 1. Comprendere attraverso i punti di una funzione quando essa cresce o decresce
 
@@ -33,6 +34,8 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
 }
 ```
 
+---
+
 ## 2. Retta secante, retta tangente, sua pendenza
 
 ```matephis
@@ -61,6 +64,8 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   ]
 }
 ```
+
+---
 
 ## 3. Costruzione della funzione derivata di funzioni polinomiali
 
@@ -149,7 +154,9 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "cssWidth": "95%",
   "align": "center",
   "marginBottom": 0,
-  "ylim": [-9.9,9.9],
+  "xlim": [-8,8],
+  "ylim": [-3.9,3.9],
+  "xStep": "pi/2",
   "interactive": true,
   "slopeSelection": true,
   "tangentSelection": true,
@@ -159,11 +166,11 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "traceDerivative": true,
   "derivativeToggle": true,
   "showDerivativePoint": false,
-  "derivativeYLim": [-9.9,9.9],
+  "derivativeYLim": [-4.9,4.9],
   "legend": true,
   "data": [
-    { "fn": "x^4", "label": "$y = x^4$", "derivativeColor": "summer3" },
-    { "points": [[-2,16],[-1,1],[0,0],[1,1],[2,16]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
+    { "fn": "sin(x)", "label": "$y = x^4$", "derivativeColor": "summer3" },
+    { "points": [["-2*pi","sin(-2*pi)"],[-1,"sin(-1)"],[0,0],[1,"sin(1)"],["1.5*pi","sin(1.5*pi)"],["pi",0]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
@@ -176,7 +183,8 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "cssWidth": "95%",
   "align": "center",
   "marginBottom": 10,
-  "ylim": [-9.9,9.9],
+  "xlim": [-9.9,4.9],
+  "ylim": [-0.9,9.9],
   "interactive": true,
   "slopeSelection": true,
   "tangentSelection": true,
@@ -189,11 +197,13 @@ In figura è rappresentato il grafico del volume d'aria presente nei polmoni di 
   "derivativeYLim": [-9.9,9.9],
   "legend": true,
   "data": [
-    { "fn": "x^5", "label": "$y = x^5$", "derivativeColor": "summer3" },
-    { "points": [[-2,-32],[-1,-1],[0,0],[1,1],[2,32]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
+    { "fn": "e^x", "label": "$y = x^5$", "derivativeColor": "summer3" },
+    { "points": [[-5,"e^(-5)"],[-2,"e^(-2)"],[0,1],[1,"e"],[2,"e^2"]], "color": "red1", "radius": 3, "strokeColor": "#fff", "strokeWidth": 2 }
   ]
 }
 ```
+
+---
 
 ## 4. Mettiti alla prova
 
