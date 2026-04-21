@@ -393,8 +393,9 @@ h3 {
 h4,
 h5,
 h6 {
-  font-size: var(--scale-base);
+  font-size: clamp(1.1rem, 2vw, 1.2rem);
   font-weight: 600;
+    margin-bottom: var(--space-sm);
 }
 
 p {
