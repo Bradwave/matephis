@@ -168,6 +168,145 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 2. **[F]** Che forma ha una circonferenza secondo la geometria del taxi (ovvero secondo la distanza Manhattan)? [sol: Un quadrato con le diagonali parallele agli assi cartesiani.]
 3. **[F]** Che forma ha una circonferenza secondo la distanza della regina? [sol: Un quadrato con i lati paralleli agli assi cartesiani.]
 4. **[PD-]** Disegna una circonferenza di raggio $3$ e una circonferenza di raggio $6$ secondo la distanza del cavallo.
+5. **[PD-]** Se la distanza di Manhattan tra due punti è nulla, cosa si può dire della loro distanza euclidea? Motiva la tua risposta. [sol: È nulla, poiché se $\mid x_1-x_2 \mid+\mid y_1-y_2 \mid=0$ allora necessariamente $x_1=x_2$ e $y_1=y_2$, quindi i punti coincidono.]
+6. **[PD]** Spiega intuitivamente perché la distanza di Manhattan è sempre maggiore o uguale alla distanza euclidea tra due punti. In quali casi coincidono? [sol: Il percorso più breve tra due punti è il segmento di retta (distanza euclidea). La distanza di Manhattan vincola i movimenti agli assi, descrivendo i cateti di un triangolo rettangolo di cui la retta è ipotenusa. Coincidono solo se i punti sono allineati orizzontalmente o verticalmente.]
+7. **[EE/F]** Considera l'equazione $x^2+y^2=k$. Cosa rappresenta questa curva nel piano cartesiano reale quando $k > 0$, $k = 0$ e $k < 0$? [sol: Per $k>0$ è una circonferenza centrata nell'origine; per $k=0$ è il solo punto $(0,0)$; per $k<0$ rappresenta l'insieme vuoto (nessun punto reale).]
+8. **[AD]** È possibile trovare tre punti $A$, $B$ e $C$ distinti e non allineati tali che la somma delle distanze di Manhattan $d_M(A,B) + d_M(B,C)$ sia uguale a $d_M(A,C)$? Come cambia la situazione se si usa la distanza euclidea? [sol: Sì con la distanza Manhattan, se $B$ si trova all'interno del rettangolo di vertici opposti $A$ e $C$. Con la distanza euclidea, l'uguaglianza vale rigorosamente solo se i tre punti sono perfettamente allineati sul medesimo segmento.]
+9. **[T]** Qual è la definizione di asse di un segmento? [sol: Il luogo geometrico dei punti del piano equidistanti dagli estremi del segmento. È la retta perpendicolare al segmento nel suo punto medio.]
 
 ## Quiz
 
+1. **[E]** Quale delle seguenti coppie di punti dista esattamente $5$ secondo la distanza euclidea?
+	- **(a)** $A(1, 1)$, $B(4, 5)$
+	- **(b)** $C(-2, 0)$, $D(0, 3)$
+	- **(c)** $E(1, 4)$, $F(4, 1)$
+	- **(d)** $G(0, -2)$, $H(0, 2)$
+[sol: (a)]
+2. **[EE]** Quale delle seguenti coppie di punti dista esattamente $7$ secondo la distanza di Manhattan?
+	- **(a)** $A(1, 2)$, $B(4, -1)$
+	- **(b)** $C(-2, 5)$, $D(3, 5)$
+	- **(c)** $E(0, -1)$, $F(3, 3)$
+	- **(d)** $G(2, 2)$, $H(-2, -2)$
+[sol: (a)]
+3. **[E]** Quale tra le seguenti equazioni rappresenta una circonferenza centrata nell'origine e di raggio $4$?
+	- **(a)** $x^2 + y^2 = 4$
+	- **(b)** $x^2 + y^2 = 16$
+	- **(c)** $(x-4)^2 + (y-4)^2 = 0$
+	- **(d)** $x^2 - y^2 = 16$
+[sol: (b)]
+4. **[F+]** Dati due punti nel piano cartesiano, se la loro distanza della scacchiera è esattamente $5$, quale delle seguenti affermazioni è sicuramente vera?
+	- **(a)** La loro distanza euclidea vale al minimo $5$ e al massimo $5\sqrt{2}$.
+	- **(b)** La loro distanza di Manhattan è sempre $10$.
+	- **(c)** La loro distanza euclidea vale al minimo $\sqrt{5}$ e al massimo $5$.
+	- **(d)** La loro distanza euclidea è pari a $25$.
+[sol: (a)]
+5. **[PD-]** L'insieme dei punti del piano tali per cui la somma dei quadrati delle distanze dai punti $A(-1, 0)$ e $B(1, 0)$ è pari a $10$ corrisponde a:
+	- **(a)** Un'iperbole.
+	- **(b)** Una circonferenza centrata nell'origine di raggio $2$.
+	- **(c)** Una parabola passante per l'origine.
+	- **(d)** Due punti isolati.
+[sol: (b)]
+6. **[PD+]** Se la distanza euclidea tra due punti $A$ e $B$ è $d_E$, e la loro distanza di Manhattan è $d_M$, quale delle seguenti relazioni è sempre vera per qualsiasi coppia di punti nel piano?
+	- **(a)** $d_E \leq d_M \leq d_E \sqrt{2}$
+	- **(b)** $d_E \leq d_M \leq 2d_E$
+	- **(c)** $d_M \leq d_E \leq d_M \sqrt{2}$
+	- **(d)** Le due distanze coincidono sempre.
+[sol: (a)]
+7. **[EE]** Quale tra i seguenti punti **non** appartiene alla circonferenza di centro $C(-2, 3)$ e raggio $5$? Procedi per esclusione calcolando le distanze dal centro.
+	- **(a)** $A(3, 3)$
+	- **(b)** $B(-2, 8)$
+	- **(c)** $P(2, 6)$
+	- **(d)** $D(-6, 1)$
+[sol: (d)]
+8. **[F+]** Si considerino tre punti $A$, $B$ e $C$ nel piano cartesiano. Sapendo che $d_E(A, B) = 3$ e $d_E(B, C) = 4$, cosa si può dedurre con certezza sulla distanza euclidea $d_E(A, C)$?
+	- **(a)** $d_E(A, C) = 5$ (il triangolo è necessariamente rettangolo).
+	- **(b)** $1 \leq d_E(A, C) \leq 7$
+	- **(c)** $d_E(A, C) > 7$
+	- **(d)** Non si può stabilire alcun limite teorico alla distanza.
+[sol: (b)]
+9. **[EE]** Quale tra queste equazioni descrive l'insieme dei punti aventi distanza euclidea pari a $3$ dal punto $P(1, -2)$? (Suggerimento: espandi l'equazione canonica).
+	- **(a)** $x^2 + y^2 - 2x + 4y - 4 = 0$
+	- **(b)** $x^2 + y^2 + 2x - 4y - 4 = 0$
+	- **(c)** $x^2 + y^2 - 2x + 4y + 4 = 0$
+	- **(d)** $x^2 + y^2 - 2x + 4y - 9 = 0$
+[sol: (a)]
+10. **[EE]** Qual è l'equazione della sfera nello spazio 3D avente centro in $C(1, 2, -1)$ e raggio $3$?
+	- **(a)** $(x-1)^2 + (y-2)^2 + (z+1)^2 = 3$
+	- **(b)** $(x+1)^2 + (y+2)^2 + (z-1)^2 = 9$
+	- **(c)** $(x-1)^2 + (y-2)^2 + (z+1)^2 = 9$
+	- **(d)** $x^2 + y^2 + z^2 - 2x - 4y + 2z - 3 = 0$
+[sol: (c)]
+11. **[EE]** Qual è la relazione tra le due circonferenze rappresentate in figura e come si relazionano i loro raggi $r_1, r_2$ con la distanza $d$ tra i centri?
+	- **(a)** Esterne tangenti, $d = r_1 + r_2$
+	- **(b)** Esterne non secanti, $d > r_1 + r_2$
+	- **(c)** Interne tangenti, $d = \mid r_1 - r_2 \mid$
+	- **(d)** Secanti, $\mid r_1 - r_2 \mid < d < r_1 + r_2$
+```matephis
+{
+  "xlim": [-1.9, 5.9],
+  "ylim": [-3.9, 3.9],
+  "data": [
+    { "implicit": "(x-1)^2+y^2=4", "color": "red1" },
+    { "implicit": "(x-4)^2+y^2=1", "color": "black1" }
+  ]
+}
+```
+[sol: (a)]
+13. **[T]** Quale tra i punti contrassegnati in figura è chiaramente esterno alla circonferenza rappresentata in figura?
+	- **(a)** $A = (4, 1)$
+	- **(b)** $B = (1, -2)$
+	- **(c)** $C = (-2, 4)$
+	- **(d)** Tutti i punti sono esterni
+```matephis
+{
+  "xlim": [-3.9, 5.9],
+  "ylim": [-3.9, 5.9],
+  "data": [
+    { "implicit": "(x-1)^2+(y-1)^2=9", "color": "red1" }
+  ]
+}
+```
+[sol: (c)]
+
+## Problemi
+
+**Questione di distanze** **[F+]** Alice, Bob e Charlie sono allineati come in figura. Alice si trova a 2 metri da Bob e Bob si trova a 6 metri da Charlie. Daniel dista esattamente 8 metri sia da Bob sia da Charlie. Quanto dista da Alice?
+```matephis
+{
+  "aspectRatio": "3:2",
+  "xlim": [-1,10],
+  "ylim": [-1,6],
+  "gridOpacity": 0,
+  "showXAxis": false,
+  "showYAxis": false,
+  "showXNumbers": false,
+  "showYNumbers": false,
+  "data": [
+    { "points": [[0,0,"A"],["2*cos(pi/6)","2*sin(pi/6)","B"],["10*cos(pi/6)","10*sin(pi/6)","C"]] }
+  ]
+}
+```
+
+**Il radar di navigazione** **[PD]** Un radar navale è posizionato nell'origine di un sistema di riferimento cartesiano in cui $1$ unità corrisponde a $1 \, \text{km}$. Una nave si trova nel punto $A(-3, 4)$ e si sposta in linea retta fino al punto $B(5, -2)$.
+- A che distanza si trova la nave dal radar quando è nel punto $A$? E quando è nel punto $B$?
+- Supponi che il radar possa rilevare navi fino a una distanza massima di $6 \text{ km}$. L'area coperta dal radar è descritta da una disequazione. Qual è questa disequazione?
+- La nave esce dall'area di copertura del radar durante il suo tragitto da $A$ a $B$? Traccia un grafico per giustificare la tua risposta.
+[sol: $d_A = 5 \, \text{km}$, $d_B = \sqrt{29} \approx 5{,}39 \, \text{km}$. L'area è descritta da $x^2 + y^2 \leq 36$. No, non esce: le estremità si trovano a distanze inferiori a 6 km e il punto più vicino sul segmento è ancora più interno, per cui l'intero percorso è coperto dal radar.]
+
+**L'area del parco** **[PD-]** Un architetto deve progettare un parco recintato di forma circolare. Le coordinate del centro del parco sulla mappa del progetto sono $C(4, 3)$ (in centinaia di metri) e il cancello principale si trova nel punto $P(8, 6)$.
+- Scrivi l'equazione della circonferenza che delimita il parco.
+- Quanto misurano il raggio (in metri) e l'area del parco?
+- Il punto d'interesse storico $M(1, 7)$ si trova all'interno o all'esterno del parco?
+- L'architetto vuole costruire un sentiero rettilineo passante per $M$ e tangente al parco. Spiega a parole e/o tramite l'algebra come si determinerebbe l'equazione di tale sentiero.
+[sol: Equazione $(x - 4)^2 + (y - 3)^2 = 25$. Il raggio sulla mappa è $5$ (cioè $500 \, \text{m}$), l'area è $250.000\pi \approx 785.398 \, \text{m}^2$. Il punto $M$ dista esattamente $\sqrt{9+16} = 5$ unità da $C$, quindi si trova esattamente *sul bordo* della recinzione. Essendo $M$ sulla circonferenza, il sentiero tangente sarà dato semplicemente dalla retta perpendicolare al raggio $CM$ passante per $M$.]
+
+**Consegne in città** **[F+]** Un corriere deve effettuare una consegna partendo dal magazzino situato alle coordinate $M(2, 2)$ per raggiungere il cliente situato in $C(7, 5)$. Le strade della città formano una griglia rettangolare perfetta (i palazzi sono blocchi quadrati paralleli agli assi).
+- Calcola la distanza in linea d'aria tra il magazzino e il cliente (distanza euclidea).
+- Sapendo che il corriere deve muoversi seguendo le strade, calcola la minima distanza effettiva che percorrerà (distanza Manhattan).
+- Se sulla mappa l'unità corrisponde a $150 \, \text{m}$ (ovvero la lunghezza di un isolato) e il furgone consuma $0{,}1 \, \text{L}$ di carburante per chilometro, quanto carburante consumerà per questo tragitto?
+[sol: La distanza in linea d'aria è $d_E = \sqrt{25+9} = \sqrt{34} \approx 5{,}83$ unità, ovvero $\approx 875 \, \text{m}$. La distanza percorsa sulle strade è $d_M = 5 + 3 = 8$ unità, ovvero $1200 \text{ m}$ ($1{,}2 \text{ km}$). Il consumo è $1{,}2 \times 0{,}1 = 0{,}12 \text{ L}$ di carburante.]
+
+**Epicentro del terremoto** **[AD-]** Tre stazioni sismiche $S_1$, $S_2$ e $S_3$ si trovano rispettivamente nei punti del piano cartesiano di coordinate $(0, 0)$, $(10, 0)$ e $(0, 10)$ (unità espresse in km). Durante un terremoto, i dati mostrano che l'epicentro si trova a $5 \text{ km}$ da $S_1$, a $\sqrt{65} \text{ km}$ da $S_2$ e a $3\sqrt{5} \text{ km}$ da $S_3$.
+- Scrivi le equazioni delle tre circonferenze corrispondenti alle rilevazioni delle stazioni.
+- Trova le coordinate esatte dell'epicentro risolvendo il sistema.
+[sol: Le equazioni sono $x^2+y^2=25$, $(x-10)^2+y^2=65$, $x^2+(y-10)^2=45$. Il punto in comune (l'epicentro) si trova nel punto di coordinate $(3, 4)$.]
