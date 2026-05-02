@@ -47,4 +47,8 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-2. 
+2. Quale delle seguenti affermazioni relative a $f(x) = \sqrt{e^{-x}}$ è corretta?
+	- **(a)** $\lim_{x \to +\infty} f(x) = 0$
+	- **(b)** $\lim_{x \to +\infty} f(x) = -\infty$
+	- **(c)** È crescente.
+	- **(d)** $\textrm{dom} f = (0, +\infty)$

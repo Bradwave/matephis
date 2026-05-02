@@ -7,6 +7,10 @@ tags:
   - esercizi
   - disequazioni
 ---
+Una raccolta di esercizi, quesiti, quiz e problemi sulle disequazioni.
+
+Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]].
+
 ## Esercizi
 
 1. **[E]** Risolvi le seguenti disequazioni di primo grado con metodo algebrico e metodo grafico.
