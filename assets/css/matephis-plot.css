@@ -12,7 +12,7 @@
 
   flex-direction: column;
   align-items: center;
-  margin: .25rem 0 45px 0; /* Add bottom margin for toolbar */
+  margin: .25rem 0 20px 0; /* Add bottom margin for toolbar (I NEED TO FIGURE THIS OUT) */
   max-width: 70%;
   width: 100%;
 }

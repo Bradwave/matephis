@@ -267,6 +267,45 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 }
 ```
 [sol: (c)]
+14. **[EE]** Quale tra i seguenti punti ha una distanza euclidea dall'origine strettamente maggiore di $10$?
+	- **(a)** $(6, 8)$
+	- **(b)** $(0, -10)$
+	- **(c)** $(-5, 9)$
+	- **(d)** $(7, -7)$
+[sol: (c)]
+15. **[F+]** Qual è il luogo geometrico dei punti nel piano cartesiano per cui la distanza dall'asse $x$ è uguale alla distanza dall'asse $y$?
+	- **(a)** L'origine $(0,0)$.
+	- **(b)** Le bisettrici dei quadranti (rette $y = x$ e $y = -x$).
+	- **(c)** Una circonferenza di raggio $1$ centrata nell'origine.
+	- **(d)** L'unione di tutti i punti degli assi cartesiani.
+[sol: (b)]
+16. **[PD]** Considera la circonferenza di equazione $x^2 + y^2 - 6x + 8y = 0$. Quale delle seguenti affermazioni è vera?
+	- **(a)** Passa per l'origine degli assi.
+	- **(b)** Il suo centro è l'origine degli assi.
+	- **(c)** Non interseca mai gli assi cartesiani.
+	- **(d)** Passa per il punto $(6, -8)$.
+[sol: (a)]
+17. **[F-]** Quale delle seguenti equazioni rappresenta una circonferenza di raggio nullo, ed equivale quindi a un singolo punto nel piano cartesiano reale?
+	- **(a)** $x^2 + y^2 + 4 = 0$
+	- **(b)** $(x-2)^2 + (y+3)^2 = 0$
+	- **(c)** $x^2 + y^2 = 1$
+	- **(d)** $x^2 - y^2 = 0$
+[sol: (b)]
+18. **[F+]** Qual è il numero di punti in comune tra la circonferenza rappresentata in figura e quella di equazione $(x -1 )^2 + y^2 = 9$?
+	- **(a)** $0$
+	- **(b)** $1$
+	- **(c)** $2$
+	- **(d)** Infiniti
+```matephis
+{
+  "xlim": [-1.9, 6.9],
+  "ylim": [-3.9, 4.9],
+  "data": [
+    { "implicit": "(x-4)^2+y^2=4", "color": "red1" }
+  ]
+}
+```
+[sol: (c)]
 
 ## Problemi
 
@@ -284,6 +323,32 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "data": [
     { "points": [[0,0,"A"],["2*cos(pi/6)","2*sin(pi/6)","B"],["10*cos(pi/6)","10*sin(pi/6)","C"]] }
   ]
+}
+```
+[sol: $4\sqrt{5} \, \text{m} \approx 8{,}94 \, \text{m}$]
+
+**Antenne** **[PD-]** Determina le coordinate di una terza antenna che disti esattamente 8 kilometri dalle due già presenti e rappresentate in figura.
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [-9.9,9.9],
+  "ylim": [-4.9,4.9],
+  "data": [
+    { "points": [[-2,-2,"A1"],[6,0,"A2"]] }
+  ]
+}
+```
+[sol: Vi sono due posizioni possibili: $(2 - \sqrt{\frac{47}{17}}, -1 + 4\sqrt{\frac{47}{17}})$ e $(2 + \sqrt{\frac{47}{17}}, -1 - 4\sqrt{\frac{47}{17}})$, ovvero circa $(0{,}34; 5{,}65)$ e $(3{,}66; -7{,}65)$]
+
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [-9.9,9.9],
+  "ylim": [-4.9,4.9],
+  "data": [
+    { "points": [[-2,-2,"A1"],[6,0,"A2"]] }
+  ],
+  "interactive": true
 }
 ```
 
