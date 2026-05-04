@@ -79,7 +79,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 2. **[F]** Considera una funzione composta $h(x) = f(g(x))$. Ragionando sugli input e gli output, spiega in modo intuitivo perché se la funzione esterna $f$ è sempre decrescente, allora $h$ sarà decrescente dove $g$ è crescente, e $h$ sarà crescente dove $g$ è decrescente (ovvero, "inverte" la monotonia della funzione interna).
 [sol: Se $g$ cresce (all'aumentare di $x$, aumenta il suo output), la funzione esterna $f$ riceverà un input via via sempre più grande. Poiché $f$ è decrescente, restituirà un output finale sempre più piccolo, rendendo $h$ decrescente. Viceversa, dove $g$ decresce, fornisce input più piccoli ad $f$, che reagirà restituendo output più grandi, rendendo $h$ crescente.]
 3. **[PD]** Spiega a parole perché il dominio della funzione composta $h(x) = \sqrt{\ln(x)}$ non è semplicemente l'intervallo $(0, +\infty)$, nonostante la funzione $\ln(x)$ accetti regolarmente in ingresso tutti i numeri reali positivi.
-[sol: $\ln(x)$, accetta certamente valori in ingresso $x > 0$, tuttavia, se l'output generato da questa funzione diventa negativa, non sarà possibile calcolare $\sqrt{\text{input}}$; l'output di $\ln(x)$ è negativo ogni volta che diamo in ingresso un numero $0 < x < 1$. Per questo il dominio finale è $[1, +\infty)$.]
+[sol: $\ln(x)$ accetta certamente valori in ingresso $x > 0$; tuttavia, se l'output generato da questa funzione diventa negativo, non sarà possibile calcolare $\sqrt{\text{input}}$. L'output di $\ln(x)$ è negativo ogni volta che diamo in ingresso un numero $0 < x < 1$. Per questo il dominio finale è $[1, +\infty)$.]
 4. **[T]** Spiega con un esempio numerico o algebrico perché la composizione di funzioni non è in generale commutativa, ovvero perché $f(g(x)) \neq g(f(x))$.
 [sol: Siano $f(x) = x^2$ e $g(x) = x + 1$. Componendo si ha $f(g(x)) = (x+1)^2 = x^2 + 2x + 1$, mentre invertendo l'ordine si ottiene $g(f(x)) = x^2 + 1$. Le due espressioni sono evidentemente diverse.]
 5. **[F]** Se sai che una funzione $f$ è sempre crescente e una funzione $g$ è sempre decrescente, cosa puoi dedurre sul grafico della funzione composta $h(x) = f(g(x))$? Motiva la risposta.
@@ -142,6 +142,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-2.9, 2.9],
   "ylim": [-1.9, 2.9],
   "legend": true,
+  "labelStyle": "italic",
   "data": [
     { "fn": "x+1", "color": "red1", "domain": [-3, 3], "label": "f" },
     { "fn": "x^2", "color": "black1", "domain": [-3, 3], "label": "g" }
@@ -172,6 +173,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-2.9, 2.9],
   "ylim": [-1.9, 2.9],
   "legend": true,
+  "labelStyle": "italic",
   "data": [
     { "fn": "x^2", "color": "black1", "domain": [-3, 3], "label": "f" }
   ]
@@ -207,9 +209,10 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-3.9, 3.9],
   "ylim": [-1.9, 1.9],
   "legend": true,
+  "labelStyle": "italic",
   "data": [
-    { "fn": "-0.5*x", "color": "red1", "domain": [-4, 4], "label": "f", "labelStyle": "" },
-    { "fn": "x^2-1", "color": "black1", "domain": [-4, 4], "label": "g" }
+    { "fn": "-0.5*x", "color": "red1", "domain": [-4, 4], "label": "f'" },
+    { "fn": "x^2-1", "color": "black1", "domain": [-4, 4], "label": "g'" }
   ]
 }
 ```
