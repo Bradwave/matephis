@@ -22,7 +22,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	8. $f(x) = \ln(1 - x^2)$
 	9. $f(x) = e^{\frac{1}{x^2 - 1}}$
 	10. $f(x) = \dfrac{1}{\sqrt{x^2 - 3x + 2}}$
-[sol: 1. $(-\infty, -2) \cup (2, +\infty)$; 2. $(-\infty, 0\]$; 3. $[-2, +\infty)$; 4. $(1, 2) \cup (2, +\infty)$; 5. $(1, +\infty)$; 6. $\bigcup_{k \in \mathbb{Z}} [2k\pi, (2k+1)\pi]$; 7. $[0, 1]$; 8. $(-1, 1)$; 9. $\mathbb{R} \setminus \{-1, 1\}$; 10. $(-\infty, 1) \cup (2, +\infty)$]
+	[sol: 1. $x < -2 \lor x > 2$; 2. $x \le 0$; 3. $x \ge -2$; 4. $x > 1 \land x \neq 2$; 5. $x > 1$; 6. $2k\pi \le x \le (2k+1)\pi$ con $k \in \mathbb{Z}$; 7. $0 \le x \le 1$; 8. $-1 < x < 1$; 9. $x \neq \pm 1$; 10. $x < 1 \lor x > 2$]
 2. **[E]** Calcola i seguenti limiti di funzioni composte.
 	1. $\lim_{x \to +\infty} \ln\left(\frac{1}{x}\right)$
 	2. $\lim_{x \to -\infty} e^{x^3}$
