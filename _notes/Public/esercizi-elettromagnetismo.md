@@ -1,13 +1,13 @@
 ---
-title: Capitolo 20 Magnetismo
+title: Esercizi sui fenomeni elettromagnetici
 feed: show
 plot: true
 tags:
-- fisica
-- magnetismo
+  - fisica
+  - magnetismo
 ---
 
-Una raccolta di quiz e quesiti sul magnetismo, per la maggior parte tratti da *College Physics: Explore and Apply* di E. Etkina, G. Planisic e A. Van Heuvelen
+Una raccolta di quiz e quesiti sul magnetismo, per la maggior parte tratti da *College Physics: Explore and Apply* di E. Etkina, G. Planisic e A. Van Heuvelen.
 
 ## Quiz
 

@@ -3,6 +3,8 @@ title: La natura della luce
 feed: show
 slides: true
 draw: true
+tags:
+  - luce
 ---
 ## Sorgenti luminose e propagazione della luce
 
@@ -296,31 +298,3 @@ L’idea della camera oscura può essere fatta risalire fino ad Aristotele (IV s
 
 ![Campo San Giovanni e Paolo](https://upload.wikimedia.org/wikipedia/commons/1/10/Canaletto_%281697-1768%29%2C_Venezia%2C_campo_Santi_Giovanni_e_Paolo%2C_1736-1740.jpg){: .center-image}
 *Canaletto, Campo santi Giovanni e Paolo a Venezia col monumento a Bartolomeo Colleoni, 1736-1740.*
-
----
-
-## Esercizi
-
-1. **[E]** Spiega come funziona una meridiana.
-2. **[F-]** Che cos’è un raggio luminoso?
-    - **(a)** Un sottile fascio di luce, visibile solo quando nell’aria è presente pulviscolo.
-    - **(b)** Un modello fisico usato per descrivere la propagazione della luce.
-    - **(c)** Una legge fisica.
-3. **[F+]** Di notte, se ti trovi in prossimità di un lampione acceso, l’ombra di un tuo piede leggermente sollevato da terra appare ben definita, mentre l’ombra della tua testa è sfocata. Perché?
-4. **[F-]** Quale effetto producono i fanali accesi di un auto nella nebbia?
-5. **[PD-]** L’ombra della mano di una chirurga ostruisce la sua visuale mentre opera. Proponi delle idee alternative per illuminare la sala operatoria, includendo anche dei bozzetti.
-6. **[EE]** Ti trovi di fronte a un albero. L’ombra dell’albero è lunga $34 \, \text{m}$, mentre la tua ombra è lunga il doppio della tua altezza. Quanto è alto l’albero?
-7. **[EE/F]** Applica le conoscenze acquisite in merito alle ombre in un disegno, includendo ombre e penombre.
-8. **[AD-]** Cosa succede se si producono più fori in una camera _pinhole_? Prova a realizzarla.
-9. **[T]** Ogni punto di una sorge luminosa
-    - **(a)** emette un solo raggio.
-    - **(b)** emette qualche raggio.
-    - **(c)** emette molti raggi, ma in numero finito.
-    - **(d)** emette infiniti raggi.
-10. **[PD]** Fissi una sorgente luminosa puntiforme a $3 \, \text{m}$ da un grande telo bianco e fissi un pallone da pallavolo a $1 \, \text{m}$ dallo schermo, come illustrato in figura.
-	- **(a)** Allontanando la sorgente luminosa dallo schermo l’ombra si allarga.
-	- **(b)** Avvicinando il pallone dallo schermo l’ombra rimpicciolisce.
-	- **(c)** Allontanando il pallone e la sorgente luminosa dallo schermo (ma mantenendo la stessa distanza tra essi) la dimensione dell’ombra non varia.
-	- **(d)** Muovendo la sorgente luminosa verso l’alto l’ombra si sposta verso il basso.
-	- **(e)** Muovendo la sorgente luminosa verso l’alto l’ombra si sposta verso l’alto.
-![L'ombra di un pallone](../../images/luce-test-1.jpg){: .center-image}
