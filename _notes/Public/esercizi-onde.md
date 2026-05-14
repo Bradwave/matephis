@@ -46,6 +46,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-6.2,6.2],
   "ylim": [-1.45,1.45],
   "axisLabels": ["x",""],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "sin(0.5*pi*x)" }
   ]
@@ -58,6 +59,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2,2.2],
   "ylim": [-1.45,1.45],
   "axisLabels": ["t",""],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "0.5sin(6*pi*x)" }
   ]
@@ -70,6 +72,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2,3.8],
   "ylim": [-1.45,1.45],
   "axisLabels": ["t","∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "0.75*sin(4*pi*x)" }
   ]
@@ -82,6 +85,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2,3.8],
   "ylim": [-1.45,1.45],
   "axisLabels": ["t","∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "0.75*sin(4*pi*x)" }
   ]
@@ -94,6 +98,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2,3.8],
   "ylim": [-1.45,1.45],
   "axisLabels": ["t","∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "1.2*cos(2*pi*x)" }
   ]
@@ -105,6 +110,23 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 16. **[F+]** Calcola la lunghezza minima di un tubo chiuso da un lato (e aperto dall'altro) necessario per produrre una nota con frequenza fondamentale di $100 \, \text{Hz}$ (assumi $v = 340 \, \text{m/s}$).
 17. **[F]** Un tubo aperto ad entrambe le estremità è lungo $1.7 \, \text{m}$. Qual è la frequenza fondamentale che produce? E la frequenza della prima armonica successiva?
 18. **[EE/F]** Data la funzione d'onda $\Delta p(x) = 2 \sin(\pi x - \frac{\pi}{2}) + 1$, descrivi a parole quali trasformazioni (dilatazioni, traslazioni) devi applicare al grafico elementare di $f(x) = \sin(x)$ per ottenerla.
+19. **[F+]** Descrivi qualitativamente lo spettro di $\Delta p(t) = 4\sin(2\pi \cdot 20 \cdot t) + 2\sin(2\pi \cdot 40 \cdot t)$.
+20. **[PD-]** Spiega che tipo di segnale può produrre lo spettro in figura.
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [0, 800],
+  "ylim": [0, 4],
+  "axisLabels": ["f", "|p^|"],
+  "axisUnitMeasures": ["Hz",""],
+  "axisLabelStyle": "italic",
+  "boxPlot": true,
+  "padding": 60,
+  "data": [
+    { "fn": "2*exp(-1*(x-200)^2/50)+0.5*exp(-1*(x-450)^2/2000)" }
+  ]
+}
+```
 
 ## Quesiti
 
@@ -116,7 +138,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
    Descrivi il significato di tutti i simboli presenti nell'equazione. Spiega se e come questi influiscono sulla nostra percezione del suono.
 5. **[F]** Spiega la differenza tra la generazione di un'onda stazionaria su una corda fissata agli estremi e in un tubo chiuso a un'estremità e aperto all'altra. Come cambiano le configurazioni dei nodi?
 6. **[F]** Che cos'è il fenomeno dei battimenti? Descrivilo fisicamente e descrivi come può essere prodotto.
-7. **[PD]** Osservando lo spettro in frequenza $|\hat p|$ di un segnale sonoro, come fai a distinguere un suono "puro" (come quello di un diapason) da un suono complesso (come una nota suonata da un pianoforte o una vocale pronunciata)?
+7. **[PD]** Osservando lo spettro in frequenza $\mid\hat p\mid$ di un segnale sonoro, come fai a distinguere un suono "puro" (come quello di un diapason) da un suono complesso (come una nota suonata da un pianoforte o una vocale pronunciata)?
 8. **[PD]** Se applichi la trasformata di Fourier al suono di un accordo suonato con la chitarra, cosa ti aspetti di osservare nel grafico dello spettro?
 9. **[EE/F]** Spiega qual è la differenza tra tracciare il grafico dell'onda in funzione della posizione (fissando il tempo) $\Delta p(x)$ e in funzione del tempo (fissando la posizione) $\Delta p(t)$. Che cosa rappresentano fisicamente i due grafici?
 
@@ -132,7 +154,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "2:1",
   "xlim": [-6.2,6.2],
   "ylim": [-2.45,2.45],
-  "xNumberStep": "pi",
+  "xStep": "pi",
   "legend": true,
   "data": [
     { "fn": "2*sin(x)", "color": "red1", "label": "A" },
@@ -152,7 +174,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "2:1",
   "xlim": [-6.2,6.2],
   "ylim": [-2.45,2.45],
-  "xNumberStep": "1",
+  "xStep": "1",
   "yNumberStep": "1",
   "legend": true,
   "data": [
@@ -163,7 +185,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
-3. **[E]** Qual è la lunghezza dell'onda rappresentata nel grafico?
+3. **[T]** Qual è la lunghezza dell'onda rappresentata nel grafico?
 	- **(a)** 5
 	- **(b)** 10
 	- **(c)** 15
@@ -174,16 +196,17 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2,17.8],
   "ylim": [-0.8,0.8],
   "axisLabels": ["x",""],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "0.5*sin(0.2*pi*x)" }
   ]
 }
 ```
-4. **[E]** Quale dei seguenti grafici descrive qualitativamente lo spettro $|\hat f(f)|$ dell'onda $\Delta p(t) = 3\sin(2\pi \cdot 440 \cdot t)$?
-	- **(a)** Un grafico con infiniti picchi a tutte le frequenze multiple di 440 Hz.
+4. **[EE]** Quale dei seguenti grafici descrive qualitativamente lo spettro $\mid\hat p\mid$ dell'onda $\Delta p(t) = 3\sin(2\pi \cdot 440 \cdot t)$?
+	- **(a)** Un grafico con infiniti picchi a tutte le frequenze multiple di $440 \, \text{Hz}$.
 	- **(b)** Un grafico piatto (nessun picco).
-	- **(c)** Un grafico con un singolo picco in corrispondenza della frequenza di 440 Hz.
-	- **(d)** Un grafico con due picchi, a 440 Hz e 880 Hz.
+	- **(c)** Un grafico con un singolo picco in corrispondenza della frequenza di $440 \, \text{Hz}$.
+	- **(d)** Un grafico con due picchi, a $440 \, \text{Hz}$ e $880 \, \text{Hz}$.
 5. **[E]** Il La4 ha una frequenza di $440 \, \text{Hz}$. Sapendo che l'intervallo di un'ottava corrisponde a un raddoppio della frequenza, il La5 (un'ottava sopra) ha una frequenza di:
 	- **(a)** $880 \, \text{Hz}$
 	- **(b)** $220 \, \text{Hz}$
@@ -191,7 +214,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(d)** $450 \, \text{Hz}$
 6. **[EE]** Se sovrapponi due suoni aventi frequenze $f_1 = 300 \, \text{Hz}$ e $f_2 = 305 \, \text{Hz}$, percepirai:
 	- **(a)** Un suono continuo di $605 \, \text{Hz}$.
-	- **(b)** Un battimento con una frequenza di battimento di $5 \, \text{Hz}$ (l'intensità del suono pulsa 5 volte al secondo).
+	- **(b)** Un battimento.
 	- **(c)** Un suono di $302.5 \, \text{Hz}$ costante.
 	- **(d)** Due suoni nettamente distinti che non interagiscono tra loro.
 7. **[EE]** Una funzione d'onda produce uno spettro con due soli picchi, uno a $100 \, \text{Hz}$ e uno a $150 \, \text{Hz}$. Quale tra le seguenti potrebbe esserne l'espressione?
@@ -199,28 +222,22 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $\Delta p(t) = \sin(2\pi \cdot 100 \cdot t) + \sin(2\pi \cdot 150 \cdot t)$
 	- **(c)** $\Delta p(t) = \sin(2\pi \cdot 250 \cdot t)$
 	- **(d)** $\Delta p(t) = 100 \sin(2\pi \cdot 150 \cdot t)$
-8. **[F-]** Quale trasformazione devi applicare al grafico di $f(x) = \sin(x)$ per dimezzare il periodo (e quindi raddoppiare la frequenza) dell'onda?
-	- **(a)** Moltiplicare l'intera funzione per 2 (es. $2\sin(x)$).
-	- **(b)** Dividere l'intera funzione per 2 (es. $\frac{1}{2}\sin(x)$).
-	- **(c)** Moltiplicare l'argomento per 2 (es. $\sin(2x)$).
-	- **(d)** Dividere l'argomento per 2 (es. $\sin(\frac{x}{2})$).
-9. **[F]** Se dimezzi la lunghezza vibrante di una corda di chitarra (premendo il dito al 12° tasto), la lunghezza d'onda dell'armonica fondamentale:
+8. **[F-]** Quale trasformazione devi applicare al grafico di $f(x) = \sin(x)$ per dimezzare il periodo e quindi raddoppiare la frequenza dell'onda?
+	- **(a)** Moltiplicare l'intera funzione per 2, ovvero $2\sin(x)$.
+	- **(b)** Dividere l'intera funzione per 2, ovvero $\frac{1}{2}\sin(x)$.
+	- **(c)** Moltiplicare l'argomento per 2, ovvero $\sin(2x)$.
+	- **(d)** Dividere l'argomento per 2, ovvero $\sin(\frac{x}{2})$.
+9. **[EE]** Se dimezzi la lunghezza vibrante di una corda di chitarra (premendo il dito al 12° tasto), la lunghezza d'onda dell'armonica fondamentale:
 	- **(a)** Raddoppia.
 	- **(b)** Dimezza.
 	- **(c)** Rimane invariata.
 	- **(d)** Diventa un quarto.
-10. **[EE]** Quale tra queste funzioni d'onda descrive una perturbazione che oscilla costantemente tra i valori $1$ e $5$?
+10. **[F-]** Quale tra queste funzioni d'onda descrive una perturbazione che oscilla costantemente tra i valori $1$ e $5$?
 	- **(a)** $\Delta p(t) = 4\sin(t) + 1$
 	- **(b)** $\Delta p(t) = 2\sin(t) + 3$
 	- **(c)** $\Delta p(t) = 3\sin(t) + 2$
 	- **(d)** $\Delta p(t) = 5\sin(t)$
-11. **[EE]** Associa allo spettro $|\hat f(f)|$ la sua funzione d'onda. Lo spettro presenta tre picchi di uguale altezza a $200 \, \text{Hz}$, $400 \, \text{Hz}$ e $600 \, \text{Hz}$.
-	- **(a)** $\Delta p(t) = \sin(2\pi \cdot 200 \cdot t) + 2\sin(2\pi \cdot 400 \cdot t) + 3\sin(2\pi \cdot 600 \cdot t)$
-	- **(b)** $\Delta p(t) = \sin(2\pi \cdot 200 \cdot t) + \sin(2\pi \cdot 400 \cdot t) + \sin(2\pi \cdot 600 \cdot t)$
-	- **(c)** $\Delta p(t) = \sin(2\pi \cdot 1200 \cdot t)$
-	- **(d)** $\Delta p(t) = 3\sin(2\pi \cdot 400 \cdot t)$
-
-12. **[E]** Quale delle seguenti funzioni corrisponde al grafico in figura?
+11. **[E]** Quale delle seguenti funzioni corrisponde al grafico in figura?
 	- **(a)** $f(x) = \sin(2x)$
 	- **(b)** $f(x) = 2\sin(x)$
 	- **(c)** $f(x) = \frac{1}{2}\sin(x)$
@@ -230,29 +247,43 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:1",
   "xlim": [-6.2, 6.2],
   "ylim": [-2.5, 2.5],
-  "xNumberStep": "pi",
+  "xStep": "pi",
   "data": [
     { "fn": "2*sin(x)" }
   ]
 }
 ```
-13. **[E]** Osserva il grafico della funzione d'onda spaziale $\Delta p(x)$. Qual è la sua lunghezza d'onda $\lambda$?
+12. **[EE]** Associa allo spettro $\mid\hat p\mid$ la sua funzione d'onda. Lo spettro presenta tre picchi di uguale altezza a $200 \, \text{Hz}$, $400 \, \text{Hz}$ e $600 \, \text{Hz}$.
+	- **(a)** $\Delta p(t) = \sin(2\pi \cdot 200 \cdot t) + 2\sin(2\pi \cdot 400 \cdot t) + 3\sin(2\pi \cdot 600 \cdot t)$
+	- **(b)** $\Delta p(t) = \sin(2\pi \cdot 200 \cdot t) + \sin(2\pi \cdot 400 \cdot t) + \sin(2\pi \cdot 600 \cdot t)$
+	- **(c)** $\Delta p(t) = \sin(2\pi \cdot 1200 \cdot t)$
+	- **(d)** $\Delta p(t) = 3\sin(2\pi \cdot 400 \cdot t)$
+13. **[E]** Qual è il dominio di $f(x) = 2 \sin(x - 3)$?
+	- **(a)** $\mathbb R$
+	- **(b)** $x > 3$
+	- **(c)** $x \neq 2$
+	- **(d)** $x < \neq -\frac 3 2$
+14. **[PD]** Qual è la sua lunghezza d'onda $\lambda$ dell'onda sonora il cui spettro è rappresentato in figura?
 	- **(a)** $2 \, \text{m}$
 	- **(b)** $4 \, \text{m}$
 	- **(c)** $8 \, \text{m}$
 	- **(d)** $10 \, \text{m}$
 ```matephis
 {
-  "aspectRatio": "3:1",
-  "xlim": [-1, 9],
-  "ylim": [-1.5, 1.5],
-  "axisLabels": ["x (m)", "∆p"],
+  "aspectRatio": "2:1",
+  "xlim": [0, 200],
+  "ylim": [0, 3],
+  "axisLabels": ["f", "|p^|"],
+  "axisUnitMeasures": ["Hz",""],
+  "axisLabelStyle": "italic",
+  "padding": 60,
+  "boxPlot": true,
   "data": [
-    { "fn": "sin(0.5*pi*x)" }
+    { "fn": "2*exp(-1*(x-170)^2)", "color": "red1" }
   ]
 }
 ```
-14. **[E]** Osserva il grafico della funzione d'onda nel tempo $\Delta p(t)$. Qual è il suo periodo $T$?
+15. **[T]** Osserva il grafico della funzione d'onda sonora $\Delta p(t)$. Qual è il suo periodo $T$?
 	- **(a)** $0.5 \, \text{s}$
 	- **(b)** $1.0 \, \text{s}$
 	- **(c)** $1.5 \, \text{s}$
@@ -263,12 +294,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [-0.2, 2.2],
   "ylim": [-1.5, 1.5],
   "axisLabels": ["t (s)", "∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "cos(2*pi*x)" }
   ]
 }
 ```
-15. **[E]** Qual è l'ampiezza dell'onda rappresentata nel grafico?
+16. **[T]** Qual è l'ampiezza dell'onda rappresentata nel grafico?
 	- **(a)** $1.5$
 	- **(b)** $3.0$
 	- **(c)** $6.0$
@@ -278,12 +310,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:1",
   "xlim": [-3.14, 3.14],
   "ylim": [-4.5, 4.5],
+  "yNumberStep": 1,
   "data": [
     { "fn": "3*sin(2*x)" }
   ]
 }
 ```
-16. **[EE]** Quale funzione ha generato il grafico seguente, sapendo che rappresenta una traslazione verticale?
+17. **[EE]** Quale funzione ha generato il grafico seguente, sapendo che rappresenta una traslazione verticale?
 	- **(a)** $f(x) = \sin(x) + 2$
 	- **(b)** $f(x) = \sin(x + 2)$
 	- **(c)** $f(x) = 2\sin(x)$
@@ -293,30 +326,33 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:1",
   "xlim": [-6.2, 6.2],
   "ylim": [-0.5, 3.5],
-  "xNumberStep": "pi",
+  "xStep": "pi",
   "data": [
     { "fn": "sin(x) + 2" }
   ]
 }
 ```
-17. **[EE]** Il grafico seguente rappresenta lo spettro delle frequenze $|\hat f(f)|$ di un suono. I punti indicano i picchi dello spettro. Quale funzione d'onda $\Delta p(t)$ corrisponde a questo spettro?
-	- **(a)** $\Delta p(t) = 2\sin(2\pi \cdot 100 \cdot t)$
-	- **(b)** $\Delta p(t) = \sin(2\pi \cdot 100 \cdot t) + 2$
-	- **(c)** $\Delta p(t) = 100\sin(2\pi \cdot 2 \cdot t)$
-	- **(d)** $\Delta p(t) = \sin(2\pi \cdot 200 \cdot t)$
+18. **[EE]** Il grafico seguente rappresenta lo spettro delle frequenze $\mid\hat p \mid$ di un suono. I punti indicano i picchi dello spettro. Quale funzione d'onda $p(t)$ corrisponde a questo spettro?
+	- **(a)** $p(t) = 2\sin(2\pi \cdot 100 \cdot t)$
+	- **(b)** $p(t) = \sin(100 \cdot t) + 2$
+	- **(c)** $p(t) = 100\sin(2\pi \cdot 2 \cdot t)$
+	- **(d)** $p(t) = \sin(2\pi \cdot 200 \cdot t)$
 ```matephis
 {
   "aspectRatio": "2:1",
   "xlim": [0, 200],
   "ylim": [0, 3],
-  "axisLabels": ["f (Hz)", "|f^|"],
+  "axisLabels": ["f", "|p^|"],
+  "axisUnitMeasures": ["Hz",""],
+  "axisLabelStyle": "italic",
+  "boxPlot": true,
+  "padding": 60,
   "data": [
-    { "points": [[100, 2]], "radius": 6, "fillColor": "red1" },
-    { "points": [[100, 0], [100, 2]], "type": "interpolation", "smoothness": 0, "color": "red1", "dash": "4,4" }
+    { "points": [[100, 0], [100, 2]], "type": "interpolation", "smoothness": 0, "color": "red1", "showPoints": false }
   ]
 }
 ```
-18. **[EE]** Il seguente grafico mostra una perturbazione nel tempo. Quale fenomeno fisico vi si può riconoscere?
+19. **[EE]** Il seguente grafico mostra una perturbazione nel tempo. Quale fenomeno fisico vi si può riconoscere?
 	- **(a)** Un'onda stazionaria.
 	- **(b)** Un battimento.
 	- **(c)** L'effetto Doppler.
@@ -327,32 +363,36 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [0, 10],
   "ylim": [-2.5, 2.5],
   "axisLabels": ["t", "∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "2 * sin(10*x) * cos(0.5*x)" },
-    { "fn": "2 * cos(0.5*x)", "color": "red1", "dash": "4,4" },
-    { "fn": "-2 * cos(0.5*x)", "color": "red1", "dash": "4,4" }
+    { "fn": "2 * cos(0.5*x)", "color": "red1", "dash": "4,4", "width": 2, "opacity": 0.5 },
+    { "fn": "-2 * cos(0.5*x)", "color": "red1", "dash": "4,4", "width": 2, "opacity": 0.5 }
   ]
 }
 ```
-19. **[EE]** Considera lo spettro in figura, che presenta due picchi. Quale tra le seguenti funzioni d'onda lo ha generato?
-	- **(a)** $\Delta p(t) = 3\sin(2\pi \cdot 10 \cdot t) + 1.5\sin(2\pi \cdot 30 \cdot t)$
-	- **(b)** $\Delta p(t) = 1.5\sin(2\pi \cdot 10 \cdot t) + 3\sin(2\pi \cdot 30 \cdot t)$
-	- **(c)** $\Delta p(t) = 10\sin(2\pi \cdot 3 \cdot t) + 30\sin(2\pi \cdot 1.5 \cdot t)$
-	- **(d)** $\Delta p(t) = 3\sin(2\pi \cdot 10 \cdot t) \cdot 1.5\sin(2\pi \cdot 30 \cdot t)$
+20. **[F+]** Considera lo spettro in figura, che presenta due picchi. Quale tra le seguenti funzioni d'onda lo ha generato?
+	- **(a)** $p(t) = 3\sin(2\pi \cdot 10 \cdot t) + 1.5\sin(2\pi \cdot 30 \cdot t)$
+	- **(b)** $p(t) = 1.5\sin(2\pi \cdot 10 \cdot t) + 3\sin(2\pi \cdot 30 \cdot t)$
+	- **(c)** $p(t) = 10\sin(2\pi \cdot 3 \cdot t) + 30\sin(2\pi \cdot 1.5 \cdot t)$
+	- **(d)** $p(t) = 3\sin(2\pi \cdot 10 \cdot t) \cdot 1.5\sin(2\pi \cdot 30 \cdot t)$
 ```matephis
 {
   "aspectRatio": "2:1",
   "xlim": [0, 40],
   "ylim": [0, 4],
-  "axisLabels": ["f (Hz)", "|f^|"],
+  "axisLabels": ["f", "|p^|"],
+  "axisUnitMeasures": ["Hz",""],
+  "axisLabelStyle": "italic",
+  "boxPlot": true,
+  "padding": 60,
   "data": [
-    { "points": [[10, 3], [30, 1.5]], "radius": 5, "fillColor": "red1" },
-    { "points": [[10, 0], [10, 3]], "type": "interpolation", "smoothness": 0, "color": "red1", "dash": "4,4" },
-    { "points": [[30, 0], [30, 1.5]], "type": "interpolation", "smoothness": 0, "color": "red1", "dash": "4,4" }
+    { "points": [[10, 0], [10, 3]], "type": "interpolation", "smoothness": 0, "color": "red1", "showPoints": false },
+    { "points": [[30, 0], [30, 1.5]], "type": "interpolation", "smoothness": 0, "color": "red1", "showPoints": false }
   ]
 }
 ```
-20. **[EE]** Trova lunghezza d'onda e ampiezza dal grafico spaziale in figura.
+21. **[T]** Trova lunghezza d'onda e ampiezza della perturbazione $\Delta p(x)$ il cui grafico è rappresentato in figura.
 	- **(a)** $\lambda = 6 \, \text{m}$, $A = 1.5$
 	- **(b)** $\lambda = 3 \, \text{m}$, $A = 3$
 	- **(c)** $\lambda = 6 \, \text{m}$, $A = 3$
@@ -363,28 +403,29 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "xlim": [0, 12],
   "ylim": [-2, 2],
   "axisLabels": ["x (m)", "∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "1.5 * sin(2*pi/6 * x)" }
   ]
 }
 ```
-21. **[F]** Quale funzione corrisponde al grafico seguente? Suggerimento: osserva la traslazione orizzontale (fase).
+22. **[EE]** Quale funzione corrisponde al grafico seguente?
 	- **(a)** $f(x) = \sin(x)$
 	- **(b)** $f(x) = \cos(x)$
-	- **(c)** $f(x) = -\cos(x)$ oppure $\sin(x - \pi/2)$
+	- **(c)** $f(x) = \sin(x - \pi/2)$
 	- **(d)** $f(x) = -\sin(x)$
 ```matephis
 {
   "aspectRatio": "3:1",
   "xlim": [-3.14, 6.28],
   "ylim": [-1.5, 1.5],
-  "xNumberStep": "pi",
+  "xStep": "pi",
   "data": [
     { "fn": "-cos(x)" }
   ]
 }
 ```
-22. **[F]** Un'onda viaggia a $10 \, \text{m/s}$. Dal grafico spaziale qui sotto deduci la sua lunghezza d'onda, e calcola di conseguenza la sua frequenza.
+23. **[EE]** Un'onda viaggia a $10 \, \text{m/s}$, il suo grafico spaziale è rappresentato in figura. Quali sono la sua lunghezza d'onda e frequenza.
 	- **(a)** $\lambda = 2 \, \text{m}$, $f = 5 \, \text{Hz}$
 	- **(b)** $\lambda = 4 \, \text{m}$, $f = 2.5 \, \text{Hz}$
 	- **(c)** $\lambda = 2 \, \text{m}$, $f = 20 \, \text{Hz}$
@@ -394,33 +435,14 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:1",
   "xlim": [0, 8],
   "ylim": [-1.5, 1.5],
-  "axisLabels": ["x (m)", "∆p"],
+  "axisLabels": ["x", "∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "sin(pi * x)" }
   ]
 }
 ```
-23. **[EE]** Quale tra i seguenti grafici (A, B, C o D) rappresenta l'onda con la **frequenza maggiore**?
-	- **(a)** Grafico A (rosso)
-	- **(b)** Grafico B (nero, tratteggiato)
-	- **(c)** Grafico C (blu)
-	- **(d)** Grafico D (arancione, tratteggiato)
-```matephis
-{
-  "aspectRatio": "2:1",
-  "xlim": [0, 4],
-  "ylim": [-2.5, 2.5],
-  "axisLabels": ["t", "∆p"],
-  "legend": true,
-  "data": [
-    { "fn": "sin(pi * x)", "color": "red1", "label": "A" },
-    { "fn": "sin(2*pi * x)", "color": "black1", "dash": "4,4", "label": "B" },
-    { "fn": "sin(4*pi * x)", "color": "blue", "label": "C" },
-    { "fn": "sin(0.5*pi * x)", "color": "orange", "dash": "4,4", "label": "D" }
-  ]
-}
-```
-24. **[F]** Il grafico mostra la forma spaziale di un'onda stazionaria su una corda lunga $L = 10 \, \text{m}$ (fissata agli estremi a $x=0$ e $x=10$). Qual è la lunghezza d'onda $\lambda$ dell'onda che l'ha generata?
+24. **[T]** Il grafico mostra la forma spaziale di un'onda stazionaria su una corda lunga $L = 10 \, \text{m}$ (fissata agli estremi a $x=0$ e $x=10$). Qual è la lunghezza d'onda $\lambda$ dell'onda che l'ha generata?
 	- **(a)** $10 \, \text{m}$
 	- **(b)** $5 \, \text{m}$
 	- **(c)** $20 \, \text{m}$
@@ -428,45 +450,26 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```matephis
 {
   "aspectRatio": "3:1",
-  "xlim": [0, 10],
+  "xlim": [-0.2, 10.2],
   "ylim": [-1.5, 1.5],
-  "axisLabels": ["x (m)", "∆p"],
+  "axisLabels": ["x (m)", ""],
+  "axisLabelStyle": "italic",
+  "padding": 45,
+  "gridOpacity": 0,
+  "showYAxis": false,
   "data": [
-    { "fn": "sin(pi/10 * x)" },
+    { "fn": "sin(pi/10 * x)", "domain": [0,10] },
     { "points": [[0,0], [10,0]], "radius": 5, "fillColor": "black1" }
   ]
 }
 ```
-25. **[F+]** Quale dei seguenti spettri (A, B, C o D) corrisponde alla funzione d'onda $\Delta p(t) = 4\sin(2\pi \cdot 20 \cdot t) + 2\sin(2\pi \cdot 40 \cdot t)$?
-	- **(a)** Grafico A (rosso)
-	- **(b)** Grafico B (nero, tratteggiato)
-	- **(c)** Grafico C (blu)
-	- **(d)** Grafico D (arancione, tratteggiato)
-```matephis
-{
-  "aspectRatio": "2:1",
-  "xlim": [0, 50],
-  "ylim": [0, 5],
-  "axisLabels": ["f (Hz)", "|f^|"],
-  "legend": true,
-  "data": [
-    { "points": [[20, 4], [40, 2]], "radius": 5, "fillColor": "red1", "label": "A" },
-    { "points": [[20, 0], [20, 4]], "type": "interpolation", "smoothness": 0, "color": "red1" },
-    { "points": [[40, 0], [40, 2]], "type": "interpolation", "smoothness": 0, "color": "red1" },
-    
-    { "points": [[20, 2], [40, 4]], "radius": 5, "fillColor": "black1", "label": "B" },
-    { "points": [[20, 0], [20, 2]], "type": "interpolation", "smoothness": 0, "color": "black1", "dash": "4,4" },
-    { "points": [[40, 0], [40, 4]], "type": "interpolation", "smoothness": 0, "color": "black1", "dash": "4,4" },
 
-    { "points": [[4, 20], [2, 40]], "radius": 5, "fillColor": "blue", "label": "C" },
-
-    { "points": [[10, 4], [20, 2]], "radius": 5, "fillColor": "orange", "label": "D" },
-    { "points": [[10, 0], [10, 4]], "type": "interpolation", "smoothness": 0, "color": "orange", "dash": "4,4" },
-    { "points": [[20, 0], [20, 2]], "type": "interpolation", "smoothness": 0, "color": "orange", "dash": "4,4" }
-  ]
-}
-```
-26. **[EE]** Associa il grafico della funzione d'onda $\Delta p(x)$ alla corretta equazione.
+25. **[F-]** Con riferimento all'esercizio precedente, se l'onda si propaga a $66.7 \, \text{m/s}$, qual è la frequenza della terza armonica prodotta dalla corda?
+	- **(a)** Circa $10 \, \text{Hz}$
+	- **(b)** Circa $133.4 \, \text{Hz}$
+	- **(c)** Circa $200 \, \text{Hz}$
+	- **(d)** Circa $30 \, \text{Hz}$
+26. **[T]** Associa il grafico della funzione d'onda $\Delta p(x)$ alla corretta equazione.
 	- **(a)** $\Delta p(x) = \cos(2x)$
 	- **(b)** $\Delta p(x) = \sin(2x)$
 	- **(c)** $\Delta p(x) = \sin(0.5x)$
@@ -476,7 +479,9 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   "aspectRatio": "3:1",
   "xlim": [-6.28, 6.28],
   "ylim": [-1.5, 1.5],
-  "xNumberStep": "pi",
+  "xStep": "pi",
+  "axisLabels": ["x", "∆p"],
+  "axisLabelStyle": "italic",
   "data": [
     { "fn": "cos(2*x)" }
   ]
@@ -485,36 +490,22 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 
 ## Problemi
 
-### 1. La canna dell'organo
+**La canna dell'organo** **[AD-]** Un organo a canne possiede tubi di diverse lunghezze per riprodurre l'intera gamma delle note musicali. Considera un tubo chiuso a un'estremità.
+- Sapendo che la nota musicale più bassa che l'organo può riprodurre è un Do1 (circa $32.7 \, \text{Hz}$), qual è la lunghezza del tubo necessario per riprodurre questa nota?
+- Scrivi la funzione d'onda $\Delta p(x)$ dell'armonica fondamentale all'interno del tubo, sapendo che nell'estremità aperta ($x = 0$) la variazione di pressione è nulla (nodo di pressione) e nell'estremità chiusa ($x = L$) è massima (antinodo di pressione). Assumi un'ampiezza massima arbitraria $A$.
 
-**[AD-]** Un organo a canne possiede tubi di diverse lunghezze per riprodurre l'intera gamma delle note musicali. Considera un tubo chiuso a un'estremità.
-
-- Sapendo che la nota musicale più bassa che l'organo può riprodurre è un Do1 (circa $32.7 \, \text{Hz}$), qual è la lunghezza del tubo necessario per riprodurre questa nota? (Assumi $v = 340 \, \text{m/s}$).
-- Scrivi la funzione d'onda spaziale $\Delta p(x)$ dell'armonica fondamentale all'interno del tubo, sapendo che nell'estremità aperta ($x = 0$) la variazione di pressione è nulla (nodo di pressione) e nell'estremità chiusa ($x = L$) è massima (antinodo di pressione). Assumi un'ampiezza massima arbitraria $A$.
-- Se il tubo fosse aperto da entrambe le parti, quale frequenza fondamentale produrrebbe?
-
-### 2. Sintetizzatore analogico
-
-**[PD]** Stai programmando un sintetizzatore analogico in cui puoi sommare diverse onde sinusoidali pure per creare nuovi timbri.
-
-- Vuoi creare un suono che abbia un'onda fondamentale a $440 \, \text{Hz}$ con ampiezza $1$, la prima armonica superiore (il doppio della frequenza) con ampiezza $0.5$ e la seconda armonica superiore (il triplo della frequenza) con ampiezza $0.25$. Scrivi la funzione d'onda $\Delta p(t)$ risultante.
-- Traccia un grafico approssimativo (a mano o con la mente) dello spettro delle frequenze $|\hat f(f)|$ che ti aspetti di vedere per questo suono. Dove si trovano i picchi e quanto sono alti?
-- Come cambierebbe lo spettro se raddoppiassi il volume di tutte le componenti? E se traslassi il grafico della funzione d'onda verticalmente aggiungendo una costante? (Cosa rappresenterebbe fisicamente la costante?)
+**Sintetizzatore analogico** **[AD+]** Stai programmando un sintetizzatore analogico in cui puoi sommare diverse onde sinusoidali pure per creare nuovi timbri.
+- Vuoi creare un suono che abbia un'onda fondamentale a $440 \, \text{Hz}$ con ampiezza $1$, la prima armonica superiore (il doppio della frequenza) con ampiezza $0.5$ e la seconda armonica superiore (il triplo della frequenza) con ampiezza $0.25$. Scrivi la funzione d'onda $p(t)$ risultante.
+- Traccia un grafico approssimativo dello spettro delle frequenze $\mid\hat p\mid$ che ti aspetti di vedere per questo suono. Dove si trovano i picchi e quanto sono alti?
+- Come cambierebbe lo spettro se raddoppiassi il volume di tutte le componenti? E se traslassi il grafico della funzione d'onda verticalmente aggiungendo una costante? Cosa rappresenterebbe fisicamente la costante?
 - Se aggiungi al tuo sintetizzatore un'ulteriore onda pura avente frequenza di $442 \, \text{Hz}$ e ampiezza $1$, cosa percepirà un ascoltatore nel tempo? Descrivi il fenomeno dal punto di vista fisico.
 
-### 3. Effetto serra... o accordatore?
-
-**[PD]** L'accordatore della tua chitarra rileva le frequenze analizzando il suono prodotto. La sesta corda (Mi basso) suona a $82.4 \, \text{Hz}$. La lunghezza della corda dal ponte al capotasto è di $648 \, \text{mm}$.
-
+**Sulle corde di una chitarra** **[PD]** Pizzicando la sesta corda (Mi basso) l'accordatore rileva $82.4 \, \text{Hz}$. La lunghezza della corda dal ponte al capotasto è di $648 \, \text{mm}$.
 - Qual è la lunghezza d'onda dell'armonica fondamentale che si instaura sulla corda?
 - A quale velocità si propagano le onde lungo la corda per produrre questa specifica nota?
-- Premi la corda al 12° tasto, dimezzandone esattamente la lunghezza vibrante. Qual è la nuova frequenza prodotta? (Ricorda che la velocità di propagazione dipende solo dalle proprietà fisiche della corda, non dalla sua lunghezza).
-- Sapendo che due note distano un semitono se il rapporto tra le loro frequenze è $2^{1/12} \approx 1.059$, quante note (semitoni) hai "saltato" dimezzando la lunghezza della corda? Come si chiama questa relazione musicale tra le due note?
+- Premi la corda al 12° tasto, dimezzandone esattamente la lunghezza vibrante. Qual è la nuova frequenza prodotta? La velocità di propagazione dipende solo dalle proprietà fisiche della corda (tensione e densità lineare), non dalla sua lunghezza.
 
-### 4. Il sonar e gli ostacoli sottomarini
-
-**[D-]** Un sottomarino emette un segnale sonar (un'onda sonora nell'acqua) con una frequenza di $30 \, \text{kHz}$. Il segnale è definito dalla funzione $\Delta p(t) = A\sin(2\pi \cdot 30000 \cdot t)$.
-
+**Il sonar** **[PD+]** Un sottomarino emette un segnale sonar (un'onda sonora nell'acqua) con una frequenza di $30 \, \text{kHz}$. Il segnale è definito dalla funzione $\Delta p(t) = A\sin(2\pi \cdot 30000 \cdot t)$.
 - Qual è il periodo di questa onda in secondi e in millisecondi?
 - L'onda sonora viaggia nell'acqua a circa $1500 \, \text{m/s}$. Qual è la lunghezza d'onda di questo segnale?
 - C'è un motivo fisico (o pratico) per cui i sonar utilizzano frequenze così elevate (ultrasuoni) rispetto alle normali basse frequenze udibili? Fai riferimento alla lunghezza d'onda appena calcolata e pensa alla capacità dell'onda di "distinguere" piccoli ostacoli.
