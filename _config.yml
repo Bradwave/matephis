@@ -116,3 +116,4 @@ exclude:
   - vendor/gems/
   - vendor/ruby/
   - _notes/copilot/
+  - _notes/Public/.obsidian/
