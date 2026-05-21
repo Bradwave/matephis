@@ -340,18 +340,6 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```
 [sol: Vi sono due posizioni possibili: $(2 - \sqrt{\frac{47}{17}}, -1 + 4\sqrt{\frac{47}{17}})$ e $(2 + \sqrt{\frac{47}{17}}, -1 - 4\sqrt{\frac{47}{17}})$, ovvero circa $(0{,}34; 5{,}65)$ e $(3{,}66; -7{,}65)$]
 
-```matephis
-{
-  "aspectRatio": "2:1",
-  "xlim": [-9.9,9.9],
-  "ylim": [-4.9,4.9],
-  "data": [
-    { "points": [[-2,-2,"A1"],[6,0,"A2"]] }
-  ],
-  "interactive": true
-}
-```
-
 **Il radar di navigazione** **[PD]** Un radar navale è posizionato nell'origine di un sistema di riferimento cartesiano in cui $1$ unità corrisponde a $1 \, \text{km}$. Una nave si trova nel punto $A(-3, 4)$ e si sposta in linea retta fino al punto $B(5, -2)$.
 - A che distanza si trova la nave dal radar quando è nel punto $A$? E quando è nel punto $B$?
 - Supponi che il radar possa rilevare navi fino a una distanza massima di $6 \text{ km}$. L'area coperta dal radar è descritta da una disequazione. Qual è questa disequazione?

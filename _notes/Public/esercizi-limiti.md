@@ -51,36 +51,36 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	13. $f(x) = \dfrac{1}{x} \cdot \sin x$
 	14. $f(x) = \sin \dfrac{1}{x}$
 4. **[EE]** Per ciascuno dei seguenti grafici di funzioni, determina il limite della funzione agli estremi del dominio.
-	1. ![limiti-1]({{ site.baseurl }}/images/limiti-1.svg)
-	2. ![limiti-2]({{ site.baseurl }}/images/limiti-2.svg)
-	3. ![limiti-3]({{ site.baseurl }}/images/limiti-3.svg)
-	4. ![limiti-4]({{ site.baseurl }}/images/limiti-4.svg)
-	5. ![limiti-5]({{ site.baseurl }}/images/limiti-5.svg)
-	6. ![limiti-6]({{ site.baseurl }}/images/limiti-6.svg)
-	7. ![limiti-7]({{ site.baseurl }}/images/limiti-7.svg)
-	8. ![limiti-8]({{ site.baseurl }}/images/limiti-8.svg)
-	9. ![limiti-9]({{ site.baseurl }}/images/limiti-9.svg)
+	1. ![limiti-1](../../images/limiti-1.svg)
+	2. ![limiti-2](../../images/limiti-2.svg)
+	3. ![limiti-3](../../images/limiti-3.svg)
+	4. ![limiti-4](../../images/limiti-4.svg)
+	5. ![limiti-5](../../images/limiti-5.svg)
+	6. ![limiti-6](../../images/limiti-6.svg)
+	7. ![limiti-7](../../images/limiti-7.svg)
+	8. ![limiti-8](../../images/limiti-8.svg)
+	9. ![limiti-9](../../images/limiti-9.svg)
 5. **[D+]** Nel grafico è rappresentata la funzione $f(x) = \dfrac{\sin x}{x}$. Puoi calcolare il limite della funzione $g(x) = \dfrac{1}{f(x)}$ per $x \, \to \, +\infty$? Perché? Rappresenta tramite Desmos o GeoGebra il grafico di $g$ e prova a spiegare la sua peculiare forma.
-	![limiti-10]({{ site.baseurl }}/images/limiti-10.svg)
+	![limiti-10](../../images/limiti-10.svg)
 6. **[PD]** Scrivi una funzione che presenti un asintoto verticale in $x = 3$ e un asintoto orizzontale in $y = 5$.
 7. **[D+]** Discuti la forma di $f(x) = log_2(x^2 + bx + c)$ al variare del discriminante di $\Delta = x^2 + bx + c$. Costruisci con Desmos una visualizzazione dinamica di $f(x)$, controllando con degli slider i valori di $b$ e $c$.
 
 ## Quiz
 
-1. **[PD]** In figura il grafico della funzione $f$. Considera la funzione $g(x) = \log f(x)$. Quale delle seguenti affermazioni è corretta.
+1. **[PD]** In figura è rappresentato il grafico della funzione $f$. Considera la funzione $g(x) = \log f(x)$. Quale delle seguenti affermazioni è corretta.
 	- **(a)** $\lim_{x \, \to \, 2^+} g(x) = -\infty$
 	- **(b)** $\lim_{x \, \to \, +\infty} g(x) = 0$
 	- **(c)** $\lim_{x \, \to \, 0^-} g(x) = 0$
 	- **(d)** $\lim_{x \to -\infty} g(x) = -\infty$
 	- **(e)** Nessuna opzione è corretta.
-	![limiti-11]({{ site.baseurl }}/images/limiti-11.svg)
+	![limiti-11](../../images/limiti-11.svg)
 2. **[F]** Osserva il dynagraph di una funzione $f$ rappresentato in figura. Quale tra le seguenti affermazioni è corretta?
 	- **(a)** $\lim_{x \, \to \, +\infty} f(x) = +\infty$
 	- **(b)** $\lim_{x \, \to \, +\infty} f(x) = 0$
 	- **(c)** $\lim_{x \, \to \, 0^+} f(x) = -\infty$
 	- **(d)** $\lim_{x \, \to \, 0^+} f(x) = +\infty$
 	- **(e)** Nessuna opzione è corretta.
-	![limiti-12]({{ site.baseurl }}/images/limiti-12.svg)
+	![limiti-12](../../images/limiti-12.svg)
 3. **[F+]** Una tartaruga percorre 1 metro in 1 minuto. Dopo ogni minuto la velocità della tartaruga dimezza: percorre 0.5 m nel minuto successivo al primo, 0.25 m nel minuto ancora successivo, ecc.. Sia $v(t)$ la velocità della tartaruga al tempo $t$ (dove $t = 0$ è l'instante di tempo iniziale). Quale tra i seguenti completamenti sono corretti? Più di un completamento può essere corretto. Dopo un'infinità di tempo...
 	- **(a)** la tartaruga ha percorso meno di 2 metri.
 	- **(b)** la distanza percorsa dalla tartaruga tende a $+\infty$.
@@ -92,7 +92,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(c)** $f(x) = \dfrac{e^x}{x}$
 	- **(d)** $f(x) = x \cdot \sin x$
 	- **(e)** Il limite esiste per tutte le funzioni.
-5. **[PD]** Un sistema fisico è composto da due cariche elettriche elementari identiche $q_1$ e $q_2$, inizialmente ferme e poste a una certa distanza. Si denotata con $U(t)$ l'energia potenziale del sistema, che vale inizialmente $2 \times 10^{-19} \, \text{J}$. Le due cariche sono libere di muoversi. Si denota con $K(t)$ l'energia cinetica di ciascuna delle due cariche, in funzione del tempo. Qual tra le seguenti affermazioni. Quale tra le seguenti affermazioni **non** è corretta?
+5. **[PD]** Un sistema fisico è composto da due cariche elettriche elementari identiche $q_1$ e $q_2$, inizialmente ferme e poste a una certa distanza. Si denotata con $U(t)$ l'energia potenziale del sistema, che vale inizialmente $2 \times 10^{-19} \, \text{J}$. Le due cariche sono libere di muoversi. Si denota con $K(t)$ l'energia cinetica di ciascuna delle due cariche, in funzione del tempo. Quale tra le seguenti affermazioni **non** è corretta?
 	- **(a)** $U(t) \to 0$ per $t \to +\infty$
 	- **(b)** $K(t) \to +\infty$ per $t \to +\infty$
 	- **(c)** $K(t) \to 1 \times 10^{-19} \, \text{J}$ per $t \to +\infty$
@@ -106,7 +106,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 1. Quanto vale $p(0)$ ?
 2. Determina il limite di $p(t)$ per $t \to 0$ ?
 3. Esiste un istante di tempo per cui $p(t)$ vale zero?
-
+	 
 **Questione di pHeeling [EE/F]** La concentrazione degli ioni idrogeno in una soluzione è indicata con $[H^+]$ e il pH è definito dalla funzione:
 
 \\[pH=−log⁡_{10}[H+]\\]
@@ -119,7 +119,7 @@ e interpreta il risultato dal punto di vista chimico.
 
 **Il bosco incantato [PD-]** Un sentiero del bosco incantato cambia ogni giorno. Il primo giorno è un segmento lungo 100 m, il secondo giorno si divide in tre parti uguali il segmento e si sostituisce la parte centrale con due segmenti uguali (come due lati di un triangolo equilatero). Il giorno successivo si ripete questa procedura su tutti i segmenti, e così via…
 
-![limiti-13]({{ site.baseurl }}/images/limiti-13.jpg)
+![limiti-13](../../images/limiti-13.jpg)
 
 Un topolino percorre tutti i giorni il sentiero per andare a scuola.
 

@@ -29,7 +29,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 3. **[EE/F]** Definisci algebricamente la funzione che associa a ogni numero sulla retta dei numeri reali la sua distanza da zero. Determina dominio, codominio e immagine della funzione. Realizza un dynagraph e un grafico cartesiano.
 4. **[F-]** Definisci algebricamente la funzione che associa a ogni punto del piano cartesiano la propria distanza dall'origine. Determina dominio, codominio e immagine della funzione. È possibile realizzare un grafico cartesiano di tale funzione?
 5. **[T]** Qual è il dominio della funzione il cui grafico è rappresentato in figura?
-   ![funzioni-1-dominio_radice]({{ site.baseurl }}/images/funzioni-1-dominio_radice.svg)
+   ![funzioni-1-dominio_radice](../../images/funzioni-1-dominio_radice.svg)
 6. **[EE]** Determina il dominio naturale delle seguenti funzioni, rappresenta sul grafico gli intervalli di definizione, quindi verifica le risposte usando Desmos, GeoGebra o software simili.
 	1. $f(x) = \sqrt{x^2 + 1}$
 	2. $f(x) = \dfrac{x + 3}{x - 2}$
@@ -46,37 +46,37 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	13. $f(x) = \dfrac{1}{\sqrt{g(x)}}$, dove $g(x) = \dfrac{1}{x}$
 	14. $f(x) = \sqrt{g(x) - 3}$, dove $g(x) = x^3 + 3$
 7. **[E]** In figura è rappresentato il grafico della funzione $f$. Quante sono le soluzioni dell'equazione $f(x) = 2$.
-   ![funzioni-5-soluzioni]({{ site.baseurl }}/images/funzioni-5-soluzioni.svg)
+   ![funzioni-5-soluzioni](../../images/funzioni-5-soluzioni.svg)
 8. **[F-]** In figura è rappresentato il grafico della funzione $f$. Determina il dominio di $g(x)=\log_2 f(x)$.
-   ![funzioni-7-dominio]({{ site.baseurl }}/images/funzioni-7-dominio.svg)
+   ![funzioni-7-dominio](../../images/funzioni-7-dominio.svg)
 9. **[F+]** In figura è rappresentato il grafico della funzione $f$. Determina il dominio di $g(x) = \dfrac{1}{f(x)}$.
-    ![funzioni-8-dominio]({{ site.baseurl }}/images/funzioni-8-dominio.svg)
+    ![funzioni-8-dominio](../../images/funzioni-8-dominio.svg)
 10. Scrivi due verità e una menzogna in merito alla funzione $f$ il cui grafico è rappresentato in figura.
-	![funzioni-due_verità]({{ site.baseurl }}/images/funzioni-9-due_verità.svg)
+	![funzioni-due_verità](../../images/funzioni-9-due_verità.svg)
 11. Scrivi due verità e una menzogna in merito alla funzione $f(x) = \dfrac{\sqrt{x^2 + 1}}{x^2 + 1}$.
 12. Per ciascuna delle seguenti funzioni, descrivi un fenomeno da esse modellizzato:
 	1. $f(t) = 20 \cdot 3^t$;
 	2. $f(x) = -2x + 3$;
 	3. $f(t) = 0{,}5 \cdot \sin(20t)$.
 13. Descrivi un fenomeno che possa essere modellizzato dalla funzione il cui grafico è rappresentato in figura.
-    ![funzioni-10-fenomeno]({{ site.baseurl }}/images/funzioni-10-fenomeno.svg)
+    ![funzioni-10-fenomeno](../../images/funzioni-10-fenomeno.svg)
 14. **[F]** Una funzione strettamente crescente sul suo dominio è invertibile?
 15. **[F+]** Una funzione invertibile è strettamente crescente sul suo dominio?
 16. **[D]** Si può costruire una biiezione tra $[0, 1]$ e $(0, 1)$? Ovvero, $[0, 1]$ e $(0, 1)$ hanno la stessa cardinalità? Se sì, come? Se no, perché?
 17. **[PD-]** Costruisce una biiezione tra $[1, 2]$ e $[1, 100]$.
 18. **[E]** Di seguito sono riportati i grafici cartesiani di alcune relazioni. Identifica quali di queste relazioni sono funzioni e, tra le funzioni, stabilisci quali sono iniettive.
 	1. **Grafico 1**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_1.svg)
+	   ![](../../images/funzioni-11-grafico_1.svg)
 	2.  **Grafico 2**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_2.svg)
+	   ![](../../images/funzioni-11-grafico_2.svg)
 	3.  **Grafico 3**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_3.svg)
+	   ![](../../images/funzioni-11-grafico_3.svg)
 	4.  **Grafico 4**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_4.svg)
+	   ![](../../images/funzioni-11-grafico_4.svg)
 	5.  **Grafico 5**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_5.svg)
+	   ![](../../images/funzioni-11-grafico_5.svg)
 	6.  **Grafico 6**
-	   ![]({{ site.baseurl }}/images/funzioni-11-grafico_6.svg)
+	   ![](../../images/funzioni-11-grafico_6.svg)
 
 ## Quiz
 
@@ -100,7 +100,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** 1
 	- **(c)** 2
 	- **(d)** Infinite
-	![funzioni-4-equazione_coseno]({{ site.baseurl }}/images/funzioni-4-equazione_coseno.svg)
+	![funzioni-4-equazione_coseno](../../images/funzioni-4-equazione_coseno.svg)
 5. **[F-]** Una funzione $f(x)$ è definita in $\mathbb{R}$ e ha come insieme immagine l'intervallo $[0; 1]$. Quale delle seguenti equazioni non ha soluzione?
 	- **(a)** $f(x) = \dfrac 1 2$
 	- **(b)** $f(x) = 2$
@@ -131,7 +131,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** $f(-10) + g(10) = 0$.
 	- **(c)** $f(0) + g(0) > 0$.
 	- **(d)** $f(x) \cdot g(x) \leq 0$ se $-15 < x < 15$.
-	![funzioni-6-due_funzioni]({{ site.baseurl }}/images/funzioni-6-due_funzioni.svg)
+	![funzioni-6-due_funzioni](../../images/funzioni-6-due_funzioni.svg)
 
 ---
 
@@ -145,13 +145,13 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 **Tanti fagiani [F]** In una riserva naturale è stata programmata un’azione di ripopolamento di fagiani. Il numero di fagiani nel tempo $t$ cresce esponenzialmente secondo una legge del tipo $f(t)=a \cdot b^t$, dove $f$ è il numero di mesi trascorsi e $t$ è il numero di fagiani. L’andamento della funzione è mostrato in figura.
 	1. Quanti fagiani erano presenti inizialmente?
 	2. Dopo quanti mesi i fagiani hanno raggiunto le 90 unità?
-![funzioni-2-fagiani]({{ site.baseurl }}/images/funzioni-2-fagiani.svg)
+![funzioni-2-fagiani](../../images/funzioni-2-fagiani.svg)
 
 **Il serbatoio [E]** Per svuotare un serbatoio d'acqua inizialmente pieno si apre un rubinetto. Il grafico mostra l'andamento della quantità d'acqua nel serbatoio in funzione del tempo dal momento dell'apertura del rubinetto.
 	1. Quanti litri d'acqua ci sono nel serbatoio dopo 2 minuit?
 	2. Quanti minuti sono necessari per svuotare metà del serbatoio?
 	3. Quanti minuti sono necessari per svuotare completamente il serbatoio?
-   ![funzioni-3-serbatoio]({{ site.baseurl }}/images/funzioni-3-serbatoio.svg)
+   ![funzioni-3-serbatoio](../../images/funzioni-3-serbatoio.svg)
 **Bel tempo in vista [EE]** È lunedì. Le previsioni meteo per i prossimi martedì e mercoledì recitano: "giornate prevalentemente soleggiate, senza sbalzi di temperatura; la massima (22°C) si registrerà mercoledì alle 12:00, mentre la minima (8°C) nella notte tra martedì e mercoledì, alle 4:00". Traccia un grafico che della temperatura che rispetti la descrizione.
 
 **Coltura batterica [F]** Durante un test di laboratorio, 5 ng di batteri sono posti in una piastra con abbondanti nutrimenti. Si osserva che la popolazione di batteri raddoppia ogni 30 minuti circa. Rappresenta con una funzione la crescita della popolazione di batteri e realizza un grafico cartesiano.

@@ -207,7 +207,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** Un grafico piatto (nessun picco).
 	- **(c)** Un grafico con un singolo picco in corrispondenza della frequenza di $440 \, \text{Hz}$.
 	- **(d)** Un grafico con due picchi, a $440 \, \text{Hz}$ e $880 \, \text{Hz}$.
-5. **[E]** Il La4 ha una frequenza di $440 \, \text{Hz}$. Sapendo che l'intervallo di un'ottava corrisponde a un raddoppio della frequenza, il La5 (un'ottava sopra) ha una frequenza di:
+5. **[T]** Il La4 ha una frequenza di $440 \, \text{Hz}$. Il La5 (un'ottava sopra) ha una frequenza di:
 	- **(a)** $880 \, \text{Hz}$
 	- **(b)** $220 \, \text{Hz}$
 	- **(c)** $441 \, \text{Hz}$
