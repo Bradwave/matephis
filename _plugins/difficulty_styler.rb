@@ -4,7 +4,7 @@ Jekyll::Hooks.register [:notes, :posts], :post_render do |item|
     path = File.join(item.site.source, '_notes', 'Public', 'scala-difficoltà.md')
     data = {}
     if File.exist?(path)
-      content = File.read(path)
+      content = File.read(path, encoding: 'utf-8')
       # Match table rows: | **[CODE]** | Description | Example |
       # Updated regex to handle the [brackets] inside the **bold** markers
       content.scan(/\|\s*\*\*\[([A-Z\/]+)\]\*\*\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/) do |code, desc, ex|

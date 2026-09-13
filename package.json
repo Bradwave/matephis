@@ -1,0 +1,17 @@
+{
+  "name": "matephis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Matephis - Matematica e Fisica con grafici interattivi",
+  "scripts": {
+    "build": "esbuild assets/js/matephis-plot-src/index.js --bundle --minify --sourcemap --outfile=assets/js/matephis-plot.js",
+    "dev:js": "esbuild assets/js/matephis-plot-src/index.js --bundle --sourcemap --outfile=assets/js/matephis-plot.js --watch",
+    "dev": "concurrently -k -n \"JS,JEKYLL\" -c \"cyan,magenta\" \"npm run dev:js\" \"bundle exec jekyll serve\"",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.21.5",
+    "vitest": "^1.6.0"
+  }
+}

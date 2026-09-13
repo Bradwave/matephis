@@ -56,7 +56,13 @@ kramdown:
 
 # Menu Items
 menu:
-  - title: "Appunti"
+  - title: "Matematica"
+    url: "/matematica"
+  - title: "Fisica"
+    url: "/fisica"
+  - title: "Interdisciplinare"
+    url: "/interdisciplinare"
+  - title: "Tutti gli Appunti"
     url: "/notes"
   - title: "Blog"
     url: "/blog"
@@ -110,7 +116,12 @@ mathjax: true
 exclude:
   - Gemfile
   - Gemfile.lock
+  - package.json
+  - package-lock.json
   - node_modules
+  - tests
+  - assets/js/matephis-plot-src
+  - vitest.config.js
   - vendor/bundle/
   - vendor/cache/
   - vendor/gems/

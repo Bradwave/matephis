@@ -348,3 +348,72 @@
   pointer-events: none;
   color: #1f1f1f;
 }
+
+/* ==========================================================================
+   Dark Mode Support for Matephis Plot
+   ========================================================================== */
+[data-theme="dark"] .matephis-plot-container {
+  background: var(--plot-bg, var(--bg));
+  border-color: var(--plot-border, var(--border));
+}
+
+[data-theme="dark"] .matephis-plot-bg {
+  fill: var(--plot-bg, var(--bg)) !important;
+}
+
+[data-theme="dark"] .matephis-plot-axes line,
+[data-theme="dark"] .matephis-plot-axes path,
+[data-theme="dark"] .matephis-plot-axis {
+  stroke: var(--plot-axis, #e2e8f0) !important;
+}
+
+[data-theme="dark"] .matephis-plot-axes polygon,
+[data-theme="dark"] .matephis-plot-arrow {
+  fill: var(--plot-axis, #e2e8f0) !important;
+  stroke: var(--plot-axis, #e2e8f0) !important;
+}
+
+[data-theme="dark"] .matephis-plot-grid line {
+  stroke: var(--plot-grid, #333333) !important;
+}
+
+[data-theme="dark"] .matephis-plot-text,
+[data-theme="dark"] .matephis-plot-numbers text {
+  fill: var(--plot-text, #c9cbcf) !important;
+}
+
+[data-theme="dark"] .matephis-plot-text {
+  stroke: var(--plot-text-halo, var(--bg)) !important;
+}
+
+[data-theme="dark"] .matephis-plot-controls {
+  background: var(--plot-bg, var(--bg));
+  border-top-color: var(--border, #282828);
+}
+
+[data-theme="dark"] .matephis-plot-btn {
+  background: #252525;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+[data-theme="dark"] .matephis-plot-btn:hover {
+  background: #383838;
+}
+
+[data-theme="dark"] .matephis-slider-row input[type=range] {
+  background: #333333;
+}
+
+[data-theme="dark"] .matephis-slider-min,
+[data-theme="dark"] .matephis-slider-max {
+  color: #777777;
+}
+
+[data-theme="dark"] .matephis-derivative-title {
+  color: #aaaaaa;
+}
+
+[data-theme="dark"] .matephis-derivative-plot {
+  border-top-color: #333333;
+}

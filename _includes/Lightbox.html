@@ -17,13 +17,18 @@
         width: 100%;
         height: 100%;
         overflow: hidden; /* Prevent scrolling behind */
-        background-color: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(5px);
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         align-items: center;
         justify-content: center;
         flex-direction: column; /* Stack image and caption vertically */
         user-select: none;
         overflow: hidden;
+    }
+
+    [data-theme="dark"] .lightbox {
+        background-color: rgba(10, 10, 12, 0.88);
     }
 
     .lightbox-content {
@@ -38,7 +43,12 @@
         border-radius: 0;
         box-shadow: none;
         border: 1px solid var(--border, #e1e1e1);
-        background: var(--bg, #fff); /* Ensure background for SVG */
+        background: var(--bg, #fff); /* Ensure background matches theme */
+    }
+
+    [data-theme="dark"] .lightbox-content {
+        background: var(--bg);
+        border-color: var(--border);
     }
     
     /* Ensure SVG fills container */
@@ -54,9 +64,13 @@
         font-size: 30px;
         font-weight: 300;
         cursor: pointer;
-        transition: color 0s;
+        transition: color 0.15s ease;
         z-index: 10000;
         line-height: 1;
+    }
+
+    [data-theme="dark"] .lightbox-close {
+        color: var(--title, #ebebeb);
     }
 
     .lightbox-close:hover {
@@ -76,6 +90,10 @@
         font-family: var(--font-title);
         font-size: 0.9rem;
         letter-spacing: 0.02em;
+    }
+
+    [data-theme="dark"] #lightbox-caption {
+        color: var(--secondary-text, #8e95a0);
     }
     
     /* Make content images clickable effectively */
@@ -126,12 +144,20 @@
 
         closeBtn.onclick = closeLightbox;
 
-        // Close on clicking outside the image
+        // Close ONLY when clicking on backdrop or close button, never when clicking inside content
         lightbox.onclick = (e) => {
-            if (e.target !== lightboxImg) {
+            if (e.target === lightbox || e.target === closeBtn) {
                 closeLightbox();
             }
         };
+
+        // Prevent click bubbling from inside the SVG or Image containers
+        if (lightboxSvg) {
+            lightboxSvg.onclick = (e) => e.stopPropagation();
+        }
+        if (lightboxImg) {
+            lightboxImg.onclick = (e) => e.stopPropagation();
+        }
 
         // Close on Escape key
         document.addEventListener('keydown', (e) => {
