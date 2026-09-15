@@ -121,16 +121,16 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	31. $\frac{1}{2}x^2 - 3x + 2 \leq 0$ [sol: $3 - \sqrt{5} \leq x \leq 3 + \sqrt{5}$]
 7. Determina i valori di $x$ per cui $A(x) / B(x) < 0$.
 [sol: $-3 < x < -2 \lor -1 < x < 2 \lor x > 3$]
-	```matephis
-	{
-	  "xlim": [-3.9,3.9],
-	  "legend": true,
-	  "data": [
-	    { "fn": "-.25*(x+2)*(x+1)*(x-3)", "color": "red1", "label": "A(x)" },
-	    { "fn": "(x+3)*(x-2)", "color": "black1", "label": "B(x)" }
-     ]
-	}
-	```
+```matephis
+{
+  "xlim": [-3.9,3.9],
+  "legend": true,
+  "data": [
+	{ "fn": "-.25*(x+2)*(x+1)*(x-3)", "color": "red1", "label": "A(x)" },
+	{ "fn": "(x+3)*(x-2)", "color": "black1", "label": "B(x)" }
+ ]
+}
+```
 8. **[EE]** Risolvi le seguenti disequazioni di terzo grado, già fattorizzate.
 	1. $(x + 3)(x + 1)(x - 1) < 0$ [sol: $x < -3 \lor -1 < x < 1$]
 	2. $(x - 1)^2(x + 5) \geq 0$ [sol: $x \geq -5$]
