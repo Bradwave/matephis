@@ -36,6 +36,17 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
   ]
 }
 ```
+5. **[EE]** Risolvi le seguenti equazioni e disequazioni di grado superiore al secondo.
+	1. $-4x^4 \geq 0$
+	2. $16x^4 - 625 < 0$
+	3. $27x^3 = -1$
+	4. $-x^5 - 10^5 \leq 0$
+	5. $-2x^2 < x^6 + 2$
+	6. $x^5 - 5x^3 + 4x = 0$
+	7. $2x^3 = 4x$
+6. **[F-]** Scrivi un'equazione di sesto grado avente per soluzioni $-1$, $+1$, $+2$.
+7. **[F]** Completa $-3x^4 + \dotsc < \dotsc$ in modo da ottenere una disequazione di quarto grado senza soluzioni reali.
+8. **[PD-]** Esistono disequazioni di terzo grado binomie aventi per soluzione qualunque numero reale? Motiva la risposta.
 
 ## Quiz
 
@@ -65,3 +76,19 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- **(b)** 1
 	- **(c)** 2
 	- **(d)** Non è possibile determinarlo
+4. **[F]** Quale delle seguenti è la corretta definizione della funzione il cui grafico è rappresentato in figura?
+	- **(a)** $f(x) = \frac{1}{10}(x-2)(x-3)$
+	- **(b)** $f(x) = \frac{1}{10}(x+2)(x-3)(x-4)$
+	- **(c)** $f(x) = \frac{1}{10}(x-2)(x+3)(x+4)$
+	- **(d)** $f(x) = \frac{1}{10}x(x-2)(x+3)(x+4)$
+```matephis
+{
+  "xlim": [-4.9,4.9],
+  "ylim": [-2.9,2.9],
+  "aspectRatio": "2:1",
+  "legend": true,
+  "data": [
+    { "fn": "0.1*(x-2)*(x+3)*(x+4)", "label": "f(x)" }
+  ]
+}
+```
