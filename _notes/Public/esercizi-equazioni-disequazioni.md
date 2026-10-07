@@ -243,6 +243,24 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 ```
 33. **[AD]** Risolvi la disequazione fratta con valori assoluti:
 $$\dfrac{\lvert x^2 - 1 \rvert - 3}{\lvert x \rvert - 2} \leq 0$$
+34. **[AD+]** Per quali valori di $k$ la disequazione $-x^2 + k < \sqrt{x^3-x}$ non ammette soluzioni?
+35. **[D-]** Per quale valore di $k$ la disequazione $\lvert x - 2 \lvert \leq -\sqrt{x-k}$ ammette soluzione $x = 2$?
+36. **[AD]** Per quali valori di $k$ la disequazione $\sqrt{-x^2 + k^2} \geq 0$ ha per soluzione l'intervallo $[-4, 4]$?
+37. **[PD+]** In figura è rappresentato il grafico della funzione $f(x)$. Per quali valori di $k$ l'equazione $\sqrt{f(x)} = k$ ammette infinite soluzioni?
+```matephis
+{
+  "xlim": [-2.9, 2.9],
+  "ylim": [-3.9, 3.9],
+  "aspectRatio": "1:1",
+  "legend": true,
+  "data": [
+    { "fn": "0", "domain": [-3,-1], "color": "red1", "label": "f(x)" },
+    { "fn": "x+1", "domain": [-1,0], "color": "red1" },
+    { "fn": "1", "domain": [0,1], "color": "red1"},
+    { "fn": "x", "domain": [1,3], "color": "red1"}
+  ]
+}
+```
 
 ## Quesiti
 
