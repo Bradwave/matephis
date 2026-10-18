@@ -261,6 +261,40 @@ $$\dfrac{\lvert x^2 - 1 \rvert - 3}{\lvert x \rvert - 2} \leq 0$$
   ]
 }
 ```
+38. **[AD]** Risolvi le seguenti equazioni e disequazioni con valori assoluti e moduli annidati.
+	1. $\big|\lvert x^2 - 4 \rvert - 3\big| \leq 2$
+	2. $\lvert x + 2 \rvert - \lvert 2x - 1 \rvert = x - 3$
+	3. $\dfrac{\lvert x^2 - 1 \rvert - x}{\lvert x \rvert - 2} > 1$
+	4. $\lvert x^3 - 4x \rvert \geq x^3 - 4x$
+39. **[D]** Risolvi la seguente equazione irrazionale riconoscendo i quadrati perfetti all'interno dei radicandi:
+$$\sqrt{x + 3 - 4\sqrt{x - 1}} + \sqrt{x + 8 - 6\sqrt{x - 1}} = 1$$
+40. **[AD+]** Risolvi la seguente disequazione mista fratta, prestando particolare attenzione all'intersezione tra le condizioni di esistenza e la semplificazione dei fattori:
+$$\dfrac{\sqrt{16 - x^2} \cdot (\lvert x \rvert - 2)}{x^3 - 3x^2 - 4x + 12} \leq 0$$
+41. **[AD]** Determina i valori di $x$ per cui $A(x) \leq B(x)$ risolvendo il problema sia per via grafica che algebrica.
+```matephis
+{
+  "xlim": [-3.9, 4.9],
+  "ylim": [-1.9, 7.9],
+  "aspectRatio": "1.5:1",
+  "legend": true,
+  "data": [
+    { "fn": "abs(x^2 - 2*x - 3)", "color": "red1", "label": "A(x)" },
+    { "fn": "-x + 3", "color": "black1", "label": "B(x)" }
+  ]
+}
+```
+42. **[D]** Determina l'espressione analitica di una funzione razionale fratta $R(x) = \dfrac{N(x)}{D(x)}$ (con $N(x)$ e $D(x)$ polinomi a coefficienti interi di grado minimo possibile) tale che la disequazione $R(x) \geq 0$ abbia come insieme delle soluzioni:
+$$S = (-\infty, -3) \cup [1, 2) \cup (2, 4]$$
+43. **[D+]** Considera l'equazione parametrica con termine irrazionale:
+$$\sqrt{9 - x^2} = k(x + 3)$$
+Interpretando il primo membro come una semicirconferenza e il secondo come un fascio proprio di rette, determina graficamente il numero di soluzioni reali al variare del parametro $k \in \mathbb{R}$.
+44. **[PD]** Per quali valori del parametro reale $k$ la disequazione irrazionale:
+$$\sqrt{k - x^2} > x$$
+è verificata per ogni $x$ appartenente a un intervallo della forma $[-r, s)$ con $r, s > 0$? Determina $r$ ed $s$ in funzione di $k$.
+45. **[AD]** Risolvi le seguenti equazioni e disequazioni di grado superiore al secondo:
+	1. $x^6 - 7x^3 - 8 \geq 0$
+	2. $2x^4 - 3x^3 - x^2 - 3x + 2 = 0$
+	3. $(x^2 - 2x)^2 - 2(x - 1)^2 + 1 \leq 0$
 
 ## Quesiti
 
@@ -269,6 +303,11 @@ $$\dfrac{\lvert x^2 - 1 \rvert - 3}{\lvert x \rvert - 2} \leq 0$$
 3. **[F]** Spiega perché l'equazione con valore assoluto $\lvert A(x) \rvert = B(x)$ è logicamente equivalente al sistema $\begin{cases} B(x) \geq 0 \\ A(x) = B(x) \lor A(x) = -B(x) \end{cases}$, illustrando i vantaggi operativi di questo schema rispetto allo studio del segno di $A(x)$.
 4. **[PD]** È vero che per qualsiasi polinomio $P(x)$, la disequazione $[P(x)]^2 > 0$ ha come soluzione l'insieme $\mathbb{R} \setminus \{x \in \mathbb{R} \mid P(x) = 0\}$? Cosa si può affermare invece per la disequazione $\sqrt{P(x)} \geq 0$? Spiega le differenze teoriche tra i due insiemi di soluzioni.
 5. **[D-]** Considera un polinomio $P(x)$ a coefficienti reali di grado $n \geq 1$. Supponi che $P(x)$ sia una funzione strettamente crescente su tutto $\mathbb{R}$. Dimostra che l'equazione $P(x) = 0$ ammette al più una soluzione reale. Spiega inoltre perché se $n$ è dispari deve esistere esattamente uno zero reale, mentre non può esistere alcun polinomio di grado $n$ pari strettamente crescente su tutto $\mathbb{R}$.
+6. **[AD]** Spiega dal punto di vista logico perché, per risolvere l'equazione $\sqrt{A(x)} = B(x)$, è sufficiente impostare il sistema:
+$$\begin{cases} B(x) \geq 0 \\ A(x) = [B(x)]^2 \end{cases}$$
+senza dover richiedere esplicitamente la condizione di realtà del radicando $A(x) \geq 0$, mentre per la disequazione $\sqrt{A(x)} < B(x)$ la condizione $A(x) \geq 0$ è indispensabile.
+7. **[D]** Sia $P(x) = x^5 + 4x^3 + 2x - k$, con $k \in \mathbb{R}$. Dimostra che l'equazione $P(x) = 0$ ammette sempre una e una sola soluzione reale per qualsiasi valore di $k$.
+8. **[PD-]** È data la disequazione fratta $\dfrac{P(x)}{Q(x)} \leq 0$. Supponiamo che il grado di $P(x)$ sia pari e quello di $Q(x)$ sia dispari, entrambi con coefficiente direttivo positivo. È possibile che l'insieme delle soluzioni sia un intervallo limitato del tipo $[a, b]$? Giustifica la risposta analizzando il comportamento dei polinomi per $x \to \pm\infty$.
 
 ## Quiz
 
@@ -542,6 +581,37 @@ $$\dfrac{\lvert x^2 - 1 \rvert - 3}{\lvert x \rvert - 2} \leq 0$$
   ]
 }
 ```
+26. **[AD]** Quale tra i seguenti insiemi coincide con l'insieme delle soluzioni della disequazione $\sqrt{x^2 - 4} \leq \lvert x \rvert - 1$?
+	- **(a)** $x \leq -\frac{5}{2} \lor x \geq \frac{5}{2}$
+	- **(b)** $x \leq -2 \lor x \geq 2$
+	- **(c)** $-\frac{5}{2} \leq x \leq -2 \lor 2 \leq x \leq \frac{5}{2}$
+	- **(d)** Non ammette alcuna soluzione reale
+27. **[D]** In figura è rappresentato il grafico della funzione $f(x)$. Per quanti valori distinti di $k \in \mathbb{R}$ l'equazione $\lvert f(x) \rvert = k$ ammette esattamente 3 soluzioni reali?
+	- **(a)** Nessuno
+	- **(b)** Uno
+	- **(c)** Due
+	- **(d)** Infiniti
+```matephis
+{
+  "xlim": [-2.9, 2.9],
+  "ylim": [-3.9, 3.9],
+  "aspectRatio": "1:1",
+  "legend": true,
+  "data": [
+    { "fn": "x^3 - 3*x", "color": "red1", "label": "f(x)" }
+  ]
+}
+```
+28. **[AD]** La disequazione $\dfrac{\sqrt{x - 3}}{\lvert x - 5 \rvert \cdot (x - 4)} \geq 0$ è soddisfatta per:
+	- **(a)** $x \geq 3 \setminus \{4, 5\}$
+	- **(b)** $x > 4 \setminus \{5\}$
+	- **(c)** $x = 3 \lor (x > 4 \land x \neq 5)$
+	- **(d)** $x > 4$
+29. **[PD]** Per quali valori del parametro $a \in \mathbb{R}$ la disequazione $(a - 1)x^2 - 2ax + a + 3 > 0$ è verificata per ogni $x \in \mathbb{R}$?
+	- **(a)** $a > 1$
+	- **(b)** $a > \frac{3}{2}$
+	- **(c)** $a < -\frac{3}{2}$
+	- **(d)** Nessun valore di $a$
 
 ## Problemi
 
@@ -550,3 +620,16 @@ $$\dfrac{\lvert x^2 - 1 \rvert - 3}{\lvert x \rvert - 2} \leq 0$$
 > "Scompongo il numeratore in $(x - 2)(x + 2)$. Semplifico il fattore $(x - 2)$ sopra e sotto. Mi rimane $x + 2 > 3$, quindi la soluzione è $x > 1$."
 
 Questo procedimento è sbagliato. Spiega a parole perché il ragionamento dello studente è scorretto e fornisci la soluzione esatta.
+
+2. **[D] Caccia all'errore** Uno studente affronta la seguente disequazione irrazionale:
+$$\sqrt{2x + 6} > x - 1$$
+Il suo svolgimento è il seguente:
+
+> "Entrambi i membri possono essere elevati al quadrato:
+> $$2x + 6 > (x - 1)^2$$
+> $$2x + 6 > x^2 - 2x + 1 \implies x^2 - 4x - 5 < 0$$
+> Le radici dell'equazione associata sono $x = -1$ e $x = 5$, quindi la soluzione è $-1 < x < 5$.
+> Inoltre il radicando deve essere positivo o nullo: $2x + 6 \geq 0 \implies x \geq -3$.
+> Intersecando $x \geq -3$ con $-1 < x < 5$ ottengo come risultato finale: $-1 < x < 5$."
+
+Individua i due errori concettuali commessi dallo studente, spiega perché l'intervallo trovato è incompleto e determina l'insieme corretto delle soluzioni.
