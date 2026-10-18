@@ -6,6 +6,8 @@ _notes/.obsidian
 _notes/Public/.obsidian
 _notes/images
 copilot/
+.claude/
+assets/js/matephis-plot-src/REVIEW.md
 
 # Obsidian settings
 .obsidian/
@@ -15,6 +17,7 @@ copilot/
 _site/
 .sass-cache/
 .jekyll-cache/
+.jekyll-metadata
 
 # Node modules
 node_modules/

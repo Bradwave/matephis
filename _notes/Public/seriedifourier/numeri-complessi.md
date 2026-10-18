@@ -62,7 +62,7 @@ Il numero complesso $z = a + ib$ si può rappresentare su un piano come un punto
       "points": [[2, 1, "z = P.x + iP.y"]],
       "freeCoordinates": true,
       "name": "P",
-      "fillColor": "sumemr1",
+      "fillColor": "summer1",
       "radius": 3
     },
     { "vector": [[0, 0], ["P.x", "P.y"]], "color": "summer1", "width": 2 },
@@ -107,14 +107,14 @@ Geometricamente, corrisponde alla **somma vettoriale**.
       "points": [[2, 1, "z = P.x + iP.y"]],
       "freeCoordinates": true,
       "name": "P",
-      "fillColor": "sumemr1",
+      "fillColor": "summer1",
       "radius": 3
     },
     {
       "points": [[-3, 0.5, "w = Q.x + iQ.y"]],
       "freeCoordinates": true,
       "name": "Q",
-      "fillColor": "sumemr2",
+      "fillColor": "summer2",
       "radius": 3
     },
     {
@@ -130,7 +130,7 @@ Geometricamente, corrisponde alla **somma vettoriale**.
     { "vector": [["P.x", 0], ["P.x", "P.y"]], "color": "black1", "width": 1, "dash": [4,4], "arrow": false },
     { "vector": [[0,0], ["Q.x", "Q.y"]], "color": "summer2", "width": 2 },
     { "vector": [["P.x", "P.y"], ["P.x + Q.x", "P.y"]], "color": "summer4", "width": 2, "opacity": 0.7 },
-    { "vector": [["P.x", "P.y"], ["P.x", "P.y + Q.y"]], "color": "summer8", "width": 2, "opacity": 0.7 },
+    { "vector": [["P.x", "P.y"], ["P.x", "P.y + Q.y"]], "color": "summer7", "width": 2, "opacity": 0.7 },
     { "vector": [["P.x + Q.x", "P.y"], ["P.x + Q.x", "P.y + Q.y"]], "color": "black1", "width": 1, "dash": [4,4], "arrow": false },
     { "vector": [["P.x", "P.y + Q.y"], ["P.x + Q.x", "P.y + Q.y"]], "color": "black1", "width": 1, "dash": [4,4], "arrow": false },
     { "vector": [[0, 0], ["P.x + Q.x", "P.y + Q.y"]], "color": "summer6", "width": 2 }
@@ -163,7 +163,7 @@ $$ z = \underbrace{(r \cos\theta, r \sin\theta)}_\text{forma cartesiana} = \unde
       "points": [[2, 1, "z = P.x + iP.y"]],
       "freeCoordinates": true,
       "name": "P",
-      "fillColor": "sumemr1",
+      "fillColor": "summer1",
       "radius": 3
     },
     { "vector": [[0, 0], ["P.x", "P.y"]], "color": "summer1", "width": 2, "label": "r = P.r, θ = P.theta" }

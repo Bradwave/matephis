@@ -1105,3 +1105,232 @@ Impostando `xScale: "log"` o `yScale: "log"` la trasformazione delle coordinate 
   ]
 }
 ```
+
+
+## 12. Nuove funzionalità
+
+### Vettori: forme abbreviate, componenti e trascinamento
+`"vector"` accetta `[[x0, y0], [x1, y1]]`, i nomi di due punti (`["A", "B"]`) oppure le sole componenti `[vx, vy]` (applicate nell'origine o in `"from"`). `"components": true` disegna le proiezioni, `"arrow"` può valere `true`, `false`, `"start"`, `"end"` o `"both"`, `"draggable": true` (o `"tail"`, `"both"`) rende trascinabile la punta e `"snap"` aggancia alla griglia. Con `"name"` il vettore espone `v.x`, `v.y`, `v.r` (modulo) e `v.theta`.
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-1, 6],
+  "ylim": [-1, 6],
+  "align": "center",
+  "data": [
+    {"points": [[1, 1]], "freeCoordinates": true, "name": "A", "label": "A", "radius": 6, "snap": 0.5},
+    {"points": [[4, 2]], "freeCoordinates": true, "name": "B", "label": "B", "radius": 6, "snap": 0.5},
+    {"vector": ["A", "B"], "name": "u", "color": "summer2", "width": 3, "components": true, "label": "|u| = u.r"},
+    {"vector": [1, 3], "from": [0.5, 0.5], "color": "summer4", "draggable": true, "snap": 0.5, "name": "w", "label": "w = (w.x, w.y)"},
+    {"vector": [[3, 5], [5, 4]], "arrow": "both", "color": "black2", "width": 2, "label": "both"}
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-1, 6],
+  "ylim": [-1, 6],
+  "align": "center",
+  "data": [
+    {"points": [[1, 1]], "freeCoordinates": true, "name": "A", "label": "A", "radius": 6, "snap": 0.5},
+    {"points": [[4, 2]], "freeCoordinates": true, "name": "B", "label": "B", "radius": 6, "snap": 0.5},
+    {"vector": ["A", "B"], "name": "u", "color": "summer2", "width": 3, "components": true, "label": "|u| = u.r"},
+    {"vector": [1, 3], "from": [0.5, 0.5], "color": "summer4", "draggable": true, "snap": 0.5, "name": "w", "label": "w = (w.x, w.y)"},
+    {"vector": [[3, 5], [5, 4]], "arrow": "both", "color": "black2", "width": 2, "label": "both"}
+  ]
+}
+```
+
+### Angoli tra punti
+I vertici di `"angle"` possono essere nomi di punti. `"showValue": true` (o `"rad"`) scrive l'ampiezza; un angolo retto viene disegnato col quadratino. Con `"name"` sono disponibili `nome.deg` e `nome.rad` nelle espressioni e nelle etichette.
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-1, 5],
+  "ylim": [-1, 5],
+  "align": "center",
+  "data": [
+    {"points": [[4, 1]], "freeCoordinates": true, "name": "P", "label": "P", "radius": 6},
+    {"points": [[0, 0]], "name": "O", "radius": 3, "color": "black1"},
+    {"points": [[4, 0]], "name": "X", "radius": 0},
+    {"vector": ["O", "X"], "color": "black3", "width": 1.5},
+    {"vector": ["O", "P"], "color": "summer2", "width": 2.5},
+    {"angle": ["X", "O", "P"], "radius": 35, "fillColor": "summer5", "fillOpacity": 0.3, "showValue": true, "name": "alpha"},
+    {"angle": [[0, 4], [0, 0], [4, 0]], "radius": 18, "color": "black3"}
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-1, 5],
+  "ylim": [-1, 5],
+  "align": "center",
+  "data": [
+    {"points": [[4, 1]], "freeCoordinates": true, "name": "P", "label": "P", "radius": 6},
+    {"points": [[0, 0]], "name": "O", "radius": 3, "color": "black1"},
+    {"points": [[4, 0]], "name": "X", "radius": 0},
+    {"vector": ["O", "X"], "color": "black3", "width": 1.5},
+    {"vector": ["O", "P"], "color": "summer2", "width": 2.5},
+    {"angle": ["X", "O", "P"], "radius": 35, "fillColor": "summer5", "fillOpacity": 0.3, "showValue": true, "name": "alpha"},
+    {"angle": [[0, 4], [0, 0], [4, 0]], "radius": 18, "color": "black3"}
+  ]
+}
+```
+
+### Curve parametriche e polari
+`"parametric": ["x(t)", "y(t)"]` traccia una curva parametrica (dominio di `t` in `"domain"`, default `[0, 2π]`). `"r": "..."` traccia una curva polare $r(\theta)$ (la variabile si può scrivere `t`, `x`, `θ` o `theta`); nei grafici con `"polar": true` anche `"fn"` è interpretata come $r(\theta)$.
+
+```json
+{
+  "aspectRatio": 1,
+  "xlim": [-3.5, 3.5],
+  "ylim": [-3.5, 3.5],
+  "equalAspect": true,
+  "legend": true,
+  "align": "center",
+  "params": {"k": {"min": 1, "max": 7, "step": 1, "val": 3}},
+  "data": [
+    {"parametric": ["2 cos(t) + cos(k t)", "2 sin(t) - sin(k t)"], "label": "epicicloide", "color": "summer2"},
+    {"r": "1 + cos(θ)", "label": "cardioide", "color": "summer6", "dash": "6,4"}
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": 1,
+  "xlim": [-3.5, 3.5],
+  "ylim": [-3.5, 3.5],
+  "equalAspect": true,
+  "legend": true,
+  "align": "center",
+  "params": {"k": {"min": 1, "max": 7, "step": 1, "val": 3}},
+  "data": [
+    {"parametric": ["2 cos(t) + cos(k t)", "2 sin(t) - sin(k t)"], "label": "epicicloide", "color": "summer2"},
+    {"r": "1 + cos(θ)", "label": "cardioide", "color": "summer6", "dash": "6,4"}
+  ]
+}
+```
+
+### Funzioni a tratti, valore assoluto e simboli
+Le espressioni supportano l'operatore ternario e i confronti (`x < 0 ? -x : x^2`), il valore assoluto con `|x|`, `log(x, b)` in base qualunque, `!`, `mod`, `sgn` e la moltiplicazione implicita (`2x`, `3sin(x)`, `(x+1)(x-1)`, `ax` con parametro `a`). `-x^2` vale $-(x^2)$.
+
+```json
+{
+  "aspectRatio": "2:1",
+  "xlim": [-4, 4],
+  "ylim": [-2, 5],
+  "legend": true,
+  "data": [
+    {"fn": "x < 0 ? -x/2 : x^2", "label": "a tratti", "color": "summer2"},
+    {"fn": "|x^2 - 4| / 2", "label": "|x² − 4| / 2", "color": "summer6", "dash": "5,4"},
+    {"fn": "floor(x)", "label": "floor(x)", "color": "black3", "width": 2}
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [-4, 4],
+  "ylim": [-2, 5],
+  "legend": true,
+  "data": [
+    {"fn": "x < 0 ? -x/2 : x^2", "label": "a tratti", "color": "summer2"},
+    {"fn": "|x^2 - 4| / 2", "label": "|x² − 4| / 2", "color": "summer6", "dash": "5,4"},
+    {"fn": "floor(x)", "label": "floor(x)", "color": "black3", "width": 2}
+  ]
+}
+```
+
+### Più grafici affiancati (domande a scelta multipla)
+Un blocco con `"plots": [...]` crea una griglia di grafici piccoli. `"layout"`: `"row"` (tutti su una riga) o `"grid"` con `"columns"`; `"mobileColumns"` imposta le colonne su schermi stretti. `"labels"`: `"A"`, `"a"`, `"1"`, `"i"`, un array o `false`. Le opzioni in `"shared"` valgono per tutti i grafici; ogni grafico si apre a schermo intero con un clic.
+
+```json
+{
+  "layout": "grid",
+  "columns": 4,
+  "mobileColumns": 2,
+  "labels": "A",
+  "shared": {"xlim": [-3.9, 3.9], "ylim": [-3.9, 3.9], "aspectRatio": 1, "showXNumbers": false, "showYNumbers": false},
+  "plots": [
+    { "data": [
+      {"fn": "x^2 - 2"}
+    ] },
+    { "data": [
+      {"fn": "-(x^2) + 2"}
+    ] },
+    { "data": [
+      {"fn": "(x - 1)^2"}
+    ] },
+    { "data": [
+      {"fn": "2^x - 2"}
+    ] }
+  ]
+}
+```
+
+```matephis
+{
+  "layout": "grid",
+  "columns": 4,
+  "mobileColumns": 2,
+  "labels": "A",
+  "shared": {"xlim": [-3.9, 3.9], "ylim": [-3.9, 3.9], "aspectRatio": 1, "showXNumbers": false, "showYNumbers": false},
+  "plots": [
+    { "data": [
+      {"fn": "x^2 - 2"}
+    ] },
+    { "data": [
+      {"fn": "-(x^2) + 2"}
+    ] },
+    { "data": [
+      {"fn": "(x - 1)^2"}
+    ] },
+    { "data": [
+      {"fn": "2^x - 2"}
+    ] }
+  ]
+}
+```
+
+### Scale logaritmiche: navigazione
+Con `"interactive": true` pan e zoom lavorano nello spazio logaritmico (il grafico scorre per fattori costanti). Le etichette fuori dall'intervallo $[10^{-3}, 10^4]$ usano la notazione $10^n$.
+
+```json
+{
+  "aspectRatio": "2:1",
+  "xlim": [0.01, 100000],
+  "ylim": [0.001, 1000000],
+  "xScale": "log",
+  "yScale": "log",
+  "interactive": true,
+  "data": [
+    {"fn": "x", "label": "x", "color": "summer2"},
+    {"fn": "x^2", "label": "x²", "color": "summer6"},
+    {"fn": "sqrt(x)", "label": "√x", "color": "summer4"}
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "2:1",
+  "xlim": [0.01, 100000],
+  "ylim": [0.001, 1000000],
+  "xScale": "log",
+  "yScale": "log",
+  "interactive": true,
+  "data": [
+    {"fn": "x", "label": "x", "color": "summer2"},
+    {"fn": "x^2", "label": "x²", "color": "summer6"},
+    {"fn": "sqrt(x)", "label": "√x", "color": "summer4"}
+  ]
+}
+```

@@ -1,27 +1,27 @@
 /* Matephis Plot Styling */
 
-/* Container */
+/* ==========================================================================
+   Container & layout
+   ========================================================================== */
+
 .matephis-plot-container {
   display: flex;
-  position: relative;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-select: none;
-  cursor: default;
-  /* Explicit default cursor to stop inheritance */
-
   flex-direction: column;
   align-items: center;
-  margin: .25rem 0 20px 0; /* Add bottom margin for toolbar (I NEED TO FIGURE THIS OUT) */
-  max-width: 70%;
+  position: relative;
   width: 100%;
+  max-width: 70%;
+  /* One spacing value for every plot; toolbar and sliders live inside */
+  margin: var(--space-xs, 0.5rem) 0 var(--space-md, 1.5rem) 0;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .matephis-plot-container.bordered {
-  border: 1px solid var(--border-color, #e1e1e1);
+  border: 1px solid var(--border-color, var(--border, #e1e1e1));
 }
 
-/* Modifiers */
 .matephis-plot-container.align-center {
   margin-left: auto;
   margin-right: auto;
@@ -32,48 +32,165 @@
   margin-right: auto;
 }
 
-/* Stage */
+@media (max-width: 768px) {
+  .matephis-plot-container {
+    max-width: 100%;
+  }
+}
+
+/* Captions (*italic paragraph* right after a plot) */
+.matephis-plot + pre + p:has(> em:only-child),
+.matephis-plot + div.language-matephis + p:has(> em:only-child) {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #888;
+  font-family: var(--font);
+  font-style: normal;
+  margin-top: calc(-1 * var(--space-sm, 1rem));
+  margin-bottom: var(--space-lg);
+  margin-left: var(--space-sm);
+  margin-right: var(--space-sm);
+}
+
+.matephis-plot:has(.matephis-plot-container.align-center) + pre + p:has(> em:only-child),
+.matephis-plot:has(.matephis-plot-container.align-center) + div.language-matephis + p:has(> em:only-child) {
+  text-align: center;
+  padding: 0 var(--space-lg);
+}
+
+/* ==========================================================================
+   Stage & SVG
+   ========================================================================== */
+
 .matephis-plot-stage {
   position: relative;
   width: 100%;
 }
 
-/* SVG */
 .matephis-plot-svg {
-  background: transparent;
-  max-width: 100%;
-  width: 100%;
-  height: auto;
-  font-family: var(--font-plot, monospace);
   display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  background: transparent;
+  font-family: var(--font-plot, monospace);
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Fix for mobile pinch: ensure touches pass through lines/text to the SVG handler */
+/* Hit testing is done in JS on the whole SVG */
 .matephis-plot-svg * {
   pointer-events: none;
 }
 
-.matephis-plot-svg.interactive {
-  cursor: default;
-}
-
-.matephis-plot-svg.static {
+.matephis-plot-svg.zoomable {
   cursor: zoom-in;
 }
 
-/* Error */
-.matephis-plot-error {
-  color: red;
-  border: 1px solid red;
-  padding: 5px;
+/* Interactive plots: vertical swipes scroll the page, everything else is ours */
+.matephis-plot-svg.interactive {
+  touch-action: pan-y;
+  cursor: grab;
 }
 
-/* Derivative Plot */
+.matephis-plot-container.no-pan .matephis-plot-svg.interactive {
+  cursor: default;
+}
+
+.matephis-plot-svg.interactive.selecting {
+  cursor: crosshair;
+}
+
+.matephis-plot-svg.interactive.over-handle {
+  cursor: grab;
+}
+
+.matephis-dragging .matephis-plot-svg.interactive,
+.matephis-touch-active .matephis-plot-svg.interactive {
+  touch-action: none;
+  cursor: grabbing;
+}
+
+.matephis-plot-svg:focus-visible {
+  outline: 2px solid var(--accent, #B01A00);
+  outline-offset: 2px;
+}
+
+/* Press-and-hold feedback on touch */
+.matephis-touch-active .matephis-plot-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--accent, #B01A00);
+  pointer-events: none;
+}
+
+/* Transient hint ("Ctrl + rotellina per lo zoom") */
+.matephis-plot-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-family: var(--font, sans-serif);
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.matephis-plot-hint.visible {
+  opacity: 1;
+}
+
+.matephis-plot-text {
+  font-family: var(--font-plot, 'Space Mono', monospace) !important;
+}
+
+/* Optional "caption" option */
+.matephis-plot-caption {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Messages
+   ========================================================================== */
+
+.matephis-plot-error {
+  color: #b00020;
+  border: 1px solid currentColor;
+  padding: 5px 8px;
+  font-size: 0.85rem;
+}
+
+.matephis-plot-warnings {
+  width: 100%;
+  border-top: 1px solid #ffcc00;
+  background: #fffbe6;
+  color: #5c4b00;
+  padding: 10px;
+  font-size: 0.85em;
+}
+
+.matephis-plot-warnings ul {
+  margin: 5px 0 0 20px;
+  padding: 0;
+}
+
+/* ==========================================================================
+   Derivative plot
+   ========================================================================== */
+
 .matephis-derivative-plot {
   width: 100%;
-  max-width: 100%;
   margin: 15px auto 0 auto;
   border-top: 1px dashed #eee;
   padding-top: 15px;
@@ -82,11 +199,14 @@
   align-items: center;
 }
 
-/* Derivative Plot internal instance should be tighter */
+.matephis-derivative-plot > div {
+  width: 100%;
+}
+
 .matephis-derivative-plot .matephis-plot-container {
-  margin: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
+  margin: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .matephis-derivative-title {
@@ -98,17 +218,21 @@
   text-align: center;
 }
 
-/* Controls (Sliders) */
+/* ==========================================================================
+   Sliders
+   ========================================================================== */
+
 .matephis-plot-controls {
   width: 100%;
   max-width: 600px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--plot-bg, #fff);
   border-top: 1px solid #f0f0f0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 10px;
+  box-sizing: border-box;
 }
 
 .matephis-slider-row {
@@ -120,15 +244,14 @@
 }
 
 .matephis-slider-row.slider-bordered {
-  border: 1px solid var(--border-color, #e1e1e1);
-  padding: 6px 0px 6px 12px;
+  border: 1px solid var(--border-color, var(--border, #e1e1e1));
+  padding: 6px 0 6px 12px;
   margin-bottom: 4px;
 }
 
 .matephis-slider-label-group {
   min-width: 80px;
   white-space: nowrap;
-  text-align: left;
   display: flex;
   align-items: center;
 }
@@ -139,7 +262,6 @@
 
 .matephis-slider-val {
   min-width: 4ch;
-  text-align: left;
   color: var(--accent, #B01A00);
   font-weight: bold;
   margin-left: 8px;
@@ -160,18 +282,33 @@
 
 .matephis-slider-max {
   margin-left: 8px;
-  text-align: left;
 }
 
 .matephis-slider-row input[type=range] {
   -webkit-appearance: none;
   appearance: none;
   flex-grow: 1;
+  min-width: 60px;
+  height: 6px;
+  /* Larger touch target without changing the look */
+  padding: 10px 0;
+  background: transparent;
+  background-clip: content-box;
+  outline: none;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.matephis-slider-row input[type=range]::-webkit-slider-runnable-track {
   height: 6px;
   background: #e0e0e0;
   border-radius: 3px;
-  outline: none;
-  cursor: default;
+}
+
+.matephis-slider-row input[type=range]::-moz-range-track {
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
 }
 
 .matephis-slider-row input[type=range]::-webkit-slider-thumb {
@@ -183,12 +320,12 @@
   border-radius: 50%;
   box-shadow: 0 0 0 6px rgba(176, 26, 0, 0.2);
   cursor: pointer;
-  transition: all 0.1s ease-in-out;
-  margin-top: 0;
+  transition: box-shadow 0.1s ease-in-out;
 }
 
-.matephis-slider-row input[type=range]::-webkit-slider-thumb:hover {
-  outline: 6px solid #b01a00;
+.matephis-slider-row input[type=range]:hover::-webkit-slider-thumb,
+.matephis-slider-row input[type=range]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px rgba(176, 26, 0, 0.3);
 }
 
 .matephis-slider-row input[type=range]::-moz-range-thumb {
@@ -205,20 +342,48 @@
   transform: scale(1.2);
 }
 
-/* Toolbar (Below Plot) */
+/* Play / pause */
+.matephis-plot-play-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  min-width: 24px;
+  color: #1f1f1f;
+}
+
+.matephis-plot-play-btn:hover {
+  opacity: 1;
+}
+
+.matephis-plot-play-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Toolbar
+   ========================================================================== */
+
 .matephis-plot-toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  align-items: center; /* Fix vertical alignment */
+  align-items: center;
   gap: 8px;
   width: 100%;
-  z-index: 10;
-  cursor: default;
-  /* Toolbar background should be default */
+  margin-top: 6px;
 }
 
 .matephis-plot-btn {
   background: #f0f0f0;
+  color: #1f1f1f;
   border: none;
   border-radius: 0;
   width: 32px;
@@ -232,6 +397,14 @@
   cursor: pointer;
   user-select: none;
   box-sizing: border-box !important;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .matephis-plot-btn {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .matephis-plot-btn:not(.active):hover {
@@ -242,116 +415,176 @@
   background: #d0d0d0;
 }
 
-.matephis-plot-btn.active {
-  background: var(--accent, #B01A00);
+.matephis-plot-btn:focus-visible {
+  outline: 2px solid var(--accent, #B01A00);
+  outline-offset: 1px;
 }
 
-.matephis-plot-btn.active img,
+.matephis-plot-btn.active {
+  background: var(--accent, #B01A00);
+  color: #fff;
+}
+
+.matephis-plot-btn svg {
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.matephis-plot-btn:hover svg,
 .matephis-plot-btn.active svg {
   opacity: 1;
-  filter: brightness(0) invert(1); /* Make white */
 }
 
 .matephis-plot-separator {
   width: 1px;
   height: 24px;
   background: #ddd;
-  margin: 4px 4px;
+  margin: 4px;
 }
 
-.matephis-plot-btn img,
-.matephis-plot-btn svg {
-  opacity: 0.6;
-  pointer-events: none;
-  /* Let clicks pass to button */
-  margin: 0 !important;
-  padding: 0 !important;
-  display: block !important;
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
-  min-height: 20px !important;
-  max-width: 20px !important;
-  max-height: 20px !important;
-  flex-shrink: 0 !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background: none !important;
-  color: inherit; /* Allow fill="currentColor" to work */
-}
-
-.matephis-plot-btn:hover img,
-.matephis-plot-btn:hover svg {
-  opacity: 0.9;
-}
-
-@media (max-width: 768px) {
-  .matephis-plot-container {
-    max-width: 90%;
-    width: 90%;
-  }
-}
-
-.matephis-plot-container.interactive {
-  touch-action: none;
-}
-
-/* SVG Text - Force Font Family */
-.matephis-plot-text {
-  font-family: var(--font-plot, 'Space Mono', monospace) !important;
-}
-
-/* Captions for plots */
-.matephis-plot + pre + p:has(> em:only-child) {
-  text-align: left;
-  font-size: 0.85rem;
-  color: #888;
-  font-family: var(--font);
-  font-style: normal;
-  margin-top: var(--space-xs);
-  margin-bottom: var(--space-lg);
-  margin-left: var(--space-sm);
-  margin-right: var(--space-sm);
-}
-
-.matephis-plot:has(.matephis-plot-container.align-center)+pre+p:has(> em:only-child) {
-  text-align: center;
-  padding: 0 var(--space-lg) 0 var(--space-lg);
-}
-
-/* Utility to forcibly hide elements */
 .matephis-hidden {
   display: none !important;
 }
 
-/* Animation Controls */
-.matephis-plot-play-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
+/* ==========================================================================
+   Multi-plot groups (row / grid)
+   ========================================================================== */
+
+.matephis-plot-group {
+  --mp-gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(var(--mp-cols, 2), minmax(0, 1fr));
+  gap: var(--mp-gap);
+  width: 100%;
+  margin: var(--space-xs, 0.5rem) 0 var(--space-md, 1.5rem) 0;
+}
+
+.matephis-plot-group.align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 640px) {
+  .matephis-plot-group {
+    grid-template-columns: repeat(var(--mp-cols-mobile, 2), minmax(0, 1fr));
+  }
+}
+
+.matephis-plot-cell {
+  margin: 0;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  min-width: 24px;
+  flex-direction: column;
+  align-items: stretch;
 }
-.matephis-plot-play-btn:hover {
-  opacity: 1;
+
+.matephis-plot-cell-label {
+  font-family: var(--font-plot, monospace);
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: var(--accent, #B01A00);
+  margin-bottom: 2px;
 }
-.matephis-plot-play-btn img,
-.matephis-plot-play-btn svg {
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
-  color: #1f1f1f;
+
+.matephis-plot-cell .matephis-plot-container {
+  max-width: 100%;
+  margin: 0;
+}
+
+.matephis-plot-group-caption {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
 }
 
 /* ==========================================================================
-   Dark Mode Support for Matephis Plot
+   Fullscreen lightbox (owned by the library)
    ========================================================================== */
+
+.matephis-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overscroll-behavior: contain;
+}
+
+.matephis-lightbox[hidden] {
+  display: none;
+}
+
+html.matephis-lightbox-open {
+  overflow: hidden;
+}
+
+.matephis-lightbox-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: auto;
+}
+
+.matephis-plot-container.matephis-in-lightbox {
+  background: var(--plot-bg, var(--bg, #fff));
+  border: 1px solid var(--border, #e1e1e1);
+  padding-bottom: 8px;
+}
+
+/* Inside the lightbox one finger always pans */
+.matephis-in-lightbox .matephis-plot-svg.interactive {
+  touch-action: none;
+}
+
+.matephis-in-lightbox .matephis-plot-svg.zoomable {
+  cursor: default;
+}
+
+.matephis-lightbox-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.matephis-lightbox-close svg {
+  width: 28px;
+  height: 28px;
+}
+
+.matephis-lightbox-close:hover {
+  color: var(--accent, #B01A00);
+}
+
+/* ==========================================================================
+   Dark mode
+   ========================================================================== */
+
 [data-theme="dark"] .matephis-plot-container {
   background: var(--plot-bg, var(--bg));
   border-color: var(--plot-border, var(--border));
@@ -361,13 +594,10 @@
   fill: var(--plot-bg, var(--bg)) !important;
 }
 
-[data-theme="dark"] .matephis-plot-axes line,
-[data-theme="dark"] .matephis-plot-axes path,
 [data-theme="dark"] .matephis-plot-axis {
   stroke: var(--plot-axis, #e2e8f0) !important;
 }
 
-[data-theme="dark"] .matephis-plot-axes polygon,
 [data-theme="dark"] .matephis-plot-arrow {
   fill: var(--plot-axis, #e2e8f0) !important;
   stroke: var(--plot-axis, #e2e8f0) !important;
@@ -377,8 +607,9 @@
   stroke: var(--plot-grid, #333333) !important;
 }
 
-[data-theme="dark"] .matephis-plot-text,
-[data-theme="dark"] .matephis-plot-numbers text {
+/* Only numbers and axis labels are recoloured: data labels keep their series color */
+[data-theme="dark"] .matephis-plot-numbers text,
+[data-theme="dark"] .matephis-plot-axes text {
   fill: var(--plot-text, #c9cbcf) !important;
 }
 
@@ -394,14 +625,26 @@
 [data-theme="dark"] .matephis-plot-btn {
   background: #252525;
   color: #e0e0e0;
-  border-color: #444;
 }
 
 [data-theme="dark"] .matephis-plot-btn:hover {
   background: #383838;
 }
 
-[data-theme="dark"] .matephis-slider-row input[type=range] {
+[data-theme="dark"] .matephis-plot-btn.active {
+  background: var(--accent, #B01A00);
+  color: #fff;
+}
+
+[data-theme="dark"] .matephis-plot-play-btn {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .matephis-slider-row input[type=range]::-webkit-slider-runnable-track {
+  background: #333333;
+}
+
+[data-theme="dark"] .matephis-slider-row input[type=range]::-moz-range-track {
   background: #333333;
 }
 
@@ -416,4 +659,35 @@
 
 [data-theme="dark"] .matephis-derivative-plot {
   border-top-color: #333333;
+}
+
+[data-theme="dark"] .matephis-plot-warnings {
+  background: #2a2510;
+  color: #f0e2a8;
+}
+
+[data-theme="dark"] .matephis-lightbox {
+  background: rgba(10, 10, 12, 0.88);
+}
+
+[data-theme="dark"] .matephis-lightbox-close {
+  color: var(--title, #ebebeb);
+}
+
+/* ==========================================================================
+   Print
+   ========================================================================== */
+
+@media print {
+  .matephis-plot-toolbar,
+  .matephis-plot-controls,
+  .matephis-plot-hint,
+  .matephis-plot-warnings,
+  .matephis-lightbox {
+    display: none !important;
+  }
+
+  .matephis-plot-group {
+    break-inside: avoid;
+  }
 }
