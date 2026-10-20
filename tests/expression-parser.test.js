@@ -104,3 +104,39 @@ describe('ExpressionParser: prefissi sui punti', () => {
         expect(substituteLabel('z = P.x + iP.y', { P: { x: 2, y: 3 } })).toBe('z = 2 + i3');
     });
 });
+
+describe('Gradi e radianti', () => {
+    it('interpreta il ° come operatore postfisso', () => {
+        expect(compiler().eval('30°')).toBeCloseTo(Math.PI / 6, 12);
+        expect(compiler().eval('sin(30°)')).toBeCloseTo(0.5, 12);
+        expect(compiler().eval('sin 90°')).toBeCloseTo(1, 12);
+        expect(compiler().eval('-45°')).toBeCloseTo(-Math.PI / 4, 12);
+        expect(compiler().eval('(30 + 15)°')).toBeCloseTo(Math.PI / 4, 12);
+        expect(compiler().eval('30°^2')).toBeCloseTo((Math.PI / 6) ** 2, 12);
+        expect(compiler().eval('2*30°')).toBeCloseTo(Math.PI / 3, 12);
+    });
+
+    it('accetta il simbolo º al posto di °', () => {
+        expect(compiler().eval('cos(60º)')).toBeCloseTo(0.5, 12);
+    });
+
+    it('applica il ° a parametri e variabili', () => {
+        expect(compiler({ alpha: 30 }).eval('sin(alpha°)')).toBeCloseTo(0.5, 12);
+        expect(compiler().fn('x°')(180)).toBeCloseTo(Math.PI, 12);
+    });
+
+    it('converte con deg() e rad()', () => {
+        expect(compiler().eval('deg(pi)')).toBeCloseTo(180, 12);
+        expect(compiler().eval('rad(180)')).toBeCloseTo(Math.PI, 12);
+        expect(compiler().eval('deg(30°)')).toBeCloseTo(30, 12);
+    });
+
+    it('lascia usabili parametri chiamati deg o rad', () => {
+        expect(compiler({ rad: 2 }).eval('3rad')).toBe(6);
+        expect(compiler({ deg: 4 }).eval('deg + 1')).toBe(5);
+    });
+
+    it('funziona anche in modalità complessa', () => {
+        expect(compiler({}, {}, true).eval('cos(60°)')).toBeCloseTo(0.5, 12);
+    });
+});

@@ -121,6 +121,7 @@ exclude:
   - node_modules
   - tests
   - assets/js/matephis-plot-src
+  - assets/js/matephis-physics-src
   - vitest.config.js
   - vendor/bundle/
   - vendor/cache/

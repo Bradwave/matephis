@@ -32,8 +32,11 @@
     {%- else -%}
     <link href="{{ site.baseurl }}/assets/css/style.css?v=2.16" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
-    {%- if page.plot -%}
+    {%- if page.plot or page.physics -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v=2.0" rel="stylesheet" />
+    {%- endif -%}
+    {%- if page.physics -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-physics.css?v=0.1" rel="stylesheet" />
     {%- endif -%}
     {%- if page.circuit -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-circuit.css?v=1.1" rel="stylesheet" />
@@ -278,7 +281,10 @@
         </div>
     </div>
     {%- if page.plot -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.0"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.1"></script>
+    {%- endif -%}
+    {%- if page.physics -%}
+    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=0.1"></script>
     {%- endif -%}
     {%- if page.circuit -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.1"></script>

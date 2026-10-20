@@ -73,13 +73,16 @@ Apri il browser su **`http://localhost:4000`**. Ogni volta che salvi una nota in
 ---
 
 ### B. Sviluppare il Codice dei Grafici JS
-Quando modifichi i file JavaScript dentro `assets/js/matephis-plot-src/`:
+Quando modifichi i file JavaScript dentro `assets/js/matephis-plot-src/` o `assets/js/matephis-physics-src/`:
 ```bash
 npm run dev
 ```
 Questo comando avvia **contemporaneamente** nello stesso terminale:
 1. `esbuild --watch`: ricompila istantaneamente i sorgenti JS in `assets/js/matephis-plot.js` (in ~30 ms ad ogni salvataggio).
-2. `bundle exec jekyll serve`: serve il sito locale su `http://localhost:4000`.
+2. `esbuild --watch`: lo stesso per i diagrammi di fisica, in `assets/js/matephis-physics.js`.
+3. `bundle exec jekyll serve`: serve il sito locale su `http://localhost:4000`.
+
+Per provare una configurazione JSON mentre la scrivi apri **`http://localhost:4000/playground/`**: anteprima dal vivo per blocchi `physics` e `matephis`, con gli avvisi e un pulsante per copiare il blocco.
 
 *Per uscire: premi `Ctrl + C`.*
 
@@ -95,7 +98,7 @@ I test vengono eseguiti con **Vitest** in ambiente isolato headless (in meno di 
 ---
 
 ### D. Compilazione Manuale del Bundle
-Per ricompilare il file finale `assets/js/matephis-plot.js` compresso e con sourcemap:
+Per ricompilare i file finali `assets/js/matephis-plot.js` e `assets/js/matephis-physics.js` compressi e con sourcemap:
 ```bash
 npm run build
 ```
@@ -119,14 +122,19 @@ matephis/
 │   ├── matematica/                 # Appunti ed esercizi di matematica
 │   ├── fisica/                     # Appunti ed esercizi di fisica
 │   ├── interdisciplinare/          # Argomenti ponte e complementi
-│   └── test-plot.md                # Pagina completa di collaudo visivo dei grafici
-├── pages/                          # Pagine principali del sito (matematica.md, fisica.md, ecc.)
+│   ├── test-plot.md                # Pagina completa di collaudo visivo dei grafici
+│   └── test-physics.md             # Collaudo e documentazione dei diagrammi di fisica
+├── pages/                          # Pagine principali del sito (matematica.md, fisica.md, playground.md, ecc.)
 ├── assets/
 │   ├── css/
 │   │   ├── style.css               # Stili globali, tipografia, dark mode e stampa (@media print)
-│   │   └── matephis-plot.css       # Stili dei grafici, toolbar, slider e tooltip
+│   │   ├── matephis-plot.css       # Stili dei grafici, toolbar, slider e tooltip
+│   │   └── matephis-physics.css    # Stili specifici dei diagrammi di fisica
 │   └── js/
 │       ├── matephis-plot.js        # File finale generato da esbuild (NON modificare a mano)
+│       ├── matephis-physics.js     # File finale dei diagrammi di fisica (NON modificare a mano)
+│       ├── matephis-physics-src/   # SORGENTI DI MATEPHIS-PHYSICS (riusano parser, slider e coordinate di matephis-plot)
+│       ├── matephis-playground.js  # Editor JSON con anteprima (pagina /playground/)
 │       ├── matephis-circuit.js     # Schemi circuitali SVG
 │       ├── matephis-draw.js        # Lavagna interattiva a mano libera
 │       └── matephis-plot-src/      # SORGENTI MODULARI DI MATEPHIS-PLOT (Modifica qui!)
@@ -136,6 +144,7 @@ matephis/
 │           ├── interactions/       # PanZoom, SnappingEngine, AnalysisTools
 │           └── ui/                 # Toolbar, SliderManager, LightboxBridge
 ├── package.json                    # Script di build (esbuild, vitest, concurrently)
+├── .github/workflows/ci.yml        # Controlli automatici sulle pull request (test, build), senza pubblicare
 └── .github/workflows/jekyll.yml    # Pipeline CI/CD di pubblicazione automatica su GitHub Pages
 ```
 
@@ -171,8 +180,11 @@ Per inserire un grafico all'interno di qualsiasi nota Markdown, scrivi un blocco
   ```
 - **Rette tangenti e derivate**: `"tangentSelection": true`, `"traceDerivative": true`.
 - **Formule LaTeX nelle etichette**: accetta sintassi MathJax, es. `"label": "$e^{i\\pi} + 1 = 0$"`.
+- **Gradi**: `30°` vale 30·π/180 in qualunque espressione (`"fn": "sin(x°)"`); `deg(x)` e `rad(x)` convertono. Un parametro con `"unit": "deg"` ha lo slider in gradi ma vale in radianti nelle espressioni; con un'altra unità (`"unit": "kg"`) l'unità compare solo accanto al valore.
 
 Per una panoramica esaustiva di tutte le opzioni con esempi visivi, visita la pagina locale `/notes/test-plot`.
+
+I diagrammi di fisica usano blocchi `physics` con la stessa logica (JSON, parametri, slider): opzioni ed esempi sono nella pagina `/notes/test-physics`.
 
 ---
 

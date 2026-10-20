@@ -1,4 +1,4 @@
-# Automatically injects plot/circuit/slides assets if code blocks or markers exist in content
+# Automatically injects plot/circuit/slides/physics assets if code blocks or markers exist in content
 Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
   content = doc.content.to_s
   
@@ -8,6 +8,10 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 
   if content.include?('language-circuit') || content.include?('matephis-circuit') || content =~ /```\s*circuit/
     doc.data['circuit'] = true
+  end
+
+  if content.include?('language-physics') || content.include?('matephis-physics') || content =~ /```\s*physics/
+    doc.data['physics'] = true
   end
 
   if content.include?('language-slides') || content.include?('matephis-slides') || content =~ /```\s*slides/
