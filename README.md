@@ -1,158 +1,119 @@
-# Matephis 📐⚡
+# Matephis
 
-> **Matephis** è una piattaforma scolastica e digitale garden per lo studio e la didattica della matematica e della fisica, basata su **Jekyll**, file **Markdown** (compatibile con Obsidian) e una suite di **widget vettoriali interattivi (SVG)** per grafici cartesiani, schemi circuitali e presentazioni.
+Matephis è il mio sito di appunti, esercizi e verifiche di matematica e fisica per le scuole superiori. Si trova su [matephis.com](https://matephis.com).
 
----
+Il materiale è in italiano e nasce dalle lezioni che preparo: teoria, serie di esercizi graduati per difficoltà, simulazioni di verifica, attività guidate. Le pagine sono collegate tra loro con link e backlink, un po' come in un giardino digitale, e hanno una ricerca interna.
 
-## Indice della Guida
+Quello che lo distingue da un normale blog di appunti sono i grafici. Funzioni, equazioni implicite, curve parametriche, numeri complessi, diagrammi di fisica e schemi di circuiti non sono immagini: sono SVG disegnati nel browser a partire da un blocco di testo nella nota. Si può zoomare, trascinare, muovere gli slider dei parametri e leggere il valore di un punto o di una tangente.
 
-1. [Architettura del Progetto](#1-architettura-del-progetto)
-2. [Prerequisiti di Sistema](#2-prerequisiti-di-sistema)
-3. [Installazione Iniziale](#3-installazione-iniziale)
-4. [Flusso di Lavoro Quotidiano](#4-flusso-di-lavoro-quotidiano)
-   - [A. Scrivere e Modificare Appunti (Solo Jekyll)](#a-scrivere-e-modificare-appunti-markdown)
-   - [B. Sviluppare e Modificare i Grafici JS (Jekyll + esbuild)](#b-sviluppare-il-codice-dei-grafici-js)
-   - [C. Eseguire i Test Matematici](#c-eseguire-i-test-matematici)
-   - [D. Compilazione Manuale del Bundle](#d-compilazione-manuale-del-bundle)
-5. [Mappa del Repository](#5-mappa-del-repository)
-6. [Guida all'Uso dei Grafici (`matephis-plot`)](#6-guida-alluso-dei-grafici-matephis-plot)
-7. [Deploy Automatico su GitHub Pages](#7-deploy-automatico-su-github-pages)
-8. [Risoluzione Problemi Frequenti (Troubleshooting)](#8-risoluzione-problemi-frequenti)
+## Da dove vengono i contenuti
 
----
+Gli esercizi hanno origini miste, e preferisco dirlo chiaramente:
 
-## 1. Architettura del Progetto
+- molti sono presi o adattati da libri di testo, in particolare *College Physics* di Etkina, e da articoli e paper di didattica;
+- tanti, soprattutto quelli di matematica, li ho scritti io;
+- alcuni sono generati da LLM, a partire dalle fonti sopra o dai miei esercizi, e poi riletti e sistemati da me.
 
-Il progetto è strutturato su tre livelli integrati:
-- **Contenuti (Markdown + Obsidian)**: tutti gli appunti risiedono in `_notes/Public/` e possono essere modificati direttamente tramite [Obsidian](https://obsidian.md/) o qualunque editor di testo.
-- **Generatore Statico (Jekyll / Ruby)**: converte le note Markdown in pagine HTML, processa le formule matematiche con **MathJax** e applica i layout.
-- **Motore Interattivo (JavaScript ES6 / esbuild)**: i sorgenti modulari di `matephis-plot` si trovano in `assets/js/matephis-plot-src/` e vengono compilati in un unico file ottimizzato `assets/js/matephis-plot.js` tramite `esbuild`.
+Non garantisco che siano privi di errori: se ne trovate uno, ditemelo.
 
----
+## Come è fatto
 
-## 2. Prerequisiti di Sistema
+Il sito è statico, generato con [Jekyll](https://jekyllrb.com/). Le note sono file Markdown in `_notes/Public/`, e la cartella si può aprire direttamente come vault di [Obsidian](https://obsidian.md/): wikilink `[[nota]]`, immagini e blocchi di codice funzionano allo stesso modo in Obsidian e sul sito. Le formule sono in LaTeX, rese da MathJax.
 
-Su macOS assicurati di avere installati:
-- **Ruby & Bundler** (gestione dipendenze Jekyll):
-  ```bash
-  ruby -v
-  bundle -v
-  ```
-- **Node.js & npm** (per il compilatore dei grafici e i test matematici):
-  ```bash
-  node -v   # v20+ raccomandata
-  npm -v
-  ```
-  *Se non presente, installalo con Homebrew: `brew install node`.*
+Il sito è partito come un progetto di programmazione all'antica, scritto a mano. Le funzionalità più recenti, e la libreria dei grafici in particolare, sono invece *vibecoddate*: le ho fatte scrivere quasi per intero a Gemini e Claude, guidandole e controllando il risultato a occhio e con i test. Il codice lo riflette, e in alcuni punti si vede.
 
----
+Sopra Jekyll ci sono due pezzi aggiunti in questo modo:
 
-## 3. Installazione Iniziale
+- Alcuni plugin Ruby (`_plugins/`) che aggiungono sintassi al Markdown: badge di difficoltà per gli esercizi, soluzioni sfocate da rivelare con un click, sezioni `details`, tabelle con scroll orizzontale, grafo dei collegamenti tra note.
+- Una piccola libreria JavaScript, in moduli ES, che trasforma i blocchi ```` ```matephis ````, ```` ```physics ```` e simili in grafici. I sorgenti stanno in `assets/js/*-src/` e vengono impacchettati con esbuild nei file `assets/js/matephis-plot.js` e `assets/js/matephis-physics.js`, che sono quelli che il sito carica davvero.
 
-Se cloni il repository su un nuovo computer, esegui questi comandi una sola volta nella cartella radice:
+I file JS vengono caricati solo nelle pagine che ne hanno bisogno (se ne occupa `asset_injector.rb`), così le note senza grafici restano leggere.
+
+## Come è nato
+
+Il progetto è cambiato parecchio in un anno. In breve:
+
+**Settembre 2025: il blog.** Parto dal template [Jekyll Garden](https://github.com/Jekyll-Garden/jekyll-garden) (la licenza MIT del repository è la sua), pubblicato su GitHub Pages. Le prime settimane sono tentativi con l'URL, MathJax e i primi appunti ed esercizi sulle funzioni e sulle equazioni di secondo grado.
+
+**Fine 2025: i contenuti crescono.** Aggiungo energia, elettrostatica, limiti, parabola, esponenziali, la serie di Fourier. A novembre arriva il dominio matephis.com. A dicembre un CMS (Sveltia, in `admin/`) per scrivere dal browser, e un restyling completo: sidebar con indice, pagine correlate, sfondo a puntini, lightbox per le immagini.
+
+**Gennaio 2026: i grafici.** Parte come uno script per tracciare funzioni a partire da un blocco JSON e in poche settimane diventa `matephis-plot`: slider, griglia adattiva, zoom e pan, campionamento adattivo per gestire asintoti e discontinuità, legende con MathJax, selezione di punti e tangenti, interpolazione. Funziona anche in anteprima dentro Obsidian.
+
+**Primavera 2026: sempre più strumenti.** Un sistema di slide per le lezioni (marzo), numeri complessi e coordinate polari con parametri animati, schemi di circuiti, una lavagna per disegnare e annotare. Intanto escono molte serie di esercizi su derivate, logaritmi, ottica, onde e circuiti.
+
+**Settembre-ottobre 2026: riordino.** Il codice dei grafici, nato come un unico file, viene diviso in moduli (parser, renderer, interazioni, interfaccia), con una suite di test e il tema scuro. Wikilink e backlink vengono risolti in fase di build. Il deploy su GitHub Pages passa da una GitHub Action che compila anche il JS, e le pull request hanno una CI che esegue test e build. Infine inizia `matephis-physics`, il motore per i diagrammi di fisica, ancora ai primi passi: le fondamenta, una pagina di prova e un playground.
+
+La storia completa, con tutti i commit dai messaggi poco dignitosi, è nel log di git.
+
+## Come farlo partire
+
+Servono Ruby con Bundler e Node.js (consiglio la versione 20 o successiva). Su macOS con Homebrew:
 
 ```bash
-# 1. Installa le dipendenze Ruby di Jekyll
-bundle install
+brew install ruby node
+```
 
-# 2. Installa le dipendenze npm per il bundler e i test
+Poi, nella cartella del progetto, una volta sola:
+
+```bash
+bundle install
 npm install
 ```
 
----
+### Solo scrivere note
 
-## 4. Flusso di Lavoro Quotidiano
+Se devo solo scrivere o correggere note ed esercizi non serve Node:
 
-### A. Scrivere e Modificare Appunti (Markdown)
-Se devi solo scrivere o correggere lezioni, esercizi o formule matematiche, **non serve toccare Node**:
 ```bash
 bundle exec jekyll serve
 ```
-Apri il browser su **`http://localhost:4000`**. Ogni volta che salvi una nota in `_notes/Public/`, Jekyll ricarica automaticamente la pagina.
 
----
+Il sito è su <http://localhost:4000> e Jekyll ricostruisce le pagine a ogni salvataggio. Se modifico `_config.yml` devo riavviare il server.
 
-### B. Sviluppare il Codice dei Grafici JS
-Quando modifichi i file JavaScript dentro `assets/js/matephis-plot-src/` o `assets/js/matephis-physics-src/`:
+### Lavorare sul codice dei grafici
+
 ```bash
 npm run dev
 ```
-Questo comando avvia **contemporaneamente** nello stesso terminale:
-1. `esbuild --watch`: ricompila istantaneamente i sorgenti JS in `assets/js/matephis-plot.js` (in ~30 ms ad ogni salvataggio).
-2. `esbuild --watch`: lo stesso per i diagrammi di fisica, in `assets/js/matephis-physics.js`.
-3. `bundle exec jekyll serve`: serve il sito locale su `http://localhost:4000`.
 
-Per provare una configurazione JSON mentre la scrivi apri **`http://localhost:4000/playground/`**: anteprima dal vivo per blocchi `physics` e `matephis`, con gli avvisi e un pulsante per copiare il blocco.
+Avvia nello stesso terminale esbuild in modalità watch per `matephis-plot` e `matephis-physics` e il server Jekyll, quindi ogni modifica ai sorgenti JS viene ricompilata subito. Per provare una configurazione mentre la scrivo uso il playground su <http://localhost:4000/playground/>, che mostra l'anteprima dal vivo dei blocchi `matephis` e `physics`, gli avvisi di errore e un pulsante per copiare il blocco.
 
-*Per uscire: premi `Ctrl + C`.*
+Ci si ferma con `Ctrl + C`.
 
----
+### Test e build
 
-### C. Eseguire i Test Matematici
-Per verificare che il parser algebrico, le coordinate e le formule complesse non abbiano subito regressioni:
 ```bash
-npm test
-```
-I test vengono eseguiti con **Vitest** in ambiente isolato headless (in meno di 1 secondo).
-
----
-
-### D. Compilazione Manuale del Bundle
-Per ricompilare i file finali `assets/js/matephis-plot.js` e `assets/js/matephis-physics.js` compressi e con sourcemap:
-```bash
-npm run build
+npm test          # test con Vitest: parser, coordinate, campionamento, slider, fisica
+npm run build     # ricompila i bundle minificati con sourcemap
 ```
 
----
+I bundle `assets/js/matephis-plot.js` e `assets/js/matephis-physics.js` sono generati: non vanno modificati a mano, si cambiano i sorgenti nelle cartelle `-src`.
 
-## 5. Mappa del Repository
+## Struttura del repository
 
 ```
-matephis/
-├── _config.yml                     # Configurazione generale del sito e menu
-├── _layouts/                       # Template HTML delle pagine (Post.html)
-├── _includes/                      # Componenti riutilizzabili (Nav.html, Lightbox.html, ecc.)
-├── _plugins/                       # Plugin Ruby custom per Jekyll:
-│   ├── asset_injector.rb           # Inietta script JS/CSS se la pagina contiene grafici
-│   ├── wikilinks_converter.rb      # Risolve i collegamenti [[nota]] a build-time
-│   ├── difficulty_styler.rb        # Badge difficoltà esercizi (E, M, D)
-│   ├── solution_styler.rb          # Soluzioni sfocate [sol: ...]
-│   └── table_wrapper.rb            # Tabelle responsive con scroll
-├── _notes/Public/                  # IL TUO MATERIALE SCOLASTICO (Markdown / Obsidian)
-│   ├── matematica/                 # Appunti ed esercizi di matematica
-│   ├── fisica/                     # Appunti ed esercizi di fisica
-│   ├── interdisciplinare/          # Argomenti ponte e complementi
-│   ├── test-plot.md                # Pagina completa di collaudo visivo dei grafici
-│   └── test-physics.md             # Collaudo e documentazione dei diagrammi di fisica
-├── pages/                          # Pagine principali del sito (matematica.md, fisica.md, playground.md, ecc.)
-├── assets/
-│   ├── css/
-│   │   ├── style.css               # Stili globali, tipografia, dark mode e stampa (@media print)
-│   │   ├── matephis-plot.css       # Stili dei grafici, toolbar, slider e tooltip
-│   │   └── matephis-physics.css    # Stili specifici dei diagrammi di fisica
-│   └── js/
-│       ├── matephis-plot.js        # File finale generato da esbuild (NON modificare a mano)
-│       ├── matephis-physics.js     # File finale dei diagrammi di fisica (NON modificare a mano)
-│       ├── matephis-physics-src/   # SORGENTI DI MATEPHIS-PHYSICS (riusano parser, slider e coordinate di matephis-plot)
-│       ├── matephis-playground.js  # Editor JSON con anteprima (pagina /playground/)
-│       ├── matephis-circuit.js     # Schemi circuitali SVG
-│       ├── matephis-draw.js        # Lavagna interattiva a mano libera
-│       └── matephis-plot-src/      # SORGENTI MODULARI DI MATEPHIS-PLOT (Modifica qui!)
-│           ├── core/               # CoordinateSystem.js, Plot.js, Config.js
-│           ├── parser/             # ExpressionParser.js, ComplexParser.js
-│           ├── renderers/          # GridRenderer, FunctionRenderer, ImplicitRenderer, ecc.
-│           ├── interactions/       # PanZoom, SnappingEngine, AnalysisTools
-│           └── ui/                 # Toolbar, SliderManager, LightboxBridge
-├── package.json                    # Script di build (esbuild, vitest, concurrently)
-├── .github/workflows/ci.yml        # Controlli automatici sulle pull request (test, build), senza pubblicare
-└── .github/workflows/jekyll.yml    # Pipeline CI/CD di pubblicazione automatica su GitHub Pages
+_config.yml           configurazione del sito e menu
+_layouts/, _includes/ template HTML e componenti (navigazione, ricerca, backlink, lightbox)
+_plugins/             plugin Ruby (asset_injector, solution_styler, difficulty_styler, ...)
+_notes/Public/        le note: matematica/, fisica/, interdisciplinare/
+                      più le pagine di collaudo test-plot.md e test-physics.md
+_posts/               il blog
+pages/                pagine principali (matematica, fisica, playground, crediti, ...)
+admin/                configurazione del CMS
+assets/css/           stili del sito, dei grafici e dei diagrammi di fisica
+assets/js/
+  matephis-plot-src/      sorgenti dei grafici (core, parser, renderers, interactions, ui)
+  matephis-physics-src/   sorgenti dei diagrammi di fisica
+  matephis-slides.js, matephis-circuit.js, matephis-draw.js, matephis-playground.js
+tests/                test Vitest
+.github/workflows/    ci.yml (test e build sulle PR), jekyll.yml (deploy)
 ```
 
----
+`Dockerfile` e `docker-compose.yml` vengono dal template originale.
 
-## 6. Guida all'Uso dei Grafici (`matephis-plot`)
+## Scrivere un grafico
 
-Per inserire un grafico all'interno di qualsiasi nota Markdown, scrivi un blocco con linguaggio `matephis`:
+In una nota basta un blocco di codice con linguaggio `matephis` e un oggetto JSON:
 
 ````markdown
 ```matephis
@@ -160,64 +121,45 @@ Per inserire un grafico all'interno di qualsiasi nota Markdown, scrivi un blocco
   "xlim": [-5, 5],
   "ylim": [-2, 2],
   "interactive": true,
-  "grid": true,
   "data": [
-    { "fn": "sin(x)", "color": "red", "label": "f(x) = sin(x)" }
-  ]
+    { "fn": "a * sin(x)", "color": "red", "label": "f(x) = a sin(x)" }
+  ],
+  "params": {
+    "a": { "val": 1, "min": -2, "max": 2, "step": 0.1 }
+  }
 }
 ```
 ````
 
-### Funzionalità Principali Supportate:
-- **Funzioni esplicite**: `"fn": "x^2 - 3*x + 1"`
-- **Equazioni implicite**: `"implicit": "x^2 + y^2 = 9"`
-- **Parametri & Slider**:
-  ```json
-  "params": {
-    "a": { "val": 1, "min": -3, "max": 3, "step": 0.1 }
-  },
-  "data": [{ "fn": "a * x^2" }]
-  ```
-- **Rette tangenti e derivate**: `"tangentSelection": true`, `"traceDerivative": true`.
-- **Formule LaTeX nelle etichette**: accetta sintassi MathJax, es. `"label": "$e^{i\\pi} + 1 = 0$"`.
-- **Gradi**: `30°` vale 30·π/180 in qualunque espressione (`"fn": "sin(x°)"`); `deg(x)` e `rad(x)` convertono. Un parametro con `"unit": "deg"` ha lo slider in gradi ma vale in radianti nelle espressioni; con un'altra unità (`"unit": "kg"`) l'unità compare solo accanto al valore.
+Alcune delle cose che si possono fare:
 
-Per una panoramica esaustiva di tutte le opzioni con esempi visivi, visita la pagina locale `/notes/test-plot`.
+- funzioni esplicite (`"fn": "x^2 - 3*x + 1"`) e implicite (`"implicit": "x^2 + y^2 = 9"`);
+- parametri con slider, anche in gradi: `30°` vale 30·π/180 in qualunque espressione e un parametro con `"unit": "deg"` ha lo slider in gradi ma vale in radianti nelle formule;
+- selezione di punti, pendenze e rette tangenti (`"tangentSelection": true`, `"traceDerivative": true`);
+- LaTeX nelle etichette, ad esempio `"label": "$e^{i\\pi} + 1 = 0$"`.
 
-I diagrammi di fisica usano blocchi `physics` con la stessa logica (JSON, parametri, slider): opzioni ed esempi sono nella pagina `/notes/test-physics`.
+L'elenco completo delle opzioni, con esempi renderizzati, è nella pagina `/notes/test-plot` del sito in locale. I diagrammi di fisica usano blocchi `physics` con la stessa logica e sono documentati in `/notes/test-physics`.
 
----
+## Pubblicazione
 
-## 7. Deploy Automatico su GitHub Pages
+Ogni push su `main` fa partire la GitHub Action in `jekyll.yml`: installa le dipendenze, esegue `npm run build`, poi `bundle exec jekyll build`, e pubblica il risultato su GitHub Pages. Non serve compilare i bundle prima di ogni commit.
 
-Ogni volta che effettui un `git push` sul branch `main`:
-1. **GitHub Actions** riceve il codice.
-2. Esegue in automatico `npm ci && npm run build` compilando i file JavaScript.
-3. Esegue `bundle exec jekyll build` assemblando l'intero sito statico.
-4. Pubblica il risultato sul dominio del sito.
+Sulle pull request gira invece `ci.yml`, che esegue test e build senza pubblicare nulla.
 
-Non devi compilare i file a mano prima di ogni commit: la pipeline fa tutto in automatico.
+## Problemi comuni
 
----
+**La porta 4000 è occupata.** Di solito è un vecchio processo Jekyll rimasto in background:
 
-## 8. Risoluzione Problemi Frequenti
-
-### La porta 4000 è già occupata
-Se Jekyll segnala `Address already in use - bind(2) for 127.0.0.1:4000`:
 ```bash
-# Trova e termina il processo Jekyll rimasto aperto in background
 kill -9 $(lsof -ti :4000)
 ```
 
-### Le modifiche a `matephis-plot-src` non si vedono nel browser
-Assicurati di aver compilato il file con `npm run build` o di avere attivo `npm run dev` mentre sviluppi. Se necessario, forza il ricaricamento del browser con `Cmd + Shift + R` per pulire la cache.
+**Le modifiche ai sorgenti JS non si vedono.** Controllo che `npm run dev` sia attivo (o lancio `npm run build`) e ricarico la pagina senza cache con `Cmd + Shift + R`.
 
-### Errore `bundle exec jekyll` dopo aggiornamenti di sistema
-Se Ruby o macOS hanno aggiornato librerie di sistema:
-```bash
-bundle install
-```
+**`bundle exec jekyll` dà errore dopo un aggiornamento di Ruby o macOS.** Di solito basta rilanciare `bundle install`.
 
 ---
 
-*Matephis — "Dobbiamo sapere, sapremo!" (D. Hilbert)*
+*"Wir müssen wissen, wir werden wissen."* (D. Hilbert)
+
+Vibecoddato con Gemini e Claude, con &lt;3
