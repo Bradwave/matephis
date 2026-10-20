@@ -6,20 +6,7 @@
  */
 import { MatephisPlot } from './core/plot.js';
 import { MatephisPlotGroup } from './core/group.js';
-
-function whenMathJaxReady(cb) {
-    if (!document.getElementById('MathJax-script')) { cb(); return; }
-    const started = Date.now();
-    const check = () => {
-        const mj = window.MathJax;
-        if (mj && mj.startup && mj.startup.promise) { mj.startup.promise.then(cb, cb); return; }
-        if (mj && mj.tex2svg) { cb(); return; }
-        // Never block plots forever if MathJax fails to load
-        if (Date.now() - started > 8000) { cb(); return; }
-        setTimeout(check, 50);
-    };
-    check();
-}
+import { whenMathJaxReady } from './renderers/mathjax-bridge.js';
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     window.MatephisPlot = MatephisPlot;

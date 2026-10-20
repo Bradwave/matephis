@@ -1,0 +1,29 @@
+/* ==========================================================================
+   Matephis Physics
+   Scenes reuse matephis-plot.css (container, stage, sliders, warnings,
+   lightbox); this file only holds what is specific to physics diagrams.
+   ========================================================================== */
+
+/* Captions (*italic paragraph* right after a scene), as for plots */
+.matephis-physics + div.language-physics + p:has(> em:only-child),
+.matephis-physics + pre + p:has(> em:only-child) {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #888;
+  font-family: var(--font);
+  font-style: normal;
+  margin-top: calc(-1 * var(--space-sm, 1rem));
+  margin-bottom: var(--space-lg);
+  margin-left: var(--space-sm);
+  margin-right: var(--space-sm);
+}
+
+.matephis-physics:has(.matephis-plot-container.align-center) + div.language-physics + p:has(> em:only-child) {
+  text-align: center;
+  padding: 0 var(--space-lg);
+}
+
+/* The debug overlay never takes clicks */
+.matephis-physics-debug {
+  pointer-events: none;
+}

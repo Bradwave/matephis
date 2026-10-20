@@ -1,0 +1,45 @@
+# Checks every pull request without deploying: tests, JS bundles and Jekyll build.
+# The result appears as a tick (or cross) on the PR. Deploy stays in jekyll.yml.
+name: CI
+
+on:
+  pull_request:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the run still in progress
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Ruby
+        # https://github.com/ruby/setup-ruby/releases/tag/v1.207.0
+        uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          cache-version: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Build JS bundles
+        run: npm run build
+      - name: Build Jekyll site
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production

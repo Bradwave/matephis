@@ -14,6 +14,7 @@
  *  - comparisons (< > <= >=) and the ternary operator: x < 0 ? -x : x^2
  *  - "lhs = rhs" (top level) becomes lhs - rhs, for implicit curves
  *  - point properties A.x, A.y, A.r, A.theta (and A.rad, A.deg for angles)
+ *  - degrees: postfix ° (30° = 30·π/180), deg(x) radians -> degrees, rad(x) degrees -> radians
  */
 
 // =========================================================================
@@ -108,6 +109,7 @@ const REAL_FUNCTIONS = {
     abs: 'Math.abs', floor: 'Math.floor', ceil: 'Math.ceil', round: 'Math.round',
     sign: 'Math.sign', sgn: 'Math.sign', min: 'Math.min', max: 'Math.max',
     pow: 'Math.pow', hypot: 'Math.hypot', mod: '$R.mod',
+    deg: '$R.deg', rad: '$R.rad',
 };
 
 /** Complex-mode functions (also accept plain numbers). */
@@ -130,6 +132,8 @@ export const Runtime = {
     sec, csc, cot,
     log: (x, b) => (b === undefined ? Math.log(x) : Math.log(x) / Math.log(b)),
     mod: (a, b) => ((a % b) + b) % b,
+    deg: (x) => x * 180 / Math.PI,
+    rad: (x) => x * Math.PI / 180,
     /** Reads a property of a named point / vector / angle. */
     pt: (pts, name, prop) => {
         const p = pts && pts[name];
@@ -157,6 +161,7 @@ function tokenize(src) {
         .replace(/[−–]/g, '-')
         .replace(/[·×]/g, '*')
         .replace(/÷/g, '/')
+        .replace(/º/g, '°') // masculine ordinal, often typed for the degree sign
         .replace(/\bMath\./g, ''); // tolerate JS-style "Math.sin(x)"
 
     while (i < s.length) {
@@ -189,7 +194,7 @@ function tokenize(src) {
         if (two === '<=' || two === '>=' || two === '==' || two === '!=' || two === '&&' || two === '||') {
             tokens.push({ t: 'op', v: two }); i += 2; continue;
         }
-        if ('+-*/^(),=<>?:|!'.includes(c)) { tokens.push({ t: 'op', v: c }); i++; continue; }
+        if ('+-*/^(),=<>?:|!°'.includes(c)) { tokens.push({ t: 'op', v: c }); i++; continue; }
 
         throw new Error(`Unexpected character '${c}' in "${src}"`);
     }
@@ -326,9 +331,9 @@ class Parser {
 
     parsePostfix() {
         let node = this.parsePrimary();
-        while (this.isOp('!')) {
-            this.next();
-            node = { k: 'call', fn: 'factorial', args: [node] };
+        while (this.isOp('!') || this.isOp('°')) {
+            if (this.next().v === '°') node = { k: 'bin', op: '*', a: node, b: { k: 'const', v: '(Math.PI/180)' } };
+            else node = { k: 'call', fn: 'factorial', args: [node] };
         }
         return node;
     }

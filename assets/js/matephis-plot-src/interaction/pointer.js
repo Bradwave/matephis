@@ -245,9 +245,10 @@ export const PointerMixin = {
         const cs = this.transform;
         const exprs = obj.rawExpressions;
 
+        // t is in slider units; params store t * scale (radians for "deg" params)
         const evalAt = (key, t) => {
             const old = this.params[key];
-            this.params[key] = t;
+            this.params[key] = t * this.sliders.paramUIs[key].scale;
             let px = NaN, py = NaN;
             try {
                 const vx = this._eval(exprs[0], 'drag eval x');

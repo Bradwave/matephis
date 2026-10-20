@@ -13,6 +13,21 @@ export function hasMathJax() {
     return typeof window !== 'undefined' && !!(window.MathJax && window.MathJax.tex2svg);
 }
 
+/** Calls cb once MathJax is ready (or right away when the page does not load it). */
+export function whenMathJaxReady(cb) {
+    if (!document.getElementById('MathJax-script')) { cb(); return; }
+    const started = Date.now();
+    const check = () => {
+        const mj = window.MathJax;
+        if (mj && mj.startup && mj.startup.promise) { mj.startup.promise.then(cb, cb); return; }
+        if (mj && mj.tex2svg) { cb(); return; }
+        // Never block rendering forever if MathJax fails to load
+        if (Date.now() - started > 8000) { cb(); return; }
+        setTimeout(check, 50);
+    };
+    check();
+}
+
 /** Typesets TeX once and returns a detached, self-contained <svg> to clone. */
 function typeset(tex) {
     let node = cache.get(tex);

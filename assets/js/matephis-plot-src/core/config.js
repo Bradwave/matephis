@@ -131,3 +131,44 @@ export function parseAspectRatio(val) {
 export function cssLength(val) {
     return typeof val === 'number' ? `${val}px` : val;
 }
+
+/** Lightens dark colors in dark mode so they stay readable. */
+export function adaptColorForTheme(color, isDark) {
+    if (!color || typeof color !== 'string' || !isDark) return color;
+    const c = color.toLowerCase().trim();
+    if (c === '#000' || c === '#000000' || c === 'black') return '#e2e8f0';
+    let hex = c;
+    if (!hex.startsWith('#')) return color;
+    hex = hex.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
+    if (hex.length !== 6 && hex.length !== 8) return color;
+    const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    if (lum >= 0.42) return color;
+
+    const rN = r / 255, gN = g / 255, bN = b / 255;
+    const max = Math.max(rN, gN, bN), min = Math.min(rN, gN, bN);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === rN) h = (gN - bN) / d + (gN < bN ? 6 : 0);
+        else if (max === gN) h = (bN - rN) / d + 2;
+        else h = (rN - gN) / d + 4;
+        h /= 6;
+    }
+    const L = Math.max(0.68, l * 2.0);
+    const S = Math.min(0.9, Math.max(0.65, s));
+    const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+    };
+    const q = L < 0.5 ? L * (1 + S) : L + S - L * S;
+    const p = 2 * L - q;
+    return `rgb(${Math.round(hue2rgb(p, q, h + 1 / 3) * 255)}, ${Math.round(hue2rgb(p, q, h) * 255)}, ${Math.round(hue2rgb(p, q, h - 1 / 3) * 255)})`;
+}
