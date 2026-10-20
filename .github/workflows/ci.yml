@@ -39,6 +39,15 @@ jobs:
         run: npm test
       - name: Build JS bundles
         run: npm run build
+      # The bundles are committed for hosts that do not build them (jekyll serve
+      # without Node, Docker, Obsidian): they must match the sources
+      - name: Check committed bundles are up to date
+        run: |
+          if [ -n "$(git status --porcelain -- assets/js)" ]; then
+            echo "::error::The bundles in assets/js do not match the sources. Run 'npm run build' and commit the result."
+            git status --short -- assets/js
+            exit 1
+          fi
       - name: Build Jekyll site
         run: bundle exec jekyll build
         env:

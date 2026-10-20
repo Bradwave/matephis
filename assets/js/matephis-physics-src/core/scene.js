@@ -6,6 +6,9 @@
  * objects. Params get sliders through the plot engine's SliderManager, so a
  * scene and a plot behave the same way (expressions, "unit": "deg", animate).
  *
+ * Geometry comes from the Resolver (no DOM); this class owns the layout, the
+ * drawing context handed to object types, theme and lifecycle.
+ *
  * Shared with the plot engine (imported, not copied): expression compiler,
  * coordinate system, slider manager, palettes, MathJax bridge, lightbox.
  */
@@ -17,9 +20,11 @@ import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderer
 import { SliderManager } from '../../matephis-plot-src/ui/slider-manager.js';
 import { LightboxBridge } from '../../matephis-plot-src/ui/lightbox-bridge.js';
 import { validateConfig, defaultLimits, DEFAULT_ASPECT_RATIO, DEFAULT_G } from './config.js';
-import { angleValue, angleLiteralWarning } from './angles.js';
+import { formatAngle } from './angles.js';
 import { fitView, gridValues } from './world.js';
-import { toTeX } from './labels.js';
+import { toTeX, normalizeLabel, estimateTextSize, labelBox, boxesOverlap, segmentHitsBox } from './labels.js';
+import { Resolver, describe } from './resolver.js';
+import { angleArc, polar, anchorFor } from './draw.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
 
 let uidCounter = 0;
@@ -43,7 +48,6 @@ export class MatephisPhysics {
         const cfg = this.config;
         this.angleUnit = cfg.angleUnit === 'rad' ? 'rad' : 'deg';
         this.params = {};
-        this.resolved = {};
         this.warnings = [];
         this._listeners = [];
 
@@ -54,20 +58,20 @@ export class MatephisPhysics {
         this.container.appendChild(this.wrapper);
         this._applyLayout();
 
-        const objects = Array.isArray(cfg.objects) ? cfg.objects : [];
-        this.objects = objects.filter(o => o && typeof o === 'object' && OBJECT_TYPES[o.type]);
-        this.ids = objects.map(o => o && o.id).filter(id => typeof id === 'string' && id !== '');
-        this._idPattern = this.ids.length
-            ? new RegExp(`(?<![A-Za-z0-9_.])(${this.ids.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\.`, 'g')
-            : null;
+        const objects = (Array.isArray(cfg.objects) ? cfg.objects : []).filter(o => o && typeof o === 'object' && OBJECT_TYPES[o.type]);
+        const ids = objects.map(o => o.id).filter(id => typeof id === 'string' && id !== '');
 
         // g is always in scope; a param called g overrides it (and gets a slider)
         const paramNames = Object.keys(cfg.params || {});
         this.compiler = new ExpressionCompiler({
             getParams: () => this.params,
-            getPoints: () => this.resolved,
+            getPoints: () => (this.resolver ? this.resolver.resolved : {}),
             paramNames: [...new Set(['g', ...paramNames])],
-            pointNames: this.ids,
+            pointNames: ids,
+        });
+        this.resolver = new Resolver({
+            objects, types: OBJECT_TYPES, compiler: this.compiler, angleUnit: this.angleUnit, config: cfg,
+            warn: (msg) => this._addWarning(msg),
         });
         this.params.g = DEFAULT_G;
         if (cfg.g !== undefined) this.params.g = this._num(cfg.g, 'g');
@@ -253,7 +257,6 @@ export class MatephisPhysics {
         if (typeof val === 'number') return val;
         if (typeof val === 'boolean') return Number(val);
         try {
-            this._resolveReferencedIds(val);
             return this.compiler.eval(val);
         } catch (e) {
             this._addWarning(`${context}: ${e.message}`);
@@ -264,14 +267,6 @@ export class MatephisPhysics {
     _num(val, context) {
         const r = this._eval(val, context);
         return typeof r === 'number' ? r : NaN;
-    }
-
-    /** Resolves objects named in "A.x"-style references before evaluating. */
-    _resolveReferencedIds(src) {
-        if (!this._idPattern || !this._resolving || typeof src !== 'string') return;
-        this._idPattern.lastIndex = 0;
-        let m;
-        while ((m = this._idPattern.exec(src)) !== null) this._ensureResolved(m[1]);
     }
 
     /** Dark theme? Hosts can override with MatephisPhysics.isDarkHook = () => boolean. */
@@ -303,9 +298,17 @@ export class MatephisPhysics {
         return el;
     }
 
-    /** Text with a halo; "$...$" goes through MathJax when the page loads it. */
-    _text(x, y, str, { anchor = 'middle', baseline = 'middle', color = '#000', size, weight = 'normal', parent } = {}) {
+    /**
+     * Text with a halo; "$...$" goes through MathJax when the page loads it.
+     * A label with a TeX command and no "$" ("\\vec F") is treated as math.
+     */
+    _text(x, y, raw, { anchor = 'middle', baseline = 'middle', color = '#000', size, weight = 'normal', parent } = {}) {
+        const str = normalizeLabel(raw);
         const fontSize = size || this.config.fontSize || 16;
+        if (this._placed) {
+            const { w, h } = estimateTextSize(str, fontSize);
+            this._placed.boxes.push(labelBox(x, y, w, h, anchor, baseline));
+        }
         const plain = () => {
             const dark = this._isDark();
             const t = this._svg("text", {
@@ -364,12 +367,14 @@ export class MatephisPhysics {
 
         const cs = this._computeTransform();
         this.transform = cs;
+        // Labels and lines drawn so far, so later labels can avoid them
+        this._placed = { boxes: [], segs: [] };
 
         this._svg("rect", { x: 0, y: 0, width: this.width, height: this.height, fill: "none", class: "matephis-plot-bg" }, this.bgGroup);
 
         this._drawGrid(cs);
         this._drawAxes(cs);
-        this._drawObjects();
+        this._drawObjects(cs);
         if (this.config.debug) this._drawDebug(cs);
 
         if (this._warningsDirty) this._renderWarnings();
@@ -429,127 +434,140 @@ export class MatephisPhysics {
         }
     }
 
-    /** Context handed to object types: evaluation, mapping and drawing helpers. */
-    _context(obj) {
-        const where = (field) => `${obj.type}${obj.id ? ` '${obj.id}'` : ''} ${field}`;
-        return {
-            num: (v, field) => this._num(v, where(field)),
-            angle: (v, field) => {
-                const w = angleLiteralWarning(v, this.angleUnit, where(field));
-                if (w) this._addWarning(w);
-                return angleValue(v, this.angleUnit, (e) => this._num(e, where(field)));
-            },
-            point: (v, field) => this._point(v, where(field)),
-            map: (p) => ({ x: this.transform.mapX(p.x), y: this.transform.mapY(p.y) }),
-            color: (c) => this._color(c),
-            svg: (tag, attrs, parent) => this._svg(tag, attrs, parent),
-            text: (x, y, str, opts) => this._text(x, y, str, opts),
-            warn: (msg) => this._addWarning(msg),
-            pxPerMetre: this.pxPerMetre,
-            angleUnit: this.angleUnit,
-        };
+    /** Theme ink for lines and text that have no colour of their own. */
+    get ink() {
+        return this._isDark() ? '#e2e8f0' : '#1f1f1f';
+    }
+
+    /** Default colour of a vector kind: forces in the theme colour, the others fixed hues. */
+    _kindColor(kind) {
+        const d = this.palettes.default;
+        switch (kind) {
+            case 'velocity': return adaptColorForTheme(d[0], this._isDark());
+            case 'acceleration': return adaptColorForTheme(d[2], this._isDark());
+            case 'momentum': return adaptColorForTheme(d[4], this._isDark());
+            case 'vector': {
+                const palette = this.palettes[this.config.theme || "red"] || d;
+                return adaptColorForTheme(palette[1] || palette[0], this._isDark());
+            }
+            default: return this._color();
+        }
     }
 
     /**
-     * A point in world coordinates: [x, y] (numbers or expressions; a third
-     * coordinate z is accepted and ignored for now), an object id ("A"), or
-     * { "from": <point>, "offset": [dx, dy] } in metres.
+     * Places a label at the first candidate position whose box overlaps no
+     * label and no registered line drawn so far; falls back to the first.
+     * @param {{x, y, anchor, baseline}[]} candidates - screen positions, in order of preference
      */
-    _point(v, where) {
-        if (Array.isArray(v) && (v.length === 2 || v.length === 3)) {
-            const x = this._num(v[0], `${where} x`), y = this._num(v[1], `${where} y`);
-            return isFinite(x) && isFinite(y) ? { x, y } : null;
-        }
-        if (typeof v === 'string') {
-            const [id, anchor] = v.split('.');
-            if (!this.ids.includes(id)) {
-                this._addWarning(`${where}: no object with id '${id}'`);
-                return null;
-            }
-            if (anchor) this._addWarning(`${where}: anchors like '${v}' come with static scenes; using the position of '${id}'`);
-            const s = this._ensureResolved(id);
-            return s ? { x: s.x, y: s.y } : null;
-        }
-        if (v && typeof v === 'object' && v.from !== undefined) {
-            const base = this._point(v.from, where);
-            if (!base) return null;
-            const off = Array.isArray(v.offset) ? v.offset : [0, 0];
-            return { x: base.x + this._num(off[0], `${where} offset`), y: base.y + this._num(off[1], `${where} offset`) };
-        }
-        this._addWarning(`${where}: expected [x, y], an object id or { "from", "offset" }`);
-        return null;
+    _placeText(str, candidates, opts = {}) {
+        const fontSize = opts.size || this.config.fontSize || 16;
+        const { w, h } = estimateTextSize(normalizeLabel(str), fontSize);
+        const free = (c) => {
+            const b = labelBox(c.x, c.y, w, h, c.anchor, c.baseline);
+            if (b.x < 0 || b.y < 0 || b.x + b.w > this.width || b.y + b.h > this.height) return false;
+            if (this._placed.boxes.some(o => boxesOverlap(o, b))) return false;
+            return !this._placed.segs.some(([p, q]) => segmentHitsBox(p, q, b));
+        };
+        const pick = candidates.find(free) || candidates[0];
+        return this._text(pick.x, pick.y, str, { ...opts, anchor: pick.anchor, baseline: pick.baseline });
     }
 
-    /** Resolves an object by id once per draw; detects reference cycles. */
-    _ensureResolved(id) {
-        if (this._state.has(id)) return this._state.get(id);
-        const obj = this.objects.find(o => o.id === id);
-        if (!obj) return null;
-        if (this._visiting.has(id)) {
-            this._addWarning(`Reference cycle through '${id}'`);
-            return null;
-        }
-        this._visiting.add(id);
-        const state = this._resolveObject(obj);
-        this._visiting.delete(id);
-        return state;
-    }
-
-    _resolveObject(obj) {
-        const key = obj.id || obj;
-        if (this._state.has(key)) return this._state.get(key);
-        let state = null;
-        try {
-            state = OBJECT_TYPES[obj.type].resolve(obj, this._context(obj));
-        } catch (e) {
-            this._addWarning(`${obj.type}${obj.id ? ` '${obj.id}'` : ''}: ${e.message}`);
-        }
-        this._state.set(key, state);
-        if (obj.id && state) this.resolved[obj.id] = { x: state.x, y: state.y };
-        return state;
+    /** Drawing context handed to object types (see objects/index.js). */
+    _renderContext(cs) {
+        const ctx = {
+            r: this.resolver,
+            map: (p) => ({ x: cs.mapX(p.x), y: cs.mapY(p.y) }),
+            pxPerMetre: this.pxPerMetre,
+            svg: (tag, attrs, parent) => this._svg(tag, attrs, parent),
+            text: (x, y, str, opts) => this._text(x, y, str, opts),
+            placeText: (str, candidates, opts) => this._placeText(str, candidates, opts),
+            /** Registers a drawn line (screen points) that labels should not cover. */
+            obstacle: (p, q) => this._placed.segs.push([p, q]),
+            /** Same, for a world polyline. */
+            obstaclePath: (pts) => {
+                for (let i = 1; i < pts.length; i++) this._placed.segs.push([ctx.map(pts[i - 1]), ctx.map(pts[i])]);
+            },
+            color: (c) => this._color(c),
+            kindColor: (kind) => this._kindColor(kind),
+            ink: this.ink,
+            angleUnit: this.angleUnit,
+            /** Arc (or right-angle square) for {vertex, a1, a2}, with a label or the value. */
+            angleMark: (spec, { label, showValue = false, radius = 30, color = this.ink, digits } = {}, g) => {
+                const c = ctx.map(spec.vertex);
+                const mid = angleArc(ctx, c, spec.a1, spec.a2, radius, { color }, g);
+                const sweep = ((spec.a2 - spec.a1) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                const text = label !== undefined && label !== null && label !== true ? label
+                    : (showValue || label === true) ? formatAngle(sweep, this.angleUnit, digits !== undefined ? digits : 0) : null;
+                if (!text) return;
+                // Just outside the arc on the bisector, text running outwards; then just outside
+                // either side of the angle (narrow angles), then further out
+                const outside = (a, turn) => {
+                    const p = polar(c, a, radius * 0.75), o = a + turn;
+                    return { x: p.x + 9 * Math.cos(o), y: p.y - 9 * Math.sin(o), ...anchorFor(o) };
+                };
+                const cands = [
+                    { ...polar(c, mid, radius + 5), ...anchorFor(mid) },
+                    outside(spec.a1, -Math.PI / 2), outside(spec.a2, Math.PI / 2),
+                    { ...polar(c, mid, radius + 16), ...anchorFor(mid) },
+                ];
+                ctx.placeText(text, cands, { color, size: 15, parent: g });
+            },
+        };
+        return ctx;
     }
 
     _isShown(obj) {
         if (obj.hidden === true) return false;
         if (obj.show === undefined) return true;
-        const v = typeof obj.show === 'boolean' ? obj.show : this._num(obj.show, `${obj.type} show`);
+        const v = typeof obj.show === 'boolean' ? obj.show : this.resolver.num(obj.show, `${describe(obj)} show`);
         return !!v && !Number.isNaN(v);
     }
 
-    _drawObjects() {
-        this._state = new Map();
-        this._visiting = new Set();
-        this.resolved = {};
-        this._resolving = true;
-        try {
-            this.objects.forEach(obj => this._resolveObject(obj));
-            this.objects.forEach(obj => {
-                const state = this._state.get(obj.id || obj);
-                if (!state || !this._isShown(obj)) return;
-                const def = OBJECT_TYPES[obj.type];
-                const layer = LAYERS.includes(obj.layer) ? obj.layer : def.layer;
-                const g = this._svg("g", { class: `matephis-physics-${obj.type}` }, this.layerGroups[layer]);
-                if (obj.opacity !== undefined) g.setAttribute("opacity", this._num(obj.opacity, `${obj.type} opacity`));
-                try {
-                    def.render(obj, state, this._context(obj), g);
-                } catch (e) {
-                    this._addWarning(`${obj.type}${obj.id ? ` '${obj.id}'` : ''}: ${e.message}`);
-                }
-            });
-        } finally {
-            this._resolving = false;
-        }
+    _drawObjects(cs) {
+        const r = this.resolver;
+        const states = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
+        const ctx = this._renderContext(cs);
+        r.objects.forEach(obj => {
+            const state = states.get(obj);
+            if (!state || !this._isShown(obj)) return;
+            const def = OBJECT_TYPES[obj.type];
+            const layer = LAYERS.includes(obj.layer) ? obj.layer : def.layer;
+            const g = this._svg("g", { class: `matephis-physics-${obj.type}` }, this.layerGroups[layer]);
+            if (obj.opacity !== undefined) g.setAttribute("opacity", r.num(obj.opacity, `${describe(obj)} opacity`));
+            try {
+                def.render(obj, state, ctx, g);
+            } catch (e) {
+                this._addWarning(`${describe(obj)}: ${e.message}`);
+            }
+        });
     }
 
-    /** Debug overlay: object ids at their positions and the scale. */
+    /**
+     * Debug overlay: each named object's position, id and frame (t, n), with
+     * its anchor names in a tooltip; the scale in the corner.
+     */
     _drawDebug(cs) {
         const g = this.debugGroup;
         const color = '#7c3aed';
-        this._state.forEach((state, key) => {
-            if (!state || typeof key !== 'string') return;
-            const x = cs.mapX(state.x), y = cs.mapY(state.y);
-            this._svg("path", { d: `M${x - 5} ${y}H${x + 5}M${x} ${y - 5}V${y + 5}`, stroke: color, "stroke-width": 1 }, g);
-            this._text(x + 6, y + 6, `${key} (${+state.x.toFixed(2)}, ${+state.y.toFixed(2)})`, { anchor: 'start', baseline: 'hanging', color, size: 11, parent: g });
+        const r = this.resolver;
+        const k = 0.06 * Math.min(cs.xMax - cs.xMin, cs.yMax - cs.yMin);
+        r.objects.forEach(obj => {
+            const st = r.states.get(obj);
+            if (!st || !obj.id || obj.id.startsWith('__')) return;
+            const x = cs.mapX(st.pos.x), y = cs.mapY(st.pos.y);
+            const grp = this._svg("g", {}, g);
+            const tip = this._svg("title", {}, grp);
+            const names = OBJECT_TYPES[obj.type].anchorNames || [];
+            tip.textContent = `${describe(obj)}${names.length ? ` · anchors: ${names.join(', ')}` : ''}`;
+            if (st.frame && !st.vec) {
+                [[st.frame.t, 't'], [st.frame.n, 'n']].forEach(([a, name]) => {
+                    const ex = cs.mapX(st.pos.x + a.x * k), ey = cs.mapY(st.pos.y + a.y * k);
+                    this._svg("line", { x1: x, y1: y, x2: ex, y2: ey, stroke: color, "stroke-width": 1.2 }, grp);
+                    this._text(ex + (ex - x) * 0.25, ey + (ey - y) * 0.25, name, { color, size: 10, parent: grp });
+                });
+            }
+            this._svg("circle", { cx: x, cy: y, r: 2.5, fill: color }, grp);
+            this._text(x + 6, y + 6, `${obj.id} (${+st.pos.x.toFixed(2)}, ${+st.pos.y.toFixed(2)})`, { anchor: 'start', baseline: 'hanging', color, size: 11, parent: grp });
         });
         this._text(this.width - 6, this.height - 6, `1 m = ${+this.pxPerMetre.toFixed(1)} px`, { anchor: 'end', baseline: 'auto', color, size: 11, parent: g });
     }

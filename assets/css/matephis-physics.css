@@ -23,7 +23,72 @@
   padding: 0 var(--space-lg);
 }
 
-/* The debug overlay never takes clicks */
+/* The debug overlay never takes clicks, but its markers show a tooltip */
 .matephis-physics-debug {
   pointer-events: none;
+}
+
+.matephis-physics-debug circle {
+  pointer-events: all;
+  cursor: help;
+}
+
+/* ==========================================================================
+   Base look of objects. A colour set in the JSON is an inline style and wins.
+   ========================================================================== */
+
+.matephis-physics-svg {
+  --physics-ink: #1f1f1f;
+  --physics-body: #f4f4f4;
+  --physics-surface: #e6e6e6;
+  --physics-hatch: #6b6b6b;
+  --physics-rope: #3a3a3a;
+}
+
+[data-theme="dark"] .matephis-physics-svg {
+  --physics-ink: #e2e8f0;
+  --physics-body: #262626;
+  --physics-surface: #303030;
+  --physics-hatch: #9a9a9a;
+  --physics-rope: #cbd5e1;
+}
+
+.matephis-physics-svg .mp-ink {
+  stroke: var(--physics-ink);
+  fill: none;
+}
+
+.matephis-physics-svg .mp-ink-fill {
+  fill: var(--physics-ink);
+}
+
+.matephis-physics-svg .mp-body {
+  stroke: var(--physics-ink);
+  fill: var(--physics-body);
+}
+
+.matephis-physics-svg .mp-body-stroke {
+  stroke: var(--physics-body);
+  fill: none;
+}
+
+.matephis-physics-svg .mp-surface {
+  stroke: var(--physics-ink);
+  fill: var(--physics-surface);
+}
+
+.matephis-physics-svg .mp-hatch {
+  stroke: var(--physics-hatch);
+  fill: none;
+}
+
+.matephis-physics-svg .mp-rope {
+  stroke: var(--physics-rope);
+  fill: none;
+}
+
+.matephis-physics-svg .mp-pin {
+  stroke: var(--physics-ink);
+  stroke-width: 1.4;
+  fill: var(--physics-body);
 }

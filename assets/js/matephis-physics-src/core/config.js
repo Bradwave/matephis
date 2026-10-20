@@ -11,28 +11,25 @@ export const ROOT_KEYS = [
     "xlim", "ylim", "aspectRatio", "width", "fullWidth", "cssWidth", "align", "border", "padding",
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
-    "objects", "debug", "fontSize",
+    "objects", "debug", "fontSize", "forceScale", "vectorScale",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
-    "forceScale", "vectorScale", "applyAt", "styles", "state", "ode", "events", "time", "preset", "use",
+    "applyAt", "styles", "state", "ode", "events", "time", "preset", "use",
     "frames", "views", "graphs", "readouts", "controls", "interactive", "magnitudes", "outOfPlane",
     "compare", "seed",
 ];
 
 /** Keys every object accepts. */
 export const COMMON_OBJECT_KEYS = [
-    "id", "type", "at", "on", "pos", "angle", "label", "labelAt", "labelOffset", "color", "fill",
+    "id", "type", "at", "on", "pos", "posUnit", "angle", "label", "labelAt", "labelOffset", "color", "fill",
     "opacity", "dash", "mass", "show", "hidden", "views", "layer",
 ];
 
 /** Object and annotation types from the spec's catalogue that later phases implement. */
 export const PLANNED_TYPES = [
-    "ground", "wall", "ceiling", "slope", "table", "road", "block", "ball", "cart", "car", "person",
-    "rod", "disk", "pulley", "rope", "spring", "pendulum", "hinge", "frame", "dimension", "angle", "path",
-    "force", "vector", "velocity", "acceleration", "momentum", "decompose", "resultant", "moment",
-    "lever-arm", "ghosts", "trace", "energy", "com", "pairs", "fbd",
+    "road", "car", "person", "resultant", "moment", "lever-arm", "ghosts", "trace", "energy", "pairs", "fbd",
 ];
 
 export const DEFAULT_ASPECT_RATIO = 16 / 9;

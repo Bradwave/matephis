@@ -32,9 +32,34 @@
                     { id: 'B', type: 'particle', at: ['v0*cos(a)*t', 'v0*sin(a)*t - g*t^2/2'], radius: 7, show: 'v0*sin(a)*t - g*t^2/2 >= 0' }
                 ]
             },
+            'Piano inclinato': {
+                xlim: [0, 9], ylim: [0, 5], forceScale: 0.11,
+                objects: [
+                    { type: 'ground', y: 0.3 },
+                    { id: 's', type: 'slope', at: [0.4, 0.3], angle: 30, length: 8.6 },
+                    { id: 'A', type: 'block', on: 's', pos: 0.5, size: [1.6, 0.9] },
+                    { id: 'P', type: 'force', on: 'A', dir: 'down', mag: 20, label: '\\vec P' },
+                    { type: 'force', on: 'A', dir: 'normal', mag: '20*cos(30°)', label: '\\vec N' },
+                    { type: 'decompose', vector: 'P', frame: 's', showAngle: 'y', angleLabel: '\\alpha' },
+                    { type: 'angle', of: 's', label: '\\alpha' }
+                ]
+            },
+            'Tavolo e carrucola': {
+                xlim: [0, 7], ylim: [0, 4],
+                objects: [
+                    { type: 'ground', y: 0.2 },
+                    { id: 't', type: 'table', at: [0.5, 2.5], width: 4.5, height: 2.3 },
+                    { id: 'A', type: 'block', on: 't', pos: 0.45, size: [1, 0.6], label: '$m_1$' },
+                    { id: 'p', type: 'pulley', at: { from: 't.edge', offset: [0.3, 0] }, radius: 0.3, hangFrom: 't.edge' },
+                    { id: 'B', type: 'block', at: [5.6, 1.5], size: [0.6, 0.6], label: '$m_2$' },
+                    { id: 'rope', type: 'rope', from: 'A.right', to: 'B.top', over: ['p'] },
+                    { type: 'force', on: 'A', at: 'A.right', dir: 'along:rope', mag: 8, label: '\\vec T' },
+                    { type: 'force', on: 'B', at: 'B.top', dir: 'along:rope', mag: 8, label: '\\vec T' }
+                ]
+            },
             'Avvisi': {
                 xlin: [0, 10], graphs: [],
-                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'block', on: 's' }, { type: 'particle', at: [5, 2], raduis: 4 }]
+                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'trace', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
             }
         },
         matephis: {
