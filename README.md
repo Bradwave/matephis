@@ -89,6 +89,8 @@ npm run build     # ricompila i bundle minificati con sourcemap
 
 I bundle `assets/js/matephis-plot.js` e `assets/js/matephis-physics.js` sono generati: non vanno modificati a mano, si cambiano i sorgenti nelle cartelle `-src`.
 
+Stanno comunque nel repository, insieme alle sourcemap, perché servono a chi non compila (`jekyll serve` senza Node, Docker, Obsidian). `npm run dev` e `npm run build` producono file identici, quindi git li mostra modificati solo quando cambio davvero i sorgenti: in quel caso li committo insieme ai sorgenti.
+
 ## Struttura del repository
 
 ```
@@ -142,9 +144,9 @@ L'elenco completo delle opzioni, con esempi renderizzati, è nella pagina `/note
 
 ## Pubblicazione
 
-Ogni push su `main` fa partire la GitHub Action in `jekyll.yml`: installa le dipendenze, esegue `npm run build`, poi `bundle exec jekyll build`, e pubblica il risultato su GitHub Pages. Non serve compilare i bundle prima di ogni commit.
+Ogni push su `main` fa partire la GitHub Action in `jekyll.yml`: installa le dipendenze, esegue `npm run build`, poi `bundle exec jekyll build`, e pubblica il risultato su GitHub Pages. Il sito pubblicato usa quindi sempre bundle ricompilati dai sorgenti.
 
-Sulle pull request gira invece `ci.yml`, che esegue test e build senza pubblicare nulla.
+Sulle pull request gira invece `ci.yml`, che esegue test e build senza pubblicare nulla, e fallisce se i bundle nel repository non corrispondono ai sorgenti (cioè se ho cambiato il JS senza rilanciare `npm run build`).
 
 ## Problemi comuni
 
