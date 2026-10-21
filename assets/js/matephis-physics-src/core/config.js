@@ -11,7 +11,7 @@ export const ROOT_KEYS = [
     "xlim", "ylim", "aspectRatio", "width", "fullWidth", "cssWidth", "align", "border", "padding",
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
-    "objects", "debug", "fontSize", "forceScale", "vectorScale",
+    "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo",
 ];
 
 /** Root keys from the spec that later phases implement. */

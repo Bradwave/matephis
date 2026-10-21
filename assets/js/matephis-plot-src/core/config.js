@@ -24,7 +24,7 @@ export const VALID_ROOT_KEYS = [
     "complexMode", "draggablePoints", "equalAspect",
     "selectionColor", "selectionRadius", "selectionOutlineColor", "selectionOutlineWidth",
     "snapToPoints", "pointSelectionIcon", "slopeSelectionIcon", "tangentSelectionIcon",
-    "title", "caption", "ariaLabel", "download", "sampleTolerance", "implicitResolution"
+    "title", "caption", "ariaLabel", "download", "sampleTolerance", "implicitResolution", "labelHalo"
 ];
 
 export const VALID_DATA_KEYS = [

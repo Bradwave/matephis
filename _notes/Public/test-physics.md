@@ -27,6 +27,7 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `animate` | Boolean/Array | | Pulsante play per gli slider, come nei grafici. |
 | `objects` | Array | `[]` | Gli oggetti della scena. |
 | `debug` | Boolean | `false` | Mostra id e coordinate degli oggetti e la scala (1 m = N px). |
+| `labelHalo` | Boolean | `true` | Contorno attorno alle formule LaTeX, come quello dei testi semplici; `false` per toglierlo. |
 
 ### Oggetti
 

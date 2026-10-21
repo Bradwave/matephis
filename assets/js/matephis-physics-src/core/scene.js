@@ -322,7 +322,9 @@ export class MatephisPhysics {
             return t;
         };
         if (hasMathJax() && str.includes('$')) {
-            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain);
+            // Formulas get the same outline as plain labels unless "labelHalo": false
+            const halo = this.config.labelHalo !== false ? { color: this._isDark() ? "#181818" : "#fff" } : null;
+            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain, { halo });
         }
         return plain();
     }

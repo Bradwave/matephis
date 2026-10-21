@@ -512,8 +512,10 @@ export class MatephisPlot {
     }
 
     _renderMathJax(text, x, y, baseSize, color, anchor, baseline, parent) {
+        // "labelHalo": true outlines formulas like plain labels (off by default in plots)
+        const halo = this.config.labelHalo === true ? { color: this._isDark() ? "#181818" : "#fff" } : null;
         return renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline, parent,
-            () => this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize));
+            () => this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize), { halo });
     }
 
     // =========================================================================
