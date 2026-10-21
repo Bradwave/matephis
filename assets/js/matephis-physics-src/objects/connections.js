@@ -11,6 +11,7 @@ import { roundAnchor, ROUND_ANCHORS } from '../core/anchors.js';
 import { ropePath, springPoints, pointAlong } from '../core/geometry.js';
 import { polyline, hatch, colorStyle } from '../core/draw.js';
 import { argNum, argAngle, massOf, circlePoints } from './shared.js';
+import { AUTO_KEYS } from './autoforces.js';
 
 const pulley = {
     keys: ['radius', 'hangFrom', 'fixed'],
@@ -131,7 +132,7 @@ const spring = {
     },
     render(obj, st, ctx, g) {
         polyline(ctx, st.points, { fill: 'none', class: 'mp-ink', 'stroke-width': 1.6, 'stroke-linejoin': 'round', style: colorStyle(obj.color && ctx.color(obj.color)) }, g);
-        ctx.obstaclePath([st.a, st.b]);
+        ctx.obstaclePath(st.points);
         if (obj.label) {
             const c = ctx.map(st.pos);
             const n = st.frame.n;
@@ -146,7 +147,7 @@ const spring = {
  * (t, direction of increasing theta) and radial (n, towards the pivot).
  */
 const pendulum = {
-    keys: ['pivot', 'length', 'theta', 'bob', 'support', 'showVertical', 'angleLabel'],
+    keys: ['pivot', 'length', 'theta', 'bob', 'support', 'showVertical', 'angleLabel', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: ['pivot', 'bob', 'center', 'com', 'point(u)'],
     resolve(obj, r) {

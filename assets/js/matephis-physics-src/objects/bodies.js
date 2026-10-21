@@ -8,6 +8,7 @@ import { add, sub, lerp, fromLocal, fromAngle, perp, norm, dist, angleOf } from 
 import { boxAnchor, roundAnchor, BOX_ANCHORS, ROUND_ANCHORS } from '../core/anchors.js';
 import { polyline, colorStyle } from '../core/draw.js';
 import { argNum, argAngle, SURFACE_LABELS, massOf, circlePoints } from './shared.js';
+import { AUTO_KEYS } from './autoforces.js';
 
 /** Frame of a placed body: the surface frame when it rests on one. */
 function bodyFrame(place) {
@@ -29,13 +30,13 @@ function centerLabel(obj, st, ctx, g) {
 
 /** Particle: a point with an optional label. `radius` is in pixels (drawing only). */
 const particle = {
-    keys: ['radius'],
+    keys: ['radius', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: ['center', 'com'],
     resolve(obj, r) {
         const p = r.place(obj, 0);
         if (!p) return null;
-        return { pos: p.pos, com: p.pos, angle: p.angle, frame: bodyFrame(p), support: p.support, mass: massOf(obj, r) };
+        return { pos: p.pos, com: p.pos, angle: p.angle, frame: bodyFrame(p), support: p.support, contact: p.contact, mass: massOf(obj, r) };
     },
     anchor(st, name) {
         return name === 'center' || name === 'com' ? st.pos : null;
@@ -54,7 +55,7 @@ const particle = {
 
 /** Block: a w × h rectangle. On a surface, its bottom face lies on it. */
 const block = {
-    keys: ['size'],
+    keys: ['size', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: [...BOX_ANCHORS, 'surface(u)'],
     resolve(obj, r) {
@@ -66,7 +67,7 @@ const block = {
         const tl = boxAnchor(p.pos, p.angle, w, h, 'tl'), tr = boxAnchor(p.pos, p.angle, w, h, 'tr');
         const t = norm(sub(tr, tl));
         return {
-            pos: p.pos, com: p.pos, angle: p.angle, w, h, frame: bodyFrame(p), support: p.support, mass: massOf(obj, r),
+            pos: p.pos, com: p.pos, angle: p.angle, w, h, frame: bodyFrame(p), support: p.support, contact: p.contact, mass: massOf(obj, r),
             // Another body can rest on the top face
             surface: (u) => ({ point: lerp(tl, tr, u), tangent: t, normal: perp(t) }),
             surfaceLength: w,
@@ -89,7 +90,7 @@ const block = {
 
 /** Ball: radius in metres; on a surface it touches it at one point. */
 const ball = {
-    keys: ['radius'],
+    keys: ['radius', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: ROUND_ANCHORS,
     resolve(obj, r) {
@@ -97,7 +98,7 @@ const ball = {
         if (!(rad > 0)) return null;
         const p = r.place(obj, rad);
         if (!p) return null;
-        return { pos: p.pos, com: p.pos, angle: p.angle, radius: rad, frame: bodyFrame(p), support: p.support, mass: massOf(obj, r) };
+        return { pos: p.pos, com: p.pos, angle: p.angle, radius: rad, frame: bodyFrame(p), support: p.support, contact: p.contact, mass: massOf(obj, r) };
     },
     anchor(st, name, arg, r) {
         if (name === 'rim') {
@@ -116,7 +117,7 @@ const ball = {
 
 /** Cart: a box on two wheels; on a surface the wheels touch it. */
 const cart = {
-    keys: ['size', 'wheel'],
+    keys: ['size', 'wheel', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: [...BOX_ANCHORS, 'axle(i)', 'surface(u)'],
     resolve(obj, r) {
@@ -131,7 +132,7 @@ const cart = {
         const tl = boxAnchor(p.pos, p.angle, w, h, 'tl'), tr = boxAnchor(p.pos, p.angle, w, h, 'tr');
         const t = norm(sub(tr, tl));
         return {
-            pos: p.pos, com: p.pos, angle: p.angle, w, h, wr, axles, frame: bodyFrame(p), support: p.support, mass: massOf(obj, r),
+            pos: p.pos, com: p.pos, angle: p.angle, w, h, wr, axles, frame: bodyFrame(p), support: p.support, contact: p.contact, mass: massOf(obj, r),
             surface: (u) => ({ point: lerp(tl, tr, u), tangent: t, normal: perp(t) }),
             surfaceLength: w,
         };
@@ -166,7 +167,7 @@ const cart = {
  * "center", "end" or a fraction 0–1) draws a hinge pin there.
  */
 const rod = {
-    keys: ['from', 'to', 'length', 'pivot', 'width'],
+    keys: ['from', 'to', 'length', 'pivot', 'width', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: ['start', 'end', 'center', 'com', 'pivot', 'point(u)'],
     resolve(obj, r) {
@@ -224,7 +225,7 @@ const rod = {
 
 /** Disk: radius in metres; `rotation` turns a marker radius to show the angle turned. */
 const disk = {
-    keys: ['radius', 'rotation', 'pivot'],
+    keys: ['radius', 'rotation', 'pivot', ...AUTO_KEYS],
     layer: 'bodies',
     anchorNames: [...ROUND_ANCHORS, 'axle'],
     resolve(obj, r) {

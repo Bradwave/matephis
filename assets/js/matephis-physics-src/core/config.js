@@ -11,25 +11,25 @@ export const ROOT_KEYS = [
     "xlim", "ylim", "aspectRatio", "width", "fullWidth", "cssWidth", "align", "border", "padding",
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
-    "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo",
+    "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
-    "applyAt", "styles", "state", "ode", "events", "time", "preset", "use",
-    "frames", "views", "graphs", "readouts", "controls", "interactive", "magnitudes", "outOfPlane",
+    "styles", "state", "ode", "events", "time", "preset", "use",
+    "frames", "views", "graphs", "readouts", "interactive", "magnitudes", "outOfPlane",
     "compare", "seed",
 ];
 
 /** Keys every object accepts. */
 export const COMMON_OBJECT_KEYS = [
     "id", "type", "at", "on", "pos", "posUnit", "angle", "label", "labelAt", "labelOffset", "color", "fill",
-    "opacity", "dash", "mass", "show", "hidden", "views", "layer",
+    "opacity", "dash", "mass", "show", "hidden", "views", "layer", "drag",
 ];
 
 /** Object and annotation types from the spec's catalogue that later phases implement. */
 export const PLANNED_TYPES = [
-    "road", "car", "person", "resultant", "moment", "lever-arm", "ghosts", "trace", "energy", "pairs", "fbd",
+    "road", "car", "person", "moment", "lever-arm", "ghosts", "trace", "energy",
 ];
 
 export const DEFAULT_ASPECT_RATIO = 16 / 9;

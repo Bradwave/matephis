@@ -12,6 +12,7 @@ import { arrow, polyline, anchorFor, colorStyle } from '../core/draw.js';
 import { formatNumber } from '../../matephis-plot-src/parser/expression-parser.js';
 import { argNum, labelSymbol, massOf } from './shared.js';
 import { normalizeLabel } from '../core/labels.js';
+import { resolveAutoForce } from './autoforces.js';
 
 export const VECTOR_KINDS = ['force', 'velocity', 'acceleration', 'momentum', 'vector'];
 
@@ -66,7 +67,9 @@ export function drawVector(ctx, p, v, k, opts, g) {
     const vertical = Math.abs(Math.cos(a)) < 0.4;
     const candidates = opts.labelAt === 'middle'
         ? [at(mid, nA, 10), at(mid, nB, 10), ahead]
-        : [...(vertical ? [...sides, ahead] : [ahead, ...sides]), at(mid, nA, 10), at(mid, nB, 10), { ...ahead, x: ahead.x + Math.cos(a) * 14, y: ahead.y - Math.sin(a) * 14 }];
+        : [...(vertical ? [...sides, ahead] : [ahead, ...sides]), at(mid, nA, 10), at(mid, nB, 10),
+            // Further out, for arrows running along a spring or a rope
+            at(tipBack, nA, 24), at(tipBack, nB, 24), { ...ahead, x: ahead.x + Math.cos(a) * 14, y: ahead.y - Math.sin(a) * 14 }];
     // Drawn first (so the label is on top) but registered after its own label,
     // which may sit next to it
     arrow(ctx, s0, s1, { ...opts, noObstacle: true }, g);
@@ -76,7 +79,7 @@ export function drawVector(ctx, p, v, k, opts, g) {
 
 function vectorType(kind) {
     return {
-        keys: ['on', 'dir', 'mag', 'vec', 'scale', 'showValue', 'unit', 'digits', 'tail', 'width', 'decompose', 'labelAt'],
+        keys: ['on', 'dir', 'mag', 'vec', 'scale', 'showValue', 'unit', 'digits', 'tail', 'width', 'decompose', 'labelAt', 'by'],
         layer: 'annotations',
         anchorNames: ['tail', 'tip'],
         resolve(obj, r) {
@@ -92,6 +95,16 @@ function vectorType(kind) {
                 return null;
             }
             let v;
+            if (obj.__auto && obj.vec === undefined && obj.dir === undefined) {
+                // Automatic force: geometry from the connection; "mag" and "at" may override it
+                const a = resolveAutoForce(obj, r);
+                if (!a) return null;
+                let vec = a.vec;
+                if (obj.mag !== undefined) vec = scale(norm(vec), r.num(obj.mag, `${where} mag`));
+                const pos = obj.at !== undefined ? r.point(obj.at, `${where} at`) : a.pos;
+                if (!pos || !isFinite(vec.x) || !isFinite(vec.y)) return null;
+                return { pos, vec, mag: len(vec), kind, frame: owner && owner.frame ? owner.frame : null };
+            }
             if (obj.vec !== undefined) {
                 if (!Array.isArray(obj.vec)) { r.warn(`${where}: 'vec' must be [vx, vy]`); return null; }
                 v = { x: r.num(obj.vec[0], `${where} vec`), y: r.num(obj.vec[1], `${where} vec`), z: 0 };
@@ -114,9 +127,12 @@ function vectorType(kind) {
         render(obj, st, ctx, g) {
             const r = ctx.r;
             const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[kind];
-            const color = obj.color ? ctx.color(obj.color) : ctx.kindColor(kind);
+            const pair = r.pairIndex ? r.pairIndex.get(obj) : undefined;
+            const color = obj.color ? ctx.color(obj.color) : pair !== undefined ? ctx.pairColor(pair) : ctx.kindColor(kind);
             const value = obj.showValue ? valueText(st.mag, obj, kind, r) : null;
-            drawVector(ctx, st.pos, st.vec, k, {
+            const off = ctx.vectorOffset ? ctx.vectorOffset(obj) : 0;
+            const pos = off ? add(st.pos, scale(perp(norm(st.vec)), off / ctx.pxPerMetre)) : st.pos;
+            drawVector(ctx, pos, st.vec, k, {
                 color, head: HEADS[kind], tail: obj.tail,
                 width: obj.width !== undefined ? r.num(obj.width, 'width') : kind === 'momentum' ? 3 : 2,
                 dash: obj.dash, opacity: r.faded.has(obj) ? 0.35 : undefined,
@@ -456,7 +472,135 @@ const path = {
     },
 };
 
+/** Vectors of a kind acting on a body (hand-written and automatic). */
+function vectorsOn(r, body, kind) {
+    return r.objects.filter(o => o.on === body && o.type === kind);
+}
+
+/**
+ * Resultant of the vectors of one kind on a body (default: forces), from its
+ * centre of mass. "construction": "tip-to-tail" chains the vectors that add up
+ * to it. A zero resultant prints "= 0" next to the body (equilibrium).
+ */
+const resultant = {
+    keys: ['on', 'kind', 'construction', 'showValue', 'digits', 'unit', 'width'],
+    layer: 'annotations',
+    anchorNames: ['tip'],
+    resolve(obj, r) {
+        const kind = obj.kind || 'force';
+        const body = r.state(obj.on);
+        if (!body) {
+            r.warn(`resultant: 'on' must be the id of a body`);
+            return null;
+        }
+        const parts = vectorsOn(r, obj.on, kind).map(o => ({ obj: o, st: r.stateOf(o) })).filter(p => p.st);
+        const vec = parts.reduce((s, p) => add(s, p.st.vec), { x: 0, y: 0, z: 0 });
+        const pos = obj.at !== undefined ? r.point(obj.at, 'resultant at') : (body.com || body.pos);
+        if (!pos) return null;
+        return { pos, vec, mag: len(vec), kind, parts, isResultant: true };
+    },
+    anchor(st, name, arg, r) {
+        return name === 'tip' ? add(st.pos, scale(st.vec, r.scales[st.kind])) : null;
+    },
+    render(obj, st, ctx, g) {
+        const r = ctx.r;
+        const k = r.scales[st.kind];
+        const color = obj.color ? ctx.color(obj.color) : ctx.ink;
+        const label = obj.label !== undefined ? obj.label : '\\vec R';
+        const eps = 1e-9 * Math.max(1, ...st.parts.map(p => p.st.mag));
+        if (st.mag <= eps) {
+            const c = ctx.map(st.pos);
+            ctx.placeText(`${normalizeLabel(label)} = 0`, [
+                { x: c.x + 14, y: c.y - 14, anchor: 'start', baseline: 'auto' }, { x: c.x - 14, y: c.y - 14, anchor: 'end', baseline: 'auto' },
+                { x: c.x + 14, y: c.y + 14, anchor: 'start', baseline: 'hanging' },
+            ], { color, parent: g });
+            return;
+        }
+        if (obj.construction === 'tip-to-tail') {
+            let start = st.pos;
+            st.parts.forEach(p => {
+                if (p.st.mag <= eps) return;
+                const end = add(start, scale(p.st.vec, k));
+                arrow(ctx, ctx.map(start), ctx.map(end), { color: ctx.kindColor(st.kind), width: 1.2, dash: '4 3', opacity: 0.55 }, g);
+                start = end;
+            });
+        }
+        const value = obj.showValue ? valueText(st.mag, obj, st.kind, r) : null;
+        drawVector(ctx, st.pos, st.vec, k, {
+            color, head: HEADS[st.kind], width: obj.width !== undefined ? r.num(obj.width, 'width') : 2.6,
+            label: vectorLabel(label, value),
+        }, g);
+    },
+};
+
+/**
+ * Action–reaction pairs between two bodies: forces on A exerted by B and on B
+ * exerted by A get matching colours. The source of a force is its "by" key, or
+ * for automatic forces the surface or body it comes from.
+ */
+const pairs = {
+    keys: ['between'],
+    layer: 'annotations',
+    anchorNames: [],
+    resolve(obj, r) {
+        const [a, b] = Array.isArray(obj.between) ? obj.between : [];
+        if (!r.objectById(a) || !r.objectById(b)) {
+            r.warn(`pairs: 'between' must list two body ids`);
+            return null;
+        }
+        const on = (body, from) => r.objects.filter(o => VECTOR_KINDS.includes(o.type) && o.on === body && sourceOf(o, r) === from);
+        const ab = on(a, b), ba = on(b, a);
+        if (!r.pairIndex) r.pairIndex = new Map();
+        const n = Math.min(ab.length, ba.length);
+        for (let i = 0; i < n; i++) {
+            const idx = r.pairIndex.size / 2;
+            r.pairIndex.set(ab[i], idx);
+            r.pairIndex.set(ba[i], idx);
+        }
+        if (!n) r.warn(`pairs: no forces between '${a}' and '${b}' (set "by" on hand-written forces)`);
+        return { pos: { x: 0, y: 0, z: 0 }, count: n };
+    },
+    render() {},
+};
+
+/** Who exerts a force: "by", or the surface / body an automatic force comes from. */
+function sourceOf(o, r) {
+    if (o.by !== undefined) return o.by;
+    const a = o.__auto;
+    if (!a) return null;
+    if (a.kind === 'reaction') return a.from;
+    if (a.kind === 'normal' || a.kind === 'friction') {
+        const body = r.objectById(o.on);
+        return body ? body.on : null;
+    }
+    return null;
+}
+
+/**
+ * Free-body diagram: the body alone, in a panel under the scene, with the
+ * forces acting on it. As a point (default) all forces start from it; with
+ * "shape": true the body's outline is drawn and forces keep their points.
+ */
+const fbd = {
+    keys: ['of', 'shape', 'size', 'kind'],
+    layer: 'annotations',
+    anchorNames: [],
+    panel: true,
+    resolve(obj, r) {
+        const body = r.state(obj.of);
+        if (!body) {
+            r.warn(`fbd: 'of' must be the id of a body`);
+            return null;
+        }
+        const kinds = obj.kind ? [obj.kind] : ['force'];
+        const forces = r.objects.filter(o => kinds.includes(o.type) && o.on === obj.of);
+        forces.forEach(o => r.stateOf(o));
+        return { pos: body.com || body.pos, body, bodyObj: r.objectById(obj.of), forces };
+    },
+    render() {},
+};
+
 export const ANNOTATION_TYPES = {
     ...Object.fromEntries(VECTOR_KINDS.map(k => [k, vectorType(k)])),
-    frame, decompose, angle, dimension, label, com, path,
+    frame, decompose, angle, dimension, label, com, path, resultant, pairs, fbd,
 };
