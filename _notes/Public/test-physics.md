@@ -94,16 +94,16 @@ Con `"forces": "auto"` su un corpo (`particle`, `block`, `ball`, `cart`, `rod`, 
 | Nome | Forza | Quando | Modulo (indicativo) |
 | :--- | :--- | :--- | :--- |
 | `P` | peso | sempre, nel centro di massa | $mg$ |
-| `N` | reazione normale | il corpo è appoggiato (`on`) | $mg\cos\alpha$ |
-| `N_B` | spinta di un corpo `B` appoggiato sopra | `B` ha `"on"` uguale a questo corpo | $m_B g\cos\alpha$ |
-| `f` | attrito | `mu` (sul corpo o sulla superficie), `friction`, `moving` o `tendency` | statico: $mg\sin\alpha$, al massimo $\mu N$; dinamico: $\mu N$ |
+| `N` | reazione normale | il corpo è appoggiato (`on`) | bilancia le altre forze perpendicolari alla superficie: $mg\cos\alpha$ da solo, di più con un corpo sopra o una spinta verso il basso; zero se il corpo viene sollevato |
+| `N_B` | spinta di un corpo `B` appoggiato sopra | `B` ha `"on"` uguale a questo corpo | opposta alla normale di `B` |
+| `f` | attrito | `mu` (sul corpo o sulla superficie), `friction`, `moving` | statico: bilancia le altre forze lungo la superficie, al massimo $\mu N$; dinamico: $\mu N$ |
 | `T`, `T1`, `T2` | tensione | una per ogni fune attaccata al corpo; il filo di un pendolo | peso di ciò che pende (la media se pendono entrambi i capi); pendolo: $mg\cos\theta$ |
 | `Fel`, `Fel1` | forza elastica | una per ogni molla attaccata (servono `k` e `rest`) | $k\,\lvert L - L_0\rvert$ |
 
-Le direzioni seguono la geometria; i moduli sono regole da libro di testo, non la soluzione delle equazioni del moto: per un valore esatto si usa `mag` in `override`. Opzioni del corpo:
+Le direzioni seguono la geometria. Normale e attrito statico sono esatti per un corpo fermo sulla sua superficie, perché bilanciano le altre forze; la tensione segue una regola da libro di testo, non la soluzione delle equazioni del moto: per un valore esatto si usa `mag` in `override`. Opzioni del corpo:
 
 - `"exclude": ["f"]` toglie alcune forze; `"override": { "N": { "label": "\\vec R" }, "*": { "hidden": true } }` cambia le opzioni di una forza o di tutte (`*`); `"add": [ {...} ]` aggiunge forze scritte a mano;
-- `"friction": "static"` / `"kinetic"` / `"none"`, `"moving": "up"` (dinamico, verso del moto: `up`, `down`, `left`, `right`), `"tendency": "down"` (statico); su un piano inclinato senza indicazioni il corpo tende a scendere;
+- `"friction": "static"` (default) / `"kinetic"` / `"none"`; per l'attrito dinamico `"moving"` indica il verso del moto (`up`, `down`, `left`, `right`). L'attrito statico non ha bisogno di indicazioni: il verso viene dalle altre forze;
 - `"applyAt": "physical"` (default) mette normale e attrito nel punto di contatto, la tensione nel punto della fune e la forza elastica nel punto della molla; `"center"` mette tutto nel centro di massa. Vale anche come opzione globale. Il peso è sempre nel centro di massa.
 
 Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.P"` e si nascondono o si mostrano con i pulsanti.

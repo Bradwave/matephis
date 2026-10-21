@@ -76,13 +76,38 @@ describe('Forze automatiche su un piano inclinato', () => {
         expect(f.vec.y).toBeLessThan(0);
     });
 
-    it('chiede la direzione del moto su una superficie orizzontale', () => {
+    it('su una superficie orizzontale senza altre forze l\'attrito statico è nullo', () => {
         const { warnings, st } = scene({ objects: [
             { id: 'g', type: 'ground', mu: 0.4 },
             { id: 'A', type: 'block', on: 'g', forces: 'auto' },
         ] });
+        expect(st('A.f').mag).toBe(0);
+        expect(warnings).toEqual([]);
+    });
+
+    it('chiede il verso del moto per l\'attrito dinamico', () => {
+        const { warnings, st } = scene({ objects: [
+            { id: 'g', type: 'ground', mu: 0.4 },
+            { id: 'A', type: 'block', on: 'g', forces: 'auto', friction: 'kinetic' },
+        ] });
         expect(st('A.f')).toBeNull();
-        expect(warnings.some(w => /moving.*tendency/.test(w))).toBe(true);
+        expect(warnings.some(w => /needs "moving"/.test(w))).toBe(true);
+    });
+
+    it('aumenta la normale se una forza spinge il corpo contro il piano', () => {
+        const { st } = scene({ objects: [
+            { id: 'g', type: 'ground' },
+            { id: 'A', type: 'block', on: 'g', mass: 2, forces: 'auto', add: [{ dir: 'down', mag: 10 }] },
+        ] });
+        expect(st('A.N').mag).toBeCloseTo(2 * g + 10, 9);
+    });
+
+    it('annulla la normale se una forza solleva il corpo', () => {
+        const { st } = scene({ objects: [
+            { id: 'g', type: 'ground' },
+            { id: 'A', type: 'block', on: 'g', mass: 1, forces: 'auto', add: [{ dir: 'up', mag: 30 }] },
+        ] });
+        expect(st('A.N').mag).toBe(0);
     });
 
     it('esclude, modifica e aggiunge forze', () => {
@@ -149,6 +174,34 @@ describe('Forze automatiche con funi, corpi appoggiati e molle', () => {
         close(st('A.N_B').vec, { x: 0, y: -2 * g });
         close(st('A.N_B').pos, at('A.top'));
         close(st('B.N').vec, { x: 0, y: 2 * g });
+        // The ground holds both blocks
+        close(st('A.N').vec, { x: 0, y: 7 * g });
+    });
+
+    it('blocchi impilati: la somma delle forze è nulla su entrambi i corpi', () => {
+        const { st } = scene({ objects: [
+            { id: 'g', type: 'ground' },
+            { id: 'A', type: 'block', on: 'g', size: [2, 1], mass: 5, forces: 'auto' },
+            { id: 'B', type: 'block', on: 'A', size: [1, 0.5], mass: 2, forces: 'auto' },
+            { id: 'RA', type: 'resultant', on: 'A' },
+            { id: 'RB', type: 'resultant', on: 'B' },
+        ] });
+        expect(st('RA').mag).toBeLessThan(1e-9);
+        expect(st('RB').mag).toBeLessThan(1e-9);
+    });
+
+    it('tavolo: l\'attrito statico bilancia la tensione, al massimo μN', () => {
+        const table = (mu) => scene({ objects: [
+            { id: 't', type: 'table', at: [0, 2], width: 4 },
+            { id: 'A', type: 'block', on: 't', pos: 0.4, size: [0.8, 0.4], mass: 2, mu, forces: 'auto' },
+            { id: 'p', type: 'pulley', at: [4.2, 2.0], radius: 0.2 },
+            { id: 'B', type: 'block', at: [4.4, 0.5], size: [0.4, 0.4], mass: 1, forces: 'auto' },
+            { type: 'rope', from: 'A.right', to: 'B.top', over: ['p'] },
+        ] });
+        // μ = 0.8: holds (μN = 15.7 N > T = 9.81 N), f = −T
+        close(table(0.8).st('A.f').vec, { x: -g, y: 0 });
+        // μ = 0.3: cannot hold, f = μN = 5.9 N
+        close(table(0.3).st('A.f').vec, { x: -0.3 * 2 * g, y: 0 });
     });
 
     it('molla: la forza elastica tira se allungata, spinge se compressa', () => {

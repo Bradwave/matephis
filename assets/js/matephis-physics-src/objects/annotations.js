@@ -126,6 +126,7 @@ function vectorType(kind) {
         },
         render(obj, st, ctx, g) {
             const r = ctx.r;
+            if (st.mag < 1e-9) return;
             const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[kind];
             const pair = r.pairIndex ? r.pairIndex.get(obj) : undefined;
             const color = obj.color ? ctx.color(obj.color) : pair !== undefined ? ctx.pairColor(pair) : ctx.kindColor(kind);

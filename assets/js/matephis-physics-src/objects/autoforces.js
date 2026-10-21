@@ -4,9 +4,12 @@
  * From the configuration alone, each auto body gets one force object per
  * connection, with ids "<body>.<name>":
  *   P    weight                      always, at the centre of mass
- *   N    normal force                resting `on` a surface
+ *   N    normal force                resting `on` a surface: balances the other forces
+ *                                     perpendicular to it (zero if they pull the body off)
  *   N_B  reaction of a body B on it  when B rests on this body
- *   f    friction                    with `friction`, `mu` (body or surface), `moving` or `tendency`
+ *   f    friction                    with `friction`, `mu` (body or surface), `moving` or `tendency`:
+ *                                     static balances the other forces along the surface, up
+ *                                     to μN; kinetic is μN against `moving`
  *   T    tension (T1, T2, …)         one per rope attached to the body; a pendulum's string
  *   Fel  elastic force (Fel1, …)     one per spring attached to the body (needs k and rest)
  *
@@ -17,9 +20,10 @@
  *   "add": [ {...} ]                        extra forces on the same body
  *   "applyAt": "physical" | "center"        contact / attachment points, or the centre of mass
  *
- * Directions come from the geometry. Magnitudes are schematic (level A): the
- * simple textbook rules below, not a solution of Newton's laws. Give "mag" in
- * an override for exact values.
+ * Directions come from the geometry. The normal force and static friction are
+ * exact for a body at rest on its surface (they balance the other forces);
+ * tensions use a simple textbook rule, not a solution of Newton's laws. Give
+ * "mag" in an override for exact values.
  */
 import { sub, scale, norm, dot, len } from '../core/vec.js';
 import { parseRef } from '../core/anchors.js';
@@ -107,6 +111,26 @@ function applyPoint(body, r, bs, physical) {
     return mode === 'center' ? (bs.com || bs.pos) : (physical || bs.com || bs.pos);
 }
 
+/**
+ * Sum of the other forces on a body (hand-written and automatic), leaving out
+ * its normal force and friction, which are computed from this sum.
+ */
+function otherForces(r, obj) {
+    let sum = { x: 0, y: 0, z: 0 };
+    r.objects.forEach(o => {
+        if (o === obj || o.type !== 'force' || o.on !== obj.on) return;
+        if (o.__auto && (o.__auto.kind === 'normal' || o.__auto.kind === 'friction')) return;
+        const st = r.stateOf(o);
+        if (st) sum = { x: sum.x + st.vec.x, y: sum.y + st.vec.y, z: 0 };
+    });
+    return sum;
+}
+
+/** Normal force magnitude: balances the other forces perpendicular to the surface, never pulls. */
+function normalMagnitude(r, obj, n) {
+    return Math.max(0, -dot(otherForces(r, obj), n));
+}
+
 /** Sign of a motion word ("up", "down", "left", "right") along the unit tangent t. */
 function along(word, t) {
     const m = { up: { x: 0, y: 1 }, down: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[word];
@@ -136,46 +160,55 @@ export function resolveAutoForce(obj, r) {
             return { pos: com, vec: { x: 0, y: -W, z: 0 } };
 
         case 'normal': {
-            // N = m g cos(inclination): the weight's component into the surface
+            // No acceleration perpendicular to the surface: N balances the rest there
+            // (m g cos α alone; more with a body on top or a force pushing down)
             const n = bs.frame.n;
-            return { pos: applyPoint(body, r, bs, bs.contact), vec: scale(n, W * Math.max(0, n.y)) };
+            return { pos: applyPoint(body, r, bs, bs.contact), vec: scale(n, normalMagnitude(r, obj, n)) };
         }
 
         case 'reaction': {
-            // The body on top pushes down on this one with its own normal force
-            const top = r.objectById(a.from);
+            // The body on top pushes on this one with the opposite of its own normal force
             const ts = r.state(a.from);
-            if (!top || !ts) return null;
+            const topN = r.objectById(`${a.from}.N`);
+            if (!ts) return null;
             const n = ts.frame.n;
-            const N = massOf(top, r) * g * Math.max(0, n.y);
+            let N;
+            if (topN) {
+                const ns = r.stateOf(topN);
+                N = ns ? ns.mag : 0;
+            } else {
+                N = normalMagnitude(r, { on: a.from }, n);
+            }
             return { pos: applyPoint(body, r, bs, ts.contact), vec: scale(n, -N) };
         }
 
         case 'friction': {
             const t = bs.frame.t, n = bs.frame.n;
-            const word = body.moving || body.tendency;
-            let s = word ? along(word, t) : 0;
-            if (word && s === 0) {
-                r.warn(`${where}: '${word}' is not along the surface`);
-                return null;
-            }
-            if (!word) {
-                // Without a declared motion, on a slope the body tends to slide down
-                if (Math.abs(t.y) < 1e-9) {
-                    r.warn(`${where}: friction on a level surface needs "moving" or "tendency" (left/right)`);
-                    return null;
-                }
-                s = -Math.sign(t.y);
-            }
             const support = r.objectById(body.on);
             const muSrc = body.mu !== undefined ? body.mu : support && support.mu !== undefined ? support.mu : undefined;
             const mu = muSrc !== undefined ? r.num(muSrc, `${where} mu`) : 0.3;
-            const N = W * Math.max(0, n.y);
+            // The normal force as drawn (it may be overridden), else from the balance
+            const nObj = r.objectById(`${obj.on}.N`);
+            const ns = nObj ? r.stateOf(nObj) : null;
+            const N = ns ? ns.mag : normalMagnitude(r, obj, n);
+            const pos = applyPoint(body, r, bs, bs.contact);
             const kinetic = body.friction === 'kinetic' || (body.friction === undefined && body.moving !== undefined);
-            // Kinetic: μN. Static: what holds the body on the slope (m g sin α), at most μN
-            let mag = kinetic ? mu * N : Math.min(W * Math.abs(t.y), mu * N);
-            if (!kinetic && Math.abs(t.y) < 1e-9) mag = 0.5 * mu * N;
-            return { pos: applyPoint(body, r, bs, bs.contact), vec: scale(t, -s * mag) };
+            if (kinetic) {
+                // Kinetic: μN against the motion, which must be declared
+                const s = along(body.moving, t);
+                if (s === 0) {
+                    r.warn(`${where}: kinetic friction needs "moving" along the surface (up, down, left, right)`);
+                    return null;
+                }
+                return { pos, vec: scale(t, -s * mu * N) };
+            }
+            // Static: holds the body, balancing the other forces along the surface, at most μN
+            const along_ = dot(otherForces(r, obj), t);
+            const mag = Math.min(Math.abs(along_), mu * N);
+            if (body.tendency !== undefined && Math.abs(along_) < 1e-9) {
+                r.warn(`${where}: no force pushes the body along the surface, so static friction is zero`);
+            }
+            return { pos, vec: scale(t, -Math.sign(along_) * mag) };
         }
 
         case 'tension': {

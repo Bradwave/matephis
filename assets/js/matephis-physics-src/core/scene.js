@@ -645,6 +645,15 @@ export class MatephisPhysics {
             for (let i = 1; i < pts.length; i++) this._placed.segs.push([ctx.map(pts[i - 1]), ctx.map(pts[i])]);
         };
 
+        // Forces on the same line (for instance weight and normal with the shape) go into lanes
+        const segs = items.map(([o, s]) => {
+            const kk = o.scale !== undefined ? r.num(o.scale, 'scale') : r.scales[s.kind];
+            const a = shape ? s.pos : c0;
+            return { key: o, a, b: { x: a.x + s.vec.x * kk, y: a.y + s.vec.y * kk } };
+        });
+        const offsets = collinearOffsets(segs, k);
+        ctx.vectorOffset = (o) => offsets.get(o) || 0;
+
         const saved = this._placed;
         this._placed = { boxes: [], segs: [], w: size, h: size };
         try {
