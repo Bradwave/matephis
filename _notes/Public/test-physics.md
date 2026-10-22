@@ -114,7 +114,7 @@ Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.
 | :--- | :--- | :--- |
 | `resultant` | `on`, `kind` (default `force`), `construction: "tip-to-tail"`, `showValue`, `label` | Somma dei vettori sul corpo, dal centro di massa. Se è nulla scrive $\vec R = 0$. |
 | `pairs` | `between: ["A", "B"]` | Colora allo stesso modo le coppie azione e reazione tra due corpi. Per le forze scritte a mano indica chi la esercita con `"by": "B"`. |
-| `fbd` | `of`, `shape` (`true`: disegna il corpo), `size` (px), `label` | Diagramma di corpo libero in un riquadro sotto la scena, con le forze visibili del corpo. |
+| `fbd` | `of`, `shape` (`true`: disegna il corpo), `size` (px), `label`, `forces`, `button` | Diagramma di corpo libero in un riquadro sotto la scena, con le forze visibili del corpo. `"forces": "all"` mostra anche quelle nascoste nella scena. `"button": true` aggiunge un pulsante «Mostra corpo libero di …» (o con il testo dato) e il riquadro parte nascosto. I riquadri di una scena usano la stessa scala, così le forze restano confrontabili. |
 
 ### Pulsanti e trascinamento
 
@@ -649,18 +649,20 @@ Il blocco ha `"forces": "auto"`: peso, normale e attrito (c'è `mu`) sono genera
 
 ## 16. Blocchi impilati: azione e reazione
 
-Il blocco $m$ è appoggiato su $M$: $M$ riceve da $m$ la spinta $\vec N'_B$, e `pairs` colora allo stesso modo le due forze della coppia. I due riquadri mostrano i corpi liberi con la loro forma (`"shape": true`).
+Il blocco $m$ è appoggiato su $M$: $M$ riceve da $m$ la spinta $\vec N'_B$, e `pairs` colora allo stesso modo le due forze della coppia. Nella scena le forze sono nascoste; ogni diagramma di corpo libero ha il suo pulsante (`"button": true`) e mostra tutte le forze del corpo (`"forces": "all"`), con la sua forma (`"shape": true`).
 
 ```physics
 {
   "xlim": [0, 8], "ylim": [0, 3.6], "forceScale": 0.035,
   "objects": [
     { "id": "g", "type": "ground", "y": 0.3 },
-    { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$", "forces": "auto" },
-    { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$", "forces": "auto" },
+    { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$",
+      "forces": "auto", "override": { "*": { "hidden": true } } },
+    { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$",
+      "forces": "auto", "override": { "*": { "hidden": true } } },
     { "type": "pairs", "between": ["A", "B"] },
-    { "type": "fbd", "of": "A", "shape": true, "label": "Corpo libero di M" },
-    { "type": "fbd", "of": "B", "shape": true, "label": "Corpo libero di m" }
+    { "type": "fbd", "of": "A", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di M" },
+    { "type": "fbd", "of": "B", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di m" }
   ]
 }
 ```
@@ -671,11 +673,13 @@ Il blocco $m$ è appoggiato su $M$: $M$ riceve da $m$ la spinta $\vec N'_B$, e `
 >   "xlim": [0, 8], "ylim": [0, 3.6], "forceScale": 0.035,
 >   "objects": [
 >     { "id": "g", "type": "ground", "y": 0.3 },
->     { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$", "forces": "auto" },
->     { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$", "forces": "auto" },
+>     { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$",
+>       "forces": "auto", "override": { "*": { "hidden": true } } },
+>     { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$",
+>       "forces": "auto", "override": { "*": { "hidden": true } } },
 >     { "type": "pairs", "between": ["A", "B"] },
->     { "type": "fbd", "of": "A", "shape": true, "label": "Corpo libero di M" },
->     { "type": "fbd", "of": "B", "shape": true, "label": "Corpo libero di m" }
+>     { "type": "fbd", "of": "A", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di M" },
+>     { "type": "fbd", "of": "B", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di m" }
 >   ]
 > }
 > ```

@@ -26,7 +26,7 @@ import { toTeX, normalizeLabel, estimateTextSize, labelBox, boxesOverlap, segmen
 import { Resolver, describe } from './resolver.js';
 import { angleArc, polar, anchorFor } from './draw.js';
 import { collinearOffsets } from './geometry.js';
-import { Controls } from './controls.js';
+import { Controls, plainLabel } from './controls.js';
 import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
 
@@ -93,8 +93,15 @@ export class MatephisPhysics {
         this.panelHost.className = 'matephis-physics-panels';
         this.wrapper.appendChild(this.panelHost);
 
-        if (Array.isArray(cfg.controls) && cfg.controls.length) {
-            this.controls = new Controls(this, cfg.controls);
+        // Buttons from "controls", then the ones objects bring ("button" on a free-body diagram)
+        const defs = Array.isArray(cfg.controls) ? cfg.controls.slice() : [];
+        objects.filter(o => o.type === 'fbd' && o.button !== undefined && o.button !== false).forEach(o => {
+            const body = objects.find(b => b.id === o.of);
+            const name = body ? plainLabel(body.label !== undefined ? body.label : body.id) : o.of;
+            defs.push({ type: 'reveal', label: typeof o.button === 'string' ? o.button : `Mostra corpo libero di ${name}`, objects: [o] });
+        });
+        if (defs.length) {
+            this.controls = new Controls(this, defs);
             this.wrapper.appendChild(this.controls.el);
         }
 
@@ -551,10 +558,16 @@ export class MatephisPhysics {
         return ctx;
     }
 
-    _isShown(obj) {
+    /**
+     * Is an object drawn? `ignoreHidden` skips "hidden" (a free-body diagram
+     * with "forces": "all" shows forces hidden in the scene); "show" still applies.
+     */
+    _isShown(obj, ignoreHidden = false) {
         // A decomposition shortcut follows its vector
-        if (obj.__parent && !this._isShown(obj.__parent)) return false;
-        if (obj.hidden === true && !(this.controls && this.controls.isRevealed(obj))) return false;
+        if (obj.__parent && !this._isShown(obj.__parent, ignoreHidden)) return false;
+        // An object with its own button starts hidden
+        const hidden = obj.hidden === true || (obj.button !== undefined && obj.button !== false);
+        if (!ignoreHidden && hidden && !(this.controls && this.controls.isRevealed(obj))) return false;
         if (obj.show === undefined) return true;
         const v = typeof obj.show === 'boolean' ? obj.show : this.resolver.num(obj.show, `${describe(obj)} show`);
         return !!v && !Number.isNaN(v);
@@ -601,17 +614,58 @@ export class MatephisPhysics {
             }
         });
         this.panelHost.textContent = '';
-        panels.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx));
+        if (!panels.length) return;
+        // One scale for all the panels of a scene, as large as the tightest fit allows,
+        // so forces keep their proportions from one diagram to the next
+        const fits = panels.map(([obj, st]) => {
+            const { box } = this._freeBodyItems(obj, st);
+            const room = this._panelSize(obj) - 2 * 34;
+            const span = Math.max(box.x1 - box.x0, box.y1 - box.y0);
+            return span > 0 ? room / span : Infinity;
+        });
+        let k = Math.min(...fits);
+        if (!isFinite(k)) k = this.pxPerMetre;
+        panels.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
+    }
+
+    _panelSize(obj) {
+        return obj.size !== undefined ? this.resolver.num(obj.size, 'fbd size') : 200;
+    }
+
+    /**
+     * Forces drawn in a free-body panel and the box (metres, relative to the
+     * body's centre) that holds them, their points and, with the shape, the body.
+     */
+    _freeBodyItems(obj, st) {
+        const r = this.resolver;
+        const shape = obj.shape === true;
+        // "forces": "all" also shows the forces hidden in the scene
+        const all = obj.forces === 'all';
+        const items = st.forces.filter(o => this._isShown(o, all)).map(o => [o, r.states.get(o)]).filter(([, s]) => s);
+        const c0 = st.pos;
+        const box = { x0: 0, x1: 0, y0: 0, y1: 0 };
+        const grow = (x, y) => {
+            box.x0 = Math.min(box.x0, x); box.x1 = Math.max(box.x1, x);
+            box.y0 = Math.min(box.y0, y); box.y1 = Math.max(box.y1, y);
+        };
+        items.forEach(([o, s]) => {
+            const k = o.scale !== undefined ? r.num(o.scale, 'scale') : r.scales[s.kind];
+            const a = shape ? { x: s.pos.x - c0.x, y: s.pos.y - c0.y } : { x: 0, y: 0 };
+            grow(a.x, a.y);
+            grow(a.x + s.vec.x * k, a.y + s.vec.y * k);
+        });
+        const half = shape && st.body.w ? Math.hypot(st.body.w, st.body.h) / 2 : shape && st.body.radius ? st.body.radius : 0;
+        if (half) { grow(-half, -half); grow(half, half); }
+        return { items, box };
     }
 
     /**
      * Free-body diagram panel: the body as a point (or its outline with
-     * "shape": true) and its visible forces, at the scene's scale, shrunk to
-     * fit the panel when needed.
+     * "shape": true) and its forces, at `k` pixels per metre.
      */
-    _drawFreeBody(obj, st, baseCtx) {
+    _drawFreeBody(obj, st, baseCtx, k) {
         const r = this.resolver;
-        const size = obj.size !== undefined ? r.num(obj.size, 'fbd size') : 220;
+        const size = this._panelSize(obj);
         const panel = document.createElement('figure');
         panel.className = 'matephis-physics-fbd';
         const svg = createSvgElement('svg', {
@@ -624,22 +678,13 @@ export class MatephisPhysics {
         this.panelHost.appendChild(panel);
 
         const shape = obj.shape === true;
-        const items = st.forces.filter(o => this._isShown(o)).map(o => [o, r.states.get(o)]).filter(([, s]) => s);
+        const { items, box } = this._freeBodyItems(obj, st);
+        // Centred on what is drawn, not on the body: forces often reach out on one side
         const c0 = st.pos;
-        // Largest extent in metres from the centre: vectors (and their points, with the shape)
-        let ext = 0;
-        items.forEach(([o, s]) => {
-            const k = o.scale !== undefined ? r.num(o.scale, 'scale') : r.scales[s.kind];
-            const off = shape ? Math.hypot(s.pos.x - c0.x, s.pos.y - c0.y) : 0;
-            ext = Math.max(ext, off + s.mag * k);
-        });
-        if (shape && st.body.w) ext = Math.max(ext, Math.hypot(st.body.w, st.body.h) / 2);
-        if (shape && st.body.radius) ext = Math.max(ext, st.body.radius);
-        const room = size / 2 - 34;
-        const k = ext * this.pxPerMetre > room ? room / ext : this.pxPerMetre;
+        const mid = { x: c0.x + (box.x0 + box.x1) / 2, y: c0.y + (box.y0 + box.y1) / 2 };
         const ctx = {
             ...baseCtx, pxPerMetre: k, vectorOffset: () => 0,
-            map: (p) => ({ x: size / 2 + (p.x - c0.x) * k, y: size / 2 - (p.y - c0.y) * k }),
+            map: (p) => ({ x: size / 2 + (p.x - mid.x) * k, y: size / 2 - (p.y - mid.y) * k }),
         };
         ctx.obstaclePath = (pts) => {
             for (let i = 1; i < pts.length; i++) this._placed.segs.push([ctx.map(pts[i - 1]), ctx.map(pts[i])]);

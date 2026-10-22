@@ -6,7 +6,8 @@
  *       "Mostra" turns into "Nascondi" while pressed.
  *   { "type": "toggle", "label": "Attrito", "param": "mu", "on": 0.3, "off": 0 }
  *       switches a param between two values (slider units).
- * State resets on reload.
+ * Objects can also bring their own reveal button (a free-body diagram with
+ * "button"): those come after the ones in "controls". State resets on reload.
  */
 import { paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 
@@ -24,10 +25,16 @@ export function matchesTarget(obj, target) {
 
 const pressedLabel = (label) => (/^Mostra\b/.test(label) ? label.replace(/^Mostra/, 'Nascondi') : label);
 
+/** A label as plain text for a button: "$m_1$" -> "m1", "\\vec F" -> "F". */
+export function plainLabel(label) {
+    return String(label).replace(/\$/g, '').replace(/\\[A-Za-z]+\s*/g, '').replace(/[{}_^]/g, '').trim();
+}
+
 export class Controls {
     /**
      * @param {object} scene - the MatephisPhysics instance
-     * @param {object[]} defs - the "controls" config array
+     * @param {object[]} defs - the "controls" config array; reveal entries may
+     *   carry `objects` (configs revealed by identity) instead of `targets`
      */
     constructor(scene, defs) {
         this.scene = scene;
@@ -53,8 +60,9 @@ export class Controls {
         this.el.appendChild(btn);
 
         if (def.type === 'reveal') {
-            const targets = Array.isArray(def.targets) ? def.targets : def.targets !== undefined ? [def.targets] : ['*'];
-            this.reveals.push({ i, targets });
+            const objects = Array.isArray(def.objects) ? def.objects : [];
+            const targets = Array.isArray(def.targets) ? def.targets : def.targets !== undefined ? [def.targets] : objects.length ? [] : ['*'];
+            this.reveals.push({ i, targets, objects });
             btn.addEventListener('click', () => {
                 const on = !this.active.has(i);
                 if (on) this.active.add(i); else this.active.delete(i);
@@ -84,6 +92,6 @@ export class Controls {
 
     /** Is a hidden object revealed by a pressed button? */
     isRevealed(obj) {
-        return this.reveals.some(r => this.active.has(r.i) && r.targets.some(t => matchesTarget(obj, t)));
+        return this.reveals.some(r => this.active.has(r.i) && (r.objects.includes(obj) || r.targets.some(t => matchesTarget(obj, t))));
     }
 }

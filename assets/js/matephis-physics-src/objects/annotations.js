@@ -581,9 +581,11 @@ function sourceOf(o, r) {
  * Free-body diagram: the body alone, in a panel under the scene, with the
  * forces acting on it. As a point (default) all forces start from it; with
  * "shape": true the body's outline is drawn and forces keep their points.
+ * "forces": "all" includes forces hidden in the scene; "button" (true or a
+ * text) adds a button that shows and hides the panel, which starts hidden.
  */
 const fbd = {
-    keys: ['of', 'shape', 'size', 'kind'],
+    keys: ['of', 'shape', 'size', 'kind', 'forces', 'button'],
     layer: 'annotations',
     anchorNames: [],
     panel: true,
