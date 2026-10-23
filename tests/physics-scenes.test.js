@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Resolver } from '../assets/js/matephis-physics-src/core/resolver.js';
 import { OBJECT_TYPES } from '../assets/js/matephis-physics-src/objects/index.js';
 import { parseRef } from '../assets/js/matephis-physics-src/core/anchors.js';
-import { tangentSegment, ropePath, wrapSide, springPoints } from '../assets/js/matephis-physics-src/core/geometry.js';
+import { tangentSegment, ropePath, wrapSide, springPoints, collinearOffsets } from '../assets/js/matephis-physics-src/core/geometry.js';
 import { dot, sub, len, dist } from '../assets/js/matephis-physics-src/core/vec.js';
 import { ExpressionCompiler } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
 
@@ -296,5 +296,36 @@ describe('Grafo delle connessioni e avvisi', () => {
         close(at('B'), { x: 3, y: 3 });
         expect(dist(at('B'), at('A'))).toBeCloseTo(1, 12);
         expect(len({ x: 3, y: 4 })).toBe(5);
+    });
+});
+
+describe('Vettori sovrapposti', () => {
+    it('separa due vettori opposti sovrapposti sulla stessa retta', () => {
+        // Weight from the centre down, normal from below up: they overlap
+        const segs = [
+            { key: 'P', a: { x: 0, y: 0 }, b: { x: 0, y: -2 } },
+            { key: 'N', a: { x: 0, y: -1 }, b: { x: 0, y: 1 } },
+        ];
+        const off = collinearOffsets(segs, 50);
+        expect(off.size).toBe(2);
+        // Offsets are along each vector's own left side: opposite vectors end up 7 px apart
+        const sideP = off.get('P') * -1, sideN = off.get('N') * 1; // left of "down" is +x, left of "up" is -x
+        expect(Math.abs(sideP - sideN)).toBeCloseTo(7, 9);
+    });
+
+    it('lascia al loro posto i vettori opposti che partono dallo stesso punto', () => {
+        const segs = [
+            { key: 'P', a: { x: 0, y: 0 }, b: { x: 0, y: -2 } },
+            { key: 'N', a: { x: 0, y: 0 }, b: { x: 0, y: 2 } },
+        ];
+        expect(collinearOffsets(segs, 50).size).toBe(0);
+    });
+
+    it('ignora i vettori paralleli su rette diverse', () => {
+        const segs = [
+            { key: 'a', a: { x: 0, y: 0 }, b: { x: 0, y: 2 } },
+            { key: 'b', a: { x: 1, y: 0 }, b: { x: 1, y: 2 } },
+        ];
+        expect(collinearOffsets(segs, 50).size).toBe(0);
     });
 });

@@ -10,6 +10,7 @@
 import { angleValue, angleLiteralWarning } from './angles.js';
 import { parseRef } from './anchors.js';
 import { add, sub, scale, norm, perp, fromAngle, angleOf, len, rotate } from './vec.js';
+import { expandAutoForces } from '../objects/autoforces.js';
 
 const WORLD_FRAME = { t: { x: 1, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, labels: ['x', 'y'] };
 const DIR_WORDS = ['up', 'down', 'left', 'right', 'tangent', '-tangent', 'normal', '-normal', 'toward', 'away', 'along'];
@@ -34,7 +35,7 @@ export class Resolver {
         this.angleUnit = angleUnit;
         this.config = config;
         this.warn = warn;
-        this.objects = expandShortcuts(objects);
+        this.objects = expandShortcuts(expandAutoForces(objects));
         this.byId = new Map();
         this.objects.forEach(o => { if (o.id && !this.byId.has(o.id)) this.byId.set(o.id, o); });
         this.ids = [...this.byId.keys()];
@@ -55,6 +56,7 @@ export class Resolver {
         this.visiting = new Set();
         this.resolved = {};
         this.faded = new Set();
+        this.pairIndex = new Map();
         this._resolving = true;
         try {
             this.objects.forEach(o => this._resolveObject(o));
@@ -120,6 +122,16 @@ export class Resolver {
 
     objectById(id) {
         return this.byId.get(id) || null;
+    }
+
+    /** State of an object given by its config (for objects without an id, like an unnamed rope). */
+    stateOf(obj) {
+        if (this.states.has(obj)) return this.states.get(obj);
+        if (this.visiting.has(obj)) {
+            this.warn(`Reference cycle through ${describe(obj)}`);
+            return null;
+        }
+        return this._resolveObject(obj);
     }
 
     _resolveObject(obj) {
@@ -217,8 +229,8 @@ export class Resolver {
     /**
      * Position and frame of a body: either resting `on` a surface at `pos`
      * (its centre lifted by `lift` metres along the surface normal), or `at`
-     * a point with an optional `angle`.
-     * @returns {{pos, angle, frame: {t, n}, support: string|null}|null}
+     * a point with an optional `angle`. `contact` is the touching point on the surface.
+     * @returns {{pos, angle, frame: {t, n}, support: string|null, contact: object|null}|null}
      */
     place(obj, lift, where = describe(obj)) {
         const extra = obj.angle !== undefined ? this.angle(obj.angle, `${where} angle`) : 0;
@@ -237,7 +249,7 @@ export class Resolver {
             if (obj.posUnit === 'm') u = sup.surfaceLength > 0 ? u / sup.surfaceLength : 0;
             const s = sup.surface(u);
             const t = rotate(s.tangent, extra), n = rotate(s.normal, extra);
-            return { pos: add(s.point, scale(s.normal, lift)), angle: angleOf(t), frame: { t, n }, support: obj.on };
+            return { pos: add(s.point, scale(s.normal, lift)), angle: angleOf(t), frame: { t, n }, support: obj.on, contact: s.point };
         }
         if (obj.at === undefined) {
             this.warn(`${where}: needs 'at' or 'on'`);
@@ -246,7 +258,7 @@ export class Resolver {
         const p = this.point(obj.at, `${where} at`);
         if (!p) return null;
         const t = fromAngle(extra);
-        return { pos: p, angle: extra, frame: { t, n: perp(t) }, support: null };
+        return { pos: p, angle: extra, frame: { t, n: perp(t) }, support: null, contact: null };
     }
 
     // =========================================================================
@@ -363,7 +375,7 @@ export class Resolver {
     _computeScales() {
         const max = {};
         this.states.forEach((st, obj) => {
-            if (!st || !st.vec || obj.scale !== undefined) return;
+            if (!st || !st.vec || st.isResultant || obj.scale !== undefined) return;
             max[st.kind] = Math.max(max[st.kind] || 0, st.mag);
         });
         const span = AUTO_VECTOR_SPAN * Math.min(this.view.xMax - this.view.xMin, this.view.yMax - this.view.yMin);
@@ -419,7 +431,8 @@ function expandShortcuts(objects) {
         if (VECTOR_KINDS.includes(obj.type) && obj.decompose !== undefined && obj.decompose !== false) {
             // An unnamed vector gets an internal id on a copy; the config stays as written
             const v = obj.id ? obj : { ...obj, id: `__vec${++auto}` };
-            out.push(v, { type: 'decompose', vector: v.id, frame: obj.decompose === true ? 'xy' : obj.decompose });
+            // The shortcut's components are shown and hidden with their vector
+            out.push(v, { type: 'decompose', vector: v.id, frame: obj.decompose === true ? 'xy' : obj.decompose, __parent: v });
         } else {
             out.push(obj);
         }

@@ -17,7 +17,7 @@ import { CoordinateSystem } from '../../matephis-plot-src/core/coordinate-system
 import { createPalettes, parseAspectRatio, cssLength, adaptColorForTheme } from '../../matephis-plot-src/core/config.js';
 import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.js';
 import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
-import { SliderManager } from '../../matephis-plot-src/ui/slider-manager.js';
+import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 import { LightboxBridge } from '../../matephis-plot-src/ui/lightbox-bridge.js';
 import { validateConfig, defaultLimits, DEFAULT_ASPECT_RATIO, DEFAULT_G } from './config.js';
 import { formatAngle } from './angles.js';
@@ -25,6 +25,9 @@ import { fitView, gridValues } from './world.js';
 import { toTeX, normalizeLabel, estimateTextSize, labelBox, boxesOverlap, segmentHitsBox } from './labels.js';
 import { Resolver, describe } from './resolver.js';
 import { angleArc, polar, anchorFor } from './draw.js';
+import { collinearOffsets } from './geometry.js';
+import { Controls, plainLabel } from './controls.js';
+import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
 
 let uidCounter = 0;
@@ -85,13 +88,34 @@ export class MatephisPhysics {
 
         this._initSVG();
 
+        // Free-body diagrams go in panels under the scene
+        this.panelHost = document.createElement('div');
+        this.panelHost.className = 'matephis-physics-panels';
+        this.wrapper.appendChild(this.panelHost);
+
+        // Buttons from "controls", then the ones objects bring ("button" on a free-body diagram)
+        const defs = Array.isArray(cfg.controls) ? cfg.controls.slice() : [];
+        objects.filter(o => o.type === 'fbd' && o.button !== undefined && o.button !== false).forEach(o => {
+            const body = objects.find(b => b.id === o.of);
+            const name = body ? plainLabel(body.label !== undefined ? body.label : body.id) : o.of;
+            defs.push({ type: 'reveal', label: typeof o.button === 'string' ? o.button : `Mostra corpo libero di ${name}`, objects: [o] });
+        });
+        if (defs.length) {
+            this.controls = new Controls(this, defs);
+            this.wrapper.appendChild(this.controls.el);
+        }
+
         if (cfg.params && cfg.showSliders !== false) {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
 
+        const draggable = objects.some(o => o.drag !== undefined);
+        if (draggable) this.dragger = new DragController(this);
+
         this.lightbox = new LightboxBridge(this);
-        if (!options.noLightbox) {
+        // A click on a scene you can drag things in must not open the lightbox
+        if (!options.noLightbox && !draggable) {
             this.svg.classList.add('zoomable');
             this.svg.addEventListener('click', () => this.toggleLightbox());
         }
@@ -269,6 +293,17 @@ export class MatephisPhysics {
         return typeof r === 'number' ? r : NaN;
     }
 
+    /** Sets a param in slider units (as its slider would) and redraws. */
+    setParam(key, value, redraw = true) {
+        if (this.sliders && this.sliders.paramUIs[key]) {
+            this.sliders.setValue(key, value, false);
+        } else {
+            const def = this.config.params && this.config.params[key];
+            this.params[key] = value * paramScale(def);
+        }
+        if (redraw) this.requestDraw();
+    }
+
     /** Dark theme? Hosts can override with MatephisPhysics.isDarkHook = () => boolean. */
     _isDark() {
         if (this.config.theme === 'dark') return true;
@@ -322,7 +357,9 @@ export class MatephisPhysics {
             return t;
         };
         if (hasMathJax() && str.includes('$')) {
-            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain);
+            // Formulas get the same outline as plain labels unless "labelHalo": false
+            const halo = this.config.labelHalo !== false ? { color: this._isDark() ? "#181818" : "#fff" } : null;
+            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain, { halo });
         }
         return plain();
     }
@@ -368,7 +405,7 @@ export class MatephisPhysics {
         const cs = this._computeTransform();
         this.transform = cs;
         // Labels and lines drawn so far, so later labels can avoid them
-        this._placed = { boxes: [], segs: [] };
+        this._placed = { boxes: [], segs: [], w: this.width, h: this.height };
 
         this._svg("rect", { x: 0, y: 0, width: this.width, height: this.height, fill: "none", class: "matephis-plot-bg" }, this.bgGroup);
 
@@ -464,7 +501,7 @@ export class MatephisPhysics {
         const { w, h } = estimateTextSize(normalizeLabel(str), fontSize);
         const free = (c) => {
             const b = labelBox(c.x, c.y, w, h, c.anchor, c.baseline);
-            if (b.x < 0 || b.y < 0 || b.x + b.w > this.width || b.y + b.h > this.height) return false;
+            if (b.x < 0 || b.y < 0 || b.x + b.w > this._placed.w || b.y + b.h > this._placed.h) return false;
             if (this._placed.boxes.some(o => boxesOverlap(o, b))) return false;
             return !this._placed.segs.some(([p, q]) => segmentHitsBox(p, q, b));
         };
@@ -489,6 +526,11 @@ export class MatephisPhysics {
             },
             color: (c) => this._color(c),
             kindColor: (kind) => this._kindColor(kind),
+            /** Colours for action–reaction pairs: distinct from the default force colour. */
+            pairColor: (i) => {
+                const d = this.palettes.default;
+                return adaptColorForTheme([d[0], d[2], d[3], d[4]][i % 4], this._isDark());
+            },
             ink: this.ink,
             angleUnit: this.angleUnit,
             /** Arc (or right-angle square) for {vertex, a1, a2}, with a label or the value. */
@@ -516,8 +558,16 @@ export class MatephisPhysics {
         return ctx;
     }
 
-    _isShown(obj) {
-        if (obj.hidden === true) return false;
+    /**
+     * Is an object drawn? `ignoreHidden` skips "hidden" (a free-body diagram
+     * with "forces": "all" shows forces hidden in the scene); "show" still applies.
+     */
+    _isShown(obj, ignoreHidden = false) {
+        // A decomposition shortcut follows its vector
+        if (obj.__parent && !this._isShown(obj.__parent, ignoreHidden)) return false;
+        // An object with its own button starts hidden
+        const hidden = obj.hidden === true || (obj.button !== undefined && obj.button !== false);
+        if (!ignoreHidden && hidden && !(this.controls && this.controls.isRevealed(obj))) return false;
         if (obj.show === undefined) return true;
         const v = typeof obj.show === 'boolean' ? obj.show : this.resolver.num(obj.show, `${describe(obj)} show`);
         return !!v && !Number.isNaN(v);
@@ -527,19 +577,151 @@ export class MatephisPhysics {
         const r = this.resolver;
         const states = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
         const ctx = this._renderContext(cs);
+        // Overlapping vectors on the same line are spread sideways
+        const segs = [];
         r.objects.forEach(obj => {
+            const st = states.get(obj);
+            if (!st || !st.vec || !this._isShown(obj)) return;
+            const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[st.kind];
+            const w = { x: st.vec.x * k, y: st.vec.y * k };
+            const a = obj.tail === 'tip' ? { x: st.pos.x - w.x, y: st.pos.y - w.y } : st.pos;
+            segs.push({ key: obj, a, b: { x: a.x + w.x, y: a.y + w.y } });
+        });
+        const offsets = collinearOffsets(segs, this.pxPerMetre);
+        ctx.vectorOffset = (obj) => offsets.get(obj) || 0;
+        const panels = [];
+        // Layer by layer (list order within a layer), so labels placed in upper
+        // layers already see the lines drawn underneath
+        const layerOf = (obj) => (LAYERS.includes(obj.layer) ? obj.layer : OBJECT_TYPES[obj.type].layer);
+        const ordered = r.objects.map((obj, index) => [obj, index])
+            .sort((p, q) => LAYERS.indexOf(layerOf(p[0])) - LAYERS.indexOf(layerOf(q[0])) || p[1] - q[1]);
+        ordered.forEach(([obj, index]) => {
             const state = states.get(obj);
             if (!state || !this._isShown(obj)) return;
             const def = OBJECT_TYPES[obj.type];
-            const layer = LAYERS.includes(obj.layer) ? obj.layer : def.layer;
+            if (def.panel) { panels.push([obj, state]); return; }
+            const layer = layerOf(obj);
             const g = this._svg("g", { class: `matephis-physics-${obj.type}` }, this.layerGroups[layer]);
             if (obj.opacity !== undefined) g.setAttribute("opacity", r.num(obj.opacity, `${describe(obj)} opacity`));
+            if (obj.drag !== undefined && this.dragger) {
+                g.setAttribute('data-drag', index);
+                g.classList.add('mp-draggable');
+            }
             try {
                 def.render(obj, state, ctx, g);
             } catch (e) {
                 this._addWarning(`${describe(obj)}: ${e.message}`);
             }
         });
+        this.panelHost.textContent = '';
+        if (!panels.length) return;
+        // One scale for all the panels of a scene, as large as the tightest fit allows,
+        // so forces keep their proportions from one diagram to the next
+        const fits = panels.map(([obj, st]) => {
+            const { box } = this._freeBodyItems(obj, st);
+            const room = this._panelSize(obj) - 2 * 34;
+            const span = Math.max(box.x1 - box.x0, box.y1 - box.y0);
+            return span > 0 ? room / span : Infinity;
+        });
+        let k = Math.min(...fits);
+        if (!isFinite(k)) k = this.pxPerMetre;
+        panels.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
+    }
+
+    _panelSize(obj) {
+        return obj.size !== undefined ? this.resolver.num(obj.size, 'fbd size') : 200;
+    }
+
+    /**
+     * Forces drawn in a free-body panel and the box (metres, relative to the
+     * body's centre) that holds them, their points and, with the shape, the body.
+     */
+    _freeBodyItems(obj, st) {
+        const r = this.resolver;
+        const shape = obj.shape === true;
+        // "forces": "all" also shows the forces hidden in the scene
+        const all = obj.forces === 'all';
+        const items = st.forces.filter(o => this._isShown(o, all)).map(o => [o, r.states.get(o)]).filter(([, s]) => s);
+        const c0 = st.pos;
+        const box = { x0: 0, x1: 0, y0: 0, y1: 0 };
+        const grow = (x, y) => {
+            box.x0 = Math.min(box.x0, x); box.x1 = Math.max(box.x1, x);
+            box.y0 = Math.min(box.y0, y); box.y1 = Math.max(box.y1, y);
+        };
+        items.forEach(([o, s]) => {
+            const k = o.scale !== undefined ? r.num(o.scale, 'scale') : r.scales[s.kind];
+            const a = shape ? { x: s.pos.x - c0.x, y: s.pos.y - c0.y } : { x: 0, y: 0 };
+            grow(a.x, a.y);
+            grow(a.x + s.vec.x * k, a.y + s.vec.y * k);
+        });
+        const half = shape && st.body.w ? Math.hypot(st.body.w, st.body.h) / 2 : shape && st.body.radius ? st.body.radius : 0;
+        if (half) { grow(-half, -half); grow(half, half); }
+        return { items, box };
+    }
+
+    /**
+     * Free-body diagram panel: the body as a point (or its outline with
+     * "shape": true) and its forces, at `k` pixels per metre.
+     */
+    _drawFreeBody(obj, st, baseCtx, k) {
+        const r = this.resolver;
+        const size = this._panelSize(obj);
+        const panel = document.createElement('figure');
+        panel.className = 'matephis-physics-fbd';
+        const svg = createSvgElement('svg', {
+            width: size, height: size, viewBox: `0 0 ${size} ${size}`,
+            class: 'matephis-plot-svg matephis-physics-svg', role: 'img',
+            'aria-label': `Diagramma di corpo libero${obj.label ? `: ${obj.label}` : ''}`,
+        });
+        svg.style.fontFamily = 'var(--font-plot, monospace)';
+        panel.appendChild(svg);
+        this.panelHost.appendChild(panel);
+
+        const shape = obj.shape === true;
+        const { items, box } = this._freeBodyItems(obj, st);
+        // Centred on what is drawn, not on the body: forces often reach out on one side
+        const c0 = st.pos;
+        const mid = { x: c0.x + (box.x0 + box.x1) / 2, y: c0.y + (box.y0 + box.y1) / 2 };
+        const ctx = {
+            ...baseCtx, pxPerMetre: k, vectorOffset: () => 0,
+            map: (p) => ({ x: size / 2 + (p.x - mid.x) * k, y: size / 2 - (p.y - mid.y) * k }),
+        };
+        ctx.obstaclePath = (pts) => {
+            for (let i = 1; i < pts.length; i++) this._placed.segs.push([ctx.map(pts[i - 1]), ctx.map(pts[i])]);
+        };
+
+        // Forces on the same line (for instance weight and normal with the shape) go into lanes
+        const segs = items.map(([o, s]) => {
+            const kk = o.scale !== undefined ? r.num(o.scale, 'scale') : r.scales[s.kind];
+            const a = shape ? s.pos : c0;
+            return { key: o, a, b: { x: a.x + s.vec.x * kk, y: a.y + s.vec.y * kk } };
+        });
+        const offsets = collinearOffsets(segs, k);
+        ctx.vectorOffset = (o) => offsets.get(o) || 0;
+
+        const saved = this._placed;
+        this._placed = { boxes: [], segs: [], w: size, h: size };
+        try {
+            const g = createSvgElement('g', {});
+            svg.appendChild(g);
+            const bodyDef = OBJECT_TYPES[st.bodyObj.type];
+            if (shape && ['block', 'ball', 'cart', 'disk', 'particle'].includes(st.bodyObj.type)) {
+                bodyDef.render({ ...st.bodyObj, label: undefined }, st.body, ctx, g);
+            } else {
+                const c = ctx.map(c0);
+                this._svg('circle', { cx: c.x, cy: c.y, r: 4.5, class: 'mp-ink-fill' }, g);
+            }
+            items.forEach(([o, s]) => {
+                OBJECT_TYPES[o.type].render(o, shape ? s : { ...s, pos: c0 }, ctx, g);
+            });
+        } finally {
+            this._placed = saved;
+        }
+        if (obj.label) {
+            const cap = document.createElement('figcaption');
+            cap.textContent = obj.label;
+            panel.appendChild(cap);
+        }
     }
 
     /**
@@ -595,6 +777,7 @@ export class MatephisPhysics {
         if (this.lightbox && this.lightbox.isOpen) this.lightbox.close();
         if (this.resizeObserver) this.resizeObserver.disconnect();
         if (this.sliders) this.sliders.destroy();
+        if (this.dragger) this.dragger.destroy();
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = "";

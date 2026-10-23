@@ -92,3 +92,81 @@
   stroke-width: 1.4;
   fill: var(--physics-body);
 }
+
+/* ==========================================================================
+   Interaction: draggable objects, reveal buttons, free-body diagram panels
+   ========================================================================== */
+
+/* matephis-plot.css turns off pointer events inside the SVG; draggable objects
+   take them back (arrows and labels on top stay transparent to the pointer) */
+.matephis-physics-svg .mp-draggable,
+.matephis-physics-svg .mp-draggable * {
+  pointer-events: auto;
+}
+
+.matephis-physics-svg .mp-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.matephis-physics-svg.dragging,
+.matephis-physics-svg.dragging .mp-draggable {
+  cursor: grabbing;
+}
+
+.matephis-physics-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs, 0.5rem);
+  margin: var(--space-xs, 0.5rem) 0;
+}
+
+.matephis-physics-button {
+  font: inherit;
+  font-size: var(--scale-sm, 0.9rem);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.matephis-physics-button:hover,
+.matephis-physics-button:focus-visible {
+  border-color: var(--accent);
+}
+
+.matephis-physics-button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.matephis-physics-panels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm, 1rem);
+}
+
+.matephis-physics-panels:empty {
+  display: none;
+}
+
+.matephis-physics-fbd {
+  margin: 0;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+/* Only the panel's own SVG: the formulas inside are nested SVGs too */
+.matephis-physics-fbd > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.matephis-physics-fbd figcaption {
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  padding: 0 var(--space-xs, 0.5rem) var(--space-xs, 0.5rem);
+}

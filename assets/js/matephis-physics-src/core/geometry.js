@@ -135,3 +135,53 @@ export function springPoints(a, b, coils = 8, amp = 0.1, lead = 0.12) {
 
 /** Signed distance of p from the line through a with unit normal n. */
 export const signedDistance = (p, a, n) => dot(sub(p, a), n);
+
+/**
+ * Sideways offsets (pixels) for vectors drawn on top of each other: segments
+ * on the same line that overlap by more than a couple of pixels are spread
+ * into lanes 7 px apart. Opposite vectors leaving the same point do not
+ * overlap and keep their place.
+ * @param {{key: any, a: object, b: object}[]} segs - world segments (tail, tip)
+ * @param {number} pxPerMetre
+ * @returns {Map<any, number>} key -> offset in pixels (perpendicular, left of the vector)
+ */
+export function collinearOffsets(segs, pxPerMetre, lane = 7) {
+    const tol = 3 / pxPerMetre, minOverlap = 2 / pxPerMetre;
+    const parent = segs.map((_, i) => i);
+    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < segs.length; i++) {
+        const A = segs[i], La = dist(A.a, A.b);
+        if (La < 1e-12) continue;
+        const u = scale(sub(A.b, A.a), 1 / La), n = perp(u);
+        for (let j = i + 1; j < segs.length; j++) {
+            const B = segs[j], Lb = dist(B.a, B.b);
+            if (Lb < 1e-12) continue;
+            const v = scale(sub(B.b, B.a), 1 / Lb);
+            if (Math.abs(cross(u, v)) > 0.05) continue;
+            if (Math.abs(dot(sub(B.a, A.a), n)) > tol) continue;
+            const s0 = dot(sub(B.a, A.a), u), s1 = dot(sub(B.b, A.a), u);
+            const overlap = Math.min(La, Math.max(s0, s1)) - Math.max(0, Math.min(s0, s1));
+            if (overlap > minOverlap) parent[find(i)] = find(j);
+        }
+    }
+    const groups = new Map();
+    segs.forEach((s, i) => {
+        const g = find(i);
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(i);
+    });
+    const out = new Map();
+    groups.forEach(members => {
+        if (members.length < 2) return;
+        // Lanes measured on a common side, so a vector and an opposite one end up apart
+        const ref = segs[members[0]];
+        const n0 = perp(norm(sub(ref.b, ref.a)));
+        members.forEach((i, k) => {
+            const s = segs[i];
+            const own = perp(norm(sub(s.b, s.a)));
+            const sign = dot(own, n0) >= 0 ? 1 : -1;
+            out.set(s.key, sign * (k - (members.length - 1) / 2) * lane);
+        });
+    });
+    return out;
+}

@@ -57,6 +57,21 @@
                     { type: 'force', on: 'B', at: 'B.top', dir: 'along:rope', mag: 8, label: '\\vec T' }
                 ]
             },
+            'Forze automatiche e pulsanti': {
+                xlim: [0, 9], ylim: [0, 5], forceScale: 0.09,
+                params: { u: { min: 0.25, max: 0.85, step: 0.01, val: 0.5, label: 'posizione' }, alpha: { min: 10, max: 40, val: 25, unit: 'deg', label: 'α' } },
+                controls: [
+                    { type: 'reveal', label: 'Mostra forze', targets: ['A.*'] },
+                    { type: 'reveal', label: 'Mostra risultante', targets: ['R'] }
+                ],
+                objects: [
+                    { type: 'ground', y: 0.3 },
+                    { id: 's', type: 'slope', at: [0.4, 0.3], angle: 'alpha', length: 7.2 },
+                    { id: 'A', type: 'block', on: 's', pos: 'u', size: [1.4, 0.8], mass: 2, mu: 0.6, forces: 'auto', override: { '*': { hidden: true } }, drag: 'u' },
+                    { id: 'R', type: 'resultant', on: 'A', hidden: true },
+                    { type: 'fbd', of: 'A', label: 'Corpo libero' }
+                ]
+            },
             'Avvisi': {
                 xlin: [0, 10], graphs: [],
                 objects: [{ type: 'partcle', at: [1, 1] }, { type: 'trace', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]

@@ -60,11 +60,32 @@ function typeset(tex) {
 }
 
 /**
+ * Outline under the glyphs, like the halo of plain SVG text: a stroke in the
+ * background colour painted before the fill (paint-order). Glyph coordinates
+ * are in the formula's viewBox units, so the width in pixels is converted with
+ * the scale between the viewBox and the rendered width.
+ */
+function applyHalo(svgNode, widthPx, halo) {
+    const vb = (svgNode.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    const root = svgNode.querySelector('g');
+    if (vb.length !== 4 || !(vb[2] > 0) || !root) return;
+    const units = (halo.width || 2.5) * vb[2] / widthPx;
+    root.style.stroke = halo.color;
+    root.style.strokeWidth = String(units);
+    root.style.strokeLinejoin = 'round';
+    root.style.paintOrder = 'stroke';
+    // The outline extends past the formula's box: do not clip it
+    svgNode.style.overflow = 'visible';
+}
+
+/**
  * Renders "$...$" text as MathJax SVG at (x, y).
  * @param {Function} fallback - called with no args when MathJax is unavailable or fails
+ * @param {object} [opts]
+ * @param {{color: string, width?: number}} [opts.halo] - outline under the glyphs (width in px)
  * @returns {SVGElement|null}
  */
-export function renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline, parent, fallback) {
+export function renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline, parent, fallback, opts = {}) {
     if (!hasMathJax()) return fallback ? fallback() : null;
 
     try {
@@ -98,6 +119,7 @@ export function renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline
         svgNode.setAttribute('fill', color);
         svgNode.style.color = color;
         svgNode.style.verticalAlign = '';
+        if (opts.halo) applyHalo(svgNode, w, opts.halo);
         svgNode.classList.add('matephis-plot-math');
 
         parent.appendChild(svgNode);

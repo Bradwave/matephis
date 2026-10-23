@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 2 (scene statiche).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. Forze automatiche, simulazione nel tempo e viste dall'alto arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 3 (scene dinamiche ed esercizi).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. Simulazione nel tempo e viste dall'alto arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -27,6 +27,7 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `animate` | Boolean/Array | | Pulsante play per gli slider, come nei grafici. |
 | `objects` | Array | `[]` | Gli oggetti della scena. |
 | `debug` | Boolean | `false` | Mostra id e coordinate degli oggetti e la scala (1 m = N px). |
+| `labelHalo` | Boolean | `true` | Contorno attorno alle formule LaTeX, come quello dei testi semplici; `false` per toglierlo. |
 
 ### Oggetti
 
@@ -85,6 +86,49 @@ Nelle espressioni `A.x` e `A.y` leggono la posizione di `A`, `A.deg` e `A.rad` l
 | `[vx, vy]` | direzione di un vettore |
 
 I vettori hanno moduli fisici (N, m/s, …): la scala è automatica per ogni tipo (il più lungo occupa poco più di un quarto della vista), oppure `forceScale` (m per N), `vectorScale: { "velocity": 0.2 }` o `scale` sul singolo vettore. Le etichette con un comando TeX (`"\\vec F"`) sono scritte in LaTeX anche senza `$`.
+
+### Forze automatiche
+
+Con `"forces": "auto"` su un corpo (`particle`, `block`, `ball`, `cart`, `rod`, `disk`, `pendulum`) compaiono da sole le forze dovute ai suoi collegamenti, con id `<corpo>.<nome>`:
+
+| Nome | Forza | Quando | Modulo (indicativo) |
+| :--- | :--- | :--- | :--- |
+| `P` | peso | sempre, nel centro di massa | $mg$ |
+| `N` | reazione normale | il corpo è appoggiato (`on`) | bilancia le altre forze perpendicolari alla superficie: $mg\cos\alpha$ da solo, di più con un corpo sopra o una spinta verso il basso; zero se il corpo viene sollevato |
+| `N_B` | spinta di un corpo `B` appoggiato sopra | `B` ha `"on"` uguale a questo corpo | opposta alla normale di `B` |
+| `f` | attrito | `mu` (sul corpo o sulla superficie), `friction`, `moving` | statico: bilancia le altre forze lungo la superficie, al massimo $\mu N$; dinamico: $\mu N$ |
+| `T`, `T1`, `T2` | tensione | una per ogni fune attaccata al corpo; il filo di un pendolo | peso di ciò che pende (la media se pendono entrambi i capi); pendolo: $mg\cos\theta$ |
+| `Fel`, `Fel1` | forza elastica | una per ogni molla attaccata (servono `k` e `rest`) | $k\,\lvert L - L_0\rvert$ |
+
+Le direzioni seguono la geometria. Normale e attrito statico sono esatti per un corpo fermo sulla sua superficie, perché bilanciano le altre forze; la tensione segue una regola da libro di testo, non la soluzione delle equazioni del moto: per un valore esatto si usa `mag` in `override`. Opzioni del corpo:
+
+- `"exclude": ["f"]` toglie alcune forze; `"override": { "N": { "label": "\\vec R" }, "*": { "hidden": true } }` cambia le opzioni di una forza o di tutte (`*`); `"add": [ {...} ]` aggiunge forze scritte a mano;
+- `"friction": "static"` (default) / `"kinetic"` / `"none"`; per l'attrito dinamico `"moving"` indica il verso del moto (`up`, `down`, `left`, `right`). L'attrito statico non ha bisogno di indicazioni: il verso viene dalle altre forze;
+- `"applyAt": "physical"` (default) mette normale e attrito nel punto di contatto, la tensione nel punto della fune e la forza elastica nel punto della molla; `"center"` mette tutto nel centro di massa. Vale anche come opzione globale. Il peso è sempre nel centro di massa.
+
+Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.P"` e si nascondono o si mostrano con i pulsanti.
+
+### Risultante, coppie, corpo libero
+
+| Tipo | Opzioni | Descrizione |
+| :--- | :--- | :--- |
+| `resultant` | `on`, `kind` (default `force`), `construction: "tip-to-tail"`, `showValue`, `label` | Somma dei vettori sul corpo, dal centro di massa. Se è nulla scrive $\vec R = 0$. |
+| `pairs` | `between: ["A", "B"]` | Colora allo stesso modo le coppie azione e reazione tra due corpi. Per le forze scritte a mano indica chi la esercita con `"by": "B"`. |
+| `fbd` | `of`, `shape` (`true`: disegna il corpo), `size` (px), `label`, `forces`, `button` | Diagramma di corpo libero in un riquadro sotto la scena, con le forze visibili del corpo. `"forces": "all"` mostra anche quelle nascoste nella scena. `"button": true` aggiunge un pulsante «Mostra corpo libero di …» (o con il testo dato) e il riquadro parte nascosto. I riquadri di una scena usano la stessa scala, così le forze restano confrontabili. |
+
+### Pulsanti e trascinamento
+
+`"controls"` aggiunge pulsanti sotto la scena:
+
+- `{ "type": "reveal", "label": "Mostra forze", "targets": ["A.*"] }` mostra gli oggetti con `"hidden": true` che corrispondono ai bersagli (id con `*`, oppure `"type:decompose"`); premuto di nuovo li nasconde. «Mostra» diventa «Nascondi» mentre è premuto.
+- `{ "type": "toggle", "label": "Molla rigida", "param": "k", "on": 20, "off": 8 }` alterna un parametro tra due valori.
+
+`"drag"` su un oggetto lo rende trascinabile e cambia un parametro come farebbe il suo slider:
+
+- `"drag": "u"`: per un corpo appoggiato, la posizione lungo la superficie (il parametro va usato in `pos`); per un pendolo, l'angolo;
+- `{ "param": "x", "axis": "x" }`, `{ "param": ["px", "py"] }`, `{ "param": "theta", "angle": true }`; `min` e `max` limitano il valore.
+
+Una scena con oggetti trascinabili non si apre a schermo intero con un clic.
 
 ### Gradi e radianti
 
@@ -548,7 +592,204 @@ Un `frame` disegna una coppia di assi ruotati; `decompose` usa quegli assi. L'an
 > }
 > ```
 
-## 15. Avvisi
+## 15. Forze automatiche, pulsanti e corpo libero
+
+Il blocco ha `"forces": "auto"`: peso, normale e attrito (c'è `mu`) sono generati e nascosti con `override`. I pulsanti mostrano forze, scomposizione e risultante; il riquadro sotto è il diagramma di corpo libero. Si può trascinare il blocco lungo il piano; con un'inclinazione oltre $\arctan\mu \approx 31°$ l'attrito statico non basta più e la risultante non è nulla.
+
+```physics
+{
+  "xlim": [0, 9], "ylim": [0, 5], "forceScale": 0.09,
+  "params": {
+    "u": { "min": 0.25, "max": 0.85, "step": 0.01, "val": 0.5, "label": "posizione" },
+    "alpha": { "min": 10, "max": 40, "step": 1, "val": 25, "unit": "deg", "label": "α" }
+  },
+  "controls": [
+    { "type": "reveal", "label": "Mostra forze", "targets": ["A.*"] },
+    { "type": "reveal", "label": "Mostra scomposizione", "targets": ["type:decompose"] },
+    { "type": "reveal", "label": "Mostra risultante", "targets": ["R"] }
+  ],
+  "objects": [
+    { "type": "ground", "y": 0.3 },
+    { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 7.2 },
+    { "id": "A", "type": "block", "on": "s", "pos": "u", "size": [1.4, 0.8], "mass": 2, "mu": 0.6,
+      "forces": "auto", "override": { "*": { "hidden": true } }, "drag": "u" },
+    { "type": "decompose", "vector": "A.P", "frame": "s", "hidden": true },
+    { "id": "R", "type": "resultant", "on": "A", "hidden": true },
+    { "type": "angle", "of": "s", "label": "\\alpha" },
+    { "type": "fbd", "of": "A", "label": "Corpo libero del blocco" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 9], "ylim": [0, 5], "forceScale": 0.09,
+>   "params": {
+>     "u": { "min": 0.25, "max": 0.85, "step": 0.01, "val": 0.5, "label": "posizione" },
+>     "alpha": { "min": 10, "max": 40, "step": 1, "val": 25, "unit": "deg", "label": "α" }
+>   },
+>   "controls": [
+>     { "type": "reveal", "label": "Mostra forze", "targets": ["A.*"] },
+>     { "type": "reveal", "label": "Mostra scomposizione", "targets": ["type:decompose"] },
+>     { "type": "reveal", "label": "Mostra risultante", "targets": ["R"] }
+>   ],
+>   "objects": [
+>     { "type": "ground", "y": 0.3 },
+>     { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 7.2 },
+>     { "id": "A", "type": "block", "on": "s", "pos": "u", "size": [1.4, 0.8], "mass": 2, "mu": 0.6,
+>       "forces": "auto", "override": { "*": { "hidden": true } }, "drag": "u" },
+>     { "type": "decompose", "vector": "A.P", "frame": "s", "hidden": true },
+>     { "id": "R", "type": "resultant", "on": "A", "hidden": true },
+>     { "type": "angle", "of": "s", "label": "\\alpha" },
+>     { "type": "fbd", "of": "A", "label": "Corpo libero del blocco" }
+>   ]
+> }
+> ```
+
+## 16. Blocchi impilati: azione e reazione
+
+Il blocco $m$ è appoggiato su $M$: $M$ riceve da $m$ la spinta $\vec N'_B$, e `pairs` colora allo stesso modo le due forze della coppia. Nella scena le forze sono nascoste; ogni diagramma di corpo libero ha il suo pulsante (`"button": true`) e mostra tutte le forze del corpo (`"forces": "all"`), con la sua forma (`"shape": true`).
+
+```physics
+{
+  "xlim": [0, 8], "ylim": [0, 3.6], "forceScale": 0.035,
+  "objects": [
+    { "id": "g", "type": "ground", "y": 0.3 },
+    { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$",
+      "forces": "auto", "override": { "*": { "hidden": true } } },
+    { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$",
+      "forces": "auto", "override": { "*": { "hidden": true } } },
+    { "type": "pairs", "between": ["A", "B"] },
+    { "type": "fbd", "of": "A", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di M" },
+    { "type": "fbd", "of": "B", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di m" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 8], "ylim": [0, 3.6], "forceScale": 0.035,
+>   "objects": [
+>     { "id": "g", "type": "ground", "y": 0.3 },
+>     { "id": "A", "type": "block", "on": "g", "pos": 0.45, "size": [2.6, 1], "mass": 5, "label": "$M$",
+>       "forces": "auto", "override": { "*": { "hidden": true } } },
+>     { "id": "B", "type": "block", "on": "A", "size": [1.2, 0.7], "mass": 2, "label": "$m$",
+>       "forces": "auto", "override": { "*": { "hidden": true } } },
+>     { "type": "pairs", "between": ["A", "B"] },
+>     { "type": "fbd", "of": "A", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di M" },
+>     { "type": "fbd", "of": "B", "shape": true, "forces": "all", "button": true, "label": "Corpo libero di m" }
+>   ]
+> }
+> ```
+
+## 17. Pendolo trascinabile e risultante
+
+Si trascina la massa: `"drag": "theta"` cambia l'angolo come lo slider. Peso e tensione sono automatici; la risultante è tangente alla traiettoria e vale $mg\sin\theta$.
+
+```physics
+{
+  "xlim": [0, 8], "ylim": [0, 5],
+  "params": { "theta": { "min": -60, "max": 60, "step": 1, "val": 35, "unit": "deg", "label": "θ" } },
+  "objects": [
+    { "id": "p", "type": "pendulum", "pivot": [4, 4.7], "length": 3, "theta": "theta", "angleLabel": "\\theta",
+      "mass": 1, "forces": "auto", "drag": "theta" },
+    { "type": "resultant", "on": "p", "showValue": true }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 8], "ylim": [0, 5],
+>   "params": { "theta": { "min": -60, "max": 60, "step": 1, "val": 35, "unit": "deg", "label": "θ" } },
+>   "objects": [
+>     { "id": "p", "type": "pendulum", "pivot": [4, 4.7], "length": 3, "theta": "theta", "angleLabel": "\\theta",
+>       "mass": 1, "forces": "auto", "drag": "theta" },
+>     { "type": "resultant", "on": "p", "showValue": true }
+>   ]
+> }
+> ```
+
+## 18. Molla con forza automatica e pulsante
+
+La forza elastica è generata dalla molla (`k` e `rest`). Il blocco si trascina lungo il suolo; il pulsante cambia la costante elastica.
+
+```physics
+{
+  "xlim": [0, 7], "ylim": [0, 2.6],
+  "params": {
+    "x": { "min": -1.2, "max": 1.2, "step": 0.05, "val": 0.8, "unit": "m" },
+    "k": { "min": 5, "max": 25, "val": 8, "unit": "N/m" }
+  },
+  "controls": [ { "type": "toggle", "label": "Molla rigida", "param": "k", "on": 20, "off": 8 } ],
+  "objects": [
+    { "id": "g", "type": "ground", "from": [0.5, 0.5], "to": [7, 0.5] },
+    { "id": "w", "type": "wall", "at": [0.5, 0.5], "height": 1.8 },
+    { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "label": "$m$",
+      "forces": "auto", "exclude": ["P", "N"], "override": { "Fel": { "showValue": true } }, "drag": "x" },
+    { "type": "spring", "from": [0.5, 0.8], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+    { "type": "path", "points": [[3.5, 0.5], [3.5, 2.2]], "dash": "4 4" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 7], "ylim": [0, 2.6],
+>   "params": {
+>     "x": { "min": -1.2, "max": 1.2, "step": 0.05, "val": 0.8, "unit": "m" },
+>     "k": { "min": 5, "max": 25, "val": 8, "unit": "N/m" }
+>   },
+>   "controls": [ { "type": "toggle", "label": "Molla rigida", "param": "k", "on": 20, "off": 8 } ],
+>   "objects": [
+>     { "id": "g", "type": "ground", "from": [0.5, 0.5], "to": [7, 0.5] },
+>     { "id": "w", "type": "wall", "at": [0.5, 0.5], "height": 1.8 },
+>     { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "label": "$m$",
+>       "forces": "auto", "exclude": ["P", "N"], "override": { "Fel": { "showValue": true } }, "drag": "x" },
+>     { "type": "spring", "from": [0.5, 0.8], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+>     { "type": "path", "points": [[3.5, 0.5], [3.5, 2.2]], "dash": "4 4" }
+>   ]
+> }
+> ```
+
+## 19. Tavolo e carrucola con forze automatiche
+
+Le tensioni seguono la fune e valgono, in modo indicativo, il peso della massa appesa; con `"applyAt": "center"` le forze partono tutte dal centro dei blocchi.
+
+```physics
+{
+  "xlim": [0, 7], "ylim": [0, 4], "applyAt": "center", "forceScale": 0.025,
+  "objects": [
+    { "type": "ground", "y": 0.2 },
+    { "id": "t", "type": "table", "at": [0.5, 2.5], "width": 4.5, "height": 2.3 },
+    { "id": "A", "type": "block", "on": "t", "pos": 0.45, "size": [1, 0.6], "mass": 3, "label": "$m_1$", "forces": "auto" },
+    { "id": "p", "type": "pulley", "at": { "from": "t.edge", "offset": [0.3, 0] }, "radius": 0.3, "hangFrom": "t.edge" },
+    { "id": "B", "type": "block", "at": [5.6, 1.5], "size": [0.6, 0.6], "mass": 2, "label": "$m_2$", "forces": "auto" },
+    { "type": "rope", "from": "A.right", "to": "B.top", "over": ["p"] }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 7], "ylim": [0, 4], "applyAt": "center", "forceScale": 0.025,
+>   "objects": [
+>     { "type": "ground", "y": 0.2 },
+>     { "id": "t", "type": "table", "at": [0.5, 2.5], "width": 4.5, "height": 2.3 },
+>     { "id": "A", "type": "block", "on": "t", "pos": 0.45, "size": [1, 0.6], "mass": 3, "label": "$m_1$", "forces": "auto" },
+>     { "id": "p", "type": "pulley", "at": { "from": "t.edge", "offset": [0.3, 0] }, "radius": 0.3, "hangFrom": "t.edge" },
+>     { "id": "B", "type": "block", "at": [5.6, 1.5], "size": [0.6, 0.6], "mass": 2, "label": "$m_2$", "forces": "auto" },
+>     { "type": "rope", "from": "A.right", "to": "B.top", "over": ["p"] }
+>   ]
+> }
+> ```
+
+## 20. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -568,7 +809,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 16. Errore nel JSON
+## 21. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

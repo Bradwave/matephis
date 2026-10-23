@@ -38,6 +38,7 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `sampleStep` | Number | 2 | Passo di campionamento in pixel. Valori più bassi (es. 1) migliorano la qualità ma riducono le performance. |
 | `fontSize` | Number | 18 | Dimensione base font. |
 | `renderOrder` | String | `"numbers-bottom"` | `"numbers-top"` per disegnare numeri sopra i dati. |
+| `labelHalo` | Boolean | `false` | Contorno chiaro (scuro nel tema scuro) attorno alle formule LaTeX, come quello dei testi semplici: le rende leggibili sopra linee e griglia. |
 
 ### Griglia e assi
 
