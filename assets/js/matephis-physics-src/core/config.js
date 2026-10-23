@@ -12,25 +12,24 @@ export const ROOT_KEYS = [
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
     "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
-    "time", "state", "ode", "events", "graphs", "readouts",
+    "time", "state", "ode", "events", "graphs", "readouts", "outOfPlane", "compare",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
     "styles", "preset", "use",
-    "frames", "views", "interactive", "magnitudes", "outOfPlane",
-    "compare", "seed",
+    "frames", "views", "interactive", "magnitudes", "seed",
 ];
 
 /** Keys every object accepts. */
 export const COMMON_OBJECT_KEYS = [
     "id", "type", "at", "on", "pos", "posUnit", "angle", "label", "labelAt", "labelOffset", "color", "fill",
-    "opacity", "dash", "mass", "show", "hidden", "views", "layer", "drag", "follow", "s", "orient",
+    "opacity", "dash", "mass", "show", "hidden", "views", "layer", "drag", "follow", "s", "orient", "offset",
 ];
 
 /** Object and annotation types from the spec's catalogue that later phases implement. */
 export const PLANNED_TYPES = [
-    "road", "car", "person", "moment", "lever-arm",
+    "person", "moment", "lever-arm",
 ];
 
 export const DEFAULT_ASPECT_RATIO = 16 / 9;
@@ -81,11 +80,14 @@ export function validateConfig(config, objectTypes = {}) {
     if (config.angleUnit !== undefined && config.angleUnit !== 'deg' && config.angleUnit !== 'rad') {
         warnings.push(`angleUnit must be "deg" or "rad", not '${config.angleUnit}'`);
     }
+    if (config.outOfPlane !== undefined && !['symbols', 'hide', 'note'].includes(config.outOfPlane)) {
+        warnings.push(`outOfPlane must be "symbols", "hide" or "note", not '${config.outOfPlane}'`);
+    }
+    if (config.compare !== undefined && !Array.isArray(config.compare)) {
+        warnings.push(`compare must be a list of param sets: [{ "mu": 0 }, { "mu": 0.3 }]`);
+    }
     if (config.plane !== undefined && config.plane !== 'vertical' && config.plane !== 'horizontal') {
         warnings.push(`plane must be "vertical" or "horizontal", not '${config.plane}'`);
-    }
-    if (config.plane === 'horizontal') {
-        warnings.push(`plane "horizontal" is not implemented yet: the scene is drawn as "vertical"`);
     }
 
     if (config.params && typeof config.params === 'object') {

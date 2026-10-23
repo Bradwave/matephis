@@ -67,7 +67,7 @@ describe('Validazione della scena', () => {
     });
 
     it('segnala opzioni e tipi non ancora implementati', () => {
-        expect(warnings({ compare: [] })[0]).toMatch(/not implemented yet/);
+        expect(warnings({ seed: 42 })[0]).toMatch(/not implemented yet/);
         expect(warnings({ objects: [{ type: 'moment' }] })[0]).toMatch(/not implemented yet/);
     });
 

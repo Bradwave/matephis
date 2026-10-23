@@ -195,3 +195,63 @@ describe('Energie', () => {
         expect(s.warnings.join(' ')).toMatch(/energy: 'of' must be the id of a body/);
     });
 });
+
+describe('Scene viste dall\'alto (plane: "horizontal")', () => {
+    const curve = (extra = {}) => timed({
+        plane: 'horizontal',
+        time: { max: 10 },
+        objects: [
+            { id: 'r', type: 'road', width: 7, mu: 0.8, path: { arc: { center: [0, 0], radius: 20 } } },
+            { id: 'C', type: 'car', follow: 'r', s: '15*t', orient: 'tangent', mass: 1200, forces: 'auto', ...extra },
+        ],
+    });
+
+    it('peso e normale sono perpendicolari al disegno, N = mg', () => {
+        const s = curve().at(2);
+        const P = s.resolver.state('C.P'), N = s.resolver.state('C.N');
+        expect(P.outOfPlane && N.outOfPlane).toBe(true);
+        expect(P.vec.z).toBeCloseTo(-1200 * g, 6);
+        expect(N.vec.z).toBeCloseTo(1200 * g, 6);
+        expect(s.num('C.N.mag')).toBeCloseTo(1200 * g, 6);
+    });
+
+    it('in curva l\'attrito statico è la forza centripeta m v²/R', () => {
+        const s = curve().at(2);
+        const f = s.resolver.state('C.f'), C = s.resolver.state('C');
+        expect(f.mag).toBeCloseTo(1200 * 15 * 15 / 20, -1);
+        // Towards the centre
+        expect((f.vec.x * C.pos.x + f.vec.y * C.pos.y) / (f.mag * Math.hypot(C.pos.x, C.pos.y))).toBeCloseTo(-1, 4);
+    });
+
+    it('la scala delle forze non tiene conto di quelle perpendicolari al disegno', () => {
+        const s = curve().at(2);
+        const f = s.resolver.state('C.f');
+        // The friction is the only arrow: it spans the automatic fraction of the view
+        expect(f.mag * s.resolver.scales.force).toBeCloseTo(0.28 * 10, 6);
+    });
+
+    it('offset sposta il corpo nella corsia', () => {
+        const s = curve({ offset: -1.75 }).at(0);
+        // Running anticlockwise, the right of the way is the outside of the curve
+        expect(Math.hypot(s.resolver.state('C').pos.x, s.resolver.state('C').pos.y)).toBeCloseTo(21.75, 6);
+    });
+
+    it('in corsia s si misura lungo la corsia: la velocità è proprio v', () => {
+        const s = curve({ offset: -1.75 }).at(3);
+        expect(s.num('C.speed')).toBeCloseTo(15, 4);
+        expect(s.resolver.state('C.f').mag).toBeCloseTo(1200 * 15 * 15 / 21.75, 0);
+    });
+
+    it('le direzioni "in" e "out" escono dal disegno', () => {
+        const s = timed({
+            objects: [
+                { id: 'q', type: 'particle', at: [0, 0] },
+                { id: 'B', type: 'vector', at: [1, 1], dir: 'in', mag: 2 },
+                { id: 'F', type: 'force', on: 'q', dir: 'out', mag: 3 },
+            ],
+        }).at(0);
+        expect(s.resolver.state('B').vec).toEqual({ x: 0, y: 0, z: -2 });
+        expect(s.resolver.state('F').outOfPlane).toBe(true);
+        expect(s.resolver.state('F').mag).toBe(3);
+    });
+});

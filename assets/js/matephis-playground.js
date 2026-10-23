@@ -102,8 +102,19 @@
                 readouts: ['t', { label: 'v', value: 'A.speed' }],
                 graphs: [{ y: 'x', label: 'Posizione', axisLabels: ['t (s)', 'x (m)'] }]
             },
+            'Auto in curva (dall\'alto)': {
+                plane: 'horizontal', xlim: [-18, 18], ylim: [-18, 18], aspectRatio: '1:1',
+                params: { v: { min: 5, max: 20, step: 0.5, val: 10, unit: 'm/s' }, mu: { min: 0.2, max: 1, step: 0.05, val: 0.8, label: 'μ' } },
+                time: { max: 12, loop: true },
+                objects: [
+                    { id: 'r', type: 'road', width: 7, lanes: 2, mu: 'mu', path: { arc: { center: [0, 0], radius: 12 } } },
+                    { id: 'C', type: 'car', follow: 'r', s: 'v*t', orient: 'tangent', offset: -1.75, mass: 1200, forces: 'auto' },
+                    { type: 'velocity', on: 'C', label: '\\vec v' }
+                ],
+                readouts: [{ label: 'f', value: 'C.f.mag', unit: 'N', digits: 0 }, { label: 'μmg', value: 'mu*1200*g', unit: 'N', digits: 0 }]
+            },
             'Avvisi': {
-                xlin: [0, 10], compare: [],
+                xlin: [0, 10], seed: 42,
                 objects: [{ type: 'partcle', at: [1, 1] }, { type: 'moment', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
             }
         },

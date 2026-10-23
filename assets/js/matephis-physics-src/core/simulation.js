@@ -32,9 +32,12 @@ export class Simulation {
     /**
      * @param {object} scene - the MatephisPhysics instance (config, params, compiler, resolver)
      * @param {string[]} names - state variable names
+     * @param {object} [opts]
+     * @param {boolean} [opts.graphs=true] - sample the scene's graphs (not for "compare" copies)
      */
-    constructor(scene, names) {
+    constructor(scene, names, { graphs = true } = {}) {
         this.scene = scene;
+        this.withGraphs = graphs;
         this.cfg = scene.config;
         this.time = this.cfg.time && typeof this.cfg.time === 'object' ? this.cfg.time : {};
         this.names = names;
@@ -184,7 +187,7 @@ export class Simulation {
      */
     _sample(view) {
         const r = this.scene.resolver;
-        const graphs = this.scene.graphs;
+        const graphs = this.withGraphs ? this.scene.graphs : null;
         const energies = r.objects.filter(o => o.type === 'energy');
         const fine = (graphs && graphs.count) || energies.length;
         const n = fine ? Math.min(MAX_SAMPLES, Math.max(BASE_SAMPLES, Math.ceil(this.tEnd * SAMPLES_PER_SECOND))) : BASE_SAMPLES;
@@ -200,7 +203,7 @@ export class Simulation {
             r.timeline = { ...this.timeline(), t };
             const states = r.resolveAll(view);
             states.forEach((st, obj) => {
-                if (!st || !st.vec || st.isResultant || obj.scale !== undefined) return;
+                if (!st || !st.vec || st.isResultant || st.outOfPlane || obj.scale !== undefined) return;
                 max[st.kind] = Math.max(max[st.kind] || 0, st.mag);
             });
             energy.forEach((e, obj) => {
@@ -252,7 +255,7 @@ export class Simulation {
 
     /** Kinematics for the vectors that need it ("velocity" / "acceleration" on a body, no dir or vec). */
     _kinematicsNow(view) {
-        this._kinematicsAt(this.t, view);
+        this._kinematicsAt(Math.min(this.t, this.tEnd), view);
     }
 
     /** Bodies whose velocity and acceleration something reads. */
@@ -263,6 +266,8 @@ export class Simulation {
         r.objects.forEach(o => {
             if ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined) ids.add(o.on);
             if (o.type === 'energy') [].concat(o.of).forEach(id => { if (typeof id === 'string' && r.objectById(id)) ids.add(id); });
+            // Seen from above, static friction is the force the motion needs
+            if (o.__auto && o.__auto.kind === 'friction' && this.cfg.plane === 'horizontal') ids.add(o.on);
         });
         this._kinIds = [...ids].filter(id => r.objectById(id));
         return this._kinIds;
@@ -314,7 +319,15 @@ export class Simulation {
 
     /** Current time, as the clock moves it. */
     seek(t) {
-        this.t = Math.min(Math.max(0, t), this.tEnd);
+        this.t = Math.min(Math.max(0, t), this.clockEnd);
+    }
+
+    /**
+     * Where the clock stops: the end of this run, or later when a "compare"
+     * run lasts longer (this one then stays at its last state).
+     */
+    get clockEnd() {
+        return Math.max(this.tEnd, this.extraEnd || 0);
     }
 
     /** What object types read while the scene is resolved at the current time. */

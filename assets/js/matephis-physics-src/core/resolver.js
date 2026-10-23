@@ -9,12 +9,12 @@
  */
 import { angleValue, angleLiteralWarning } from './angles.js';
 import { parseRef } from './anchors.js';
-import { add, sub, scale, norm, perp, fromAngle, angleOf, len, rotate } from './vec.js';
+import { add, sub, scale, norm, perp, fromAngle, angleOf, len, len3, rotate } from './vec.js';
 import { expandAutoForces } from '../objects/autoforces.js';
 import { aliasId } from './compiler.js';
 
 const WORLD_FRAME = { t: { x: 1, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, labels: ['x', 'y'] };
-const DIR_WORDS = ['up', 'down', 'left', 'right', 'tangent', '-tangent', 'normal', '-normal', 'toward', 'away', 'along'];
+const DIR_WORDS = ['up', 'down', 'left', 'right', 'in', 'out', 'tangent', '-tangent', 'normal', '-normal', 'toward', 'away', 'along'];
 const VECTOR_KINDS = ['force', 'velocity', 'acceleration', 'momentum', 'vector'];
 
 /** Fraction of the shorter side of the view that the largest vector of a kind spans. */
@@ -36,7 +36,7 @@ export class Resolver {
         this.angleUnit = angleUnit;
         this.config = config;
         this.warn = warn;
-        this.objects = expandShortcuts(expandAutoForces(objects));
+        this.objects = expandShortcuts(expandAutoForces(objects, config.plane));
         this.byId = new Map();
         this.objects.forEach(o => { if (o.id && !this.byId.has(o.id)) this.byId.set(o.id, o); });
         this.ids = [...this.byId.keys()];
@@ -178,7 +178,7 @@ export class Resolver {
     _values(obj, state) {
         if (state.vec) {
             const a = angleOf(state.vec);
-            return { x: state.vec.x, y: state.vec.y, mag: len(state.vec), angle: a, rad: a, deg: a * 180 / Math.PI };
+            return { x: state.vec.x, y: state.vec.y, z: state.vec.z || 0, mag: len3(state.vec), angle: a, rad: a, deg: a * 180 / Math.PI };
         }
         const a = state.angle || 0;
         const out = { x: state.pos.x, y: state.pos.y, angle: a, rad: a, deg: a * 180 / Math.PI };
@@ -274,8 +274,9 @@ export class Resolver {
     /**
      * A body moving along a path: "follow": "<path id>", "s": arc length in
      * metres (an expression of t, or a state variable); "orient": "tangent"
-     * turns it with the path. Round a closed path s wraps; on an open one the
-     * body stops at the ends.
+     * turns it with the path; "offset" moves it sideways (to the left for
+     * positive values). Round a closed path s wraps; on an open one the body
+     * stops at the ends.
      */
     _follow(obj, extra, where) {
         const ps = this.state(obj.follow);
@@ -285,9 +286,18 @@ export class Resolver {
         }
         let s = obj.s !== undefined ? this.num(obj.s, `${where} s`) : 0;
         if (!isFinite(s)) return null;
-        const L = ps.length;
+        // Sideways from the line ("offset", metres, positive to the left of the way it runs): a
+        // lane, a parallel curve; s is measured along it, so s' is the body's own speed
+        let curve = ps;
+        if (obj.offset !== undefined) {
+            const d = this.num(obj.offset, `${where} offset`);
+            const lane = isFinite(d) && d !== 0 && ps.offsetCurve ? ps.offsetCurve(d) : null;
+            if (lane) curve = lane;
+            else if (d !== 0) this.warn(`${where}: offset ${d} does not fit the path (past the centre of a curve?)`);
+        }
+        const L = curve.length;
         s = ps.closed && L > 0 ? ((s % L) + L) % L : Math.min(Math.max(s, 0), L);
-        const { point, tangent } = ps.at(s);
+        const { point, tangent } = curve.at(s);
         const t = obj.orient === 'tangent' ? rotate(tangent, extra) : fromAngle(extra);
         return { pos: point, angle: angleOf(t), frame: { t, n: perp(t) }, support: null, contact: null, pathTangent: tangent };
     }
@@ -358,6 +368,9 @@ export class Resolver {
             case 'down': return { x: 0, y: -1, z: 0 };
             case 'left': return { x: -1, y: 0, z: 0 };
             case 'right': return { x: 1, y: 0, z: 0 };
+            // Perpendicular to the drawing: into it (⊗) or out of it, towards the viewer (⊙)
+            case 'in': return { x: 0, y: 0, z: -1 };
+            case 'out': return { x: 0, y: 0, z: 1 };
             case 'toward':
             case 'away': {
                 const p = this.point(rest, where);
@@ -436,7 +449,8 @@ export class Resolver {
     _computeScales() {
         const max = {};
         this.states.forEach((st, obj) => {
-            if (!st || !st.vec || st.isResultant || obj.scale !== undefined) return;
+            // Vectors out of the drawing are symbols: their size does not set the arrows' scale
+            if (!st || !st.vec || st.isResultant || st.outOfPlane || obj.scale !== undefined) return;
             max[st.kind] = Math.max(max[st.kind] || 0, st.mag);
         });
         // With time, the largest value over the whole run, so scales do not change while it plays

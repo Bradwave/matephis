@@ -6,7 +6,7 @@
  * lengths with one scale per kind ("auto": the largest of a kind spans just
  * over a quarter of the view), so forces in one figure stay comparable.
  */
-import { add, sub, scale, len, dot, norm, angleOf, fromAngle, perp, lerp, dist, wrapAngle } from '../core/vec.js';
+import { add, sub, scale, len, len3, outOfPlane, dot, norm, angleOf, fromAngle, perp, lerp, dist, wrapAngle } from '../core/vec.js';
 import { pointAlong, polylineLength, arcLengthMap } from '../core/geometry.js';
 import { arrow, polyline, anchorFor, colorStyle } from '../core/draw.js';
 import { formatNumber } from '../../matephis-plot-src/parser/expression-parser.js';
@@ -34,10 +34,44 @@ function vectorLabel(label, value) {
 }
 
 /**
+ * A vector perpendicular to the drawing: ⊙ (out of it, towards the viewer)
+ * or ⊗ (into it), with its label beside. Several at one point (weight and
+ * normal seen from above) sit side by side.
+ */
+function drawOutOfPlane(ctx, p, sign, opts, g) {
+    const c0 = ctx.map(p);
+    const slot = ctx.oopSlot ? ctx.oopSlot(c0) : 0;
+    const R = 8;
+    const c = { x: c0.x + slot * (2 * R + 8), y: c0.y };
+    const color = opts.color;
+    ctx.svg('circle', { cx: c.x, cy: c.y, r: R, style: 'fill: var(--bg, #fff)', stroke: color, 'stroke-width': 1.8, opacity: opts.opacity }, g);
+    if (sign > 0) {
+        ctx.svg('circle', { cx: c.x, cy: c.y, r: 2.6, fill: color, opacity: opts.opacity }, g);
+    } else {
+        const d = R * 0.6;
+        ctx.svg('path', { d: `M${c.x - d},${c.y - d}L${c.x + d},${c.y + d}M${c.x - d},${c.y + d}L${c.x + d},${c.y - d}`, stroke: color, 'stroke-width': 1.8, opacity: opts.opacity }, g);
+    }
+    ctx.obstacle({ x: c.x - R, y: c.y }, { x: c.x + R, y: c.y });
+    ctx.obstacle({ x: c.x, y: c.y - R }, { x: c.x, y: c.y + R });
+    if (!opts.label) return;
+    ctx.placeText(opts.label, [
+        { x: c.x + R + 4, y: c.y - R, anchor: 'start', baseline: 'auto' }, { x: c.x - R - 4, y: c.y - R, anchor: 'end', baseline: 'auto' },
+        { x: c.x, y: c.y + R + 4, anchor: 'middle', baseline: 'hanging' }, { x: c.x, y: c.y - R - 4, anchor: 'middle', baseline: 'auto' },
+        { x: c.x + R + 4, y: c.y + R, anchor: 'start', baseline: 'hanging' },
+    ], { color, parent: g });
+}
+
+/**
  * Draws a vector of physical components `v` from world point `p`, at `k`
- * metres per unit. `tail: "tip"` ends the arrow at p (a push).
+ * metres per unit. `tail: "tip"` ends the arrow at p (a push). A vector
+ * perpendicular to the drawing becomes ⊙ or ⊗.
  */
 export function drawVector(ctx, p, v, k, opts, g) {
+    const oop = outOfPlane(v);
+    if (oop) {
+        drawOutOfPlane(ctx, p, oop, opts, g);
+        return;
+    }
     const w = scale(v, k);
     const from = opts.tail === 'tip' ? sub(p, w) : p;
     const to = opts.tail === 'tip' ? p : add(p, w);
@@ -80,6 +114,8 @@ export function drawVector(ctx, p, v, k, opts, g) {
 function vectorType(kind) {
     return {
         keys: ['on', 'dir', 'mag', 'vec', 'scale', 'showValue', 'unit', 'digits', 'tail', 'width', 'decompose', 'labelAt', 'by'],
+        // Physical size (with z) and whether it is perpendicular to the drawing
+        state: (pos, vec, extra) => ({ pos, vec, mag: len3(vec), outOfPlane: outOfPlane(vec) !== 0, kind, ...extra }),
         layer: 'annotations',
         anchorNames: ['tail', 'tip'],
         resolve(obj, r) {
@@ -100,10 +136,13 @@ function vectorType(kind) {
                 const a = resolveAutoForce(obj, r);
                 if (!a) return null;
                 let vec = a.vec;
-                if (obj.mag !== undefined) vec = scale(norm(vec), r.num(obj.mag, `${where} mag`));
+                if (obj.mag !== undefined) {
+                    const l = len3(vec);
+                    vec = l > 0 ? scale(vec, r.num(obj.mag, `${where} mag`) / l) : vec;
+                }
                 const pos = obj.at !== undefined ? r.point(obj.at, `${where} at`) : a.pos;
                 if (!pos || !isFinite(vec.x) || !isFinite(vec.y)) return null;
-                return { pos, vec, mag: len(vec), kind, frame: owner && owner.frame ? owner.frame : null };
+                return this.state(pos, vec, { frame: owner && owner.frame ? owner.frame : null });
             }
             if ((kind === 'velocity' || kind === 'acceleration') && owner && obj.vec === undefined && obj.dir === undefined) {
                 // Velocity / acceleration of a moving body, from its motion over time
@@ -113,11 +152,11 @@ function vectorType(kind) {
                     return null;
                 }
                 v = kind === 'velocity' ? k.v : k.a;
-                return { pos: p, vec: v, mag: len(v), kind, frame: owner.frame || null };
+                return this.state(p, v, { frame: owner.frame || null });
             }
             if (obj.vec !== undefined) {
-                if (!Array.isArray(obj.vec)) { r.warn(`${where}: 'vec' must be [vx, vy]`); return null; }
-                v = { x: r.num(obj.vec[0], `${where} vec`), y: r.num(obj.vec[1], `${where} vec`), z: 0 };
+                if (!Array.isArray(obj.vec)) { r.warn(`${where}: 'vec' must be [vx, vy] or [vx, vy, vz]`); return null; }
+                v = { x: r.num(obj.vec[0], `${where} vec`), y: r.num(obj.vec[1], `${where} vec`), z: obj.vec.length > 2 ? r.num(obj.vec[2], `${where} vec`) : 0 };
             } else {
                 if (obj.dir === undefined) { r.warn(`${where}: needs 'dir' and 'mag', or 'vec'`); return null; }
                 const d = r.dir(obj.dir, owner, p, `${where} dir`);
@@ -126,7 +165,7 @@ function vectorType(kind) {
                 v = scale(d, m);
             }
             if (!isFinite(v.x) || !isFinite(v.y)) return null;
-            return { pos: p, vec: v, mag: len(v), kind, frame: owner && owner.frame ? owner.frame : null };
+            return this.state(p, v, { frame: owner && owner.frame ? owner.frame : null });
         },
         anchor(st, name, arg, r, obj) {
             const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[kind];
@@ -137,6 +176,13 @@ function vectorType(kind) {
         render(obj, st, ctx, g) {
             const r = ctx.r;
             if (st.mag < 1e-9) return;
+            // Perpendicular to the drawing: a symbol (default), nothing, or a line under the scene
+            const oopMode = r.config.outOfPlane || 'symbols';
+            if (st.outOfPlane && oopMode === 'hide') return;
+            if (st.outOfPlane && oopMode === 'note') {
+                if (ctx.note) ctx.note(obj, st, valueText(st.mag, obj, kind, r));
+                return;
+            }
             const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[kind];
             const pair = r.pairIndex ? r.pairIndex.get(obj) : undefined;
             const color = obj.color ? ctx.color(obj.color) : pair !== undefined ? ctx.pairColor(pair) : ctx.kindColor(kind);
@@ -424,56 +470,104 @@ const com = {
  *   "arc": { "center", "radius", "from", "to" }   angles follow angleUnit
  *   "parametric": { "x": "...", "y": "...", "t": [t0, t1] }
  */
+/**
+ * Geometry of a path from "points", "arc" or "parametric" (also a road's):
+ * the drawn points, the length, and at(s), point and tangent at distance s
+ * from the start (exact for arcs and parametric curves). Null if it cannot
+ * be built.
+ */
+export function pathGeometry(obj, r, where = `path${obj.id ? ` '${obj.id}'` : ''}`) {
+    let pts = null, at = null, exactLength = null, offset = null;
+    if (Array.isArray(obj.points)) {
+        pts = obj.points.map((p, i) => r.point(p, `${where} points[${i}]`));
+        if (pts.some(p => !p)) return null;
+    } else if (obj.arc && typeof obj.arc === 'object') {
+        const c = r.point(obj.arc.center, `${where} arc center`);
+        const R = r.num(obj.arc.radius, `${where} arc radius`);
+        const a0 = obj.arc.from !== undefined ? r.angle(obj.arc.from, `${where} arc from`) : 0;
+        const a1 = obj.arc.to !== undefined ? r.angle(obj.arc.to, `${where} arc to`) : 2 * Math.PI;
+        if (!c || !(R > 0)) return null;
+        const n = Math.max(8, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 60)));
+        pts = Array.from({ length: n + 1 }, (_, i) => add(c, fromAngle(a0 + (a1 - a0) * i / n, R)));
+        // Exact position along the arc, for bodies that follow it
+        const dir = Math.sign(a1 - a0) || 1;
+        exactLength = Math.abs(a1 - a0) * R;
+        // Concentric arc d to the left (towards the centre when it turns left)
+        const arcAt = (Rd) => (sv) => {
+            const a = a0 + dir * sv / Rd;
+            return { point: add(c, fromAngle(a, Rd)), tangent: fromAngle(a + dir * Math.PI / 2) };
+        };
+        at = arcAt(R);
+        offset = (d) => {
+            const Rd = R - dir * d;
+            return Rd > 0 ? { at: arcAt(Rd), length: Math.abs(a1 - a0) * Rd } : null;
+        };
+    } else if (obj.parametric && typeof obj.parametric === 'object') {
+        const pm = obj.parametric;
+        const t = Array.isArray(pm.t) ? pm.t.map(v => r.num(v, `${where} t`)) : [0, 1];
+        const n = obj.samples !== undefined ? r.num(obj.samples, `${where} samples`) : 200;
+        try {
+            const fx = r.compiler.fn(String(pm.x), ['t'], { exclude: 't' }), fy = r.compiler.fn(String(pm.y), ['t'], { exclude: 't' });
+            pts = Array.from({ length: n + 1 }, (_, i) => {
+                const tt = t[0] + (t[1] - t[0]) * i / n;
+                return { x: fx(tt), y: fy(tt), z: 0 };
+            }).filter(p => isFinite(p.x) && isFinite(p.y));
+            const f = (tt) => ({ x: fx(tt), y: fy(tt) });
+            const samples = Math.max(400, n * 2);
+            const map = arcLengthMap(f, t[0], t[1], samples);
+            if (map) { at = map.at; exactLength = map.length; }
+            // Parallel curve d to the left, with its own arc length
+            offset = (d) => {
+                const eps = Math.abs(t[1] - t[0]) * 1e-5, sgn = Math.sign(t[1] - t[0]) || 1;
+                const m = arcLengthMap((tt) => {
+                    const p = f(tt), a = f(tt - eps), b = f(tt + eps);
+                    const l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+                    return { x: p.x - sgn * (b.y - a.y) / l * d, y: p.y + sgn * (b.x - a.x) / l * d };
+                }, t[0], t[1], samples);
+                return m ? { at: m.at, length: m.length } : null;
+            };
+        } catch (e) {
+            r.warn(`${where} parametric: ${e.message}`);
+            return null;
+        }
+    } else {
+        r.warn(`${where}: needs 'points', 'arc' or 'parametric'`);
+        return null;
+    }
+    if (pts.length < 2) return null;
+    const length = exactLength !== null ? exactLength : polylineLength(pts);
+    if (!at) at = (sv) => pointAlong(pts, length > 0 ? sv / length : 0);
+    // Closed (a full circle, a loop): a body following it goes round
+    const closed = dist(pts[0], pts[pts.length - 1]) < 1e-6 * Math.max(1, length);
+    if (!offset) {
+        // A polyline: the parallel polyline (corners mitred), measured along itself
+        offset = (d) => {
+            const n = pts.length;
+            const moved = pts.map((p, i) => {
+                const prev = i > 0 ? pts[i - 1] : closed ? pts[n - 2] : null;
+                const next = i < n - 1 ? pts[i + 1] : closed ? pts[1] : null;
+                const t = norm(add(prev ? norm(sub(p, prev)) : { x: 0, y: 0, z: 0 }, next ? norm(sub(next, p)) : { x: 0, y: 0, z: 0 }));
+                return add(p, scale(perp(t), d));
+            });
+            const L = polylineLength(moved);
+            return { at: (sv) => pointAlong(moved, L > 0 ? sv / L : 0), length: L };
+        };
+    }
+    // Lanes are asked for again at every instant: keep each one
+    const lanes = new Map();
+    const offsetCurve = (d) => {
+        if (!lanes.has(d)) lanes.set(d, offset(d));
+        return lanes.get(d);
+    };
+    return { pos: pts[0], points: pts, length, at, closed, offsetCurve };
+}
+
 const path = {
     keys: ['points', 'arc', 'parametric', 'samples', 'arrow', 'width'],
     layer: 'connections',
     anchorNames: ['start', 'end', 'point(u)'],
     resolve(obj, r) {
-        let pts = null, at = null, exactLength = null;
-        if (Array.isArray(obj.points)) {
-            pts = obj.points.map((p, i) => r.point(p, `path points[${i}]`));
-            if (pts.some(p => !p)) return null;
-        } else if (obj.arc && typeof obj.arc === 'object') {
-            const c = r.point(obj.arc.center, 'path arc center');
-            const R = r.num(obj.arc.radius, 'path arc radius');
-            const a0 = obj.arc.from !== undefined ? r.angle(obj.arc.from, 'path arc from') : 0;
-            const a1 = obj.arc.to !== undefined ? r.angle(obj.arc.to, 'path arc to') : 2 * Math.PI;
-            if (!c || !(R > 0)) return null;
-            const n = Math.max(8, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 60)));
-            pts = Array.from({ length: n + 1 }, (_, i) => add(c, fromAngle(a0 + (a1 - a0) * i / n, R)));
-            // Exact position along the arc, for bodies that follow it
-            const dir = Math.sign(a1 - a0) || 1;
-            exactLength = Math.abs(a1 - a0) * R;
-            at = (sv) => {
-                const a = a0 + dir * sv / R;
-                return { point: add(c, fromAngle(a, R)), tangent: fromAngle(a + dir * Math.PI / 2) };
-            };
-        } else if (obj.parametric && typeof obj.parametric === 'object') {
-            const pm = obj.parametric;
-            const t = Array.isArray(pm.t) ? pm.t.map(v => r.num(v, 'path t')) : [0, 1];
-            const n = obj.samples !== undefined ? r.num(obj.samples, 'path samples') : 200;
-            try {
-                const fx = r.compiler.fn(String(pm.x), ['t'], { exclude: 't' }), fy = r.compiler.fn(String(pm.y), ['t'], { exclude: 't' });
-                pts = Array.from({ length: n + 1 }, (_, i) => {
-                    const tt = t[0] + (t[1] - t[0]) * i / n;
-                    return { x: fx(tt), y: fy(tt), z: 0 };
-                }).filter(p => isFinite(p.x) && isFinite(p.y));
-                const map = arcLengthMap((tt) => ({ x: fx(tt), y: fy(tt) }), t[0], t[1], Math.max(400, n * 2));
-                if (map) { at = map.at; exactLength = map.length; }
-            } catch (e) {
-                r.warn(`path parametric: ${e.message}`);
-                return null;
-            }
-        } else {
-            r.warn(`path${obj.id ? ` '${obj.id}'` : ''}: needs 'points', 'arc' or 'parametric'`);
-            return null;
-        }
-        if (pts.length < 2) return null;
-        const length = exactLength !== null ? exactLength : polylineLength(pts);
-        if (!at) at = (sv) => pointAlong(pts, length > 0 ? sv / length : 0);
-        // Closed (a full circle, a loop): a body following it goes round
-        const closed = dist(pts[0], pts[pts.length - 1]) < 1e-6 * Math.max(1, length);
-        return { pos: pts[0], points: pts, length, at, closed };
+        return pathGeometry(obj, r);
     },
     anchor(st, name, arg, r) {
         if (name === 'start') return st.points[0];
@@ -521,7 +615,7 @@ const resultant = {
         const vec = parts.reduce((s, p) => add(s, p.st.vec), { x: 0, y: 0, z: 0 });
         const pos = obj.at !== undefined ? r.point(obj.at, 'resultant at') : (body.com || body.pos);
         if (!pos) return null;
-        return { pos, vec, mag: len(vec), kind, parts, isResultant: true };
+        return { pos, vec, mag: len3(vec), outOfPlane: outOfPlane(vec) !== 0, kind, parts, isResultant: true };
     },
     anchor(st, name, arg, r) {
         return name === 'tip' ? add(st.pos, scale(st.vec, r.scales[st.kind])) : null;
