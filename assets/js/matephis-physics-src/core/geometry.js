@@ -185,3 +185,58 @@ export function collinearOffsets(segs, pxPerMetre, lane = 7) {
     });
     return out;
 }
+
+/**
+ * Arc-length parametrisation of a curve f(p), p in [p0, p1]: `at(s)` gives
+ * the point and unit tangent at distance s from the start. The parameter is
+ * interpolated over s with a monotone cubic, so positions along the curve are
+ * smooth and a body following it has no jumps in acceleration.
+ * @param {(p: number) => {x: number, y: number}} f
+ */
+export function arcLengthMap(f, p0, p1, n = 400) {
+    const ps = [], ss = [];
+    let prev = null, s = 0;
+    for (let i = 0; i <= n; i++) {
+        const p = p0 + (p1 - p0) * i / n;
+        const q = f(p);
+        if (!q || !isFinite(q.x) || !isFinite(q.y)) continue;
+        if (prev) {
+            const d = Math.hypot(q.x - prev.x, q.y - prev.y);
+            if (d < 1e-12) continue;
+            s += d;
+        }
+        ps.push(p); ss.push(s); prev = q;
+    }
+    const m = ps.length;
+    if (m < 2) return null;
+    // Slopes dp/ds at the nodes (Fritsch–Carlson: no overshoot, p stays monotone)
+    const sec = [];
+    for (let i = 0; i < m - 1; i++) sec.push((ps[i + 1] - ps[i]) / (ss[i + 1] - ss[i]));
+    const dp = ps.map((_, i) => (i === 0 ? sec[0] : i === m - 1 ? sec[m - 2]
+        : sec[i - 1] * sec[i] <= 0 ? 0 : 2 / (1 / sec[i - 1] + 1 / sec[i])));
+    const param = (sv) => {
+        const x = Math.min(Math.max(sv, 0), ss[m - 1]);
+        let lo = 0, hi = m - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (ss[mid] <= x) lo = mid; else hi = mid;
+        }
+        const h = ss[hi] - ss[lo], u = (x - ss[lo]) / h;
+        const h00 = (1 + 2 * u) * (1 - u) * (1 - u), h10 = u * (1 - u) * (1 - u);
+        const h01 = u * u * (3 - 2 * u), h11 = u * u * (u - 1);
+        return h00 * ps[lo] + h10 * h * dp[lo] + h01 * ps[hi] + h11 * h * dp[hi];
+    };
+    const eps = Math.abs(p1 - p0) * 1e-5;
+    return {
+        length: ss[m - 1],
+        at(sv) {
+            const p = param(sv);
+            const q = f(p);
+            const a = f(Math.max(Math.min(p0, p1), Math.min(Math.max(p0, p1), p - eps)));
+            const b = f(Math.max(Math.min(p0, p1), Math.min(Math.max(p0, p1), p + eps)));
+            const d = { x: b.x - a.x, y: b.y - a.y, z: 0 };
+            const l = Math.hypot(d.x, d.y) || 1;
+            return { point: { x: q.x, y: q.y, z: 0 }, tangent: { x: d.x / l * Math.sign(p1 - p0 || 1), y: d.y / l * Math.sign(p1 - p0 || 1), z: 0 } };
+        },
+    };
+}

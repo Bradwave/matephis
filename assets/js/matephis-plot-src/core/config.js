@@ -29,7 +29,7 @@ export const VALID_ROOT_KEYS = [
 
 export const VALID_DATA_KEYS = [
     "type", "fn", "implicit", "points", "x", "vector", "angle", "range", "domain",
-    "parametric", "r",
+    "parametric", "r", "series",
     "color", "width", "strokeWidth", "dash", "opacity", "fillColor", "strokeColor", "radius",
     "label", "labelAt", "labelOffset", "labelAnchor", "derivativeColor",
     "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth", "param",

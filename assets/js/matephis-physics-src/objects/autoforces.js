@@ -38,7 +38,7 @@ const ENVIRONMENT = ['ground', 'ceiling', 'wall', 'slope', 'table'];
 const RESTING = ['particle', 'block', 'ball', 'cart'];
 
 /** Id of the object a point spec refers to, from the configuration only. */
-function ownerId(v) {
+export function ownerId(v) {
     if (typeof v === 'string') {
         const ref = parseRef(v);
         return ref ? ref.id : null;

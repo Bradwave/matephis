@@ -7,7 +7,7 @@
  * over a quarter of the view), so forces in one figure stay comparable.
  */
 import { add, sub, scale, len, dot, norm, angleOf, fromAngle, perp, lerp, dist, wrapAngle } from '../core/vec.js';
-import { pointAlong, polylineLength } from '../core/geometry.js';
+import { pointAlong, polylineLength, arcLengthMap } from '../core/geometry.js';
 import { arrow, polyline, anchorFor, colorStyle } from '../core/draw.js';
 import { formatNumber } from '../../matephis-plot-src/parser/expression-parser.js';
 import { argNum, labelSymbol, massOf } from './shared.js';
@@ -429,7 +429,7 @@ const path = {
     layer: 'connections',
     anchorNames: ['start', 'end', 'point(u)'],
     resolve(obj, r) {
-        let pts = null;
+        let pts = null, at = null, exactLength = null;
         if (Array.isArray(obj.points)) {
             pts = obj.points.map((p, i) => r.point(p, `path points[${i}]`));
             if (pts.some(p => !p)) return null;
@@ -441,6 +441,13 @@ const path = {
             if (!c || !(R > 0)) return null;
             const n = Math.max(8, Math.ceil(Math.abs(a1 - a0) / (Math.PI / 60)));
             pts = Array.from({ length: n + 1 }, (_, i) => add(c, fromAngle(a0 + (a1 - a0) * i / n, R)));
+            // Exact position along the arc, for bodies that follow it
+            const dir = Math.sign(a1 - a0) || 1;
+            exactLength = Math.abs(a1 - a0) * R;
+            at = (sv) => {
+                const a = a0 + dir * sv / R;
+                return { point: add(c, fromAngle(a, R)), tangent: fromAngle(a + dir * Math.PI / 2) };
+            };
         } else if (obj.parametric && typeof obj.parametric === 'object') {
             const pm = obj.parametric;
             const t = Array.isArray(pm.t) ? pm.t.map(v => r.num(v, 'path t')) : [0, 1];
@@ -451,6 +458,8 @@ const path = {
                     const tt = t[0] + (t[1] - t[0]) * i / n;
                     return { x: fx(tt), y: fy(tt), z: 0 };
                 }).filter(p => isFinite(p.x) && isFinite(p.y));
+                const map = arcLengthMap((tt) => ({ x: fx(tt), y: fy(tt) }), t[0], t[1], Math.max(400, n * 2));
+                if (map) { at = map.at; exactLength = map.length; }
             } catch (e) {
                 r.warn(`path parametric: ${e.message}`);
                 return null;
@@ -460,7 +469,11 @@ const path = {
             return null;
         }
         if (pts.length < 2) return null;
-        return { pos: pts[0], points: pts, length: polylineLength(pts) };
+        const length = exactLength !== null ? exactLength : polylineLength(pts);
+        if (!at) at = (sv) => pointAlong(pts, length > 0 ? sv / length : 0);
+        // Closed (a full circle, a loop): a body following it goes round
+        const closed = dist(pts[0], pts[pts.length - 1]) < 1e-6 * Math.max(1, length);
+        return { pos: pts[0], points: pts, length, at, closed };
     },
     anchor(st, name, arg, r) {
         if (name === 'start') return st.points[0];

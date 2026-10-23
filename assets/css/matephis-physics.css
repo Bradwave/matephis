@@ -170,3 +170,53 @@
   color: var(--secondary-text);
   padding: 0 var(--space-xs, 0.5rem) var(--space-xs, 0.5rem);
 }
+
+/* ==========================================================================
+   Time: readouts and graphs under the scene, energy charts
+   ========================================================================== */
+
+.matephis-physics-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 1.4rem;
+  margin: var(--space-xs, 0.5rem) 0;
+  font-family: var(--font-plot, monospace);
+  font-size: 0.85rem;
+}
+
+.matephis-physics-readout[hidden] {
+  display: none;
+}
+
+.matephis-physics-readout-label {
+  font-weight: bold;
+}
+
+.matephis-physics-readout-value {
+  color: var(--accent, #B01A00);
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+.matephis-physics-graphs {
+  /* The scene wrapper is a flex column: stretch, or the plots size to nothing */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 0.5rem);
+  margin: var(--space-xs, 0.5rem) 0;
+}
+
+/* Page styles may shrink figures to their content: graphs take the full width */
+.matephis-physics-graph {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.matephis-physics-graph figcaption {
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  text-align: center;
+}

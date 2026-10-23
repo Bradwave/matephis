@@ -11,6 +11,7 @@ import { angleValue, angleLiteralWarning } from './angles.js';
 import { parseRef } from './anchors.js';
 import { add, sub, scale, norm, perp, fromAngle, angleOf, len, rotate } from './vec.js';
 import { expandAutoForces } from '../objects/autoforces.js';
+import { aliasId } from './compiler.js';
 
 const WORLD_FRAME = { t: { x: 1, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, labels: ['x', 'y'] };
 const DIR_WORDS = ['up', 'down', 'left', 'right', 'tangent', '-tangent', 'normal', '-normal', 'toward', 'away', 'along'];
@@ -40,7 +41,7 @@ export class Resolver {
         this.objects.forEach(o => { if (o.id && !this.byId.has(o.id)) this.byId.set(o.id, o); });
         this.ids = [...this.byId.keys()];
         this._idPattern = this.ids.length
-            ? new RegExp(`(?<![A-Za-z0-9_.])(${this.ids.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\.`, 'g')
+            ? new RegExp(`(?<![A-Za-z0-9_.])(${[...this.ids].sort((a, b) => b.length - a.length).map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\.`, 'g')
             : null;
         this.resolved = {};
         this.view = { xMin: 0, xMax: 10, yMin: 0, yMax: 5 };
@@ -169,12 +170,26 @@ export class Resolver {
         }
         this.visiting.delete(obj);
         this.states.set(obj, state);
-        if (obj.id && state) {
-            this.resolved[obj.id] = state.vec
-                ? { x: state.vec.x, y: state.vec.y }
-                : { x: state.pos.x, y: state.pos.y, rad: state.angle || 0, deg: (state.angle || 0) * 180 / Math.PI };
-        }
+        if (obj.id && state) this.resolved[aliasId(obj.id)] = this._values(obj, state);
         return state;
+    }
+
+    /** What expressions read of an object: A.x, A.angle, A.speed, F.mag... */
+    _values(obj, state) {
+        if (state.vec) {
+            const a = angleOf(state.vec);
+            return { x: state.vec.x, y: state.vec.y, mag: len(state.vec), angle: a, rad: a, deg: a * 180 / Math.PI };
+        }
+        const a = state.angle || 0;
+        const out = { x: state.pos.x, y: state.pos.y, angle: a, rad: a, deg: a * 180 / Math.PI };
+        const k = this.timeline && this.timeline.kin.get(obj.id);
+        if (k) {
+            Object.assign(out, {
+                vx: k.v.x, vy: k.v.y, speed: Math.hypot(k.v.x, k.v.y),
+                ax: k.a.x, ay: k.a.y, acc: Math.hypot(k.a.x, k.a.y),
+            });
+        }
+        return out;
     }
 
     // =========================================================================
@@ -256,8 +271,30 @@ export class Resolver {
      * a point with an optional `angle`. `contact` is the touching point on the surface.
      * @returns {{pos, angle, frame: {t, n}, support: string|null, contact: object|null}|null}
      */
+    /**
+     * A body moving along a path: "follow": "<path id>", "s": arc length in
+     * metres (an expression of t, or a state variable); "orient": "tangent"
+     * turns it with the path. Round a closed path s wraps; on an open one the
+     * body stops at the ends.
+     */
+    _follow(obj, extra, where) {
+        const ps = this.state(obj.follow);
+        if (!ps || typeof ps.at !== 'function') {
+            this.warn(`${where}: 'follow' must be the id of a path`);
+            return null;
+        }
+        let s = obj.s !== undefined ? this.num(obj.s, `${where} s`) : 0;
+        if (!isFinite(s)) return null;
+        const L = ps.length;
+        s = ps.closed && L > 0 ? ((s % L) + L) % L : Math.min(Math.max(s, 0), L);
+        const { point, tangent } = ps.at(s);
+        const t = obj.orient === 'tangent' ? rotate(tangent, extra) : fromAngle(extra);
+        return { pos: point, angle: angleOf(t), frame: { t, n: perp(t) }, support: null, contact: null, pathTangent: tangent };
+    }
+
     place(obj, lift, where = describe(obj)) {
         const extra = obj.angle !== undefined ? this.angle(obj.angle, `${where} angle`) : 0;
+        if (obj.follow !== undefined) return this._follow(obj, extra, where);
         if (obj.on !== undefined) {
             const sup = this.state(obj.on);
             const supObj = this.byId.get(obj.on);

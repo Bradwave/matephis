@@ -9,6 +9,7 @@
  *   "drag": { "param": ["px", "py"] }             both coordinates
  *   "drag": { "param": "theta", "angle": true }   angle: pendulum swing, rod around its pivot,
  *                                                 disk rotation
+ *   "drag": "h0" on an energy chart               its reference level, up and down
  * "min" / "max" (slider units) limit the value; otherwise the slider's range does.
  * The param changes as if its slider moved, so everything that depends on it follows.
  */
@@ -27,6 +28,7 @@ export function dragSpec(obj, scene) {
         return null;
     }
     let mode = d.angle ? 'angle' : d.axis ? 'axis' : d.along ? 'along' : Array.isArray(d.param) ? 'xy' : null;
+    if (!mode && obj.type === 'energy') return { ...d, mode: 'axis', axis: 'y', params };
     if (!mode) mode = obj.type === 'pendulum' ? 'angle' : obj.on !== undefined ? 'along' : null;
     if (!mode) {
         scene._addWarning(`${obj.type}${obj.id ? ` '${obj.id}'` : ''} drag: say how it moves ("along", "axis" or "angle")`);

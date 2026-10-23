@@ -112,6 +112,7 @@ export const DataMixin = {
                 if (item.type === 'interpolation' && isArr(item.points)) keep(this._drawInterpolation(st));
                 if (item.fn) keep(this._drawFunction(st));
                 if (item.parametric) keep(this._drawParametric(st));
+                if (item.series) keep(this._drawSeries(st));
                 if (item.r) keep(this._drawPolarCurve(st, item.r));
                 if (item.implicit) keep(this._drawImplicit(st));
                 if (item.x !== undefined) keep(this._drawVertical(st));
@@ -283,6 +284,28 @@ export const DataMixin = {
         this._path(lines, color, width, dash, item.opacity);
         this.plotData.push({ type: 'curve', index: idx, lines });
         return lastPoint(lines, cs.viewRect);
+    },
+
+    /**
+     * Precomputed samples: { "series": [[x0, y0], [x1, y1], ...] }, joined by
+     * straight segments; a non-finite value breaks the line. For data with no
+     * closed form (a physics simulation drives these).
+     */
+    _drawSeries(st) {
+        const { item, idx, cs, color, width, dash } = st;
+        if (!isArr(item.series)) throw new Error("'series' needs a list of [x, y] pairs");
+        const lines = [];
+        let cur = null;
+        item.series.forEach(pt => {
+            const ok = isArr(pt) && isFinite(pt[0]) && isFinite(pt[1]);
+            if (!ok) { cur = null; return; }
+            if (!cur) { cur = []; lines.push(cur); }
+            cur.push(cs.mapX(pt[0]), cs.mapY(pt[1]));
+        });
+        const drawn = lines.filter(l => l.length >= 4);
+        this._path(drawn, color, width, dash, item.opacity);
+        this.plotData.push({ type: 'curve', index: idx, lines: drawn });
+        return lastPoint(drawn, cs.viewRect);
     },
 
     /** Polar curve r(θ); θ can be written as x, t, θ or theta. */

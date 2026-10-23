@@ -12,7 +12,6 @@
  * Shared with the plot engine (imported, not copied): expression compiler,
  * coordinate system, slider manager, palettes, MathJax bridge, lightbox.
  */
-import { ExpressionCompiler } from '../../matephis-plot-src/parser/expression-parser.js';
 import { CoordinateSystem } from '../../matephis-plot-src/core/coordinate-system.js';
 import { createPalettes, parseAspectRatio, cssLength, adaptColorForTheme } from '../../matephis-plot-src/core/config.js';
 import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.js';
@@ -28,6 +27,9 @@ import { angleArc, polar, anchorFor } from './draw.js';
 import { collinearOffsets } from './geometry.js';
 import { Controls, plainLabel } from './controls.js';
 import { Simulation } from './simulation.js';
+import { PhysicsCompiler, kinematicIds } from './compiler.js';
+import { Readouts } from './readouts.js';
+import { Graphs } from './graphs.js';
 import { Clock } from './clock.js';
 import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
@@ -66,9 +68,12 @@ export class MatephisPhysics {
         const objects = (Array.isArray(cfg.objects) ? cfg.objects : []).filter(o => o && typeof o === 'object' && OBJECT_TYPES[o.type]);
         const ids = objects.map(o => o.id).filter(id => typeof id === 'string' && id !== '');
 
-        // Time: a clock ("time"), an ODE ("state"), or objects that follow motion over time
+        // Time: a clock ("time"), an ODE ("state"), graphs, or anything that reads motion over
+        // time (ghosts, traces, energy, velocity vectors of a body, "A.speed" in an expression)
         const stateNames = cfg.state && typeof cfg.state === 'object' && !Array.isArray(cfg.state) ? Object.keys(cfg.state) : [];
-        const timed = cfg.time !== undefined || stateNames.length > 0 || objects.some(o => o.type === 'ghosts' || o.type === 'trace'
+        this.kinIds = kinematicIds({ objects: cfg.objects, readouts: cfg.readouts, graphs: cfg.graphs }, ids);
+        const timed = cfg.time !== undefined || stateNames.length > 0 || (Array.isArray(cfg.graphs) && cfg.graphs.length > 0)
+            || this.kinIds.length > 0 || objects.some(o => o.type === 'ghosts' || o.type === 'trace' || o.type === 'energy'
             || ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined));
 
         // g is always in scope; a param called g overrides it (and gets a slider)
@@ -77,7 +82,7 @@ export class MatephisPhysics {
         timeNames.filter(n => paramNames.includes(n)).forEach(n => {
             this._addWarning(`Param '${n}' clashes with ${n === 't' ? 'the time t' : `the state variable '${n}'`}: rename it`);
         });
-        this.compiler = new ExpressionCompiler({
+        this.compiler = new PhysicsCompiler({
             getParams: () => this.params,
             getPoints: () => (this.resolver ? this.resolver.resolved : {}),
             paramNames: [...new Set(['g', ...paramNames, ...timeNames])],
@@ -87,6 +92,7 @@ export class MatephisPhysics {
             objects, types: OBJECT_TYPES, compiler: this.compiler, angleUnit: this.angleUnit, config: cfg,
             warn: (msg) => this._addWarning(msg),
         });
+        this.compiler.setIds(this.resolver.ids);
         this.params.g = DEFAULT_G;
         if (cfg.g !== undefined) this.params.g = this._num(cfg.g, 'g');
         SliderManager.initValues(cfg.params || {}, this.params, (v, ctx) => this._eval(v, ctx));
@@ -105,7 +111,17 @@ export class MatephisPhysics {
             this.wrapper.appendChild(this.clock.el);
         }
 
-        // Free-body diagrams go in panels under the scene
+        if (Array.isArray(cfg.readouts) && cfg.readouts.length) {
+            this.readouts = new Readouts(this, cfg.readouts);
+            this.wrapper.appendChild(this.readouts.el);
+        }
+        // Graphs before the first draw: the simulation samples them
+        if (Array.isArray(cfg.graphs) && cfg.graphs.length) {
+            this.graphs = new Graphs(this, cfg.graphs);
+            this.wrapper.appendChild(this.graphs.el);
+        }
+
+        // Free-body diagrams and energy charts go in panels under the scene
         this.panelHost = document.createElement('div');
         this.panelHost.className = 'matephis-physics-panels';
         this.wrapper.appendChild(this.panelHost);
@@ -429,6 +445,8 @@ export class MatephisPhysics {
         this._drawGrid(cs);
         this._drawAxes(cs);
         this._drawObjects(cs);
+        if (this.readouts) this.readouts.update();
+        if (this.graphs) this.graphs.update();
         if (this.config.debug) this._drawDebug(cs);
 
         if (this._warningsDirty) this._renderWarnings();
@@ -549,6 +567,11 @@ export class MatephisPhysics {
                 const d = this.palettes.default;
                 return adaptColorForTheme([d[0], d[2], d[3], d[4]][i % 4], this._isDark());
             },
+            /** Colour i of the default palette (blue, red, green, orange, purple). */
+            paletteColor: (i) => {
+                const d = this.palettes.default;
+                return adaptColorForTheme(d[i % d.length], this._isDark());
+            },
             ink: this.ink,
             angleUnit: this.angleUnit,
             /** Arc (or right-angle square) for {vertex, a1, a2}, with a label or the value. */
@@ -624,7 +647,9 @@ export class MatephisPhysics {
             const state = states.get(obj);
             if (!state || !this._isShown(obj)) return;
             const def = OBJECT_TYPES[obj.type];
-            if (def.panel) { panels.push([obj, state]); return; }
+            // Panel types draw beside the scene; some also mark the scene (an energy zero level)
+            if (def.panel) panels.push([obj, state]);
+            if (def.panel && obj.type === 'fbd') return;
             const layer = layerOf(obj);
             const g = this._svg("g", { class: `matephis-physics-${obj.type}` }, this.layerGroups[layer]);
             if (obj.opacity !== undefined) g.setAttribute("opacity", r.num(obj.opacity, `${describe(obj)} opacity`));
@@ -639,10 +664,18 @@ export class MatephisPhysics {
             }
         });
         this.panelHost.textContent = '';
-        if (!panels.length) return;
+        panels.filter(([obj]) => obj.type !== 'fbd').forEach(([obj, st]) => {
+            try {
+                OBJECT_TYPES[obj.type].renderPanel(obj, st, ctx, this.panelHost);
+            } catch (e) {
+                this._addWarning(`${describe(obj)}: ${e.message}`);
+            }
+        });
+        const fbds = panels.filter(([obj]) => obj.type === 'fbd');
+        if (!fbds.length) return;
         // One scale for all the panels of a scene, as large as the tightest fit allows,
         // so forces keep their proportions from one diagram to the next
-        const fits = panels.map(([obj, st]) => {
+        const fits = fbds.map(([obj, st]) => {
             const { box } = this._freeBodyItems(obj, st);
             const room = this._panelSize(obj) - 2 * 34;
             const span = Math.max(box.x1 - box.x0, box.y1 - box.y0);
@@ -650,7 +683,7 @@ export class MatephisPhysics {
         });
         let k = Math.min(...fits);
         if (!isFinite(k)) k = this.pxPerMetre;
-        panels.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
+        fbds.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
     }
 
     _panelSize(obj) {
@@ -804,6 +837,7 @@ export class MatephisPhysics {
         if (this.sliders) this.sliders.destroy();
         if (this.dragger) this.dragger.destroy();
         if (this.clock) this.clock.destroy();
+        if (this.graphs) this.graphs.destroy();
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = "";

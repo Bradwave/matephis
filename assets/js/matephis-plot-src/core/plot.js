@@ -39,6 +39,8 @@ export class MatephisPlot {
      * @param {string|object} source - JSON configuration (string or object)
      * @param {object} [options]
      * @param {boolean} [options.observeResize=true]
+     * @param {object} [options.params] - live params owned by a host (a physics scene),
+     *   read by expressions; the host changes them and calls draw()
      */
     constructor(container, source, options = {}) {
         this.container = container;
@@ -58,7 +60,7 @@ export class MatephisPlot {
         this.container.appendChild(this.wrapper);
 
         // State
-        this.params = {};
+        this.params = options.params || {};
         this.freePoints = {};
         this.vectorState = {};
         this.resolvedPoints = {};
@@ -76,7 +78,7 @@ export class MatephisPlot {
         this.compiler = new ExpressionCompiler({
             getParams: () => this.params,
             getPoints: () => this.resolvedPoints,
-            paramNames: Object.keys(cfg.params || {}),
+            paramNames: [...Object.keys(cfg.params || {}), ...Object.keys(options.params || {})],
             pointNames: (Array.isArray(cfg.data) ? cfg.data : []).map(d => d.name).filter(Boolean),
             complex: cfg.complexMode === true,
         });
