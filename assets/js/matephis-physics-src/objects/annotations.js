@@ -105,6 +105,16 @@ function vectorType(kind) {
                 if (!pos || !isFinite(vec.x) || !isFinite(vec.y)) return null;
                 return { pos, vec, mag: len(vec), kind, frame: owner && owner.frame ? owner.frame : null };
             }
+            if ((kind === 'velocity' || kind === 'acceleration') && owner && obj.vec === undefined && obj.dir === undefined) {
+                // Velocity / acceleration of a moving body, from its motion over time
+                const k = r.timeline && r.timeline.kin.get(obj.on);
+                if (!k) {
+                    r.warn(`${where}: needs 'dir' and 'mag', or 'vec', unless the scene has time ("time") and the body moves`);
+                    return null;
+                }
+                v = kind === 'velocity' ? k.v : k.a;
+                return { pos: p, vec: v, mag: len(v), kind, frame: owner.frame || null };
+            }
             if (obj.vec !== undefined) {
                 if (!Array.isArray(obj.vec)) { r.warn(`${where}: 'vec' must be [vx, vy]`); return null; }
                 v = { x: r.num(obj.vec[0], `${where} vec`), y: r.num(obj.vec[1], `${where} vec`), z: 0 };

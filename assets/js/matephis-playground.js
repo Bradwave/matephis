@@ -72,9 +72,23 @@
                     { type: 'fbd', of: 'A', label: 'Corpo libero' }
                 ]
             },
+            'Rimbalzi (tempo ed eventi)': {
+                xlim: [0, 8], ylim: [0, 4], grid: true,
+                time: { max: 6, loop: true },
+                params: { e: { min: 0.5, max: 0.95, step: 0.05, val: 0.8, label: 'restituzione' } },
+                state: { x: 0.5, y: 3.5, vx: 1.2, vy: 0 },
+                ode: { x: 'vx', y: 'vy', vx: '0', vy: '-g' },
+                events: [{ when: 'y < 0.2', set: { vy: '-e*vy' } }],
+                objects: [
+                    { type: 'ground', y: 0 },
+                    { id: 'B', type: 'ball', at: ['x', 'y'], radius: 0.2 },
+                    { type: 'trace', of: 'B' },
+                    { type: 'velocity', on: 'B', label: '\\vec v' }
+                ]
+            },
             'Avvisi': {
                 xlin: [0, 10], graphs: [],
-                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'trace', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
+                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'energy', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
             }
         },
         matephis: {

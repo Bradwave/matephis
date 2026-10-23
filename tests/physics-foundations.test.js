@@ -68,7 +68,7 @@ describe('Validazione della scena', () => {
 
     it('segnala opzioni e tipi non ancora implementati', () => {
         expect(warnings({ graphs: [] })[0]).toMatch(/not implemented yet/);
-        expect(warnings({ objects: [{ type: 'trace' }] })[0]).toMatch(/not implemented yet/);
+        expect(warnings({ objects: [{ type: 'energy' }] })[0]).toMatch(/not implemented yet/);
     });
 
     it('segnala id duplicati, tipi mancanti e unità errate', () => {

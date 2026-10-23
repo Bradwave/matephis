@@ -44,6 +44,30 @@ export class Resolver {
             : null;
         this.resolved = {};
         this.view = { xMin: 0, xMax: 10, yMin: 0, yMax: 5 };
+        /** Set by the scene when it has time: current t, kinematics, tracks, ghosts. */
+        this.timeline = null;
+    }
+
+    /**
+     * Resolves only some objects (and what they depend on), for positions at
+     * other times. Leaves scales and graph untouched.
+     * @returns {Map<string, object>} id -> state
+     */
+    resolveSome(view, ids) {
+        if (view) this.view = view;
+        this.states = new Map();
+        this.visiting = new Set();
+        this.resolved = {};
+        this.faded = new Set();
+        this.pairIndex = new Map();
+        this._resolving = true;
+        const out = new Map();
+        try {
+            ids.forEach(id => out.set(id, this.state(id)));
+        } finally {
+            this._resolving = false;
+        }
+        return out;
     }
 
     /**
@@ -378,15 +402,22 @@ export class Resolver {
             if (!st || !st.vec || st.isResultant || obj.scale !== undefined) return;
             max[st.kind] = Math.max(max[st.kind] || 0, st.mag);
         });
+        // With time, the largest value over the whole run, so scales do not change while it plays
+        const overTime = this.timeline && this.timeline.maxMag ? this.timeline.maxMag : {};
+        Object.keys(overTime).forEach(kind => { max[kind] = Math.max(max[kind] || 0, overTime[kind]); });
         const span = AUTO_VECTOR_SPAN * Math.min(this.view.xMax - this.view.xMin, this.view.yMax - this.view.yMin);
         const scales = {};
+        /** Kinds whose scale comes from the scene (explicit, or vectors of that kind). */
+        this.scaleSet = new Set();
         VECTOR_KINDS.forEach(kind => {
             const explicit = kind === 'force' ? this.config.forceScale
                 : (this.config.vectorScale && typeof this.config.vectorScale === 'object' ? this.config.vectorScale[kind] : undefined);
             if (explicit !== undefined && explicit !== 'auto') {
                 scales[kind] = this.num(explicit, kind === 'force' ? 'forceScale' : `vectorScale ${kind}`);
+                this.scaleSet.add(kind);
             } else {
                 scales[kind] = max[kind] > 0 ? span / max[kind] : 1;
+                if (max[kind] > 0) this.scaleSet.add(kind);
             }
         });
         return scales;

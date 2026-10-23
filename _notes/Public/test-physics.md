@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 3 (scene dinamiche ed esercizi).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. Simulazione nel tempo e viste dall'alto arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 4 (simulazione nel tempo).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie. Grafici collegati, barre dell'energia e viste dall'alto arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -129,6 +129,34 @@ Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.
 - `{ "param": "x", "axis": "x" }`, `{ "param": ["px", "py"] }`, `{ "param": "theta", "angle": true }`; `min` e `max` limitano il valore.
 
 Una scena con oggetti trascinabili non si apre a schermo intero con un clic.
+
+### Tempo e simulazione
+
+Con `"time"` la scena ha un orologio: pulsanti avvia/pausa e ricomincia, uno slider per spostarsi nel tempo, il tempo attuale e la velocità di riproduzione (0.25×–2×). Il moto si scrive in due modi, anche insieme nella stessa scena:
+
+- **analitico**: posizioni e angoli in funzione di `t`, per esempio `"at": ["v0*cos(a)*t", "v0*sin(a)*t - g*t^2/2"]`;
+- **numerico**: variabili di stato e loro derivate, integrate con Runge-Kutta (RK4) a passo fisso: `"state": { "x": 1, "v": 0 }`, `"ode": { "x": "v", "v": "-k/m*x" }`.
+
+`t` e le variabili di stato si usano in tutte le espressioni come parametri. Tutto il moto viene calcolato una volta all'apertura della pagina e di nuovo quando cambia uno slider: avviare e spostarsi nel tempo è immediato.
+
+| Chiave di `time` | Default | Significato |
+| :--- | :--- | :--- |
+| `max` | 10 | durata (s), anche un'espressione |
+| `dt` | 1/240 | passo di integrazione (s) |
+| `speed` | 1 | velocità di riproduzione iniziale |
+| `loop` | `false` | `true` ricomincia, `"bounce"` torna indietro |
+| `autoplay` | `false` | parte da sola la prima volta che la scena è visibile |
+| `stopWhen` | | condizione che termina il moto (`"y < 0"`) |
+
+`"events"` cambia lo stato quando una condizione diventa vera, nell'istante esatto: `{ "when": "y < r", "set": { "vy": "-e*vy" } }` è un rimbalzo; `"stop": true` termina il moto, `"once": true` scatta una volta sola. L'orologio si ferma quando la scena esce dallo schermo.
+
+| Tipo | Opzioni | Descrizione |
+| :--- | :--- | :--- |
+| `velocity`, `acceleration` | `on` senza `dir` né `vec` | velocità e accelerazione del corpo, calcolate dal suo moto |
+| `ghosts` | `of`, `every` (s), `from`, `to`, `vectors` (`["velocity"]`), `labels: "t"`, `opacity`, `upTo` | copie del corpo a intervalli regolari: il diagramma del moto (stroboscopico) |
+| `trace` | `of`, `window` (s), `width`, `dash`, `upTo` | traiettoria percorsa |
+
+Con l'orologio fantasmi e traccia compaiono man mano (`"upTo": "now"`); senza `"time"` la scena è statica e li mostra tutti, utile per le figure degli esercizi. Le scale automatiche dei vettori usano il valore massimo su tutto il moto, così un vettore che cresce si allunga davvero.
 
 ### Gradi e radianti
 
@@ -789,7 +817,241 @@ Le tensioni seguono la fune e valgono, in modo indicativo, il peso della massa a
 > }
 > ```
 
-## 20. Avvisi
+## 20. Moto parabolico con orologio
+
+Moto analitico in $t$; velocità e accelerazione della pallina sono calcolate dal suo moto, la traccia compare man mano. `stopWhen` ferma il moto quando la pallina torna al suolo.
+
+```physics
+{
+  "xlim": [0, 10], "ylim": [0, 4.5], "grid": true,
+  "params": {
+    "v0": { "min": 5, "max": 10, "val": 8, "unit": "m/s", "label": "v₀" },
+    "a": { "min": 15, "max": 75, "val": 50, "unit": "deg", "label": "α" }
+  },
+  "time": { "max": 3, "stopWhen": "v0*sin(a)*t - g*t^2/2 < 0" },
+  "objects": [
+    { "type": "ground", "from": [0, 0], "to": [10, 0] },
+    { "id": "B", "type": "ball", "radius": 0.15, "at": ["v0*cos(a)*t", "v0*sin(a)*t - g*t^2/2"] },
+    { "type": "trace", "of": "B" },
+    { "type": "velocity", "on": "B", "label": "\\vec v", "decompose": true },
+    { "type": "acceleration", "on": "B", "label": "\\vec g" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 10], "ylim": [0, 4.5], "grid": true,
+>   "params": {
+>     "v0": { "min": 5, "max": 10, "val": 8, "unit": "m/s", "label": "v₀" },
+>     "a": { "min": 15, "max": 75, "val": 50, "unit": "deg", "label": "α" }
+>   },
+>   "time": { "max": 3, "stopWhen": "v0*sin(a)*t - g*t^2/2 < 0" },
+>   "objects": [
+>     { "type": "ground", "from": [0, 0], "to": [10, 0] },
+>     { "id": "B", "type": "ball", "radius": 0.15, "at": ["v0*cos(a)*t", "v0*sin(a)*t - g*t^2/2"] },
+>     { "type": "trace", "of": "B" },
+>     { "type": "velocity", "on": "B", "label": "\\vec v", "decompose": true },
+>     { "type": "acceleration", "on": "B", "label": "\\vec g" }
+>   ]
+> }
+> ```
+
+## 21. Pallina che rimbalza (equazioni del moto ed eventi)
+
+Lo stato è integrato numericamente; l'evento inverte la velocità verticale, moltiplicata per il coefficiente di restituzione $e$, nell'istante esatto dell'urto.
+
+```physics
+{
+  "xlim": [0, 6], "ylim": [0, 4],
+  "params": { "e": { "min": 0.75, "max": 1, "step": 0.05, "val": 0.85 } },
+  "state": { "x": 0.5, "y": 3.5, "vx": 1.1, "vy": 0 },
+  "ode": { "x": "vx", "y": "vy", "vx": "0", "vy": "-g" },
+  "events": [ { "when": "y < 0.2", "set": { "vy": "-e*vy" } } ],
+  "time": { "max": 4.5, "loop": true },
+  "objects": [
+    { "type": "ground", "from": [0, 0], "to": [6, 0] },
+    { "id": "B", "type": "ball", "radius": 0.2, "at": ["x", "y"] },
+    { "type": "trace", "of": "B" },
+    { "type": "velocity", "on": "B", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 6], "ylim": [0, 4],
+>   "params": { "e": { "min": 0.75, "max": 1, "step": 0.05, "val": 0.85 } },
+>   "state": { "x": 0.5, "y": 3.5, "vx": 1.1, "vy": 0 },
+>   "ode": { "x": "vx", "y": "vy", "vx": "0", "vy": "-g" },
+>   "events": [ { "when": "y < 0.2", "set": { "vy": "-e*vy" } } ],
+>   "time": { "max": 4.5, "loop": true },
+>   "objects": [
+>     { "type": "ground", "from": [0, 0], "to": [6, 0] },
+>     { "id": "B", "type": "ball", "radius": 0.2, "at": ["x", "y"] },
+>     { "type": "trace", "of": "B" },
+>     { "type": "velocity", "on": "B", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 22. Pendolo: grandi oscillazioni e approssimazione
+
+Il pendolo pieno segue l'equazione $\ddot\theta = -\frac{g}{L}\sin\theta$; quello trasparente l'approssimazione delle piccole oscillazioni $\theta_0\cos(\sqrt{g/L}\,t)$. Con un angolo iniziale grande si separano.
+
+```physics
+{
+  "xlim": [0, 8], "ylim": [0, 5],
+  "params": {
+    "th0": { "min": 5, "max": 170, "step": 5, "val": 60, "unit": "deg", "label": "θ₀" },
+    "L": { "min": 1, "max": 3.5, "step": 0.1, "val": 3, "unit": "m" }
+  },
+  "state": { "theta": "th0", "omega": 0 },
+  "ode": { "theta": "omega", "omega": "-g/L*sin(theta)" },
+  "time": { "max": 12, "loop": true },
+  "objects": [
+    { "type": "pendulum", "pivot": [4, 4.6], "length": "L", "theta": "th0*cos(sqrt(g/L)*t)", "opacity": 0.35, "showVertical": false },
+    { "id": "p", "type": "pendulum", "pivot": [4, 4.6], "length": "L", "theta": "theta" },
+    { "type": "velocity", "on": "p", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 8], "ylim": [0, 5],
+>   "params": {
+>     "th0": { "min": 5, "max": 170, "step": 5, "val": 60, "unit": "deg", "label": "θ₀" },
+>     "L": { "min": 1, "max": 3.5, "step": 0.1, "val": 3, "unit": "m" }
+>   },
+>   "state": { "theta": "th0", "omega": 0 },
+>   "ode": { "theta": "omega", "omega": "-g/L*sin(theta)" },
+>   "time": { "max": 12, "loop": true },
+>   "objects": [
+>     { "type": "pendulum", "pivot": [4, 4.6], "length": "L", "theta": "th0*cos(sqrt(g/L)*t)", "opacity": 0.35, "showVertical": false },
+>     { "id": "p", "type": "pendulum", "pivot": [4, 4.6], "length": "L", "theta": "theta" },
+>     { "type": "velocity", "on": "p", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 23. Moto circolare uniforme
+
+Velocità tangente e accelerazione centripeta, calcolate dal moto; la durata è un periodo.
+
+```physics
+{
+  "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "1:1",
+  "params": { "w": { "min": 0.5, "max": 3, "step": 0.1, "val": 1.2, "unit": "rad/s", "label": "ω" }, "R": { "min": 1, "max": 2.5, "val": 2, "unit": "m" } },
+  "time": { "max": "2*pi/w", "loop": true },
+  "objects": [
+    { "type": "path", "arc": { "center": [0, 0], "radius": "R" }, "dash": "3 5" },
+    { "type": "particle", "at": [0, 0], "radius": 3 },
+    { "id": "P", "type": "ball", "radius": 0.12, "at": ["R*cos(w*t)", "R*sin(w*t)"] },
+    { "type": "velocity", "on": "P", "label": "\\vec v" },
+    { "type": "acceleration", "on": "P", "label": "\\vec a_c" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "1:1",
+>   "params": { "w": { "min": 0.5, "max": 3, "step": 0.1, "val": 1.2, "unit": "rad/s", "label": "ω" }, "R": { "min": 1, "max": 2.5, "val": 2, "unit": "m" } },
+>   "time": { "max": "2*pi/w", "loop": true },
+>   "objects": [
+>     { "type": "path", "arc": { "center": [0, 0], "radius": "R" }, "dash": "3 5" },
+>     { "type": "particle", "at": [0, 0], "radius": 3 },
+>     { "id": "P", "type": "ball", "radius": 0.12, "at": ["R*cos(w*t)", "R*sin(w*t)"] },
+>     { "type": "velocity", "on": "P", "label": "\\vec v" },
+>     { "type": "acceleration", "on": "P", "label": "\\vec a_c" }
+>   ]
+> }
+> ```
+
+## 24. Diagramma del moto (statico)
+
+Senza `"time"` la scena è una figura: le copie del carrello ogni 0.5 s mostrano un moto uniformemente accelerato: gli spostamenti crescono ogni volta della stessa quantità, e così la velocità. Il carrello stesso è nascosto.
+
+```physics
+{
+  "xlim": [0, 10], "ylim": [0, 2.5],
+  "objects": [
+    { "id": "g", "type": "ground", "from": [0, 0.3], "to": [10, 0.3] },
+    { "id": "C", "type": "cart", "on": "g", "pos": "0.6 + 1.2*t + 0.8*t^2", "posUnit": "m", "size": [0.6, 0.3], "hidden": true },
+    { "type": "ghosts", "of": "C", "every": 0.5, "from": 0, "to": 2.5, "vectors": ["velocity"], "labels": "t", "opacity": 0.7 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 10], "ylim": [0, 2.5],
+>   "objects": [
+>     { "id": "g", "type": "ground", "from": [0, 0.3], "to": [10, 0.3] },
+>     { "id": "C", "type": "cart", "on": "g", "pos": "0.6 + 1.2*t + 0.8*t^2", "posUnit": "m", "size": [0.6, 0.3], "hidden": true },
+>     { "type": "ghosts", "of": "C", "every": 0.5, "from": 0, "to": 2.5, "vectors": ["velocity"], "labels": "t", "opacity": 0.7 }
+>   ]
+> }
+> ```
+
+## 25. Oscillatore smorzato
+
+Molla con attrito viscoso: $\ddot x = -\frac{k}{m}x - \frac{b}{m}\dot x$. La forza elastica è automatica e segue il moto.
+
+```physics
+{
+  "xlim": [0, 7], "ylim": [0, 2.4],
+  "params": {
+    "k": { "min": 5, "max": 30, "val": 12, "unit": "N/m" },
+    "b": { "min": 0, "max": 3, "step": 0.1, "val": 0.6, "unit": "kg/s" },
+    "m": { "min": 0.5, "max": 3, "val": 1, "unit": "kg" }
+  },
+  "state": { "x": 1, "v": 0 },
+  "ode": { "x": "v", "v": "-k/m*x - b/m*v" },
+  "time": { "max": 15 },
+  "objects": [
+    { "id": "g", "type": "ground", "from": [0.5, 0.5], "to": [7, 0.5] },
+    { "id": "w", "type": "wall", "at": [0.5, 0.5], "height": 1.6 },
+    { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "mass": "m",
+      "forces": "auto", "exclude": ["P", "N"] },
+    { "type": "spring", "from": [0.5, 0.8], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+    { "type": "velocity", "on": "A", "label": "\\vec v" },
+    { "type": "path", "points": [[3.5, 0.5], [3.5, 2.1]], "dash": "4 4" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 7], "ylim": [0, 2.4],
+>   "params": {
+>     "k": { "min": 5, "max": 30, "val": 12, "unit": "N/m" },
+>     "b": { "min": 0, "max": 3, "step": 0.1, "val": 0.6, "unit": "kg/s" },
+>     "m": { "min": 0.5, "max": 3, "val": 1, "unit": "kg" }
+>   },
+>   "state": { "x": 1, "v": 0 },
+>   "ode": { "x": "v", "v": "-k/m*x - b/m*v" },
+>   "time": { "max": 15 },
+>   "objects": [
+>     { "id": "g", "type": "ground", "from": [0.5, 0.5], "to": [7, 0.5] },
+>     { "id": "w", "type": "wall", "at": [0.5, 0.5], "height": 1.6 },
+>     { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "mass": "m",
+>       "forces": "auto", "exclude": ["P", "N"] },
+>     { "type": "spring", "from": [0.5, 0.8], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+>     { "type": "velocity", "on": "A", "label": "\\vec v" },
+>     { "type": "path", "points": [[3.5, 0.5], [3.5, 2.1]], "dash": "4 4" }
+>   ]
+> }
+> ```
+
+## 26. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -800,7 +1062,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
   "params": { "theta": { "min": 0, "max": 90, "val": 30 } },
   "objects": [
     { "type": "partcle", "at": [1, 1] },
-    { "type": "trace", "of": "s" },
+    { "type": "energy", "of": "s" },
     { "id": "A", "type": "block", "at": [3, 1] },
     { "type": "label", "at": "A.tpo", "text": "?" },
     { "type": "particle", "at": [5, 2], "raduis": 4 },
@@ -809,7 +1071,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 21. Errore nel JSON
+## 27. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

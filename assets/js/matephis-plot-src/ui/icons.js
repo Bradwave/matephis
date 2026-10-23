@@ -18,10 +18,11 @@ import trace from './icons/trace.svg';
 import eraser from './icons/eraser.svg';
 import play from './icons/play.svg';
 import pause from './icons/pause.svg';
+import replay from './icons/replay.svg';
 import snap from './icons/snap.svg';
 import close from './icons/close.svg';
 import download from './icons/download.svg';
 
 export const MatephisIcons = {
-    add, remove, reset, fullscreen, chart, point, slope, tangent, trace, eraser, play, pause, snap, close, download
+    add, remove, reset, fullscreen, chart, point, slope, tangent, trace, eraser, play, pause, replay, snap, close, download
 };
