@@ -27,6 +27,8 @@ import { Resolver, describe } from './resolver.js';
 import { angleArc, polar, anchorFor } from './draw.js';
 import { collinearOffsets } from './geometry.js';
 import { Controls, plainLabel } from './controls.js';
+import { Simulation } from './simulation.js';
+import { Clock } from './clock.js';
 import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
 
@@ -64,12 +66,21 @@ export class MatephisPhysics {
         const objects = (Array.isArray(cfg.objects) ? cfg.objects : []).filter(o => o && typeof o === 'object' && OBJECT_TYPES[o.type]);
         const ids = objects.map(o => o.id).filter(id => typeof id === 'string' && id !== '');
 
+        // Time: a clock ("time"), an ODE ("state"), or objects that follow motion over time
+        const stateNames = cfg.state && typeof cfg.state === 'object' && !Array.isArray(cfg.state) ? Object.keys(cfg.state) : [];
+        const timed = cfg.time !== undefined || stateNames.length > 0 || objects.some(o => o.type === 'ghosts' || o.type === 'trace'
+            || ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined));
+
         // g is always in scope; a param called g overrides it (and gets a slider)
         const paramNames = Object.keys(cfg.params || {});
+        const timeNames = timed ? ['t', ...stateNames] : [];
+        timeNames.filter(n => paramNames.includes(n)).forEach(n => {
+            this._addWarning(`Param '${n}' clashes with ${n === 't' ? 'the time t' : `the state variable '${n}'`}: rename it`);
+        });
         this.compiler = new ExpressionCompiler({
             getParams: () => this.params,
             getPoints: () => (this.resolver ? this.resolver.resolved : {}),
-            paramNames: [...new Set(['g', ...paramNames])],
+            paramNames: [...new Set(['g', ...paramNames, ...timeNames])],
             pointNames: ids,
         });
         this.resolver = new Resolver({
@@ -79,6 +90,7 @@ export class MatephisPhysics {
         this.params.g = DEFAULT_G;
         if (cfg.g !== undefined) this.params.g = this._num(cfg.g, 'g');
         SliderManager.initValues(cfg.params || {}, this.params, (v, ctx) => this._eval(v, ctx));
+        if (timed) this.sim = new Simulation(this, stateNames);
 
         this.palettes = createPalettes(this._isDark());
         this._listen(window, 'matephis-theme-change', () => {
@@ -87,6 +99,11 @@ export class MatephisPhysics {
         });
 
         this._initSVG();
+
+        if (this.sim && this.sim.hasClock) {
+            this.clock = new Clock(this, this.sim);
+            this.wrapper.appendChild(this.clock.el);
+        }
 
         // Free-body diagrams go in panels under the scene
         this.panelHost = document.createElement('div');
@@ -526,6 +543,7 @@ export class MatephisPhysics {
             },
             color: (c) => this._color(c),
             kindColor: (kind) => this._kindColor(kind),
+            types: OBJECT_TYPES,
             /** Colours for action–reaction pairs: distinct from the default force colour. */
             pairColor: (i) => {
                 const d = this.palettes.default;
@@ -575,6 +593,13 @@ export class MatephisPhysics {
 
     _drawObjects(cs) {
         const r = this.resolver;
+        const view = { xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax };
+        if (this.sim) {
+            // Recomputes the motion if a param changed, then puts t and the state into the params
+            this.sim.prepare(view);
+            r.timeline = this.sim.timeline();
+            if (this.clock) this.clock.update();
+        }
         const states = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
         const ctx = this._renderContext(cs);
         // Overlapping vectors on the same line are spread sideways
@@ -778,6 +803,7 @@ export class MatephisPhysics {
         if (this.resizeObserver) this.resizeObserver.disconnect();
         if (this.sliders) this.sliders.destroy();
         if (this.dragger) this.dragger.destroy();
+        if (this.clock) this.clock.destroy();
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = "";
