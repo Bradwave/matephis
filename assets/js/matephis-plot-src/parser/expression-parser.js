@@ -146,7 +146,8 @@ export const Runtime = {
             case 'rad': return p.rad;
             case 'deg': return p.deg;
         }
-        return NaN;
+        // Extra properties a host declares (physics: A.vx, A.speed, F.mag)
+        return typeof p[prop] === 'number' ? p[prop] : NaN;
     },
 };
 
@@ -372,7 +373,7 @@ class Parser {
 
         // Point / vector property: A.x (also "iP.y" = i * P.y, "2aP.x" style prefixes)
         if (tok.prop !== undefined) {
-            if (!POINT_PROPS.includes(tok.prop)) throw new Error(`Unknown property '.${tok.prop}' in "${this.src}"`);
+            if (!POINT_PROPS.includes(tok.prop) && !(scope.props && scope.props.has(tok.prop))) throw new Error(`Unknown property '.${tok.prop}' in "${this.src}"`);
             const pts = scope.points;
             if (pts && pts.size && !pts.has(name)) {
                 const owner = [...pts].sort((a, b) => b.length - a.length).find(p => name.endsWith(p));
@@ -543,9 +544,10 @@ Runtime.factorial = (n) => {
 /**
  * Parses an expression into an AST (exposed for tests and tooling).
  */
-export function parseExpression(src, { vars = ['x'], params = [], points = [], complex = false } = {}) {
+export function parseExpression(src, { vars = ['x'], params = [], points = [], props = [], complex = false } = {}) {
     const scope = {
         vars,
+        props: props instanceof Set ? props : new Set(props),
         params: params instanceof Set ? params : new Set(params),
         points: points instanceof Set ? points : new Set(points),
         complex,
@@ -582,13 +584,16 @@ export class ExpressionCompiler {
      * @param {() => object} opts.getPoints - returns the live named points
      * @param {string[]} [opts.paramNames]
      * @param {string[]} [opts.pointNames] - names of points/vectors (resolves "iP.y" as i·P.y)
+     * @param {string[]} [opts.pointProps] - properties beyond x, y, r, theta, rad, deg, len,
+     *   read from the point object as they are (A.speed -> points.A.speed)
      * @param {boolean} [opts.complex]
      */
-    constructor({ getParams, getPoints, paramNames = [], pointNames = [], complex = false }) {
+    constructor({ getParams, getPoints, paramNames = [], pointNames = [], pointProps = [], complex = false }) {
         this.getParams = getParams;
         this.getPoints = getPoints;
         this.paramNames = new Set(paramNames);
         this.pointNames = new Set(pointNames);
+        this.pointProps = new Set(pointProps);
         this.complex = complex;
         this.cache = new Map();
     }
@@ -609,7 +614,7 @@ export class ExpressionCompiler {
             params.delete(exclude);
             vars.forEach(v => params.delete(v));
         }
-        const compiled = compileExpression(src, { vars, params, points: this.pointNames, complex });
+        const compiled = compileExpression(src, { vars, params, points: this.pointNames, props: this.pointProps, complex });
         const raw = compiled.raw;
         const getP = this.getParams, getPt = this.getPoints;
 

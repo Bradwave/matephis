@@ -170,3 +170,137 @@
   color: var(--secondary-text);
   padding: 0 var(--space-xs, 0.5rem) var(--space-xs, 0.5rem);
 }
+
+/* ==========================================================================
+   Time: readouts and graphs under the scene, energy charts
+   ========================================================================== */
+
+.matephis-physics-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem 1.4rem;
+  margin: var(--space-xs, 0.5rem) 0;
+  font-family: var(--font-plot, monospace);
+  font-size: 0.85rem;
+}
+
+.matephis-physics-readout[hidden] {
+  display: none;
+}
+
+.matephis-physics-readout-label {
+  font-weight: bold;
+}
+
+.matephis-physics-readout-value {
+  color: var(--accent, #B01A00);
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+.matephis-physics-graphs {
+  /* The scene wrapper is a flex column: stretch, or the plots size to nothing */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 0.5rem);
+  margin: var(--space-xs, 0.5rem) 0;
+}
+
+/* Page styles may shrink figures to their content: graphs take the full width */
+.matephis-physics-graph {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.matephis-physics-graph figcaption {
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  text-align: center;
+}
+
+.matephis-physics-graphs:empty {
+  display: none;
+}
+
+/* Graphs on the right: a wider block, the scene and the graphs side by side;
+   under 600px or so of room the row wraps and the graphs go below */
+.matephis-plot-container.matephis-physics-has-side {
+  max-width: 100%;
+}
+
+.matephis-physics-split {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm, 1rem);
+}
+
+.matephis-physics-main {
+  flex: 3 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.matephis-physics-side {
+  flex: 2 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Graphs in tabs: one at a time */
+.matephis-physics-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs, 0.5rem);
+  margin-bottom: var(--space-xs, 0.5rem);
+}
+
+.matephis-physics-tab {
+  font: inherit;
+  font-size: var(--scale-sm, 0.9rem);
+  color: var(--secondary-text, var(--text));
+  background: var(--bg);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+
+.matephis-physics-tab:hover,
+.matephis-physics-tab:focus-visible {
+  color: var(--text);
+}
+
+.matephis-physics-tab[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.matephis-physics-graph[hidden] {
+  display: none;
+}
+
+.matephis-physics-graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem 1rem;
+  font-family: var(--font-plot, monospace);
+  font-size: 0.8rem;
+}
+
+.matephis-physics-graph-swatch {
+  display: inline-block;
+  width: 1.1em;
+  height: 3px;
+  margin-right: 0.4em;
+  vertical-align: middle;
+}

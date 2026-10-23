@@ -86,9 +86,25 @@
                     { type: 'velocity', on: 'B', label: '\\vec v' }
                 ]
             },
+            'Grafici ed energia': {
+                xlim: [0, 7], ylim: [0, 1.8],
+                params: { k: { min: 5, max: 30, val: 12, unit: 'N/m' }, m: { min: 0.5, max: 3, val: 1, unit: 'kg' } },
+                state: { x: 1, v: 0 },
+                ode: { x: 'v', v: '-k/m*x' },
+                time: { max: 8, loop: true },
+                objects: [
+                    { id: 'g', type: 'ground', from: [0.5, 0.4], to: [7, 0.4] },
+                    { type: 'wall', at: [0.5, 0.4], height: 1.2 },
+                    { id: 'A', type: 'block', on: 'g', pos: '3 + x', posUnit: 'm', size: [0.8, 0.6], mass: 'm' },
+                    { type: 'spring', from: [0.5, 0.7], to: 'A.left', coils: 9, k: 'k', rest: 2.6 },
+                    { type: 'energy', of: 'A', bars: ['K', 'Uel'], total: true }
+                ],
+                readouts: ['t', { label: 'v', value: 'A.speed' }],
+                graphs: [{ y: 'x', label: 'Posizione', axisLabels: ['t (s)', 'x (m)'] }]
+            },
             'Avvisi': {
-                xlin: [0, 10], graphs: [],
-                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'energy', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
+                xlin: [0, 10], compare: [],
+                objects: [{ type: 'partcle', at: [1, 1] }, { type: 'moment', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
             }
         },
         matephis: {

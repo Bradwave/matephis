@@ -12,25 +12,25 @@ export const ROOT_KEYS = [
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
     "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
-    "time", "state", "ode", "events",
+    "time", "state", "ode", "events", "graphs", "readouts",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
     "styles", "preset", "use",
-    "frames", "views", "graphs", "readouts", "interactive", "magnitudes", "outOfPlane",
+    "frames", "views", "interactive", "magnitudes", "outOfPlane",
     "compare", "seed",
 ];
 
 /** Keys every object accepts. */
 export const COMMON_OBJECT_KEYS = [
     "id", "type", "at", "on", "pos", "posUnit", "angle", "label", "labelAt", "labelOffset", "color", "fill",
-    "opacity", "dash", "mass", "show", "hidden", "views", "layer", "drag",
+    "opacity", "dash", "mass", "show", "hidden", "views", "layer", "drag", "follow", "s", "orient",
 ];
 
 /** Object and annotation types from the spec's catalogue that later phases implement. */
 export const PLANNED_TYPES = [
-    "road", "car", "person", "moment", "lever-arm", "energy",
+    "road", "car", "person", "moment", "lever-arm",
 ];
 
 export const DEFAULT_ASPECT_RATIO = 16 / 9;

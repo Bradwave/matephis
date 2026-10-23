@@ -12,6 +12,8 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 
   if content.include?('language-physics') || content.include?('matephis-physics') || content =~ /```\s*physics/
     doc.data['physics'] = true
+    # Physics graphs are drawn by the plot engine
+    doc.data['plot'] = true if content =~ /"graphs"\s*:/
   end
 
   if content.include?('language-slides') || content.include?('matephis-slides') || content =~ /```\s*slides/

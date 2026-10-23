@@ -14,6 +14,7 @@
  * differences), so analytic and ODE motion work the same way.
  */
 import { integrate, stateAt } from './integrator.js';
+import { energyValues, mechanicalEnergy, totalEnergy } from '../objects/energy.js';
 
 const DEFAULT_DT = 1 / 240;
 const TRACK_DT = 1 / 60;
@@ -21,6 +22,11 @@ const DIFF_H = 1e-3;
 
 /** Default time span for scenes without "time" (static motion diagrams). */
 const STATIC_SPAN = 2;
+
+/** Instants sampled over the run for scales; graphs and energy bars take more (per second, at most). */
+const BASE_SAMPLES = 40;
+const SAMPLES_PER_SECOND = 60;
+const MAX_SAMPLES = 600;
 
 export class Simulation {
     /**
@@ -165,18 +171,27 @@ export class Simulation {
         }
         this.ghosts = new Map();
         r.objects.filter(o => o.type === 'ghosts' && o.of).forEach(o => this.ghosts.set(o, this._ghosts(o, view)));
-        this.maxMag = this._maxMagnitudes(view);
+        this._sample(view);
     }
 
     /**
-     * Largest magnitude of each vector kind over the whole run (about 40
-     * instants), so automatic scales stay fixed while time runs: a vector that
-     * grows must look longer, not be rescaled frame by frame.
+     * One pass over the run, resolving the whole scene at evenly spaced
+     * instants, for what must stay fixed while time runs:
+     *   - the largest magnitude of each vector kind (automatic scales: a vector
+     *     that grows must look longer, not be rescaled frame by frame);
+     *   - the range of each energy chart, and E at t = 0 for Q;
+     *   - the samples of the graphs.
      */
-    _maxMagnitudes(view) {
+    _sample(view) {
         const r = this.scene.resolver;
+        const graphs = this.scene.graphs;
+        const energies = r.objects.filter(o => o.type === 'energy');
+        const fine = (graphs && graphs.count) || energies.length;
+        const n = fine ? Math.min(MAX_SAMPLES, Math.max(BASE_SAMPLES, Math.ceil(this.tEnd * SAMPLES_PER_SECOND))) : BASE_SAMPLES;
         const max = {};
-        const n = 40;
+        const energy = new Map(energies.map(o => [o, { E0: NaN, maxPos: 0, maxNeg: 0 }]));
+        this.energy = energy;
+        if (graphs) graphs.beginSamples();
         for (let i = 0; i <= n; i++) {
             const t = this.tEnd * i / n;
             this.setTime(t);
@@ -188,9 +203,21 @@ export class Simulation {
                 if (!st || !st.vec || st.isResultant || obj.scale !== undefined) return;
                 max[st.kind] = Math.max(max[st.kind] || 0, st.mag);
             });
+            energy.forEach((e, obj) => {
+                const E = totalEnergy(obj, mechanicalEnergy(obj, r));
+                if (i === 0) e.E0 = E;
+                const vals = energyValues(obj, r).bars.map(b => (b.key === 'Q' ? e.E0 - E : b.value));
+                if (obj.total === true) vals.push(E);
+                vals.filter(isFinite).forEach(v => {
+                    e.maxPos = Math.max(e.maxPos, v);
+                    e.maxNeg = Math.max(e.maxNeg, -v);
+                });
+            });
+            if (graphs) graphs.addSample(t);
             if (this.tEnd <= 0) break;
         }
-        return max;
+        if (graphs) graphs.endSamples();
+        this.maxMag = max;
     }
 
     /** States of some objects at time t (partial resolution; leaves t set). */
@@ -199,21 +226,27 @@ export class Simulation {
         return this.scene.resolver.resolveSome(view, ids);
     }
 
-    /** Velocity and acceleration of a body at time t, by central differences. */
+    /**
+     * Velocity and acceleration of a body at time t, by central differences
+     * (one-sided, still second order, at the start and at the end of the run).
+     */
     _kinematics(id, t, view) {
-        const h = DIFF_H;
-        const lo = Math.max(0, t - h), hi = Math.min(this.tEnd, t + h);
-        const mid = (lo + hi) / 2, half = (hi - lo) / 2;
-        if (half <= 0) return null;
+        const h = Math.min(DIFF_H, this.tEnd / 4);
+        if (!(h > 0)) return null;
         const pos = (tt) => {
             const st = this._statesAt(tt, [id], view).get(id);
             return st ? (st.com || st.pos) : null;
         };
-        const a = pos(lo), b = pos(mid), c = pos(hi);
+        // Three instants t0, t0 + h, t0 + 2h around t, and where t is among them
+        const t0 = t - h < 0 ? 0 : t + h > this.tEnd ? this.tEnd - 2 * h : t - h;
+        const a = pos(t0), b = pos(t0 + h), c = pos(t0 + 2 * h);
         if (!a || !b || !c) return null;
+        const k = (t - t0) / h; // 0, 1 or 2
+        // Derivative of the parabola through the three points, at t
+        const d = (p, q, r) => ((2 * k - 3) * p - 4 * (k - 1) * q + (2 * k - 1) * r) / (2 * h);
         return {
-            v: { x: (c.x - a.x) / (2 * half), y: (c.y - a.y) / (2 * half), z: 0 },
-            a: { x: (c.x - 2 * b.x + a.x) / (half * half), y: (c.y - 2 * b.y + a.y) / (half * half), z: 0 },
+            v: { x: d(a.x, b.x, c.x), y: d(a.y, b.y, c.y), z: 0 },
+            a: { x: (a.x - 2 * b.x + c.x) / (h * h), y: (a.y - 2 * b.y + c.y) / (h * h), z: 0 },
         };
     }
 
@@ -222,10 +255,21 @@ export class Simulation {
         this._kinematicsAt(this.t, view);
     }
 
-    _kinematicsAt(t, view) {
+    /** Bodies whose velocity and acceleration something reads. */
+    _kinTargets() {
+        if (this._kinIds) return this._kinIds;
         const r = this.scene.resolver;
-        const ids = new Set(r.objects.filter(o => (o.type === 'velocity' || o.type === 'acceleration')
-            && o.on !== undefined && o.dir === undefined && o.vec === undefined).map(o => o.on));
+        const ids = new Set(this.scene.kinIds || []);
+        r.objects.forEach(o => {
+            if ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined) ids.add(o.on);
+            if (o.type === 'energy') [].concat(o.of).forEach(id => { if (typeof id === 'string' && r.objectById(id)) ids.add(id); });
+        });
+        this._kinIds = [...ids].filter(id => r.objectById(id));
+        return this._kinIds;
+    }
+
+    _kinematicsAt(t, view) {
+        const ids = this._kinTargets();
         this.kin = new Map();
         ids.forEach(id => {
             const k = this._kinematics(id, t, view);
@@ -278,6 +322,7 @@ export class Simulation {
         return {
             t: this.t, tEnd: this.tEnd, kin: this.kin || new Map(), tracks: this.tracks || new Map(),
             ghosts: this.ghosts || new Map(), maxMag: this.maxMag || {}, live: this.hasClock,
+            energy: this.energy || new Map(),
         };
     }
 }

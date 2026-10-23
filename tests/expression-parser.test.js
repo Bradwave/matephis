@@ -140,3 +140,14 @@ describe('Gradi e radianti', () => {
         expect(compiler({}, {}, true).eval('cos(60°)')).toBeCloseTo(0.5, 12);
     });
 });
+
+describe('Proprietà aggiuntive dei punti', () => {
+    it('legge le proprietà dichiarate dall\'ospite e rifiuta le altre', () => {
+        const pts = { A: { x: 1, y: 2, speed: 3 } };
+        const c = new ExpressionCompiler({ getParams: () => ({}), getPoints: () => pts, pointNames: ['A'], pointProps: ['speed', 'mag'] });
+        expect(c.eval('2*A.speed + A.x')).toBe(7);
+        // Declared but missing on this point: NaN, not an error
+        expect(c.eval('A.mag')).toBeNaN();
+        expect(() => c.fn('A.spede', [])).toThrow(/Unknown property/);
+    });
+});

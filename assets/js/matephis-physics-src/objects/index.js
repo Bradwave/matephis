@@ -17,8 +17,9 @@ import { BODY_TYPES } from './bodies.js';
 import { CONNECTION_TYPES } from './connections.js';
 import { ANNOTATION_TYPES } from './annotations.js';
 import { MOTION_TYPES } from './motion.js';
+import { ENERGY_TYPES } from './energy.js';
 
 /** Draw order, bottom to top. */
 export const LAYERS = ['environment', 'bodies', 'connections', 'annotations'];
 
-export const OBJECT_TYPES = { ...ENVIRONMENT_TYPES, ...BODY_TYPES, ...CONNECTION_TYPES, ...ANNOTATION_TYPES, ...MOTION_TYPES };
+export const OBJECT_TYPES = { ...ENVIRONMENT_TYPES, ...BODY_TYPES, ...CONNECTION_TYPES, ...ANNOTATION_TYPES, ...MOTION_TYPES, ...ENERGY_TYPES };

@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 4 (simulazione nel tempo).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie. Grafici collegati, barre dell'energia e viste dall'alto arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 4 (simulazione nel tempo).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale. Viste dall'alto e confronto tra scene arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -57,6 +57,7 @@ Tutte le lunghezze sono in metri, salvo dove è indicato «px».
 | `dimension` | `from`, `to`, `offset`, `label` (default: la distanza) | `start`, `end`, `center` |
 | `com` | `of` (id o lista di id, pesati con `mass`) | |
 | `path` | `points`, oppure `arc` `{center, radius, from, to}`, oppure `parametric` `{x, y, t: [t0, t1]}`; `arrow` | `start`, `end`, `point(u)` |
+| `energy` | `of` (corpo o lista), `bars`, `total`, `zero`, `drag`, `unit`, `digits`, `size` | (vedi «Grafici, energia e valori») |
 | `label` | `at`, `text`, `anchor`, `size` | |
 
 Opzioni comuni: `id`, `label`, `color`, `fill`, `opacity`, `show` (espressione: l'oggetto compare solo se è vera), `hidden`, `layer`.
@@ -71,7 +72,7 @@ Un punto (`at`, `from`, `to`, `pivot`, …) può essere:
 
 Un corpo con `"on": "s"` si appoggia alla superficie `s` (suolo, piano, tavolo o la faccia superiore di un altro blocco) in posizione `pos` (0–1 lungo la superficie, oppure metri con `"posUnit": "m"`) ed è ruotato come la superficie. L'ordine degli oggetti nella lista non conta.
 
-Nelle espressioni `A.x` e `A.y` leggono la posizione di `A`, `A.deg` e `A.rad` la sua rotazione; per un vettore `F.x`, `F.y` sono le componenti e `F.len` il modulo.
+Nelle espressioni `A.x` e `A.y` leggono la posizione di `A`, `A.angle` (radianti), `A.deg` e `A.rad` la sua rotazione; per un vettore `F.x`, `F.y` sono le componenti, `F.mag` (o `F.len`) il modulo e `F.angle` la direzione. Le forze automatiche si leggono con il loro id: `A.N.mag` è il modulo della normale su `A`. Quando c'è il tempo, `A.vx`, `A.vy`, `A.speed` danno la velocità di un corpo e `A.ax`, `A.ay`, `A.acc` la sua accelerazione, calcolate dal suo moto.
 
 ### Direzioni (`dir`)
 
@@ -156,7 +157,31 @@ Con `"time"` la scena ha un orologio: pulsanti avvia/pausa e ricomincia, uno sli
 | `ghosts` | `of`, `every` (s), `from`, `to`, `vectors` (`["velocity"]`), `labels: "t"`, `opacity`, `upTo` | copie del corpo a intervalli regolari: il diagramma del moto (stroboscopico) |
 | `trace` | `of`, `window` (s), `width`, `dash`, `upTo` | traiettoria percorsa |
 
+Un corpo con `"follow": "r"` si muove lungo il percorso `r` (`path`): `"s"` è la distanza percorsa in metri, un'espressione di `t` o una variabile di stato; `"orient": "tangent"` lo fa ruotare con la curva. Su un percorso chiuso (una circonferenza) fa il giro, su uno aperto si ferma alla fine. Velocità e accelerazione sono precise anche sulle curve: per archi e curve parametriche la posizione è calcolata esattamente, non sulla spezzata disegnata.
+
 Con l'orologio fantasmi e traccia compaiono man mano (`"upTo": "now"`); senza `"time"` la scena è statica e li mostra tutti, utile per le figure degli esercizi. Le scale automatiche dei vettori usano il valore massimo su tutto il moto, così un vettore che cresce si allunga davvero.
+
+### Grafici, energia e valori
+
+`"readouts"` scrive sotto la scena una riga di valori che seguono il tempo e gli slider. Una stringa è un'espressione, con sé stessa come etichetta: `"t"`, `"A.speed"` (l'unità è indovinata per `t`, velocità e accelerazioni). Un oggetto dà etichetta, unità e cifre: `{ "label": "N", "value": "A.N.mag", "unit": "N", "digits": 1 }`. Con `"hidden": true` il valore parte nascosto e compare con un pulsante `reveal` (`"targets": ["type:readout"]`, o l'`id` del valore).
+
+`"graphs"` disegna sotto la scena grafici del moto con il motore dei grafici:
+
+| Chiave | Default | Significato |
+| :--- | :--- | :--- |
+| `y` | | espressione, o lista di espressioni (più curve) |
+| `x` | `"t"` | asse orizzontale; un'altra espressione dà per esempio il piano delle fasi (`"x": "x", "y": "v"`) |
+| `label`, `legend`, `axisLabels` | | titolo, nomi delle curve, nomi degli assi |
+| `xlim`, `ylim`, `aspectRatio` | automatici | limiti (di default contengono tutto il moto) e proporzioni |
+| `cursor` | `true` | con l'orologio, linea verticale e punti nell'istante attuale |
+| `progressive` | `false` | disegna le curve solo fino all'istante attuale |
+| `colors` | | colori delle curve |
+| `position` | `"below"` | `"below"` sotto la scena; `"right"` a destra (sotto di nuovo se lo schermo è stretto); `"tabs"` sotto la scena in schede, un grafico alla volta (il titolo è il nome della scheda) |
+| `plot` | | altre opzioni del motore dei grafici, passate così come sono |
+
+Le espressioni sono valutate su tutto il moto già calcolato, quindi leggono stato, parametri e valori degli oggetti (`A.speed`, `A.N.mag`). Nelle equazioni del moto (`ode`) invece si usano solo parametri e variabili di stato.
+
+Un oggetto `energy` disegna in un riquadro le barre delle energie di un corpo o di un sistema (`"of": ["A", "B"]`): `K` cinetica, `Ug` potenziale gravitazionale ($mgy$ del centro di massa, rispetto a `zero`), `Uel` elastica (le molle attaccate ai corpi, con `k` e `rest`), `Q` energia persa dall'inizio (attrito, resistenza dell'aria), oppure barre libere `{ "label": "W", "value": "..." }`. `"total": true` aggiunge $E$, la somma di `K`, `Ug` e `Uel` tra quelle mostrate. Tutte le barre hanno la stessa scala, quella del valore più grande nel moto. Con `"drag": "h0"` (un parametro) il livello zero di $U_g$ è una linea tratteggiata che si trascina.
 
 ### Gradi e radianti
 
@@ -1051,18 +1076,220 @@ Molla con attrito viscoso: $\ddot x = -\frac{k}{m}x - \frac{b}{m}\dot x$. La for
 > }
 > ```
 
-## 26. Avvisi
+## 26. Oscillatore: grafici, energia e valori
+
+Massa e molla senza attrito. Il grafico della posizione è a destra della scena (sotto, su schermi stretti); energie e piano delle fasi sono in schede. Sotto la scena: i valori del momento e le barre dell'energia, con la stessa scala per tutto il moto. Il cursore dei grafici segue il tempo.
+
+```physics
+{
+  "xlim": [0, 7], "ylim": [0, 1.8],
+  "params": {
+    "k": { "min": 5, "max": 30, "val": 12, "unit": "N/m" },
+    "m": { "min": 0.5, "max": 3, "val": 1, "unit": "kg" }
+  },
+  "state": { "x": 1, "v": 0 },
+  "ode": { "x": "v", "v": "-k/m*x" },
+  "time": { "max": 8, "loop": true },
+  "objects": [
+    { "id": "g", "type": "ground", "from": [0.5, 0.4], "to": [7, 0.4] },
+    { "type": "wall", "at": [0.5, 0.4], "height": 1.2 },
+    { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "mass": "m" },
+    { "type": "spring", "from": [0.5, 0.7], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+    { "type": "energy", "of": "A", "bars": ["K", "Uel"], "total": true }
+  ],
+  "readouts": ["t", { "label": "x", "value": "x", "unit": "m" }, { "label": "v", "value": "v", "unit": "m/s" }],
+  "graphs": [
+    { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"], "position": "right" },
+    { "y": ["0.5*m*v^2", "0.5*k*x^2", "0.5*m*v^2 + 0.5*k*x^2"], "legend": ["K", "U", "E"],
+      "label": "Energie", "axisLabels": ["t (s)", "E (J)"], "position": "tabs" },
+    { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6, "position": "tabs" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 7], "ylim": [0, 1.8],
+>   "params": {
+>     "k": { "min": 5, "max": 30, "val": 12, "unit": "N/m" },
+>     "m": { "min": 0.5, "max": 3, "val": 1, "unit": "kg" }
+>   },
+>   "state": { "x": 1, "v": 0 },
+>   "ode": { "x": "v", "v": "-k/m*x" },
+>   "time": { "max": 8, "loop": true },
+>   "objects": [
+>     { "id": "g", "type": "ground", "from": [0.5, 0.4], "to": [7, 0.4] },
+>     { "type": "wall", "at": [0.5, 0.4], "height": 1.2 },
+>     { "id": "A", "type": "block", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [0.8, 0.6], "mass": "m" },
+>     { "type": "spring", "from": [0.5, 0.7], "to": "A.left", "coils": 9, "k": "k", "rest": 2.6 },
+>     { "type": "energy", "of": "A", "bars": ["K", "Uel"], "total": true }
+>   ],
+>   "readouts": ["t", { "label": "x", "value": "x", "unit": "m" }, { "label": "v", "value": "v", "unit": "m/s" }],
+>   "graphs": [
+>     { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"], "position": "right" },
+>     { "y": ["0.5*m*v^2", "0.5*k*x^2", "0.5*m*v^2 + 0.5*k*x^2"], "legend": ["K", "U", "E"],
+>       "label": "Energie", "axisLabels": ["t (s)", "E (J)"], "position": "tabs" },
+>     { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6, "position": "tabs" }
+>   ]
+> }
+> ```
+
+## 27. Lancio verso l'alto con attrito dell'aria
+
+Con l'attrito dell'aria l'energia meccanica diminuisce: la barra $Q$ è l'energia persa. Il livello zero di $U_g$ (linea tratteggiata) si trascina con il mouse: cambia $U_g$ ma non le differenze.
+
+```physics
+{
+  "xlim": [0, 6], "ylim": [0, 4.5], "aspectRatio": "4:3",
+  "params": {
+    "v0": { "min": 4, "max": 10, "step": 0.5, "val": 8, "unit": "m/s" },
+    "c": { "min": 0, "max": 0.1, "step": 0.005, "val": 0.03, "unit": "kg/m", "label": "attrito dell'aria" },
+    "h0": { "min": 0, "max": 4, "step": 0.1, "val": 0, "unit": "m", "label": "livello zero" }
+  },
+  "state": { "y": 0.2, "v": "v0" },
+  "ode": { "y": "v", "v": "-g - c/0.5*v*abs(v)" },
+  "time": { "max": 4, "stopWhen": "y < 0.2" },
+  "objects": [
+    { "type": "ground", "y": 0 },
+    { "id": "A", "type": "ball", "at": [2, "y"], "radius": 0.2, "mass": 0.5 },
+    { "type": "velocity", "on": "A", "label": "\\vec v" },
+    { "type": "trace", "of": "A", "dash": "2 4" },
+    { "type": "energy", "of": "A", "bars": ["K", "Ug", "Q"], "total": true, "drag": "h0" }
+  ],
+  "readouts": ["t", { "label": "v", "value": "A.speed", "digits": 1 }, { "label": "h", "value": "A.y", "unit": "m", "digits": 2 }]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 6], "ylim": [0, 4.5], "aspectRatio": "4:3",
+>   "params": {
+>     "v0": { "min": 4, "max": 10, "step": 0.5, "val": 8, "unit": "m/s" },
+>     "c": { "min": 0, "max": 0.1, "step": 0.005, "val": 0.03, "unit": "kg/m", "label": "attrito dell'aria" },
+>     "h0": { "min": 0, "max": 4, "step": 0.1, "val": 0, "unit": "m", "label": "livello zero" }
+>   },
+>   "state": { "y": 0.2, "v": "v0" },
+>   "ode": { "y": "v", "v": "-g - c/0.5*v*abs(v)" },
+>   "time": { "max": 4, "stopWhen": "y < 0.2" },
+>   "objects": [
+>     { "type": "ground", "y": 0 },
+>     { "id": "A", "type": "ball", "at": [2, "y"], "radius": 0.2, "mass": 0.5 },
+>     { "type": "velocity", "on": "A", "label": "\\vec v" },
+>     { "type": "trace", "of": "A", "dash": "2 4" },
+>     { "type": "energy", "of": "A", "bars": ["K", "Ug", "Q"], "total": true, "drag": "h0" }
+>   ],
+>   "readouts": ["t", { "label": "v", "value": "A.speed", "digits": 1 }, { "label": "h", "value": "A.y", "unit": "m", "digits": 2 }]
+> }
+> ```
+
+## 28. Moto lungo una curva (`follow`)
+
+Il blocco segue la circonferenza con $s = v_0 t + \tfrac12 a t^2$ e ruota con la curva. L'accelerazione, scomposta nel riferimento del blocco, ha una parte tangenziale costante e una centripeta $v^2/R$ che cresce: il grafico si disegna man mano.
+
+```physics
+{
+  "xlim": [-3.2, 3.2], "ylim": [-2.7, 2.7], "aspectRatio": "4:3",
+  "params": {
+    "v0": { "min": 0, "max": 3, "step": 0.1, "val": 0.5, "unit": "m/s" },
+    "a": { "min": 0, "max": 1, "step": 0.05, "val": 0.4, "unit": "m/s²", "label": "a tangenziale" }
+  },
+  "time": { "max": 4, "loop": true },
+  "objects": [
+    { "id": "r", "type": "path", "arc": { "center": [0, 0], "radius": 2.2 }, "dash": "3 5" },
+    { "type": "particle", "at": [0, 0], "radius": 3 },
+    { "id": "C", "type": "block", "size": [0.6, 0.35], "follow": "r", "s": "v0*t + a*t^2/2", "orient": "tangent" },
+    { "type": "velocity", "on": "C", "label": "\\vec v" },
+    { "id": "ac", "type": "acceleration", "on": "C", "label": "\\vec a" },
+    { "type": "decompose", "vector": "ac", "frame": "C", "labels": ["$a_t$", "$a_c$"] }
+  ],
+  "readouts": [{ "label": "v", "value": "C.speed", "digits": 2 }, { "label": "a", "value": "C.acc", "digits": 2 }],
+  "graphs": [
+    { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true, "position": "right" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [-3.2, 3.2], "ylim": [-2.7, 2.7], "aspectRatio": "4:3",
+>   "params": {
+>     "v0": { "min": 0, "max": 3, "step": 0.1, "val": 0.5, "unit": "m/s" },
+>     "a": { "min": 0, "max": 1, "step": 0.05, "val": 0.4, "unit": "m/s²", "label": "a tangenziale" }
+>   },
+>   "time": { "max": 4, "loop": true },
+>   "objects": [
+>     { "id": "r", "type": "path", "arc": { "center": [0, 0], "radius": 2.2 }, "dash": "3 5" },
+>     { "type": "particle", "at": [0, 0], "radius": 3 },
+>     { "id": "C", "type": "block", "size": [0.6, 0.35], "follow": "r", "s": "v0*t + a*t^2/2", "orient": "tangent" },
+>     { "type": "velocity", "on": "C", "label": "\\vec v" },
+>     { "id": "ac", "type": "acceleration", "on": "C", "label": "\\vec a" },
+>     { "type": "decompose", "vector": "ac", "frame": "C", "labels": ["$a_t$", "$a_c$"] }
+>   ],
+>   "readouts": [{ "label": "v", "value": "C.speed", "digits": 2 }, { "label": "a", "value": "C.acc", "digits": 2 }],
+>   "graphs": [
+>     { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true, "position": "right" }
+>   ]
+> }
+> ```
+
+## 29. Valori delle forze nelle espressioni
+
+Le forze automatiche si leggono nelle espressioni: `A.N.mag` è il modulo della normale su `A`, `A.f.mag` quello dell'attrito. I valori partono nascosti e compaiono con il pulsante.
+
+```physics
+{
+  "xlim": [0, 9], "ylim": [0, 5], "forceScale": 0.09,
+  "params": { "alpha": { "min": 5, "max": 40, "val": 20, "unit": "deg", "label": "α" } },
+  "controls": [{ "type": "reveal", "label": "Mostra i valori", "targets": ["type:readout"] }],
+  "objects": [
+    { "type": "ground", "y": 0.3 },
+    { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 7.2 },
+    { "id": "A", "type": "block", "on": "s", "pos": 0.5, "size": [1.4, 0.8], "mass": 2, "mu": 0.6, "forces": "auto" },
+    { "type": "angle", "of": "s", "label": "\\alpha" }
+  ],
+  "readouts": [
+    { "label": "P", "value": "A.P.mag", "unit": "N", "digits": 1, "hidden": true },
+    { "label": "N", "value": "A.N.mag", "unit": "N", "digits": 1, "hidden": true },
+    { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1, "hidden": true }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 9], "ylim": [0, 5], "forceScale": 0.09,
+>   "params": { "alpha": { "min": 5, "max": 40, "val": 20, "unit": "deg", "label": "α" } },
+>   "controls": [{ "type": "reveal", "label": "Mostra i valori", "targets": ["type:readout"] }],
+>   "objects": [
+>     { "type": "ground", "y": 0.3 },
+>     { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 7.2 },
+>     { "id": "A", "type": "block", "on": "s", "pos": 0.5, "size": [1.4, 0.8], "mass": 2, "mu": 0.6, "forces": "auto" },
+>     { "type": "angle", "of": "s", "label": "\\alpha" }
+>   ],
+>   "readouts": [
+>     { "label": "P", "value": "A.P.mag", "unit": "N", "digits": 1, "hidden": true },
+>     { "label": "N", "value": "A.N.mag", "unit": "N", "digits": 1, "hidden": true },
+>     { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1, "hidden": true }
+>   ]
+> }
+> ```
+
+## 30. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
 ```physics
 {
   "xlin": [0, 10],
-  "graphs": [],
+  "compare": [],
   "params": { "theta": { "min": 0, "max": 90, "val": 30 } },
   "objects": [
     { "type": "partcle", "at": [1, 1] },
-    { "type": "energy", "of": "s" },
+    { "type": "moment", "of": "s" },
     { "id": "A", "type": "block", "at": [3, 1] },
     { "type": "label", "at": "A.tpo", "text": "?" },
     { "type": "particle", "at": [5, 2], "raduis": 4 },
@@ -1071,7 +1298,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 27. Errore nel JSON
+## 31. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 
