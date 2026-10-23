@@ -176,6 +176,7 @@ Con l'orologio fantasmi e traccia compaiono man mano (`"upTo": "now"`); senza `"
 | `cursor` | `true` | con l'orologio, linea verticale e punti nell'istante attuale |
 | `progressive` | `false` | disegna le curve solo fino all'istante attuale |
 | `colors` | | colori delle curve |
+| `position` | `"below"` | `"below"` sotto la scena; `"right"` a destra (sotto di nuovo se lo schermo è stretto); `"tabs"` sotto la scena in schede, un grafico alla volta (il titolo è il nome della scheda) |
 | `plot` | | altre opzioni del motore dei grafici, passate così come sono |
 
 Le espressioni sono valutate su tutto il moto già calcolato, quindi leggono stato, parametri e valori degli oggetti (`A.speed`, `A.N.mag`). Nelle equazioni del moto (`ode`) invece si usano solo parametri e variabili di stato.
@@ -1077,7 +1078,7 @@ Molla con attrito viscoso: $\ddot x = -\frac{k}{m}x - \frac{b}{m}\dot x$. La for
 
 ## 26. Oscillatore: grafici, energia e valori
 
-Massa e molla senza attrito. Sotto la scena: i valori del momento, le barre dell'energia (stessa scala per tutto il moto) e tre grafici con il cursore che segue il tempo: posizione, energie e piano delle fasi.
+Massa e molla senza attrito. Il grafico della posizione è a destra della scena (sotto, su schermi stretti); energie e piano delle fasi sono in schede. Sotto la scena: i valori del momento e le barre dell'energia, con la stessa scala per tutto il moto. Il cursore dei grafici segue il tempo.
 
 ```physics
 {
@@ -1098,10 +1099,10 @@ Massa e molla senza attrito. Sotto la scena: i valori del momento, le barre dell
   ],
   "readouts": ["t", { "label": "x", "value": "x", "unit": "m" }, { "label": "v", "value": "v", "unit": "m/s" }],
   "graphs": [
-    { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"] },
+    { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"], "position": "right" },
     { "y": ["0.5*m*v^2", "0.5*k*x^2", "0.5*m*v^2 + 0.5*k*x^2"], "legend": ["K", "U", "E"],
-      "label": "Energie", "axisLabels": ["t (s)", "E (J)"] },
-    { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6 }
+      "label": "Energie", "axisLabels": ["t (s)", "E (J)"], "position": "tabs" },
+    { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6, "position": "tabs" }
   ]
 }
 ```
@@ -1126,10 +1127,10 @@ Massa e molla senza attrito. Sotto la scena: i valori del momento, le barre dell
 >   ],
 >   "readouts": ["t", { "label": "x", "value": "x", "unit": "m" }, { "label": "v", "value": "v", "unit": "m/s" }],
 >   "graphs": [
->     { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"] },
+>     { "y": "x", "label": "Posizione", "axisLabels": ["t (s)", "x (m)"], "position": "right" },
 >     { "y": ["0.5*m*v^2", "0.5*k*x^2", "0.5*m*v^2 + 0.5*k*x^2"], "legend": ["K", "U", "E"],
->       "label": "Energie", "axisLabels": ["t (s)", "E (J)"] },
->     { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6 }
+>       "label": "Energie", "axisLabels": ["t (s)", "E (J)"], "position": "tabs" },
+>     { "x": "x", "y": "v", "label": "Piano delle fasi", "axisLabels": ["x (m)", "v (m/s)"], "aspectRatio": 1.6, "position": "tabs" }
 >   ]
 > }
 > ```
@@ -1205,7 +1206,7 @@ Il blocco segue la circonferenza con $s = v_0 t + \tfrac12 a t^2$ e ruota con la
   ],
   "readouts": [{ "label": "v", "value": "C.speed", "digits": 2 }, { "label": "a", "value": "C.acc", "digits": 2 }],
   "graphs": [
-    { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true }
+    { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true, "position": "right" }
   ]
 }
 ```
@@ -1229,7 +1230,7 @@ Il blocco segue la circonferenza con $s = v_0 t + \tfrac12 a t^2$ e ruota con la
 >   ],
 >   "readouts": [{ "label": "v", "value": "C.speed", "digits": 2 }, { "label": "a", "value": "C.acc", "digits": 2 }],
 >   "graphs": [
->     { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true }
+>     { "y": ["C.speed^2/2.2", "a"], "legend": ["a_c = v²/R", "a_t"], "label": "Accelerazione", "axisLabels": ["t (s)", "a (m/s²)"], "progressive": true, "position": "right" }
 >   ]
 > }
 > ```

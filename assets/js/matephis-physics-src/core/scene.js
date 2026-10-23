@@ -29,7 +29,7 @@ import { Controls, plainLabel } from './controls.js';
 import { Simulation } from './simulation.js';
 import { PhysicsCompiler, kinematicIds } from './compiler.js';
 import { Readouts } from './readouts.js';
-import { Graphs } from './graphs.js';
+import { Graphs, graphPosition } from './graphs.js';
 import { Clock } from './clock.js';
 import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
@@ -104,21 +104,35 @@ export class MatephisPhysics {
             this.draw();
         });
 
+        // Graphs on the right: the scene (with clock and readouts) and the graphs side by
+        // side, in a row that wraps to a column on narrow screens
+        if (Array.isArray(cfg.graphs) && cfg.graphs.some(d => graphPosition(d) === 'right')) {
+            this.wrapper.classList.add('matephis-physics-has-side');
+            const split = document.createElement('div');
+            split.className = 'matephis-physics-split';
+            this.stageHost = document.createElement('div');
+            this.stageHost.className = 'matephis-physics-main';
+            this.sideHost = document.createElement('div');
+            this.sideHost.className = 'matephis-physics-side';
+            split.append(this.stageHost, this.sideHost);
+            this.wrapper.appendChild(split);
+        }
         this._initSVG();
 
         if (this.sim && this.sim.hasClock) {
             this.clock = new Clock(this, this.sim);
-            this.wrapper.appendChild(this.clock.el);
+            (this.stageHost || this.wrapper).appendChild(this.clock.el);
         }
 
         if (Array.isArray(cfg.readouts) && cfg.readouts.length) {
             this.readouts = new Readouts(this, cfg.readouts);
-            this.wrapper.appendChild(this.readouts.el);
+            (this.stageHost || this.wrapper).appendChild(this.readouts.el);
         }
         // Graphs before the first draw: the simulation samples them
         if (Array.isArray(cfg.graphs) && cfg.graphs.length) {
             this.graphs = new Graphs(this, cfg.graphs);
             this.wrapper.appendChild(this.graphs.el);
+            if (this.sideHost) this.sideHost.appendChild(this.graphs.sideEl);
         }
 
         // Free-body diagrams and energy charts go in panels under the scene
@@ -251,7 +265,7 @@ export class MatephisPhysics {
         const cfg = this.config;
         let targetWidth = cfg.width || 600;
         if (cfg.fullWidth) {
-            const cw = this.wrapper.clientWidth;
+            const cw = (this.stageHost || this.wrapper).clientWidth;
             targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? window.innerWidth : 1000);
         }
         this.width = Math.max(50, targetWidth);
@@ -280,7 +294,7 @@ export class MatephisPhysics {
         this.plotStage = document.createElement("div");
         this.plotStage.className = "matephis-plot-stage";
         this.plotStage.appendChild(this.svg);
-        this.wrapper.appendChild(this.plotStage);
+        (this.stageHost || this.wrapper).appendChild(this.plotStage);
     }
 
     _initResizeObserver() {
@@ -291,7 +305,8 @@ export class MatephisPhysics {
                 if (newW > 10 && Math.abs(newW - this.width) > 2) this.resize(newW);
             }
         });
-        this.resizeObserver.observe(this.wrapper);
+        // The scene's own column when graphs sit beside it
+        this.resizeObserver.observe(this.stageHost || this.wrapper);
     }
 
     /** Re-renders at a new internal width (text keeps its pixel size). */
