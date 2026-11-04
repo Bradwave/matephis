@@ -255,3 +255,143 @@ describe('Scene viste dall\'alto (plane: "horizontal")', () => {
         expect(s.resolver.state('F').mag).toBe(3);
     });
 });
+
+describe('Risolutore delle equazioni di Newton ("magnitudes": "solve")', () => {
+    const atwood = (m1, m2) => timed({
+        magnitudes: 'solve', time: { max: 1 },
+        objects: [
+            { id: 'p', type: 'pulley', at: [0, 3], radius: 0.4 },
+            { id: 'A', type: 'block', at: [-0.4, 0], size: [0.5, 0.5], mass: m1, forces: 'auto' },
+            { id: 'B', type: 'block', at: [0.4, 1], size: [0.5, 0.5], mass: m2, forces: 'auto' },
+            { id: 'rope', type: 'rope', from: 'A.top', to: 'B.top', over: ['p'] },
+        ],
+    });
+
+    it('macchina di Atwood: a = (m1 − m2) g / (m1 + m2), T = 2 m1 m2 g / (m1 + m2)', () => {
+        const s = atwood(3, 2).at(0.5);
+        const a = g / 5;
+        expect(s.num('A.ay')).toBeCloseTo(-a, 3);
+        expect(s.num('B.ay')).toBeCloseTo(a, 3);
+        expect(s.num('A.T.mag')).toBeCloseTo(2.4 * g, 6);
+        // Moved by a t²/2
+        expect(s.resolver.state('A').pos.y).toBeCloseTo(-a * 0.125, 6);
+    });
+
+    const tablePulley = (mu) => timed({
+        magnitudes: 'solve', time: { max: 2 },
+        objects: [
+            { id: 't', type: 'table', at: [0.5, 2.5], width: 4.5, height: 2.3 },
+            { id: 'A', type: 'block', on: 't', pos: 0.45, size: [1, 0.6], mass: 2, mu, forces: 'auto' },
+            { id: 'p', type: 'pulley', at: { from: 't.edge', offset: [0.3, 0] }, radius: 0.3, hangFrom: 't.edge' },
+            { id: 'B', type: 'block', at: [5.6, 1.5], size: [0.6, 0.6], mass: 1, forces: 'auto' },
+            { type: 'rope', from: 'A.right', to: 'B.top', over: ['p'] },
+        ],
+    });
+
+    it('tavolo e carrucola con attrito dinamico: a = (mB − μ mA) g / (mA + mB)', () => {
+        const s = tablePulley(0.2).at(0.4);
+        const a = (1 - 0.2 * 2) * g / 3;
+        expect(s.num('A.ax')).toBeCloseTo(a, 3);
+        expect(s.num('B.ay')).toBeCloseTo(-a, 3);
+        expect(s.num('A.T.mag')).toBeCloseTo(1 * (g - a), 6);
+        expect(s.num('A.f.mag')).toBeCloseTo(0.2 * 2 * g, 6);
+        expect(s.num('A.N.mag')).toBeCloseTo(2 * g, 6);
+    });
+
+    it('con attrito statico sufficiente resta fermo: T = mB g, f = mB g', () => {
+        const s = tablePulley(0.6).at(1);
+        expect(Math.abs(s.num('A.ax'))).toBeLessThan(1e-6);
+        expect(s.num('A.T.mag')).toBeCloseTo(g, 6);
+        expect(s.num('A.f.mag')).toBeCloseTo(g, 6);
+        expect(s.resolver.state('A').pos.x).toBeCloseTo(0.5 + 0.45 * 4.5, 6);
+    });
+
+    const incline = (mu, v0) => timed({
+        magnitudes: 'solve', time: { max: 1.5 },
+        objects: [
+            { id: 's', type: 'slope', at: [-4, -3], angle: 30, length: 8 },
+            { id: 'A', type: 'block', on: 's', pos: 0.5, size: [0.6, 0.4], mass: 2, mu, forces: 'auto', ...(v0 ? { v0 } : {}) },
+        ],
+    });
+
+    it('piano inclinato: scivola con a = g (sin α − μ cos α), oppure resta fermo', () => {
+        const a = g * (Math.sin(Math.PI / 6) - 0.2 * Math.cos(Math.PI / 6));
+        const s = incline(0.2).at(0.5);
+        expect(s.num('A.acc')).toBeCloseTo(a, 3);
+        expect(s.num('A.f.mag')).toBeCloseTo(0.2 * 2 * g * Math.cos(Math.PI / 6), 6);
+        const still = incline(0.7).at(0.5);
+        expect(still.num('A.acc')).toBeLessThan(1e-6);
+        expect(still.num('A.f.mag')).toBeCloseTo(2 * g * 0.5, 6);
+    });
+
+    it('lanciato in salita rallenta, si ferma e resta fermo se l\'attrito statico basta', () => {
+        // Up the slope at 2 m/s with μ = 0.7: a = −g (sin α + μ cos α) until it stops, then it holds
+        const s = incline(0.7, 2).at(1.2);
+        const dec = g * (0.5 + 0.7 * Math.cos(Math.PI / 6));
+        expect(s.num('A.speed')).toBeLessThan(1e-3);
+        // Up by v0² / (2 dec) along the slope (a few mm of slack around the stop)
+        const C = s.resolver.state('A');
+        const start = timed({ objects: [{ id: 's', type: 'slope', at: [-4, -3], angle: 30, length: 8 }, { id: 'A', type: 'block', on: 's', pos: 0.5, size: [0.6, 0.4] }] }).at(0).resolver.state('A');
+        expect(Math.hypot(C.pos.x - start.pos.x, C.pos.y - start.pos.y)).toBeCloseTo(4 / (2 * dec), 2);
+    });
+
+    it('molla e blocco senza equazioni del moto: periodo 2π √(m/k)', () => {
+        const s = timed({
+            magnitudes: 'solve', time: { max: 3 },
+            objects: [
+                { id: 'gr', type: 'ground', y: 0, from: [-5, 0], to: [5, 0] },
+                { id: 'A', type: 'block', on: 'gr', pos: 6, posUnit: 'm', size: [0.6, 0.4], mass: 1, forces: 'auto' },
+                { type: 'spring', from: [-5, 0.2], to: 'A.left', k: 4, rest: 4.7 },
+            ],
+        });
+        // Stretched by 1 m at the start; after half a period (π/2 s) it is compressed by 1 m
+        const x = (t) => s.at(t).resolver.state('A').pos.x;
+        expect(x(0)).toBeCloseTo(1, 6);
+        expect(x(Math.PI / 2)).toBeCloseTo(-1, 3);
+    });
+
+    it('una fune verticale tiene fermo il corpo appeso: T = mg', () => {
+        const s = timed({
+            magnitudes: 'solve',
+            objects: [
+                { id: 'c', type: 'ceiling', y: 4 },
+                { id: 'B', type: 'block', at: [0, 2], size: [0.5, 0.5], mass: 3, forces: 'auto' },
+                { type: 'rope', from: [0, 4], to: 'B.top' },
+            ],
+        }).at(0);
+        expect(s.num('B.T.mag')).toBeCloseTo(3 * g, 6);
+    });
+});
+
+describe('Slittamento in curva ("skid": true)', () => {
+    const car = () => timed({
+        plane: 'horizontal', time: { max: 14 },
+        objects: [
+            { id: 'r', type: 'road', mu: 0.5, path: { arc: { center: [0, 0], radius: 20 } } },
+            { id: 'C', type: 'car', follow: 'r', s: 't^2/2', orient: 'tangent', mass: 1000, forces: 'auto', skid: true },
+        ],
+    });
+
+    it('slitta quando a = √(aₜ² + (v²/R)²) supera μg, poi va dritto rallentando di μg', () => {
+        const mu = 0.5;
+        // aₜ = 1 m/s², v = t: (t²/R)² + 1 = (μg)²
+        const tSkid = Math.sqrt(20 * Math.sqrt((mu * g) ** 2 - 1));
+        const s = car().at(10.5);
+        const sk = s.sim.timeline().skids.get('C');
+        expect(sk.t).toBeCloseTo(tSkid, 3);
+        // Straight on along the velocity it had, slowing down at μg (it stops about 2 s later)
+        expect(s.num('C.speed')).toBeCloseTo(tSkid - mu * g * (10.5 - tSkid), 2);
+        expect(s.num('C.acc')).toBeCloseTo(mu * g, 2);
+        expect(Math.hypot(s.resolver.state('C').pos.x, s.resolver.state('C').pos.y)).toBeGreaterThan(20.1);
+        expect(car().at(13).num('C.speed')).toBeLessThan(1e-6);
+        // Friction is kinetic, μ m g against the velocity
+        const f = s.resolver.state('C.f').vec, v = { x: s.num('C.vx'), y: s.num('C.vy') };
+        expect(Math.hypot(f.x, f.y)).toBeCloseTo(mu * 1000 * g, 3);
+        expect((f.x * v.x + f.y * v.y) / (Math.hypot(f.x, f.y) * Math.hypot(v.x, v.y))).toBeCloseTo(-1, 6);
+    });
+
+    it('senza slittamento segue la strada', () => {
+        const s = car().at(5);
+        expect(Math.hypot(s.resolver.state('C').pos.x, s.resolver.state('C').pos.y)).toBeCloseTo(20, 6);
+    });
+});

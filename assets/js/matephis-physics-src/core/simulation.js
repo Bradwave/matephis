@@ -15,6 +15,8 @@
  */
 import { integrate, stateAt } from './integrator.js';
 import { energyValues, mechanicalEnergy, totalEnergy } from '../objects/energy.js';
+import { Solver } from './solver.js';
+import { massOf } from '../objects/shared.js';
 
 const DEFAULT_DT = 1 / 240;
 const TRACK_DT = 1 / 60;
@@ -38,6 +40,9 @@ export class Simulation {
     constructor(scene, names, { graphs = true } = {}) {
         this.scene = scene;
         this.withGraphs = graphs;
+        // "magnitudes": "solve": Newton's law moves some bodies (their variables come after the scene's own)
+        const solver = new Solver(scene, names);
+        this.solver = solver.ids.length ? solver : null;
         this.cfg = scene.config;
         this.time = this.cfg.time && typeof this.cfg.time === 'object' ? this.cfg.time : {};
         this.names = names;
@@ -104,6 +109,13 @@ export class Simulation {
         const p = this.scene.params;
         p.t = t;
         this.names.forEach((n, i) => { p[n] = y[i]; });
+        if (this.solver) {
+            // Bodies moved by the solver, and its forces worked out when a force asks for them
+            const r = this.scene.resolver, ys = y.slice(this.names.length);
+            r.drive = this.solver.drive(ys);
+            r.solveNow = ys.length ? () => this.solver.solve(ys, this._view, { fresh: false }) : null;
+            r._solution = undefined;
+        }
     }
 
     get dt() {
@@ -147,15 +159,28 @@ export class Simulation {
         const p = this.scene.params;
         p.t = 0;
         const y0 = this.names.map(n => this.scene._num(this.cfg.state[n], `state ${n}`));
+        const nUser = this.names.length;
+        const solver = this.solver;
+        this._view = view;
+        if (solver) {
+            this._scope(y0, 0);
+            solver.build(view);
+            y0.push(...solver.initial());
+        }
         const f = (y, t) => {
             this._scope(y, t);
-            return this.derivs.map(d => d());
+            const d = this.derivs.map(fn => fn());
+            if (solver) d.push(...solver.derivs(y.slice(nUser), view));
+            return d;
         };
-        this.run = integrate({ y0, f, dt: this.dt, tMax, events: this.events, stopWhen: this.stopWhen });
+        const userStop = this.stopWhen;
+        const stopWhen = solver ? (y, t) => solver.stopped(y.slice(nUser)) || (userStop ? userStop(y, t) : false) : userStop;
+        this.run = integrate({ y0, f, dt: this.dt, tMax, events: this.events, stopWhen });
         if (this.run.stopped === 'too many events') this._warn('events: too many in a short time (a bounce that never ends?): stopped');
         if (this.run.stopped === 'not finite') this._warn('ode: the state is not finite any more: stopped');
         this.tEnd = this.run.tEnd;
         if (this.t > this.tEnd) this.t = this.tEnd;
+        this._skids(view);
 
         // Paths of traced bodies and ghost states, from partial resolutions at other times
         this.tracks = new Map();
@@ -223,6 +248,52 @@ export class Simulation {
         this.maxMag = max;
     }
 
+    /**
+     * "skid": true on a body following a path seen from above: the first
+     * instant the motion needs more friction than μN (= μ m g), found by
+     * stepping and then halving the interval. From then on the resolver moves
+     * it in a straight line, slowed by kinetic friction.
+     */
+    _skids(view) {
+        const r = this.scene.resolver;
+        this.skids = new Map();
+        r.timeline = { ...this.timeline(), t: 0 };
+        if (this.cfg.plane !== 'horizontal') return;
+        r.objects.filter(o => o.skid === true && o.follow !== undefined && o.id).forEach(o => {
+            const road = r.objectById(o.follow);
+            const muSrc = o.mu !== undefined ? o.mu : road && road.mu !== undefined ? road.mu : undefined;
+            if (muSrc === undefined) {
+                this._warn(`'${o.id}' skid: needs "mu" (on the body or on the road it follows)`);
+                return;
+            }
+            const mu = r.num(muSrc, `${o.id} mu`), muK = o.muK !== undefined ? r.num(o.muK, `${o.id} muK`) : mu;
+            const g = r.num('g', 'g'), m = massOf(o, r);
+            const needs = (t) => {
+                const k = this._kinematics(o.id, t, view);
+                return k ? m * Math.hypot(k.a.x, k.a.y) - mu * m * g : -1;
+            };
+            const step = 1 / 60;
+            let prev = 0;
+            let found = needs(0) > 0 ? 0 : null;
+            for (let t = step; found === null && t <= this.tEnd + 1e-9; t += step) {
+                if (needs(Math.min(t, this.tEnd)) > 0) {
+                    let lo = prev, hi = Math.min(t, this.tEnd);
+                    for (let i = 0; i < 30; i++) {
+                        const mid = (lo + hi) / 2;
+                        if (needs(mid) > 0) hi = mid; else lo = mid;
+                    }
+                    found = hi;
+                }
+                prev = t;
+            }
+            if (found === null) return;
+            const st = this._statesAt(found, [o.id], view).get(o.id);
+            const k = this._kinematics(o.id, found, view);
+            if (st && k) this.skids.set(o.id, { t: found, pos: st.pos, angle: st.angle, v: k.v, dec: muK * g });
+        });
+        r.timeline = { ...this.timeline(), t: 0 };
+    }
+
     /** States of some objects at time t (partial resolution; leaves t set). */
     _statesAt(t, ids, view) {
         this.setTime(t);
@@ -265,6 +336,8 @@ export class Simulation {
         const ids = new Set(this.scene.kinIds || []);
         r.objects.forEach(o => {
             if ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined) ids.add(o.on);
+            if (this.solver && this.solver.ids.includes(o.id)) ids.add(o.id);
+            if (this.cfg.magnitudes === 'solve' && o.type === 'pendulum' && o.id) ids.add(o.id);
             if (o.type === 'energy') [].concat(o.of).forEach(id => { if (typeof id === 'string' && r.objectById(id)) ids.add(id); });
             // Seen from above, static friction is the force the motion needs
             if (o.__auto && o.__auto.kind === 'friction' && this.cfg.plane === 'horizontal') ids.add(o.on);
@@ -312,7 +385,7 @@ export class Simulation {
     /** Sets t (clamped) and the state at t into the params. */
     setTime(t) {
         const tt = Math.min(Math.max(0, t), this.tEnd || 0);
-        const y = this.run && this.names.length ? stateAt(this.run, tt) : [];
+        const y = this.run && this.run.states.length && this.run.states[0].length ? stateAt(this.run, tt) : [];
         this._scope(y, tt);
         return tt;
     }
@@ -335,7 +408,7 @@ export class Simulation {
         return {
             t: this.t, tEnd: this.tEnd, kin: this.kin || new Map(), tracks: this.tracks || new Map(),
             ghosts: this.ghosts || new Map(), maxMag: this.maxMag || {}, live: this.hasClock,
-            energy: this.energy || new Map(),
+            energy: this.energy || new Map(), skids: this.skids || new Map(),
         };
     }
 }

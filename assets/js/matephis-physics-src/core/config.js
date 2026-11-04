@@ -12,13 +12,13 @@ export const ROOT_KEYS = [
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
     "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
-    "time", "state", "ode", "events", "graphs", "readouts", "outOfPlane", "compare",
+    "time", "state", "ode", "events", "graphs", "readouts", "outOfPlane", "compare", "magnitudes",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
     "styles", "preset", "use",
-    "frames", "views", "interactive", "magnitudes", "seed",
+    "frames", "views", "interactive", "seed",
 ];
 
 /** Keys every object accepts. */
@@ -82,6 +82,9 @@ export function validateConfig(config, objectTypes = {}) {
     }
     if (config.outOfPlane !== undefined && !['symbols', 'hide', 'note'].includes(config.outOfPlane)) {
         warnings.push(`outOfPlane must be "symbols", "hide" or "note", not '${config.outOfPlane}'`);
+    }
+    if (config.magnitudes !== undefined && config.magnitudes !== 'schematic' && config.magnitudes !== 'solve') {
+        warnings.push(`magnitudes must be "schematic" or "solve", not '${config.magnitudes}'`);
     }
     if (config.compare !== undefined && !Array.isArray(config.compare)) {
         warnings.push(`compare must be a list of param sets: [{ "mu": 0 }, { "mu": 0.3 }]`);

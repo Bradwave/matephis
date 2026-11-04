@@ -28,6 +28,7 @@ import { collinearOffsets } from './geometry.js';
 import { Controls, plainLabel } from './controls.js';
 import { Simulation } from './simulation.js';
 import { PhysicsCompiler, kinematicIds } from './compiler.js';
+import { Solver } from './solver.js';
 import { Readouts } from './readouts.js';
 import { Graphs, graphPosition } from './graphs.js';
 import { Clock } from './clock.js';
@@ -72,7 +73,10 @@ export class MatephisPhysics {
         // time (ghosts, traces, energy, velocity vectors of a body, "A.speed" in an expression)
         const stateNames = cfg.state && typeof cfg.state === 'object' && !Array.isArray(cfg.state) ? Object.keys(cfg.state) : [];
         this.kinIds = kinematicIds({ objects: cfg.objects, readouts: cfg.readouts, graphs: cfg.graphs }, ids);
-        const timed = cfg.time !== undefined || stateNames.length > 0 || (Array.isArray(cfg.graphs) && cfg.graphs.length > 0)
+        // Bodies moved by Newton's law ("magnitudes": "solve") need a simulation too
+        const solved = new Solver(this, stateNames).ids.length > 0
+            || (cfg.magnitudes === 'solve' && objects.some(o => o.type === 'pendulum' && o.forces === 'auto'));
+        const timed = solved || cfg.time !== undefined || stateNames.length > 0 || (Array.isArray(cfg.graphs) && cfg.graphs.length > 0)
             || this.kinIds.length > 0 || objects.some(o => o.type === 'ghosts' || o.type === 'trace' || o.type === 'energy'
             || ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined));
 

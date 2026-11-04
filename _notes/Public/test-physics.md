@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 5a (scene viste dall'alto e confronto).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene. Più viste della stessa scena, riferimenti in moto, risolutore delle equazioni di Newton e modelli pronti arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 5c (risolutore delle equazioni di Newton).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene; il risolutore delle equazioni di Newton, che fa muovere i corpi da soli e calcola tensioni, normali e attriti, e lo slittamento in curva. Più viste della stessa scena, riferimenti in moto e modelli pronti arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -31,6 +31,7 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `plane` | `"vertical"`/`"horizontal"` | `"vertical"` | `"horizontal"`: la scena è vista dall'alto (vedi «Scene viste dall'alto»). |
 | `outOfPlane` | `"symbols"`/`"hide"`/`"note"` | `"symbols"` | Vettori perpendicolari al disegno: simboli ⊙ ⊗, nascosti, o elencati sotto la scena. |
 | `compare` | Array | | La scena ridisegnata, sbiadita, con altri valori dei parametri (vedi «Confronto»). |
+| `magnitudes` | `"schematic"`/`"solve"` | `"schematic"` | `"solve"`: i corpi si muovono secondo la seconda legge di Newton (vedi «Risolutore»). Vale anche sul singolo corpo. |
 
 ### Oggetti
 
@@ -191,9 +192,20 @@ Un oggetto `energy` disegna in un riquadro le barre delle energie di un corpo o 
 
 ### Scene viste dall'alto
 
-Con `"plane": "horizontal"` le coordinate sono quelle del terreno visto dall'alto e la gravità entra nel foglio. Peso e normale delle forze automatiche sono perpendicolari al disegno (⊗ e ⊙, $N = mg$); l'attrito sta nel piano: quello statico è la forza che serve al moto, $m\vec a$ meno le altre forze (in curva $mv^2/R$ verso il centro), quello dinamico (`"friction": "kinetic"`) è $\mu N$ contro la velocità. Un'automobile ha sempre l'attrito; il valore di $\mu$ viene dalla strada che segue o dal corpo. Che la forza necessaria superi $\mu m g$ si vede confrontando i valori (esempio 30): lo slittamento arriva con il risolutore.
+Con `"plane": "horizontal"` le coordinate sono quelle del terreno visto dall'alto e la gravità entra nel foglio. Peso e normale delle forze automatiche sono perpendicolari al disegno (⊗ e ⊙, $N = mg$); l'attrito sta nel piano: quello statico è la forza che serve al moto, $m\vec a$ meno le altre forze (in curva $mv^2/R$ verso il centro), quello dinamico (`"friction": "kinetic"`) è $\mu N$ contro la velocità. Un'automobile ha sempre l'attrito; il valore di $\mu$ viene dalla strada che segue o dal corpo. Con `"skid": true` su un corpo che segue un percorso, quando la forza necessaria supera $\mu m g$ il corpo slitta: prosegue dritto nella direzione della velocità che aveva, rallentato dall'attrito dinamico (`muK`, di default uguale a `mu`).
 
 Una strada (`road`) è un percorso con una larghezza e delle corsie. Con `"follow"` un corpo la percorre lungo la linea di mezzo; `"offset"` lo sposta di lato (metri, positivo a sinistra del verso di percorrenza) e `s` si misura lungo la corsia, così la sua derivata è la velocità del corpo. Un'automobile (`car`) vista dall'alto ha `size` `[lunghezza, larghezza]`; nelle scene di lato è disegnata di profilo, su due ruote.
+
+### Risolutore («magnitudes»: «solve»)
+
+Con `"magnitudes": "solve"` i corpi con `"forces": "auto"` la cui posizione non dipende già dal tempo si muovono da soli secondo $\vec F = m\vec a$. Ogni corpo ha una sola direzione di moto:
+
+- appoggiato (`on`) su un suolo, un piano inclinato o un tavolo: lungo la superficie;
+- appeso a una fune (senza `on`): lungo la fune.
+
+Le funi sono inestensibili e tese (una fune che dovrebbe spingere si allenta). A ogni istante il risolutore calcola accelerazioni, tensioni e attrito statico; la normale bilancia le forze perpendicolari alla superficie. Se l'attrito statico necessario supera $\mu_s N$ il corpo scivola e l'attrito diventa dinamico, $\mu_k N$ contro il moto (`mu` è $\mu_s$, `muK` è $\mu_k$, di default uguale). Un corpo che rallenta fino a fermarsi resta fermo se l'attrito statico basta. Le molle si allungano con il moto; le altre forze scritte a mano sul corpo possono dipendere dal tempo. `"v0"` dà la velocità iniziale lungo la direzione di moto. Il moto si ferma quando un corpo arriva alla fine della sua superficie, alla carrucola o al suolo.
+
+Le forze automatiche prendono i valori della soluzione e si leggono nelle espressioni (`A.T.mag`, `A.f.mag`); `A.ax`, `A.ay`, `A.acc` danno l'accelerazione. Per un pendolo la tensione diventa $mg\cos\theta + mv^2/L$. Cosa non è risolto (corpi appoggiati su altri corpi, superfici curve, corpi con più funi senza superficie) resta schematico, con un avviso.
 
 ### Confronto
 
@@ -1296,7 +1308,7 @@ Le forze automatiche si leggono nelle espressioni: `A.N.mag` è il modulo della 
 
 ## 30. Auto in curva vista dall'alto
 
-Con `"plane": "horizontal"` la scena è vista dall'alto: peso e normale sono perpendicolari al foglio (⊗ entra, ⊙ esce) e l'attrito è la forza centripeta che serve per curvare, $m v^2/R$. Aumentando la velocità o diminuendo $\mu$ la forza necessaria supera $\mu m g$.
+Con `"plane": "horizontal"` la scena è vista dall'alto: peso e normale sono perpendicolari al foglio (⊗ entra, ⊙ esce) e l'attrito è la forza centripeta che serve per curvare, $m v^2/R$. Aumentando la velocità o diminuendo $\mu$ la forza necessaria supera $\mu m g$: con `"skid": true` la macchina slitta e prosegue dritta.
 
 ```physics
 {
@@ -1310,9 +1322,9 @@ Con `"plane": "horizontal"` la scena è vista dall'alto: peso e normale sono per
   "objects": [
     { "id": "r", "type": "road", "width": 7, "lanes": 2, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 12 } } },
     { "type": "particle", "at": [0, 0], "radius": 3 },
-    { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto" },
+    { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto", "skid": true },
     { "type": "velocity", "on": "C", "label": "\\vec v" },
-    { "type": "label", "at": [0, -3], "text": "La macchina sbanda: serve più attrito di μmg", "show": "C.f.mag > mu*1200*g", "color": "red" }
+    { "type": "label", "at": [0, -3], "text": "Serve più attrito di μmg: la macchina slitta", "show": "v^2/13.75 > mu*g", "color": "red" }
   ],
   "readouts": [
     { "label": "f (necessaria)", "value": "C.f.mag", "unit": "N", "digits": 0 },
@@ -1334,9 +1346,9 @@ Con `"plane": "horizontal"` la scena è vista dall'alto: peso e normale sono per
 >   "objects": [
 >     { "id": "r", "type": "road", "width": 7, "lanes": 2, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 12 } } },
 >     { "type": "particle", "at": [0, 0], "radius": 3 },
->     { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto" },
+>     { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto", "skid": true },
 >     { "type": "velocity", "on": "C", "label": "\\vec v" },
->     { "type": "label", "at": [0, -3], "text": "La macchina sbanda: serve più attrito di μmg", "show": "C.f.mag > mu*1200*g", "color": "red" }
+>     { "type": "label", "at": [0, -3], "text": "Serve più attrito di μmg: la macchina slitta", "show": "v^2/13.75 > mu*g", "color": "red" }
 >   ],
 >   "readouts": [
 >     { "label": "f (necessaria)", "value": "C.f.mag", "unit": "N", "digits": 0 },
@@ -1468,7 +1480,207 @@ Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su stra
 > }
 > ```
 
-## 34. Avvisi
+## 34. Macchina di Atwood (risolta)
+
+Con `"magnitudes": "solve"` le masse si muovono da sole secondo la seconda legge di Newton: $a = \frac{m_1 - m_2}{m_1 + m_2}\,g$ e $T = \frac{2 m_1 m_2}{m_1 + m_2}\,g$. Il moto si ferma quando una massa tocca il suolo o la carrucola.
+
+```physics
+{
+  "xlim": [0, 6], "ylim": [0, 5], "magnitudes": "solve", "forceScale": 0.035,
+  "params": {
+    "m1": { "min": 0.5, "max": 5, "step": 0.1, "val": 3, "unit": "kg", "label": "m₁" },
+    "m2": { "min": 0.5, "max": 5, "step": 0.1, "val": 2, "unit": "kg", "label": "m₂" }
+  },
+  "time": { "max": 3 },
+  "objects": [
+    { "type": "ground", "y": 0.3 },
+    { "type": "ceiling", "y": 4.9, "from": [2.2, 4.9], "to": [3.8, 4.9] },
+    { "id": "p", "type": "pulley", "at": [3, 4.3], "radius": 0.4, "hangFrom": [3, 4.9] },
+    { "id": "A", "type": "block", "at": [2.6, 2.4], "size": [0.6, 0.6], "mass": "m1", "label": "$m_1$", "forces": "auto" },
+    { "id": "B", "type": "block", "at": [3.4, 2.4], "size": [0.6, 0.6], "mass": "m2", "label": "$m_2$", "forces": "auto" },
+    { "type": "rope", "from": "A.top", "to": "B.top", "over": ["p"] }
+  ],
+  "readouts": [
+    { "label": "a", "value": "abs(A.ay)", "unit": "m/s²", "digits": 2 },
+    { "label": "T", "value": "A.T.mag", "unit": "N", "digits": 1 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 6], "ylim": [0, 5], "magnitudes": "solve", "forceScale": 0.035,
+>   "params": {
+>     "m1": { "min": 0.5, "max": 5, "step": 0.1, "val": 3, "unit": "kg", "label": "m₁" },
+>     "m2": { "min": 0.5, "max": 5, "step": 0.1, "val": 2, "unit": "kg", "label": "m₂" }
+>   },
+>   "time": { "max": 3 },
+>   "objects": [
+>     { "type": "ground", "y": 0.3 },
+>     { "type": "ceiling", "y": 4.9, "from": [2.2, 4.9], "to": [3.8, 4.9] },
+>     { "id": "p", "type": "pulley", "at": [3, 4.3], "radius": 0.4, "hangFrom": [3, 4.9] },
+>     { "id": "A", "type": "block", "at": [2.6, 2.4], "size": [0.6, 0.6], "mass": "m1", "label": "$m_1$", "forces": "auto" },
+>     { "id": "B", "type": "block", "at": [3.4, 2.4], "size": [0.6, 0.6], "mass": "m2", "label": "$m_2$", "forces": "auto" },
+>     { "type": "rope", "from": "A.top", "to": "B.top", "over": ["p"] }
+>   ],
+>   "readouts": [
+>     { "label": "a", "value": "abs(A.ay)", "unit": "m/s²", "digits": 2 },
+>     { "label": "T", "value": "A.T.mag", "unit": "N", "digits": 1 }
+>   ]
+> }
+> ```
+
+## 35. Tavolo e carrucola con attrito (risolto)
+
+Con poco attrito il sistema accelera: $a = \frac{m_2 - \mu m_1}{m_1 + m_2}\,g$. Se $\mu m_1 \geq m_2$ l'attrito statico basta e il blocco resta fermo: allora $f = T = m_2 g$.
+
+```physics
+{
+  "xlim": [0, 7], "ylim": [0, 4], "magnitudes": "solve", "forceScale": 0.07,
+  "params": { "mu": { "min": 0, "max": 0.8, "step": 0.05, "val": 0.2, "label": "μ" } },
+  "time": { "max": 3 },
+  "objects": [
+    { "type": "ground", "y": 0.2 },
+    { "id": "t", "type": "table", "at": [0.5, 2.5], "width": 4.5, "height": 2.3 },
+    { "id": "A", "type": "block", "on": "t", "pos": 0.3, "size": [1, 0.6], "mass": 2, "mu": "mu", "label": "$m_1$", "forces": "auto" },
+    { "id": "p", "type": "pulley", "at": { "from": "t.edge", "offset": [0.3, 0] }, "radius": 0.3, "hangFrom": "t.edge" },
+    { "id": "B", "type": "block", "at": [5.6, 1.6], "size": [0.6, 0.6], "mass": 1, "label": "$m_2$", "forces": "auto" },
+    { "type": "rope", "from": "A.right", "to": "B.top", "over": ["p"] }
+  ],
+  "readouts": [
+    { "label": "a", "value": "A.ax", "unit": "m/s²", "digits": 2 },
+    { "label": "T", "value": "A.T.mag", "unit": "N", "digits": 2 },
+    { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 2 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 7], "ylim": [0, 4], "magnitudes": "solve", "forceScale": 0.07,
+>   "params": { "mu": { "min": 0, "max": 0.8, "step": 0.05, "val": 0.2, "label": "μ" } },
+>   "time": { "max": 3 },
+>   "objects": [
+>     { "type": "ground", "y": 0.2 },
+>     { "id": "t", "type": "table", "at": [0.5, 2.5], "width": 4.5, "height": 2.3 },
+>     { "id": "A", "type": "block", "on": "t", "pos": 0.3, "size": [1, 0.6], "mass": 2, "mu": "mu", "label": "$m_1$", "forces": "auto" },
+>     { "id": "p", "type": "pulley", "at": { "from": "t.edge", "offset": [0.3, 0] }, "radius": 0.3, "hangFrom": "t.edge" },
+>     { "id": "B", "type": "block", "at": [5.6, 1.6], "size": [0.6, 0.6], "mass": 1, "label": "$m_2$", "forces": "auto" },
+>     { "type": "rope", "from": "A.right", "to": "B.top", "over": ["p"] }
+>   ],
+>   "readouts": [
+>     { "label": "a", "value": "A.ax", "unit": "m/s²", "digits": 2 },
+>     { "label": "T", "value": "A.T.mag", "unit": "N", "digits": 2 },
+>     { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 2 }
+>   ]
+> }
+> ```
+
+## 36. Lancio in salita su un piano inclinato
+
+Il blocco sale rallentando con $a = g(\sin\alpha + \mu\cos\alpha)$; quando si ferma, se $\mu \geq \tan\alpha$ resta fermo, altrimenti torna giù con $a = g(\sin\alpha - \mu\cos\alpha)$. L'attrito cambia verso con il moto.
+
+```physics
+{
+  "xlim": [0, 9], "ylim": [0, 5], "magnitudes": "solve", "forceScale": 0.08,
+  "params": {
+    "v0": { "min": 0, "max": 6, "step": 0.5, "val": 4, "unit": "m/s" },
+    "mu": { "min": 0, "max": 0.9, "step": 0.05, "val": 0.3, "label": "μ" },
+    "alpha": { "min": 10, "max": 35, "val": 25, "unit": "deg", "label": "α" }
+  },
+  "time": { "max": 4 },
+  "objects": [
+    { "type": "ground", "y": 0.3 },
+    { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 8.4 },
+    { "id": "A", "type": "block", "on": "s", "pos": 0.15, "size": [0.9, 0.5], "mass": 2, "mu": "mu", "v0": "v0", "forces": "auto" },
+    { "type": "velocity", "on": "A", "label": "\\vec v" },
+    { "type": "angle", "of": "s", "label": "\\alpha" }
+  ],
+  "readouts": [
+    { "label": "v", "value": "A.speed", "digits": 2 },
+    { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 9], "ylim": [0, 5], "magnitudes": "solve", "forceScale": 0.08,
+>   "params": {
+>     "v0": { "min": 0, "max": 6, "step": 0.5, "val": 4, "unit": "m/s" },
+>     "mu": { "min": 0, "max": 0.9, "step": 0.05, "val": 0.3, "label": "μ" },
+>     "alpha": { "min": 10, "max": 35, "val": 25, "unit": "deg", "label": "α" }
+>   },
+>   "time": { "max": 4 },
+>   "objects": [
+>     { "type": "ground", "y": 0.3 },
+>     { "id": "s", "type": "slope", "at": [0.4, 0.3], "angle": "alpha", "length": 8.4 },
+>     { "id": "A", "type": "block", "on": "s", "pos": 0.15, "size": [0.9, 0.5], "mass": 2, "mu": "mu", "v0": "v0", "forces": "auto" },
+>     { "type": "velocity", "on": "A", "label": "\\vec v" },
+>     { "type": "angle", "of": "s", "label": "\\alpha" }
+>   ],
+>   "readouts": [
+>     { "label": "v", "value": "A.speed", "digits": 2 },
+>     { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1 }
+>   ]
+> }
+> ```
+
+## 37. Auto che accelera in curva e slitta
+
+L'accelerazione serve sia per curvare ($v^2/R$) sia per aumentare la velocità ($a$): quando supera $\mu g$ l'attrito non basta più. Con `"skid": true` da quel momento l'auto prosegue dritta e l'attrito diventa dinamico.
+
+```physics
+{
+  "plane": "horizontal",
+  "xlim": [-26, 26], "ylim": [-26, 26], "aspectRatio": "1:1",
+  "params": {
+    "a": { "min": 0.5, "max": 3, "step": 0.1, "val": 1.5, "unit": "m/s²", "label": "a tangenziale" },
+    "mu": { "min": 0.2, "max": 1, "step": 0.05, "val": 0.6, "label": "μ" }
+  },
+  "time": { "max": 10 },
+  "objects": [
+    { "id": "r", "type": "road", "width": 7, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 18 } } },
+    { "id": "C", "type": "car", "follow": "r", "s": "a*t^2/2", "orient": "tangent", "mass": 1200, "forces": "auto", "skid": true },
+    { "type": "trace", "of": "C", "dash": "2 4" },
+    { "type": "velocity", "on": "C", "label": "\\vec v" }
+  ],
+  "readouts": [
+    { "label": "v", "value": "C.speed", "digits": 1 },
+    { "label": "f", "value": "C.f.mag", "unit": "N", "digits": 0 },
+    { "label": "μmg", "value": "mu*1200*g", "unit": "N", "digits": 0 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "plane": "horizontal",
+>   "xlim": [-26, 26], "ylim": [-26, 26], "aspectRatio": "1:1",
+>   "params": {
+>     "a": { "min": 0.5, "max": 3, "step": 0.1, "val": 1.5, "unit": "m/s²", "label": "a tangenziale" },
+>     "mu": { "min": 0.2, "max": 1, "step": 0.05, "val": 0.6, "label": "μ" }
+>   },
+>   "time": { "max": 10 },
+>   "objects": [
+>     { "id": "r", "type": "road", "width": 7, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 18 } } },
+>     { "id": "C", "type": "car", "follow": "r", "s": "a*t^2/2", "orient": "tangent", "mass": 1200, "forces": "auto", "skid": true },
+>     { "type": "trace", "of": "C", "dash": "2 4" },
+>     { "type": "velocity", "on": "C", "label": "\\vec v" }
+>   ],
+>   "readouts": [
+>     { "label": "v", "value": "C.speed", "digits": 1 },
+>     { "label": "f", "value": "C.f.mag", "unit": "N", "digits": 0 },
+>     { "label": "μmg", "value": "mu*1200*g", "unit": "N", "digits": 0 }
+>   ]
+> }
+> ```
+
+## 38. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -1488,7 +1700,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 35. Errore nel JSON
+## 39. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 
