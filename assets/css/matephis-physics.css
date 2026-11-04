@@ -339,3 +339,31 @@
 .matephis-physics-note:empty {
   display: none;
 }
+
+/* "views": the same scene seen from several sides, side by side */
+.matephis-physics-views {
+  display: grid;
+  width: 100%;
+  align-items: start;
+}
+
+.matephis-plot-container.matephis-physics-has-views {
+  max-width: 100%;
+}
+
+.matephis-physics-view {
+  margin: 0;
+  min-width: 0;
+}
+
+.matephis-physics-view > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.matephis-physics-view figcaption {
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  text-align: center;
+}

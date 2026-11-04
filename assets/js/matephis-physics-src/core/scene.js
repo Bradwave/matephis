@@ -30,6 +30,10 @@ import { Simulation } from './simulation.js';
 import { PhysicsCompiler, kinematicIds } from './compiler.js';
 import { Solver } from './solver.js';
 import { expandScene } from './presets.js';
+import { parseFrames, parseViews, viewTransform, transformStates, frameMap } from './views.js';
+import { massOf } from '../objects/shared.js';
+import { scale as scaleVec } from './vec.js';
+import { drawVector } from '../objects/annotations.js';
 import { Readouts } from './readouts.js';
 import { Graphs, graphPosition } from './graphs.js';
 import { Clock } from './clock.js';
@@ -62,6 +66,12 @@ export class MatephisPhysics {
         this.params = {};
         this.warnings = [];
         expandWarnings.forEach(w => this._addWarning(w));
+        // Views (projections of the same scene) and reference frames (views.js)
+        this.frameDefs = parseFrames(this.config, (m) => this._addWarning(m));
+        this.viewDefs = parseViews(this.config, this.frameDefs, (m) => this._addWarning(m));
+        const frameNames = this.frameDefs ? Object.keys(this.frameDefs) : [];
+        this.frameIndex = this.config.frame !== undefined ? Math.max(0, frameNames.indexOf(this.config.frame)) : 0;
+        if (this.config.frame !== undefined && !frameNames.includes(this.config.frame)) this._addWarning(`frame: no frame called '${this.config.frame}' in "frames"`);
         this._listeners = [];
 
         this.wrapper = document.createElement("div");
@@ -280,39 +290,108 @@ export class MatephisPhysics {
     _initSVG() {
         const cfg = this.config;
         let targetWidth = cfg.width || 600;
-        if (cfg.fullWidth) {
+        if (cfg.fullWidth || this.viewDefs) {
             const cw = (this.stageHost || this.wrapper).clientWidth;
-            targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? window.innerWidth : 1000);
+            targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? Math.min(window.innerWidth, cfg.width || 600) : 600);
         }
-        this.width = Math.max(50, targetWidth);
-        this.height = Math.max(50, this.width / this.aspectRatio);
         this.padding = typeof cfg.padding === 'number' ? cfg.padding : 12;
-
-        this.svg = createSvgElement("svg", {
-            width: this.width, height: this.height, viewBox: `0 0 ${this.width} ${this.height}`,
-            class: "matephis-plot-svg matephis-physics-svg static", role: "img",
-            "aria-label": cfg.ariaLabel || cfg.title || "Diagramma di fisica",
-        });
-        this.svg.style.fontFamily = "var(--font-plot, monospace)";
-
-        const group = (cls) => {
-            const g = createSvgElement("g", cls ? { class: cls } : {});
-            this.svg.appendChild(g);
-            return g;
-        };
-        this.bgGroup = group();
-        this.gridGroup = group("matephis-plot-grid");
-        this.axesGroup = group();
-        // "compare": the scene with other params, faded, under everything else drawn on top
-        this.compareGroup = group("matephis-physics-compare");
-        this.layerGroups = {};
-        LAYERS.forEach(name => { this.layerGroups[name] = group(`matephis-physics-${name}`); });
-        this.debugGroup = group("matephis-physics-debug");
-
         this.plotStage = document.createElement("div");
         this.plotStage.className = "matephis-plot-stage";
-        this.plotStage.appendChild(this.svg);
         (this.stageHost || this.wrapper).appendChild(this.plotStage);
+        if (!this.viewDefs) {
+            this.width = Math.max(50, targetWidth);
+            this.height = Math.max(50, this.width / this.aspectRatio);
+            this._useViewport(this._createViewport(null, this.width, this.height));
+            this.plotStage.appendChild(this.svg);
+            return;
+        }
+        // Several views: a grid of panels, each with its own drawing
+        this.wrapper.classList.add('matephis-physics-has-views');
+        const grid = document.createElement('div');
+        grid.className = 'matephis-physics-views';
+        this.plotStage.appendChild(grid);
+        this.viewports = this.viewDefs.map(def => {
+            const vp = this._createViewport(def, 100, 100);
+            const fig = document.createElement('figure');
+            fig.className = 'matephis-physics-view';
+            fig.appendChild(vp.svg);
+            if (def.title !== undefined) {
+                const cap = document.createElement('figcaption');
+                cap.textContent = def.title;
+                fig.appendChild(cap);
+            }
+            grid.appendChild(fig);
+            vp.figure = fig;
+            return vp;
+        });
+        this.viewGrid = grid;
+        this._layoutViews(targetWidth);
+        this._useViewport(this.viewports[0]);
+    }
+
+    /** Config of a view: the scene's, with the view's own limits and look. */
+    _viewConfig(def) {
+        if (!def) return this.config;
+        const o = def.overrides;
+        const cfg = { ...this.config, ...o };
+        // Limits given both ways and no proportions: the drawing takes their shape
+        if (o.aspectRatio === undefined && Array.isArray(o.xlim) && Array.isArray(o.ylim)) {
+            const w = o.xlim[1] - o.xlim[0], h = o.ylim[1] - o.ylim[0];
+            if (typeof w === 'number' && typeof h === 'number' && w > 0 && h > 0) cfg.aspectRatio = w / h;
+        }
+        return cfg;
+    }
+
+    /** An SVG with its layer groups, for one view (or the only one). */
+    _createViewport(def, width, height) {
+        const cfg = this._viewConfig(def);
+        const svg = createSvgElement("svg", {
+            width, height, viewBox: `0 0 ${width} ${height}`,
+            class: "matephis-plot-svg matephis-physics-svg static", role: "img",
+            "aria-label": (def && def.title) || cfg.ariaLabel || cfg.title || "Diagramma di fisica",
+        });
+        svg.style.fontFamily = "var(--font-plot, monospace)";
+        const group = (cls) => {
+            const g = createSvgElement("g", cls ? { class: cls } : {});
+            svg.appendChild(g);
+            return g;
+        };
+        const vp = { def, config: cfg, svg, width, height };
+        vp.bgGroup = group();
+        vp.gridGroup = group("matephis-plot-grid");
+        vp.axesGroup = group();
+        // "compare": the scene with other params, faded, under everything else drawn on top
+        vp.compareGroup = group("matephis-physics-compare");
+        vp.layerGroups = {};
+        LAYERS.forEach(name => { vp.layerGroups[name] = group(`matephis-physics-${name}`); });
+        vp.debugGroup = group("matephis-physics-debug");
+        return vp;
+    }
+
+    /** Draws into this viewport from now on (the scene's drawing code reads these fields). */
+    _useViewport(vp) {
+        ['svg', 'bgGroup', 'gridGroup', 'axesGroup', 'compareGroup', 'layerGroups', 'debugGroup', 'width', 'height'].forEach(k => { this[k] = vp[k]; });
+        this.viewport = vp;
+    }
+
+    /** Sizes of the views for the room there is: side by side ("columns", 2 by default), one per row when narrow. */
+    _layoutViews(total) {
+        const n = this.viewports.length;
+        const gap = typeof this.config.gap === 'number' ? this.config.gap : 12;
+        let cols = typeof this.config.columns === 'number' ? Math.max(1, Math.round(this.config.columns)) : Math.min(n, 2);
+        if (total < 520) cols = 1;
+        this.viewGrid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        this.viewGrid.style.gap = `${gap}px`;
+        const w = Math.max(50, (total - gap * (cols - 1)) / cols);
+        this.viewports.forEach(vp => {
+            const aspect = parseAspectRatio(vp.config.aspectRatio) || DEFAULT_ASPECT_RATIO;
+            vp.width = w;
+            vp.height = Math.max(50, w / aspect);
+            vp.svg.setAttribute('width', vp.width);
+            vp.svg.setAttribute('height', vp.height);
+            vp.svg.setAttribute('viewBox', `0 0 ${vp.width} ${vp.height}`);
+        });
+        this._layoutWidth = total;
     }
 
     _initResizeObserver() {
@@ -320,7 +399,8 @@ export class MatephisPhysics {
         this.resizeObserver = new ResizeObserver(entries => {
             for (const entry of entries) {
                 const newW = Math.round(entry.contentRect.width);
-                if (newW > 10 && Math.abs(newW - this.width) > 2) this.resize(newW);
+                const current = this.viewports ? this._layoutWidth : this.width;
+                if (newW > 10 && Math.abs(newW - current) > 2) this.resize(newW);
             }
         });
         // The scene's own column when graphs sit beside it
@@ -329,6 +409,11 @@ export class MatephisPhysics {
 
     /** Re-renders at a new internal width (text keeps its pixel size). */
     resize(newW) {
+        if (this.viewports) {
+            this._layoutViews(newW);
+            this.draw();
+            return;
+        }
         this.width = newW;
         this.height = Math.max(50, newW / this.aspectRatio);
         this.svg.setAttribute("width", this.width);
@@ -465,6 +550,33 @@ export class MatephisPhysics {
 
     draw() {
         if (this._destroyed) return;
+        if (!this.viewports) {
+            this._drawView(true);
+            return;
+        }
+        // Each view in turn, the first one last: dragging and the lightbox work on it
+        const base = this.config;
+        try {
+            for (let i = this.viewports.length - 1; i >= 0; i--) {
+                const vp = this.viewports[i];
+                this._useViewport(vp);
+                this.config = vp.config;
+                this._drawView(i === 0);
+            }
+        } finally {
+            this.config = base;
+        }
+    }
+
+    /** The frame the current drawing is seen in: its view's, or the one chosen with the frame button. */
+    get currentFrame() {
+        if (this.viewport && this.viewport.def) return this.viewport.def.frame;
+        const names = this.frameDefs ? Object.keys(this.frameDefs) : [];
+        return names.length ? this.frameDefs[names[this.frameIndex]] : null;
+    }
+
+    /** Draws the scene in the current viewport; `main` also updates what sits outside it. */
+    _drawView(main) {
         [this.bgGroup, this.gridGroup, this.axesGroup, this.debugGroup, this.compareGroup, ...Object.values(this.layerGroups)]
             .forEach(g => { g.textContent = ""; });
 
@@ -478,13 +590,14 @@ export class MatephisPhysics {
         this._drawGrid(cs);
         this._drawAxes(cs);
         this._notes = [];
-        this._drawObjects(cs);
+        this._drawObjects(cs, main);
+        if (!main) return;
         if (this.noteEl) {
             this.noteEl.textContent = this._notes.length ? `Perpendicolari al disegno: ${this._notes.join(', ')}` : '';
         }
         if (this.readouts) this.readouts.update();
         if (this.graphs) this.graphs.update();
-        if (this.config.debug) this._drawDebug(cs);
+        if (this.config.debug && !this._viewT) this._drawDebug(cs);
 
         if (this._warningsDirty) this._renderWarnings();
     }
@@ -744,10 +857,13 @@ export class MatephisPhysics {
         if (this.sim) this.sim.extraEnd = end;
     }
 
-    _drawObjects(cs) {
+    _drawObjects(cs, main = true) {
         const r = this.resolver;
         const view = { xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax };
-        if (this.compareSets && this.compareSets.length) {
+        const vdef = this.viewport ? this.viewport.def : null;
+        const frame = this.currentFrame;
+        const plain = (!vdef || vdef.view === 'front') && !(frame && frame.of);
+        if (plain && this.compareSets && this.compareSets.length) {
             // The main scene first, for its scales; then the faded sets; then the main scene again
             if (this.sim) { this.sim.prepare(view); r.timeline = this.sim.timeline(); }
             r.resolveAll(view);
@@ -757,9 +873,47 @@ export class MatephisPhysics {
             // Recomputes the motion if a param changed, then puts t and the state into the params
             this.sim.prepare(view);
             r.timeline = this.sim.timeline();
+            // In a frame: velocities and accelerations measured there (forces do not change)
+            if (frame && frame.of && this.sim.frameStarts) r.timeline.kinView = this.sim.kinInFrame(frame, view);
             if (this.clock) this.clock.update();
         }
-        const states = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
+        const world = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
+        // Seen from another side or from a moving frame: the states as that view sees them
+        const T = this._viewTransformFor(vdef, frame, world);
+        this._viewT = T;
+        const states = T ? transformStates(world, T) : world;
+        if (T) r.states = states;
+        try {
+            this._renderObjects(cs, states, main, T, frame);
+        } finally {
+            if (T) r.states = world;
+        }
+    }
+
+    /** The transform of the current view (null for the plain front view). */
+    _viewTransformFor(vdef, frame, world) {
+        const view = vdef ? vdef.view : 'front';
+        if (!(frame && frame.of)) return viewTransform(view, null);
+        const sim = this.sim;
+        const start = sim && sim.frameStarts ? sim.frameStarts.get(frame.name) : null;
+        const body = this.resolver.objectById(frame.of);
+        const now = body ? world.get(body) : null;
+        if (!start || !now) return viewTransform(view, null);
+        const frameAt = (t) => frameMap(frame, t === null ? { pos: now.com || now.pos, angle: now.angle || 0 } : sim.frameAt(frame, t), start);
+        return viewTransform(view, frameAt);
+    }
+
+    /** Whether an object is drawn in the current view ("views" on it; no ground seen from above). */
+    _inView(obj) {
+        const vdef = this.viewport ? this.viewport.def : null;
+        if (!vdef) return true;
+        if (Array.isArray(obj.views)) return obj.views.includes(vdef.view) || (vdef.id !== undefined && obj.views.includes(vdef.id));
+        if (vdef.view !== 'front' && obj.type === 'angle') return false;
+        return !(vdef.view === 'top' && OBJECT_TYPES[obj.type].layer === 'environment');
+    }
+
+    _renderObjects(cs, states, main, T, frame) {
+        const r = this.resolver;
         const ctx = this._renderContext(cs);
         // Overlapping vectors on the same line are spread sideways
         const segs = [];
@@ -781,7 +935,7 @@ export class MatephisPhysics {
             .sort((p, q) => LAYERS.indexOf(layerOf(p[0])) - LAYERS.indexOf(layerOf(q[0])) || p[1] - q[1]);
         ordered.forEach(([obj, index]) => {
             const state = states.get(obj);
-            if (!state || !this._isShown(obj)) return;
+            if (!state || !this._isShown(obj) || !this._inView(obj)) return;
             const def = OBJECT_TYPES[obj.type];
             // Panel types draw beside the scene; some also mark the scene (an energy zero level)
             if (def.panel) panels.push([obj, state]);
@@ -789,7 +943,7 @@ export class MatephisPhysics {
             const layer = layerOf(obj);
             const g = this._svg("g", { class: `matephis-physics-${obj.type}` }, this.layerGroups[layer]);
             if (obj.opacity !== undefined) g.setAttribute("opacity", r.num(obj.opacity, `${describe(obj)} opacity`));
-            if (obj.drag !== undefined && this.dragger) {
+            if (obj.drag !== undefined && this.dragger && main && !T) {
                 g.setAttribute('data-drag', index);
                 g.classList.add('mp-draggable');
             }
@@ -799,6 +953,9 @@ export class MatephisPhysics {
                 this._addWarning(`${describe(obj)}: ${e.message}`);
             }
         });
+        if (frame && frame.fictitious && !frame.rotate) this._drawFictitious(ctx, states, frame, T);
+        // Panels sit outside the views: once, from the main one
+        if (!main) return;
         this.panelHost.textContent = '';
         panels.filter(([obj]) => obj.type !== 'fbd').forEach(([obj, st]) => {
             try {
@@ -820,6 +977,25 @@ export class MatephisPhysics {
         let k = Math.min(...fits);
         if (!isFinite(k)) k = this.pxPerMetre;
         fbds.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
+    }
+
+    /**
+     * In an accelerating (not rotating) frame: −m a of the frame on each body
+     * with automatic forces, dashed, labelled as an apparent force.
+     */
+    _drawFictitious(ctx, states, frame, T) {
+        const r = this.resolver;
+        const k = r.timeline && r.timeline.kin.get(frame.of);
+        if (!k || Math.hypot(k.a.x, k.a.y, k.a.z || 0) < 1e-9) return;
+        const g = this._svg('g', { class: 'matephis-physics-fictitious' }, this.layerGroups.annotations);
+        r.objects.filter(o => o.forces === 'auto' && o.id !== frame.of).forEach(o => {
+            const st = states.get(o);
+            if (!st || !this._isShown(o) || !this._inView(o)) return;
+            const F = scaleVec(k.a, -massOf(o, r));
+            drawVector(ctx, st.com || st.pos, T ? T.vec(F) : F, r.scales.force, {
+                color: this._kindColor('force'), head: 'filled', width: 2, dash: '6 4', label: '\\vec F_{app}',
+            }, g);
+        });
     }
 
     _panelSize(obj) {

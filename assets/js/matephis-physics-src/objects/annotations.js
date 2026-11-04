@@ -146,7 +146,8 @@ function vectorType(kind) {
             }
             if ((kind === 'velocity' || kind === 'acceleration') && owner && obj.vec === undefined && obj.dir === undefined) {
                 // Velocity / acceleration of a moving body, from its motion over time
-                const k = r.timeline && r.timeline.kin.get(obj.on);
+                // Measured in the frame of the view when it has one (see views.js)
+                const k = r.timeline && (r.timeline.kinView || r.timeline.kin).get(obj.on);
                 if (!k) {
                     r.warn(`${where}: needs 'dir' and 'mag', or 'vec', unless the scene has time ("time") and the body moves`);
                     return null;
