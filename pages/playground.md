@@ -22,4 +22,4 @@ physics: true
 </div>
 </div>
 
-<script src="{{ site.baseurl }}/assets/js/matephis-playground.js?v=0.5"></script>
+<script src="{{ site.baseurl }}/assets/js/matephis-playground.js?v=0.6"></script>

@@ -97,6 +97,7 @@ export class MatephisPhysics {
         if (cfg.g !== undefined) this.params.g = this._num(cfg.g, 'g');
         SliderManager.initValues(cfg.params || {}, this.params, (v, ctx) => this._eval(v, ctx));
         if (timed) this.sim = new Simulation(this, stateNames);
+        this._initCompare(timed ? stateNames : null);
 
         this.palettes = createPalettes(this._isDark());
         this._listen(window, 'matephis-theme-change', () => {
@@ -124,6 +125,12 @@ export class MatephisPhysics {
             (this.stageHost || this.wrapper).appendChild(this.clock.el);
         }
 
+        if (cfg.outOfPlane === 'note') {
+            this.noteEl = document.createElement('div');
+            this.noteEl.className = 'matephis-physics-note';
+            (this.stageHost || this.wrapper).appendChild(this.noteEl);
+        }
+        if (this.compareEl) (this.stageHost || this.wrapper).appendChild(this.compareEl);
         if (Array.isArray(cfg.readouts) && cfg.readouts.length) {
             this.readouts = new Readouts(this, cfg.readouts);
             (this.stageHost || this.wrapper).appendChild(this.readouts.el);
@@ -287,6 +294,8 @@ export class MatephisPhysics {
         this.bgGroup = group();
         this.gridGroup = group("matephis-plot-grid");
         this.axesGroup = group();
+        // "compare": the scene with other params, faded, under everything else drawn on top
+        this.compareGroup = group("matephis-physics-compare");
         this.layerGroups = {};
         LAYERS.forEach(name => { this.layerGroups[name] = group(`matephis-physics-${name}`); });
         this.debugGroup = group("matephis-physics-debug");
@@ -447,7 +456,7 @@ export class MatephisPhysics {
 
     draw() {
         if (this._destroyed) return;
-        [this.bgGroup, this.gridGroup, this.axesGroup, this.debugGroup, ...Object.values(this.layerGroups)]
+        [this.bgGroup, this.gridGroup, this.axesGroup, this.debugGroup, this.compareGroup, ...Object.values(this.layerGroups)]
             .forEach(g => { g.textContent = ""; });
 
         const cs = this._computeTransform();
@@ -459,7 +468,11 @@ export class MatephisPhysics {
 
         this._drawGrid(cs);
         this._drawAxes(cs);
+        this._notes = [];
         this._drawObjects(cs);
+        if (this.noteEl) {
+            this.noteEl.textContent = this._notes.length ? `Perpendicolari al disegno: ${this._notes.join(', ')}` : '';
+        }
         if (this.readouts) this.readouts.update();
         if (this.graphs) this.graphs.update();
         if (this.config.debug) this._drawDebug(cs);
@@ -576,6 +589,18 @@ export class MatephisPhysics {
             },
             color: (c) => this._color(c),
             kindColor: (kind) => this._kindColor(kind),
+            /** How many ⊙/⊗ symbols are already at this screen point (they go side by side). */
+            oopSlot: (c) => {
+                const list = this._placed.oop || (this._placed.oop = []);
+                const n = list.filter(q => Math.hypot(q.x - c.x, q.y - c.y) < 3).length;
+                list.push(c);
+                return n;
+            },
+            /** With "outOfPlane": "note", vectors perpendicular to the drawing are listed under it. */
+            note: (obj, st, value) => {
+                const name = plainLabel(obj.label !== undefined ? obj.label : obj.id || st.kind);
+                this._notes.push(`${name} = ${value} (${st.vec.z > 0 ? 'uscente' : 'entrante'})`);
+            },
             types: OBJECT_TYPES,
             /** Colours for action–reaction pairs: distinct from the default force colour. */
             pairColor: (i) => {
@@ -629,9 +654,96 @@ export class MatephisPhysics {
         return !!v && !Number.isNaN(v);
     }
 
+    /**
+     * "compare": [{ "mu": 0 }, { "mu": 0.3, "label": "con attrito" }] draws the
+     * scene again for each set of params (slider units), faded and without
+     * labels, on the same clock. Each set has its own simulation.
+     */
+    _initCompare(stateNames) {
+        const sets = Array.isArray(this.config.compare) ? this.config.compare : [];
+        const defs = this.config.params || {};
+        this.compareSets = sets.map((set, i) => {
+            if (!set || typeof set !== 'object') {
+                this._addWarning(`compare[${i}]: a set of params, like { "mu": 0 }`);
+                return null;
+            }
+            const values = Object.entries(set).filter(([k]) => k !== 'label');
+            values.forEach(([k]) => {
+                if (!defs[k] && k !== 'g') this._addWarning(`compare[${i}]: no param '${k}'`);
+            });
+            const text = set.label !== undefined ? String(set.label) : values.map(([k, v]) => {
+                const d = defs[k] || {};
+                const unit = d.unit === 'deg' ? '°' : d.unit ? ` ${d.unit}` : '';
+                return `${d.label || k} = ${v}${unit}`;
+            }).join(', ');
+            return { values, text, sim: stateNames ? new Simulation(this, stateNames, { graphs: false }) : null };
+        }).filter(Boolean);
+        if (!this.compareSets.length) return;
+        this.compareEl = document.createElement('div');
+        this.compareEl.className = 'matephis-physics-note';
+        this.compareEl.textContent = `Sbiadito: ${this.compareSets.map(c => c.text).join('; ')}`;
+    }
+
+    /** Params of a compare set: the current ones with its values (slider units) on top. */
+    _compareParams(c) {
+        const p = { ...this.params };
+        const defs = this.config.params || {};
+        c.values.forEach(([k, v]) => {
+            const n = this._num(v, `compare ${k}`);
+            p[k] = defs[k] ? n * paramScale(defs[k]) : n;
+        });
+        return p;
+    }
+
+    /** Draws the compare sets, faded, with the main scene's vector scales. */
+    _drawCompare(view, ctx, scales) {
+        const r = this.resolver;
+        const base = this.params;
+        const t = this.sim ? this.sim.t : 0;
+        let end = 0;
+        const saved = this._placed;
+        this._placed = { boxes: [], segs: [], w: this.width, h: this.height };
+        try {
+            this.compareSets.forEach(c => {
+                this.params = this._compareParams(c);
+                if (c.sim) {
+                    c.sim.prepare(view);
+                    c.sim.seek(t);
+                    c.sim.prepare(view);
+                    end = Math.max(end, c.sim.tEnd);
+                    r.timeline = c.sim.timeline();
+                }
+                const states = r.resolveAll(view);
+                r.scales = scales;
+                const g = this._svg('g', { opacity: 0.35 }, this.compareGroup);
+                r.objects.forEach(obj => {
+                    const def = OBJECT_TYPES[obj.type];
+                    const st = states.get(obj);
+                    // The bodies and what moves with them; surroundings, panels and labels once
+                    if (!st || def.panel || def.layer === 'environment' || ['label', 'dimension', 'angle', 'frame'].includes(obj.type)) return;
+                    if (!this._isShown(obj)) return;
+                    try {
+                        def.render({ ...obj, label: undefined, showValue: false, angleLabel: undefined }, st, ctx, g);
+                    } catch (e) { /* the main scene reports problems */ }
+                });
+            });
+        } finally {
+            this.params = base;
+            this._placed = saved;
+        }
+        // The clock runs until the longest of the runs ends
+        if (this.sim) this.sim.extraEnd = end;
+    }
+
     _drawObjects(cs) {
         const r = this.resolver;
         const view = { xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax };
+        if (this.compareSets && this.compareSets.length) {
+            // The main scene first, for its scales; then the faded sets; then the main scene again
+            if (this.sim) { this.sim.prepare(view); r.timeline = this.sim.timeline(); }
+            r.resolveAll(view);
+            this._drawCompare(view, this._renderContext(cs), r.scales);
+        }
         if (this.sim) {
             // Recomputes the motion if a param changed, then puts t and the state into the params
             this.sim.prepare(view);
@@ -644,7 +756,7 @@ export class MatephisPhysics {
         const segs = [];
         r.objects.forEach(obj => {
             const st = states.get(obj);
-            if (!st || !st.vec || !this._isShown(obj)) return;
+            if (!st || !st.vec || st.outOfPlane || !this._isShown(obj)) return;
             const k = obj.scale !== undefined ? r.num(obj.scale, 'scale') : r.scales[st.kind];
             const w = { x: st.vec.x * k, y: st.vec.y * k };
             const a = obj.tail === 'tip' ? { x: st.pos.x - w.x, y: st.pos.y - w.y } : st.pos;

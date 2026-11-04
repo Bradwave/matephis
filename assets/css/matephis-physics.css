@@ -43,6 +43,9 @@
   --physics-surface: #e6e6e6;
   --physics-hatch: #6b6b6b;
   --physics-rope: #3a3a3a;
+  --physics-road: #d9d9d9;
+  --physics-road-line: #ffffff;
+  --physics-window: #d5e3ee;
 }
 
 [data-theme="dark"] .matephis-physics-svg {
@@ -51,6 +54,9 @@
   --physics-surface: #303030;
   --physics-hatch: #9a9a9a;
   --physics-rope: #cbd5e1;
+  --physics-road: #3a3a3a;
+  --physics-road-line: #a3a3a3;
+  --physics-window: #33414d;
 }
 
 .matephis-physics-svg .mp-ink {
@@ -64,6 +70,23 @@
 
 .matephis-physics-svg .mp-body {
   stroke: var(--physics-ink);
+  fill: var(--physics-body);
+}
+
+.matephis-physics-svg .mp-road {
+  stroke: var(--physics-road);
+}
+
+.matephis-physics-svg .mp-road-line {
+  stroke: var(--physics-road-line);
+}
+
+.matephis-physics-svg .mp-window {
+  stroke: var(--physics-ink);
+  fill: var(--physics-window);
+}
+
+.matephis-physics-svg .mp-wheel-hub {
   fill: var(--physics-body);
 }
 
@@ -303,4 +326,16 @@
   height: 3px;
   margin-right: 0.4em;
   vertical-align: middle;
+}
+
+/* "outOfPlane": "note": forces perpendicular to the drawing, listed under it */
+.matephis-physics-note {
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  text-align: center;
+  margin-top: var(--space-xs, 0.5rem);
+}
+
+.matephis-physics-note:empty {
+  display: none;
 }

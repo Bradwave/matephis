@@ -10,6 +10,10 @@ export const scale = (a, k) => ({ x: a.x * k, y: a.y * k, z: (a.z || 0) * k });
 export const dot = (a, b) => a.x * b.x + a.y * b.y;
 export const cross = (a, b) => a.x * b.y - a.y * b.x;
 export const len = (a) => Math.hypot(a.x, a.y);
+/** Length counting z: a force out of the drawing plane (weight seen from above). */
+export const len3 = (a) => Math.hypot(a.x, a.y, a.z || 0);
+/** Points into (−1) or out of (+1) the drawing plane, with nothing in it? 0 otherwise. */
+export const outOfPlane = (a) => (Math.abs(a.z || 0) > 1e-12 && Math.hypot(a.x, a.y) <= 1e-6 * Math.abs(a.z) ? Math.sign(a.z) : 0);
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const angleOf = (a) => Math.atan2(a.y, a.x);
 export const fromAngle = (a, r = 1) => ({ x: r * Math.cos(a), y: r * Math.sin(a), z: 0 });

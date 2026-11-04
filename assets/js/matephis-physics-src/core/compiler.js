@@ -3,7 +3,7 @@
  *   - properties of bodies and vectors beyond x, y, rad, deg:
  *       A.vx, A.vy, A.speed, A.ax, A.ay, A.acc   (bodies, while time runs)
  *       A.angle                                  (radians, bodies and vectors)
- *       F.mag                                    (vectors)
+ *       F.mag, F.z                               (vectors; z: out of the drawing)
  *   - ids with dots, as automatic forces have: "A.N.mag" reads the normal
  *     force on A. They are renamed (A.N -> A__N) before compiling, and the
  *     resolver stores their values under the same name (see aliasId).
@@ -13,7 +13,7 @@ import { ExpressionCompiler } from '../../matephis-plot-src/parser/expression-pa
 /** Kinematic properties, computed from positions over time. */
 export const KIN_PROPS = ['vx', 'vy', 'speed', 'ax', 'ay', 'acc'];
 
-const EXTRA_PROPS = [...KIN_PROPS, 'angle', 'mag'];
+const EXTRA_PROPS = [...KIN_PROPS, 'angle', 'mag', 'z'];
 
 /** Name under which an object's values are stored for expressions. */
 export function aliasId(id) {

@@ -87,7 +87,7 @@ export class Clock {
 
     /** Syncs the slider and the readout with the simulation. */
     update() {
-        const { t, tEnd } = this.sim;
+        const { t, clockEnd: tEnd } = this.sim;
         this.slider.max = tEnd;
         this.slider.value = t;
         this.readout.textContent = `t = ${t.toFixed(2)} s`;
@@ -100,8 +100,8 @@ export class Clock {
     }
 
     play() {
-        if (this.playing || !(this.sim.tEnd > 0)) return;
-        if (this.sim.t >= this.sim.tEnd - 1e-9 && !this.loop) this.sim.seek(0);
+        if (this.playing || !(this.sim.clockEnd > 0)) return;
+        if (this.sim.t >= this.sim.clockEnd - 1e-9 && !this.loop) this.sim.seek(0);
         this.playing = true;
         this.playBtn.innerHTML = MatephisIcons.pause;
         this.playBtn.setAttribute('aria-label', 'Pausa');
@@ -112,7 +112,7 @@ export class Clock {
             if (last !== null) {
                 const dt = Math.min(0.1, (now - last) / 1000) * this.speed * this.dir;
                 let t = this.sim.t + dt;
-                const end = this.sim.tEnd;
+                const end = this.sim.clockEnd;
                 if (t >= end) {
                     if (this.loop === 'bounce') { t = end; this.dir = -1; }
                     else if (this.loop) t = 0;

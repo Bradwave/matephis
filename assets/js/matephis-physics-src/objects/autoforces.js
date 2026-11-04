@@ -13,6 +13,12 @@
  *   T    tension (T1, T2, …)         one per rope attached to the body; a pendulum's string
  *   Fel  elastic force (Fel1, …)     one per spring attached to the body (needs k and rest)
  *
+ * Seen from above ("plane": "horizontal") every body lies on the ground:
+ *   P, N  weight and normal, perpendicular to the drawing (⊗ and ⊙)
+ *   f     friction in the plane: static is the force the motion needs,
+ *         m·a minus the other forces (on a curve, m v²/R towards the centre);
+ *         kinetic is μN against the velocity
+ *
  * These are ordinary force objects, so they are drawn, labelled, decomposed
  * ("vector": "A.P") and hidden like hand-written ones. The body controls them:
  *   "exclude": ["f"]                       leave some out
@@ -35,7 +41,7 @@ export const AUTO_KEYS = ['forces', 'exclude', 'override', 'add', 'friction', 'm
 const LABELS = { P: '\\vec P', N: '\\vec N', f: '\\vec f', T: '\\vec T', Fel: '\\vec F_{el}' };
 const ENVIRONMENT = ['ground', 'ceiling', 'wall', 'slope', 'table'];
 /** Types whose `on` means "rests on" (for vectors it means "acts on"). */
-const RESTING = ['particle', 'block', 'ball', 'cart'];
+const RESTING = ['particle', 'block', 'ball', 'cart', 'car'];
 
 /** Id of the object a point spec refers to, from the configuration only. */
 export function ownerId(v) {
@@ -55,7 +61,8 @@ const numbered = (base, i, n) => (n > 1 ? `${base}${i + 1}` : base);
  * @param {object[]} objects - object configs
  * @returns {object[]} the list with the generated forces inserted
  */
-export function expandAutoForces(objects) {
+export function expandAutoForces(objects, plane = 'vertical') {
+    const top = plane === 'horizontal';
     const byId = new Map(objects.filter(o => o.id).map(o => [o.id, o]));
     const out = [];
     objects.forEach(body => {
@@ -65,7 +72,13 @@ export function expandAutoForces(objects) {
         const list = [];
         list.push({ name: 'P', auto: { kind: 'weight' } });
         if (body.type === 'pendulum') list.push({ name: 'T', auto: { kind: 'string' } });
-        if (body.on !== undefined) {
+        if (top) {
+            list.push({ name: 'N', auto: { kind: 'normal' } });
+            const road = body.follow !== undefined ? byId.get(body.follow) : null;
+            const mu = body.mu !== undefined || (road && road.mu !== undefined);
+            // A car holds the road by friction even without "mu" given
+            if (body.friction !== 'none' && (body.friction || mu || body.type === 'car')) list.push({ name: 'f', auto: { kind: 'friction' } });
+        } else if (body.on !== undefined) {
             list.push({ name: 'N', auto: { kind: 'normal' } });
             const support = byId.get(body.on);
             const mu = body.mu !== undefined || (support && support.mu !== undefined);
@@ -74,7 +87,7 @@ export function expandAutoForces(objects) {
             }
         }
         // Bodies resting on this one push on it
-        objects.filter(o => o.on === id && o.id && RESTING.includes(o.type)).forEach(top => {
+        if (!top) objects.filter(o => o.on === id && o.id && RESTING.includes(o.type)).forEach(top => {
             list.push({ name: `N_${top.id}`, auto: { kind: 'reaction', from: top.id }, label: `\\vec N'_{${top.id}}` });
         });
         const ropes = objects.filter(o => o.type === 'rope' && (ownerId(o.from) === id || ownerId(o.to) === id));
@@ -121,7 +134,7 @@ function otherForces(r, obj) {
         if (o === obj || o.type !== 'force' || o.on !== obj.on) return;
         if (o.__auto && (o.__auto.kind === 'normal' || o.__auto.kind === 'friction')) return;
         const st = r.stateOf(o);
-        if (st) sum = { x: sum.x + st.vec.x, y: sum.y + st.vec.y, z: 0 };
+        if (st) sum = { x: sum.x + st.vec.x, y: sum.y + st.vec.y, z: sum.z + (st.vec.z || 0) };
     });
     return sum;
 }
@@ -140,6 +153,43 @@ function along(word, t) {
 }
 
 /**
+ * Forces on a body seen from above: weight and normal perpendicular to the
+ * drawing, friction in it. Ropes and springs are the same as in a side view.
+ */
+function resolveFromAbove(obj, r, body, bs, a, { m, W, com, where }) {
+    const normal = () => {
+        const nObj = r.objectById(`${obj.on}.N`);
+        const ns = nObj && nObj !== obj ? r.stateOf(nObj) : null;
+        // Nothing accelerates vertically: N balances the vertical forces (the weight, and any push)
+        return ns ? ns.mag : Math.max(0, -otherForces(r, obj).z);
+    };
+    switch (a.kind) {
+        case 'weight':
+            return { pos: com, vec: { x: 0, y: 0, z: -W } };
+        case 'normal':
+            return { pos: com, vec: { x: 0, y: 0, z: normal() } };
+        case 'friction': {
+            const road = body.follow !== undefined ? r.objectById(body.follow) : null;
+            const muSrc = body.mu !== undefined ? body.mu : road && road.mu !== undefined ? road.mu : undefined;
+            const mu = muSrc !== undefined ? r.num(muSrc, `${where} mu`) : 0.3;
+            const k = r.timeline && r.timeline.kin.get(obj.on);
+            if (body.friction === 'kinetic') {
+                // μN against the velocity
+                const v = k ? k.v : null;
+                if (!v || Math.hypot(v.x, v.y) < 1e-9) return { pos: com, vec: { x: 0, y: 0, z: 0 } };
+                return { pos: com, vec: scale(norm(v), -mu * normal()) };
+            }
+            // Static: what the motion needs besides the other forces in the plane, m a − ΣF
+            const acc = k ? k.a : { x: 0, y: 0 };
+            const others = otherForces(r, obj);
+            return { pos: com, vec: { x: m * acc.x - others.x, y: m * acc.y - others.y, z: 0 } };
+        }
+        default:
+            return undefined; // ropes and springs: as in a side view
+    }
+}
+
+/**
  * Point of application and vector (newtons) of an automatic force, or null.
  * @param {object} obj - the generated force config (obj.__auto, obj.on)
  * @param {import('../core/resolver.js').Resolver} r
@@ -154,6 +204,10 @@ export function resolveAutoForce(obj, r) {
     const W = m * g;
     const com = bs.com || bs.pos;
     const where = `force '${obj.id}'`;
+    if (r.config.plane === 'horizontal') {
+        const above = resolveFromAbove(obj, r, body, bs, a, { m, W, com, where });
+        if (above !== undefined) return above;
+    }
 
     switch (a.kind) {
         case 'weight':

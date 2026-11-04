@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 4 (simulazione nel tempo).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale. Viste dall'alto e confronto tra scene arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 5a (scene viste dall'alto e confronto).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene. Più viste della stessa scena, riferimenti in moto, risolutore delle equazioni di Newton e modelli pronti arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -28,6 +28,9 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `objects` | Array | `[]` | Gli oggetti della scena. |
 | `debug` | Boolean | `false` | Mostra id e coordinate degli oggetti e la scala (1 m = N px). |
 | `labelHalo` | Boolean | `true` | Contorno attorno alle formule LaTeX, come quello dei testi semplici; `false` per toglierlo. |
+| `plane` | `"vertical"`/`"horizontal"` | `"vertical"` | `"horizontal"`: la scena è vista dall'alto (vedi «Scene viste dall'alto»). |
+| `outOfPlane` | `"symbols"`/`"hide"`/`"note"` | `"symbols"` | Vettori perpendicolari al disegno: simboli ⊙ ⊗, nascosti, o elencati sotto la scena. |
+| `compare` | Array | | La scena ridisegnata, sbiadita, con altri valori dei parametri (vedi «Confronto»). |
 
 ### Oggetti
 
@@ -58,6 +61,8 @@ Tutte le lunghezze sono in metri, salvo dove è indicato «px».
 | `com` | `of` (id o lista di id, pesati con `mass`) | |
 | `path` | `points`, oppure `arc` `{center, radius, from, to}`, oppure `parametric` `{x, y, t: [t0, t1]}`; `arrow` | `start`, `end`, `point(u)` |
 | `energy` | `of` (corpo o lista), `bars`, `total`, `zero`, `drag`, `unit`, `digits`, `size` | (vedi «Grafici, energia e valori») |
+| `road` | `path` (o le chiavi di `path`), `width` (7), `lanes` (2), `mu` | `start`, `end`, `point(u)` |
+| `car` | come `block`; `size` `[lunghezza, larghezza]` vista dall'alto, `[lunghezza, altezza]` di lato; `wheel` | come `cart` |
 | `label` | `at`, `text`, `anchor`, `size` | |
 
 Opzioni comuni: `id`, `label`, `color`, `fill`, `opacity`, `show` (espressione: l'oggetto compare solo se è vera), `hidden`, `layer`.
@@ -79,6 +84,7 @@ Nelle espressioni `A.x` e `A.y` leggono la posizione di `A`, `A.angle` (radianti
 | Valore | Direzione |
 | :--- | :--- |
 | `"up"`, `"down"`, `"left"`, `"right"` | assi del mondo |
+| `"in"`, `"out"` | perpendicolare al disegno: entra nel foglio (⊗) o esce verso chi guarda (⊙) |
 | `"normal"`, `"-normal"`, `"tangent"`, `"-tangent"` | riferimento del corpo: perpendicolare e parallela alla superficie su cui poggia (`tangent` sale lungo il piano) |
 | `"tangent:F1"` | riferimento di un altro oggetto |
 | `"toward:B"`, `"away:B"` | verso un punto / in direzione opposta |
@@ -182,6 +188,16 @@ Con l'orologio fantasmi e traccia compaiono man mano (`"upTo": "now"`); senza `"
 Le espressioni sono valutate su tutto il moto già calcolato, quindi leggono stato, parametri e valori degli oggetti (`A.speed`, `A.N.mag`). Nelle equazioni del moto (`ode`) invece si usano solo parametri e variabili di stato.
 
 Un oggetto `energy` disegna in un riquadro le barre delle energie di un corpo o di un sistema (`"of": ["A", "B"]`): `K` cinetica, `Ug` potenziale gravitazionale ($mgy$ del centro di massa, rispetto a `zero`), `Uel` elastica (le molle attaccate ai corpi, con `k` e `rest`), `Q` energia persa dall'inizio (attrito, resistenza dell'aria), oppure barre libere `{ "label": "W", "value": "..." }`. `"total": true` aggiunge $E$, la somma di `K`, `Ug` e `Uel` tra quelle mostrate. Tutte le barre hanno la stessa scala, quella del valore più grande nel moto. Con `"drag": "h0"` (un parametro) il livello zero di $U_g$ è una linea tratteggiata che si trascina.
+
+### Scene viste dall'alto
+
+Con `"plane": "horizontal"` le coordinate sono quelle del terreno visto dall'alto e la gravità entra nel foglio. Peso e normale delle forze automatiche sono perpendicolari al disegno (⊗ e ⊙, $N = mg$); l'attrito sta nel piano: quello statico è la forza che serve al moto, $m\vec a$ meno le altre forze (in curva $mv^2/R$ verso il centro), quello dinamico (`"friction": "kinetic"`) è $\mu N$ contro la velocità. Un'automobile ha sempre l'attrito; il valore di $\mu$ viene dalla strada che segue o dal corpo. Che la forza necessaria superi $\mu m g$ si vede confrontando i valori (esempio 30): lo slittamento arriva con il risolutore.
+
+Una strada (`road`) è un percorso con una larghezza e delle corsie. Con `"follow"` un corpo la percorre lungo la linea di mezzo; `"offset"` lo sposta di lato (metri, positivo a sinistra del verso di percorrenza) e `s` si misura lungo la corsia, così la sua derivata è la velocità del corpo. Un'automobile (`car`) vista dall'alto ha `size` `[lunghezza, larghezza]`; nelle scene di lato è disegnata di profilo, su due ruote.
+
+### Confronto
+
+`"compare": [{ "mu": 0 }, { "mu": 0.4, "label": "strada bagnata" }]` ridisegna la scena per ogni gruppo di valori (in unità dello slider), sbiadita e senza etichette, sotto la scena principale e con le sue stesse scale. Con il tempo ogni gruppo ha la sua simulazione e tutte seguono lo stesso orologio, che dura fino alla fine della più lunga. Sotto la scena una riga dice cosa è sbiadito (il testo di `label`, oppure i valori).
 
 ### Gradi e radianti
 
@@ -1278,14 +1294,188 @@ Le forze automatiche si leggono nelle espressioni: `A.N.mag` è il modulo della 
 > }
 > ```
 
-## 30. Avvisi
+## 30. Auto in curva vista dall'alto
+
+Con `"plane": "horizontal"` la scena è vista dall'alto: peso e normale sono perpendicolari al foglio (⊗ entra, ⊙ esce) e l'attrito è la forza centripeta che serve per curvare, $m v^2/R$. Aumentando la velocità o diminuendo $\mu$ la forza necessaria supera $\mu m g$.
+
+```physics
+{
+  "plane": "horizontal",
+  "xlim": [-18, 18], "ylim": [-18, 18], "aspectRatio": "1:1",
+  "params": {
+    "v": { "min": 5, "max": 20, "step": 0.5, "val": 10, "unit": "m/s" },
+    "mu": { "min": 0.2, "max": 1, "step": 0.05, "val": 0.8, "label": "μ" }
+  },
+  "time": { "max": 12, "loop": true },
+  "objects": [
+    { "id": "r", "type": "road", "width": 7, "lanes": 2, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 12 } } },
+    { "type": "particle", "at": [0, 0], "radius": 3 },
+    { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto" },
+    { "type": "velocity", "on": "C", "label": "\\vec v" },
+    { "type": "label", "at": [0, -3], "text": "La macchina sbanda: serve più attrito di μmg", "show": "C.f.mag > mu*1200*g", "color": "red" }
+  ],
+  "readouts": [
+    { "label": "f (necessaria)", "value": "C.f.mag", "unit": "N", "digits": 0 },
+    { "label": "μmg (massima)", "value": "mu*1200*g", "unit": "N", "digits": 0 }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "plane": "horizontal",
+>   "xlim": [-18, 18], "ylim": [-18, 18], "aspectRatio": "1:1",
+>   "params": {
+>     "v": { "min": 5, "max": 20, "step": 0.5, "val": 10, "unit": "m/s" },
+>     "mu": { "min": 0.2, "max": 1, "step": 0.05, "val": 0.8, "label": "μ" }
+>   },
+>   "time": { "max": 12, "loop": true },
+>   "objects": [
+>     { "id": "r", "type": "road", "width": 7, "lanes": 2, "mu": "mu", "path": { "arc": { "center": [0, 0], "radius": 12 } } },
+>     { "type": "particle", "at": [0, 0], "radius": 3 },
+>     { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto" },
+>     { "type": "velocity", "on": "C", "label": "\\vec v" },
+>     { "type": "label", "at": [0, -3], "text": "La macchina sbanda: serve più attrito di μmg", "show": "C.f.mag > mu*1200*g", "color": "red" }
+>   ],
+>   "readouts": [
+>     { "label": "f (necessaria)", "value": "C.f.mag", "unit": "N", "digits": 0 },
+>     { "label": "μmg (massima)", "value": "mu*1200*g", "unit": "N", "digits": 0 }
+>   ]
+> }
+> ```
+
+## 31. Blocco tirato su un tavolo, visto dall'alto
+
+L'attrito statico bilancia la forza $\vec F$ nel piano del tavolo. Con `"outOfPlane": "note"` peso e normale non sono disegnati ma elencati sotto la scena.
+
+```physics
+{
+  "plane": "horizontal", "outOfPlane": "note",
+  "xlim": [0, 8], "ylim": [0, 4.5], "forceScale": 0.12,
+  "params": { "F": { "min": 0, "max": 15, "val": 8, "unit": "N" } },
+  "objects": [
+    { "type": "path", "points": [[0.5, 0.5], [7.5, 0.5], [7.5, 4], [0.5, 4], [0.5, 0.5]], "dash": "2 4" },
+    { "id": "A", "type": "block", "at": [4, 2.2], "size": [1.4, 1], "mass": 2, "mu": 0.5, "forces": "auto",
+      "add": [{ "id": "F", "dir": 30, "mag": "F", "label": "\\vec F" }] }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "plane": "horizontal", "outOfPlane": "note",
+>   "xlim": [0, 8], "ylim": [0, 4.5], "forceScale": 0.12,
+>   "params": { "F": { "min": 0, "max": 15, "val": 8, "unit": "N" } },
+>   "objects": [
+>     { "type": "path", "points": [[0.5, 0.5], [7.5, 0.5], [7.5, 4], [0.5, 4], [0.5, 0.5]], "dash": "2 4" },
+>     { "id": "A", "type": "block", "at": [4, 2.2], "size": [1.4, 1], "mass": 2, "mu": 0.5, "forces": "auto",
+>       "add": [{ "id": "F", "dir": 30, "mag": "F", "label": "\\vec F" }] }
+>   ]
+> }
+> ```
+
+## 32. Confronto: con e senza attrito dell'aria
+
+`"compare"` ridisegna la scena, sbiadita, con altri valori dei parametri e lo stesso orologio: qui la traiettoria senza attrito dell'aria.
+
+```physics
+{
+  "xlim": [0, 22], "ylim": [0, 9],
+  "params": {
+    "v0": { "min": 10, "max": 20, "step": 0.5, "val": 16, "unit": "m/s" },
+    "a": { "min": 20, "max": 70, "val": 50, "unit": "deg", "label": "α" },
+    "c": { "min": 0, "max": 0.03, "step": 0.001, "val": 0.012, "unit": "kg/m", "label": "attrito dell'aria" }
+  },
+  "state": { "x": 0.5, "y": 0.2, "vx": "v0*cos(a)", "vy": "v0*sin(a)" },
+  "ode": { "x": "vx", "y": "vy", "vx": "-c/0.4*vx*sqrt(vx^2 + vy^2)", "vy": "-g - c/0.4*vy*sqrt(vx^2 + vy^2)" },
+  "time": { "max": 4, "stopWhen": "y < 0.2" },
+  "compare": [{ "c": 0, "label": "senza attrito dell'aria" }],
+  "objects": [
+    { "type": "ground", "y": 0 },
+    { "id": "B", "type": "ball", "at": ["x", "y"], "radius": 0.2 },
+    { "type": "trace", "of": "B" },
+    { "type": "velocity", "on": "B", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 22], "ylim": [0, 9],
+>   "params": {
+>     "v0": { "min": 10, "max": 20, "step": 0.5, "val": 16, "unit": "m/s" },
+>     "a": { "min": 20, "max": 70, "val": 50, "unit": "deg", "label": "α" },
+>     "c": { "min": 0, "max": 0.03, "step": 0.001, "val": 0.012, "unit": "kg/m", "label": "attrito dell'aria" }
+>   },
+>   "state": { "x": 0.5, "y": 0.2, "vx": "v0*cos(a)", "vy": "v0*sin(a)" },
+>   "ode": { "x": "vx", "y": "vy", "vx": "-c/0.4*vx*sqrt(vx^2 + vy^2)", "vy": "-g - c/0.4*vy*sqrt(vx^2 + vy^2)" },
+>   "time": { "max": 4, "stopWhen": "y < 0.2" },
+>   "compare": [{ "c": 0, "label": "senza attrito dell'aria" }],
+>   "objects": [
+>     { "type": "ground", "y": 0 },
+>     { "id": "B", "type": "ball", "at": ["x", "y"], "radius": 0.2 },
+>     { "type": "trace", "of": "B" },
+>     { "type": "velocity", "on": "B", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 33. Spazio di frenata: asciutto e bagnato
+
+Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su strada bagnata. Lo spazio di frenata è $v_0^2/(2\mu g)$.
+
+```physics
+{
+  "xlim": [0, 46], "ylim": [0, 8],
+  "params": {
+    "v0": { "min": 10, "max": 18, "step": 1, "val": 15, "unit": "m/s" },
+    "mu": { "min": 0.5, "max": 1, "step": 0.05, "val": 0.8, "label": "μ (asciutto)" }
+  },
+  "state": { "x": 0, "v": "v0" },
+  "ode": { "x": "v", "v": "-mu*g" },
+  "time": { "max": 8, "stopWhen": "v < 0" },
+  "compare": [{ "mu": 0.4, "label": "strada bagnata, μ = 0.4" }],
+  "objects": [
+    { "id": "g", "type": "ground", "from": [0, 1], "to": [46, 1] },
+    { "id": "C", "type": "car", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [4.2, 1.3] },
+    { "type": "velocity", "on": "C", "label": "\\vec v" }
+  ],
+  "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 46], "ylim": [0, 8],
+>   "params": {
+>     "v0": { "min": 10, "max": 18, "step": 1, "val": 15, "unit": "m/s" },
+>     "mu": { "min": 0.5, "max": 1, "step": 0.05, "val": 0.8, "label": "μ (asciutto)" }
+>   },
+>   "state": { "x": 0, "v": "v0" },
+>   "ode": { "x": "v", "v": "-mu*g" },
+>   "time": { "max": 8, "stopWhen": "v < 0" },
+>   "compare": [{ "mu": 0.4, "label": "strada bagnata, μ = 0.4" }],
+>   "objects": [
+>     { "id": "g", "type": "ground", "from": [0, 1], "to": [46, 1] },
+>     { "id": "C", "type": "car", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [4.2, 1.3] },
+>     { "type": "velocity", "on": "C", "label": "\\vec v" }
+>   ],
+>   "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }]
+> }
+> ```
+
+## 34. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
 ```physics
 {
   "xlin": [0, 10],
-  "compare": [],
+  "seed": 42,
   "params": { "theta": { "min": 0, "max": 90, "val": 30 } },
   "objects": [
     { "type": "partcle", "at": [1, 1] },
@@ -1298,7 +1488,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 31. Errore nel JSON
+## 35. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 
