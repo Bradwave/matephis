@@ -395,3 +395,67 @@ describe('Slittamento in curva ("skid": true)', () => {
         expect(Math.hypot(s.resolver.state('C').pos.x, s.resolver.state('C').pos.y)).toBeCloseTo(20, 6);
     });
 });
+
+import { expandScene, mergeScene, PRESETS } from '../assets/js/matephis-physics-src/core/presets.js';
+import { validateConfig } from '../assets/js/matephis-physics-src/core/config.js';
+
+describe('Preset e macro', () => {
+    const expand = (cfg, macros) => {
+        const w = [];
+        return { cfg: expandScene(cfg, macros, (m) => w.push(m)), w };
+    };
+
+    it('la scena scritta vince: chiavi, parametri per nome, oggetti per id', () => {
+        const base = { xlim: [0, 9], params: { m: { min: 0, max: 5, val: 2 } }, objects: [{ id: 'A', type: 'block', mass: 2 }, { id: 'B', type: 'ball' }] };
+        const top = { xlim: [0, 12], params: { m: { val: 4 } }, objects: [{ id: 'A', mass: 5 }, { id: 'B', remove: true }, { type: 'label', text: 'x' }] };
+        const out = mergeScene(base, top);
+        expect(out.xlim).toEqual([0, 12]);
+        expect(out.params.m).toEqual({ min: 0, max: 5, val: 4 });
+        expect(out.objects).toEqual([{ id: 'A', type: 'block', mass: 5 }, { type: 'label', text: 'x' }]);
+    });
+
+    it('nei preset un numero è il valore dello slider, una stringa un\'espressione', () => {
+        const a = expand({ preset: { name: 'atwood', with: { m1: 4 } } }).cfg;
+        expect(a.params.m1.val).toBe(4);
+        const b = expand({ preset: { name: 'atwood', with: { m1: 'M' } } }).cfg;
+        expect(b.params.m1).toBeUndefined();
+        expect(b.objects.find(o => o.id === 'A').mass).toBe('(M)');
+    });
+
+    it('le macro riempiono ${nome} con "with" o con i default, e possono usare preset', () => {
+        const macros = {
+            box: { defaults: { w: 1 }, objects: [{ id: 'K', type: 'block', at: [1, 1], size: ['${w}', '${h}'], label: 'm = ${w} kg' }] },
+            wrap: { use: { macro: 'box', with: { w: 2, h: 3 } }, xlim: [0, 5] },
+        };
+        const { cfg, w } = expand({ use: 'wrap' }, macros);
+        expect(cfg.xlim).toEqual([0, 5]);
+        expect(cfg.objects[0].size).toEqual([2, 3]);
+        expect(cfg.objects[0].label).toBe('m = 2 kg');
+        expect(w).toEqual([]);
+        expect(expand({ use: 'box' }, macros).w[0]).toMatch(/no value for \$\{h\}/);
+    });
+
+    it('avvisa per nomi sconosciuti, preset futuri e macro che si richiamano', () => {
+        expect(expand({ preset: 'atwod' }).w[0]).toMatch(/no preset called 'atwod'/);
+        expect(expand({ preset: 'conical-pendulum' }).w[0]).toMatch(/later phase/);
+        expect(expand({ use: 'nope' }).w[0]).toMatch(/no macro called 'nope'/);
+        expect(expand({ use: 'loop' }, { loop: { use: 'loop' } }).w[0]).toMatch(/levels of macros/);
+    });
+
+    it('ogni preset dà una scena valida e senza avvisi', () => {
+        Object.keys(PRESETS).forEach(name => {
+            const { cfg, w } = expand({ preset: name });
+            expect(w).toEqual([]);
+            const warnings = [...validateConfig(cfg, OBJECT_TYPES)];
+            const s = timed(cfg, Object.fromEntries(Object.entries(cfg.params || {}).map(([k, d]) => [k, d.unit === 'deg' ? d.val * Math.PI / 180 : d.val])));
+            s.at(0.3);
+            expect([name, ...warnings, ...s.warnings]).toEqual([name]);
+        });
+    });
+
+    it('il preset atwood si muove come la macchina di Atwood', () => {
+        const { cfg } = expand({ preset: { name: 'atwood', with: { m1: 3, m2: 2 } } });
+        const s = timed(cfg, { m1: 3, m2: 2 }).at(0.5);
+        expect(s.num('A.ay')).toBeCloseTo(-g / 5, 3);
+    });
+});

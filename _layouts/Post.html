@@ -284,7 +284,9 @@
     <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.4"></script>
     {%- endif -%}
     {%- if page.physics -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=0.8"></script>
+    {%- comment -%} Macros for "use" in physics blocks (_data/physics-macros.json) {%- endcomment -%}
+    <script>window.MatephisPhysicsMacros = {{ site.data["physics-macros"] | jsonify }};</script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=0.9"></script>
     {%- endif -%}
     {%- if page.circuit -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.1"></script>

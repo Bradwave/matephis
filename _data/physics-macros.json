@@ -1,0 +1,12 @@
+{
+  "incline-fbd": {
+    "description": "Blocco su un piano inclinato: forze nascoste dietro un pulsante e diagramma di corpo libero con il suo pulsante.",
+    "defaults": { "alpha": 30, "mu": 0.4, "mass": 2 },
+    "preset": { "name": "incline", "with": { "angle": "${alpha}", "mu": "${mu}", "mass": "${mass}", "decompose": false } },
+    "controls": [{ "type": "reveal", "label": "Mostra forze", "targets": ["A.*"] }],
+    "objects": [
+      { "id": "A", "override": { "*": { "hidden": true } } },
+      { "id": "fbdA", "type": "fbd", "of": "A", "forces": "all", "button": "Mostra corpo libero" }
+    ]
+  }
+}
