@@ -113,6 +113,19 @@
                 ],
                 readouts: [{ label: 'f', value: 'C.f.mag', unit: 'N', digits: 0 }, { label: 'μmg', value: 'mu*1200*g', unit: 'N', digits: 0 }]
             },
+            'Macchina di Atwood (risolta)': {
+                xlim: [0, 6], ylim: [0, 5], magnitudes: 'solve', forceScale: 0.035,
+                params: { m1: { min: 0.5, max: 5, step: 0.1, val: 3, unit: 'kg' }, m2: { min: 0.5, max: 5, step: 0.1, val: 2, unit: 'kg' } },
+                time: { max: 3 },
+                objects: [
+                    { type: 'ground', y: 0.3 },
+                    { id: 'p', type: 'pulley', at: [3, 4.3], radius: 0.4, hangFrom: [3, 4.9] },
+                    { id: 'A', type: 'block', at: [2.6, 2.4], size: [0.6, 0.6], mass: 'm1', label: '$m_1$', forces: 'auto' },
+                    { id: 'B', type: 'block', at: [3.4, 2.4], size: [0.6, 0.6], mass: 'm2', label: '$m_2$', forces: 'auto' },
+                    { type: 'rope', from: 'A.top', to: 'B.top', over: ['p'] }
+                ],
+                readouts: [{ label: 'a', value: 'abs(A.ay)', unit: 'm/s²' }, { label: 'T', value: 'A.T.mag', unit: 'N', digits: 1 }]
+            },
             'Avvisi': {
                 xlin: [0, 10], seed: 42,
                 objects: [{ type: 'partcle', at: [1, 1] }, { type: 'moment', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]

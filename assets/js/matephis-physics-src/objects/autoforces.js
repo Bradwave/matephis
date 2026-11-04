@@ -36,7 +36,7 @@ import { parseRef } from '../core/anchors.js';
 import { massOf } from './shared.js';
 
 /** Body options that control automatic forces (added to every body type's keys). */
-export const AUTO_KEYS = ['forces', 'exclude', 'override', 'add', 'friction', 'moving', 'tendency', 'applyAt', 'mu'];
+export const AUTO_KEYS = ['forces', 'exclude', 'override', 'add', 'friction', 'moving', 'tendency', 'applyAt', 'mu', 'muK', 'magnitudes', 'v0', 'skid'];
 
 const LABELS = { P: '\\vec P', N: '\\vec N', f: '\\vec f', T: '\\vec T', Fel: '\\vec F_{el}' };
 const ENVIRONMENT = ['ground', 'ceiling', 'wall', 'slope', 'table'];
@@ -173,6 +173,14 @@ function resolveFromAbove(obj, r, body, bs, a, { m, W, com, where }) {
             const muSrc = body.mu !== undefined ? body.mu : road && road.mu !== undefined ? road.mu : undefined;
             const mu = muSrc !== undefined ? r.num(muSrc, `${where} mu`) : 0.3;
             const k = r.timeline && r.timeline.kin.get(obj.on);
+            // Skidding: kinetic friction from the moment it lost grip
+            const sk = r.timeline && r.timeline.skids && r.timeline.skids.get(obj.on);
+            if (sk && bs.skidding) {
+                const v = k ? k.v : null;
+                const muK = body.muK !== undefined ? r.num(body.muK, `${where} muK`) : mu;
+                if (!v || Math.hypot(v.x, v.y) < 1e-6) return { pos: com, vec: { x: 0, y: 0, z: 0 } };
+                return { pos: com, vec: scale(norm(v), -muK * normal()) };
+            }
             if (body.friction === 'kinetic') {
                 // μN against the velocity
                 const v = k ? k.v : null;
@@ -207,6 +215,29 @@ export function resolveAutoForce(obj, r) {
     if (r.config.plane === 'horizontal') {
         const above = resolveFromAbove(obj, r, body, bs, a, { m, W, com, where });
         if (above !== undefined) return above;
+    }
+    // "magnitudes": "solve": normal, friction and tensions from Newton's law
+    const sol = r.solution ? r.solution() : null;
+    if (sol) {
+        const id = obj.on;
+        if (a.kind === 'normal' && sol.N.has(id)) {
+            return { pos: applyPoint(body, r, bs, bs.contact), vec: scale(sol.normal.get(id), sol.N.get(id)) };
+        }
+        if (a.kind === 'friction' && sol.f.has(id)) {
+            return { pos: applyPoint(body, r, bs, bs.contact), vec: scale(sol.dir.get(id), sol.f.get(id)) };
+        }
+        if (a.kind === 'tension') {
+            const T = sol.T.has(a.rope) ? sol.T.get(a.rope) : [...sol.T.entries()].find(([rp]) => rp.id !== undefined && rp.id === a.rope.id);
+            const value = Array.isArray(T) ? T[1] : T;
+            if (value !== undefined) {
+                const rs = r.stateOf(a.rope);
+                if (!rs || !rs.points) return null;
+                const pts = rs.points;
+                const at = a.end === 'from' ? pts[0] : pts[pts.length - 1];
+                const next = a.end === 'from' ? pts[1] : pts[pts.length - 2];
+                return { pos: applyPoint(body, r, bs, at), vec: scale(norm(sub(next, at)), value) };
+            }
+        }
     }
 
     switch (a.kind) {
@@ -295,8 +326,13 @@ export function resolveAutoForce(obj, r) {
         }
 
         case 'string': {
-            // Pendulum: along the string towards the pivot, m g cos θ (at rest in that position)
-            return { pos: com, vec: scale(bs.frame.n, W * Math.cos(bs.angle)) };
+            // Pendulum: along the string towards the pivot, m g cos θ (at rest in that position);
+            // solved, m g cos θ + m v²/L with the speed of the bob
+            let T = W * Math.cos(bs.angle);
+            const k = r.timeline && r.timeline.kin.get(obj.on);
+            const solved = (body.magnitudes || r.config.magnitudes) === 'solve';
+            if (solved && k && bs.length > 0) T += m * (k.v.x * k.v.x + k.v.y * k.v.y) / bs.length;
+            return { pos: com, vec: scale(bs.frame.n, T) };
         }
     }
     return null;

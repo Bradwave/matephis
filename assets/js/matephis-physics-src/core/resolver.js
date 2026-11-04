@@ -47,6 +47,9 @@ export class Resolver {
         this.view = { xMin: 0, xMax: 10, yMin: 0, yMax: 5 };
         /** Set by the scene when it has time: current t, kinematics, tracks, ghosts. */
         this.timeline = null;
+        /** With "magnitudes": "solve", set by the simulation: id -> {q, e}, how far it moved bodies */
+        this.drive = null;
+        this.solveNow = null;
     }
 
     /**
@@ -174,6 +177,12 @@ export class Resolver {
         return state;
     }
 
+    /** Forces from Newton's law at the current instant (worked out once, when first asked). */
+    solution() {
+        if (this._solution === undefined) this._solution = this.solveNow ? this.solveNow() : null;
+        return this._solution;
+    }
+
     /** What expressions read of an object: A.x, A.angle, A.speed, F.mag... */
     _values(obj, state) {
         if (state.vec) {
@@ -279,6 +288,15 @@ export class Resolver {
      * stops at the ends.
      */
     _follow(obj, extra, where) {
+        // Skidding (see Simulation._skids): straight on from where it lost grip, slowing down
+        const sk = this.timeline && this.timeline.skids && this.timeline.skids.get(obj.id);
+        const now = sk ? this.num('t', `${where} t`) : 0;
+        if (sk && now > sk.t) {
+            const v0 = len(sk.v), tau = Math.min(now - sk.t, sk.dec > 0 ? v0 / sk.dec : Infinity);
+            const d = v0 * tau - sk.dec * tau * tau / 2;
+            const t = fromAngle(sk.angle);
+            return { pos: add(sk.pos, scale(norm(sk.v), d)), angle: sk.angle, frame: { t, n: perp(t) }, support: null, contact: null, skidding: true };
+        }
         const ps = this.state(obj.follow);
         if (!ps || typeof ps.at !== 'function') {
             this.warn(`${where}: 'follow' must be the id of a path`);
@@ -318,6 +336,9 @@ export class Resolver {
             }
             let u = obj.pos !== undefined ? this.num(obj.pos, `${where} pos`) : 0.5;
             if (obj.posUnit === 'm') u = sup.surfaceLength > 0 ? u / sup.surfaceLength : 0;
+            // Moved along the surface by Newton's law
+            const d = this.drive && this.drive.get(obj.id);
+            if (d && sup.surfaceLength > 0) u += d.q / sup.surfaceLength;
             const s = sup.surface(u);
             const t = rotate(s.tangent, extra), n = rotate(s.normal, extra);
             return { pos: add(s.point, scale(s.normal, lift)), angle: angleOf(t), frame: { t, n }, support: obj.on, contact: s.point };
@@ -326,8 +347,11 @@ export class Resolver {
             this.warn(`${where}: needs 'at' or 'on'`);
             return null;
         }
-        const p = this.point(obj.at, `${where} at`);
+        let p = this.point(obj.at, `${where} at`);
         if (!p) return null;
+        // Moved along its rope by Newton's law
+        const d = this.drive && this.drive.get(obj.id);
+        if (d) p = add(p, scale(d.e, d.q));
         const t = fromAngle(extra);
         return { pos: p, angle: extra, frame: { t, n: perp(t) }, support: null, contact: null };
     }
