@@ -132,6 +132,18 @@
   touch-action: none;
 }
 
+/* Bodies that open their free-body diagram with a click */
+.matephis-physics-svg .mp-clickable,
+.matephis-physics-svg .mp-clickable * {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.matephis-physics-svg .mp-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .matephis-physics-svg.dragging,
 .matephis-physics-svg.dragging .mp-draggable {
   cursor: grabbing;
@@ -366,4 +378,15 @@
   font-size: var(--scale-xs, 0.8rem);
   color: var(--secondary-text);
   text-align: center;
+}
+
+/* Random values: the variant and a button for another one */
+.matephis-physics-variant {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-xs, 0.5rem);
+  font-size: var(--scale-xs, 0.8rem);
+  color: var(--secondary-text);
+  margin-top: var(--space-xs, 0.5rem);
 }

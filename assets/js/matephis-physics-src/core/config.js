@@ -13,13 +13,13 @@ export const ROOT_KEYS = [
     "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
     "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
     "time", "state", "ode", "events", "graphs", "readouts", "outOfPlane", "compare", "magnitudes",
-    "preset", "use", "views", "frames", "frame", "columns", "gap",
+    "preset", "use", "views", "frames", "frame", "columns", "gap", "seed",
 ];
 
 /** Root keys from the spec that later phases implement. */
 export const PLANNED_ROOT_KEYS = [
     "styles",
-    "interactive", "seed",
+    "interactive",
 ];
 
 /** Keys every object accepts. */

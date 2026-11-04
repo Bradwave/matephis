@@ -531,3 +531,64 @@ describe('Viste e sistemi di riferimento', () => {
         expect(s.num('P.speed')).toBeCloseTo(1.2, 4);
     });
 });
+
+import { randomValues, mixSeed } from '../assets/js/matephis-physics-src/core/random.js';
+
+describe('Rifiniture', () => {
+    it('i valori casuali dipendono solo dal seme, stanno nell\'intervallo e sul passo', () => {
+        const params = {
+            m: { min: 1, max: 5, step: 0.5, random: true },
+            a: { min: 0, max: 90, unit: 'deg', step: 5, random: [20, 40] },
+            k: { min: 0, max: 100, random: [10, 20, 50] },
+            fixed: { min: 0, max: 1, val: 0.5 },
+        };
+        const v1 = randomValues(params, 42), v2 = randomValues(params, 42), v3 = randomValues(params, 43);
+        expect(v1).toEqual(v2);
+        expect(Object.keys(v1).sort()).toEqual(['a', 'k', 'm']);
+        expect(v1).not.toEqual(v3);
+        for (let s = 1; s < 200; s++) {
+            const v = randomValues(params, s);
+            expect(v.m).toBeGreaterThanOrEqual(1); expect(v.m).toBeLessThanOrEqual(5);
+            expect((v.m * 2) % 1).toBe(0);
+            expect(v.a).toBeGreaterThanOrEqual(20); expect(v.a).toBeLessThanOrEqual(40); expect(v.a % 5).toBe(0);
+            expect([10, 20, 50]).toContain(v.k);
+        }
+        // Each scene of a page gets its own variant from the address's seed
+        expect(mixSeed(42, 0)).not.toBe(mixSeed(42, 1));
+    });
+
+    it('strada a tratti: rettilineo e curva si raccordano, la corsia ha la sua lunghezza', () => {
+        const s = timed({
+            plane: 'horizontal', time: { max: 6 },
+            objects: [
+                { id: 'r', type: 'road', start: [0, 0], heading: 0, segments: [{ straight: 20 }, { turn: 90, radius: 10 }, { straight: 10 }] },
+                { id: 'C', type: 'car', follow: 'r', s: '10*t', orient: 'tangent', mass: 1000, forces: 'auto' },
+                { id: 'L', type: 'particle', follow: 'r', s: 0, offset: 2 },
+            ],
+            readouts: ['C.speed'],
+        });
+        const road = s.at(0).resolver.state('r');
+        expect(road.length).toBeCloseTo(30 + 5 * Math.PI, 9);
+        // End of the bend: (30, 10), heading up
+        const end = road.at(20 + 5 * Math.PI);
+        expect(end.point.x).toBeCloseTo(30, 9);
+        expect(end.point.y).toBeCloseTo(10, 9);
+        expect(end.tangent.y).toBeCloseTo(1, 9);
+        // In the bend: speed 10, acceleration v²/R towards the centre (20, 10)
+        const s2 = s.at(2.5);
+        expect(s2.num('C.speed')).toBeCloseTo(10, 4);
+        expect(s2.num('C.acc')).toBeCloseTo(10, 2);
+        expect(s2.resolver.state('C.f').mag).toBeCloseTo(1000 * 10, -1);
+        // The lane on the left is 2 m inside the bend: radius 8
+        expect(road.offsetCurve(2).length).toBeCloseTo(30 + 4 * Math.PI, 9);
+        expect(s.at(0).resolver.state('L').pos.y).toBeCloseTo(2, 9);
+    });
+
+    it('vista obliqua: la profondità va in basso a sinistra, dimezzata', () => {
+        const T = viewTransform('oblique', null);
+        const p = T.point({ x: 0, y: 0, z: 2 });
+        expect(p.x).toBeCloseTo(-Math.SQRT1_2, 9);
+        expect(p.y).toBeCloseTo(-Math.SQRT1_2, 9);
+        expect(T.point({ x: 1, y: 2, z: 0 })).toMatchObject({ x: 1, y: 2 });
+    });
+});

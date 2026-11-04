@@ -36,11 +36,12 @@ export class Simulation {
      * @param {object} scene - the MatephisPhysics instance (config, params, compiler, resolver)
      * @param {string[]} names - state variable names
      * @param {object} [opts]
-     * @param {boolean} [opts.graphs=true] - sample the scene's graphs (not for "compare" copies)
+     * @param {number} [opts.graphSlot=0] - where its samples go in the scene's graphs
+     *   (0: the scene; 1, 2...: the "compare" sets)
      */
-    constructor(scene, names, { graphs = true } = {}) {
+    constructor(scene, names, { graphSlot = 0 } = {}) {
         this.scene = scene;
-        this.withGraphs = graphs;
+        this.graphSlot = graphSlot;
         // "magnitudes": "solve": Newton's law moves some bodies (their variables come after the scene's own)
         const solver = new Solver(scene, names);
         this.solver = solver.ids.length ? solver : null;
@@ -182,7 +183,6 @@ export class Simulation {
         this.tEnd = this.run.tEnd;
         if (this.t > this.tEnd) this.t = this.tEnd;
         this._skids(view);
-        this._frames(view);
 
         // Paths of traced bodies and ghost states, from partial resolutions at other times
         this.tracks = new Map();
@@ -201,6 +201,7 @@ export class Simulation {
         }
         this.ghosts = new Map();
         r.objects.filter(o => o.type === 'ghosts' && o.of).forEach(o => this.ghosts.set(o, this._ghosts(o, view)));
+        this._frames(view);
         this._sample(view);
     }
 
@@ -214,14 +215,15 @@ export class Simulation {
      */
     _sample(view) {
         const r = this.scene.resolver;
-        const graphs = this.withGraphs ? this.scene.graphs : null;
+        const graphs = this.scene.graphs || null;
+        const slot = this.graphSlot;
         const energies = r.objects.filter(o => o.type === 'energy');
         const fine = (graphs && graphs.count) || energies.length;
         const n = fine ? Math.min(MAX_SAMPLES, Math.max(BASE_SAMPLES, Math.ceil(this.tEnd * SAMPLES_PER_SECOND))) : BASE_SAMPLES;
         const max = {};
         const energy = new Map(energies.map(o => [o, { E0: NaN, maxPos: 0, maxNeg: 0 }]));
         this.energy = energy;
-        if (graphs) graphs.beginSamples();
+        if (graphs) graphs.beginSamples(slot);
         for (let i = 0; i <= n; i++) {
             const t = this.tEnd * i / n;
             this.setTime(t);
@@ -243,10 +245,10 @@ export class Simulation {
                     e.maxNeg = Math.max(e.maxNeg, -v);
                 });
             });
-            if (graphs) graphs.addSample(t);
+            if (graphs) graphs.addSample(t, slot);
             if (this.tEnd <= 0) break;
         }
-        if (graphs) graphs.endSamples();
+        if (graphs) graphs.endSamples(slot);
         this.maxMag = max;
     }
 
@@ -316,6 +318,20 @@ export class Simulation {
                 if (st) track.push({ t, pos: st.com || st.pos, angle: st.angle || 0 });
             }
             this.frameTracks.set(f.name, track);
+        });
+        // Ghosts seen in a frame carry velocities measured there
+        this.ghostsInFrame = new Map();
+        const ghosts = this.ghosts ? [...this.ghosts.entries()] : [];
+        frames.filter(f => this.frameStarts.has(f.name)).forEach(f => {
+            const m = new Map();
+            ghosts.forEach(([obj, items]) => {
+                m.set(obj, items.map(it => {
+                    if (!it.v && !it.a) return it;
+                    const k = this._kinematics(obj.of, it.t, view, f);
+                    return k ? { ...it, v: k.v, a: k.a } : it;
+                }));
+            });
+            this.ghostsInFrame.set(f.name, m);
         });
     }
 

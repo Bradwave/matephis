@@ -42,6 +42,7 @@ export class Controls {
         this.scene = scene;
         this.active = new Set();
         this.reveals = [];
+        this.syncs = [];
         this.el = document.createElement('div');
         this.el.className = 'matephis-physics-buttons';
         defs.forEach((def, i) => this._button(def, i));
@@ -89,6 +90,7 @@ export class Controls {
         const onV = Number(def.on !== undefined ? def.on : 1), offV = Number(def.off !== undefined ? def.off : 0);
         const sync = () => btn.setAttribute('aria-pressed', String(Math.abs(scene.params[key] / k - onV) < 1e-9));
         sync();
+        this.syncs.push(sync);
         btn.addEventListener('click', () => {
             const on = btn.getAttribute('aria-pressed') !== 'true';
             scene.setParam(key, on ? onV : offV);
@@ -116,6 +118,11 @@ export class Controls {
             scene.requestDraw();
         });
         this.el.appendChild(btn);
+    }
+
+    /** Toggle buttons show their param as it is now (a slider or a drag may have moved it). */
+    update() {
+        this.syncs.forEach(f => f());
     }
 
     /** Is a hidden object revealed by a pressed button? */
