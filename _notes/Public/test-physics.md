@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 5c (risolutore delle equazioni di Newton).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene; il risolutore delle equazioni di Newton, che fa muovere i corpi da soli e calcola tensioni, normali e attriti, e lo slittamento in curva. Più viste della stessa scena, riferimenti in moto e modelli pronti arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 5d (preset e macro).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene; il risolutore delle equazioni di Newton, che fa muovere i corpi da soli e calcola tensioni, normali e attriti, e lo slittamento in curva; preset e macro per scrivere le scene più comuni in una riga. Più viste della stessa scena e riferimenti in moto arrivano nella fase successiva: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -32,6 +32,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `outOfPlane` | `"symbols"`/`"hide"`/`"note"` | `"symbols"` | Vettori perpendicolari al disegno: simboli ⊙ ⊗, nascosti, o elencati sotto la scena. |
 | `compare` | Array | | La scena ridisegnata, sbiadita, con altri valori dei parametri (vedi «Confronto»). |
 | `magnitudes` | `"schematic"`/`"solve"` | `"schematic"` | `"solve"`: i corpi si muovono secondo la seconda legge di Newton (vedi «Risolutore»). Vale anche sul singolo corpo. |
+| `preset` | String/Object | | Una scena pronta: `"atwood"` oppure `{ "name": "incline", "with": {...} }` (vedi «Preset e macro»). |
+| `use` | String/Object/Array | | Una o più macro da `_data/physics-macros.json`: `{ "macro": "incline-fbd", "with": {...} }`. |
 
 ### Oggetti
 
@@ -206,6 +208,24 @@ Con `"magnitudes": "solve"` i corpi con `"forces": "auto"` la cui posizione non 
 Le funi sono inestensibili e tese (una fune che dovrebbe spingere si allenta). A ogni istante il risolutore calcola accelerazioni, tensioni e attrito statico; la normale bilancia le forze perpendicolari alla superficie. Se l'attrito statico necessario supera $\mu_s N$ il corpo scivola e l'attrito diventa dinamico, $\mu_k N$ contro il moto (`mu` è $\mu_s$, `muK` è $\mu_k$, di default uguale). Un corpo che rallenta fino a fermarsi resta fermo se l'attrito statico basta. Le molle si allungano con il moto; le altre forze scritte a mano sul corpo possono dipendere dal tempo. `"v0"` dà la velocità iniziale lungo la direzione di moto. Il moto si ferma quando un corpo arriva alla fine della sua superficie, alla carrucola o al suolo.
 
 Le forze automatiche prendono i valori della soluzione e si leggono nelle espressioni (`A.T.mag`, `A.f.mag`); `A.ax`, `A.ay`, `A.acc` danno l'accelerazione. Per un pendolo la tensione diventa $mg\cos\theta + mv^2/L$. Cosa non è risolto (corpi appoggiati su altri corpi, superfici curve, corpi con più funi senza superficie) resta schematico, con un avviso.
+
+### Preset e macro
+
+`"preset"` costruisce una scena completa; `"with"` ne cambia le opzioni. Un numero è il valore iniziale dello slider che il preset crea; una stringa è un'espressione messa al suo posto, senza slider (`"angle": "alpha"` con un parametro `alpha` della scena).
+
+| Preset | Contenuto | Opzioni di `with` |
+| :--- | :--- | :--- |
+| `incline` | piano inclinato, blocco `A` con forze automatiche, peso scomposto | `angle`, `mu`, `mass`, `pos`, `solve` (il blocco si muove), `v0`, `decompose` |
+| `spring-mass` | molla e blocco con le equazioni del moto, energia, grafico | `k`, `m`, `b` (smorzamento), `x0`, `time`, `energy`, `graph` |
+| `pendulum` | pendolo con l'equazione completa | `length`, `theta0`, `mass`, `smallAngle` (confronto sbiadito), `forces`, `time` |
+| `projectile` | moto parabolico, traccia, velocità con le componenti | `v0`, `angle`, `h`, `components`, `ghosts` |
+| `atwood` | macchina di Atwood risolta | `m1`, `m2` |
+| `table-pulley` | tavolo, carrucola e massa appesa, risolti | `m1`, `m2`, `mu` |
+| `car-curve` | auto in curva vista dall'alto, con slittamento | `v`, `mu`, `radius`, `skid` |
+
+Tutto ciò che il blocco scrive vince sul preset: le chiavi globali lo sostituiscono, i parametri si uniscono per nome (`"params": { "m1": { "max": 10 } }`), gli oggetti per `id` (`{ "id": "A", "mass": 5 }` cambia solo la massa del blocco; `{ "id": "A", "remove": true }` lo toglie); gli altri oggetti si aggiungono. Gli id degli oggetti dei preset si vedono con `"debug": true`.
+
+Le macro sono pezzi di scena scritti nello stesso formato in `_data/physics-macros.json`, con segnaposto `${nome}`: `"use": { "macro": "incline-fbd", "with": { "alpha": 25 } }`. Un segnaposto che occupa tutta la stringa prende il valore così com'è (un numero resta un numero); `"defaults"` nella macro dà i valori che `with` non indica. Una macro può usare preset e altre macro. Il sito mette le macro nella pagina, quindi funzionano anche nel [playground](/playground/).
 
 ### Confronto
 
@@ -1680,7 +1700,79 @@ L'accelerazione serve sia per curvare ($v^2/R$) sia per aumentare la velocità (
 > }
 > ```
 
-## 38. Avvisi
+## 38. Preset: macchina di Atwood in una riga
+
+`"preset"` costruisce una scena completa da un nome: qui la macchina di Atwood risolta, con slider, forze e valori.
+
+```physics
+{ "preset": "atwood" }
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> { "preset": "atwood" }
+> ```
+
+## 39. Preset modificato
+
+`"with"` cambia le opzioni del preset (un numero è il valore iniziale dello slider); gli oggetti scritti nel blocco si uniscono a quelli del preset per `id` (qui il blocco `A` cambia etichetta e dimensioni) oppure si aggiungono.
+
+```physics
+{
+  "preset": { "name": "incline", "with": { "angle": 35, "mu": 0.3, "solve": true, "pos": 0.85 } },
+  "caption": "Il blocco parte fermo in alto e scivola: μ < tan α.",
+  "objects": [
+    { "id": "A", "label": "A", "size": [1, 0.6] },
+    { "type": "velocity", "on": "A", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "preset": { "name": "incline", "with": { "angle": 35, "mu": 0.3, "solve": true, "pos": 0.85 } },
+>   "caption": "Il blocco parte fermo in alto e scivola: μ < tan α.",
+>   "objects": [
+>     { "id": "A", "label": "A", "size": [1, 0.6] },
+>     { "type": "velocity", "on": "A", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 40. Preset: pendolo e piccole oscillazioni
+
+Il pendolo con l'equazione completa e, sbiadito, quello delle piccole oscillazioni $\theta_0\cos(\sqrt{g/L}\,t)$.
+
+```physics
+{
+  "preset": { "name": "pendulum", "with": { "theta0": 70, "smallAngle": true } },
+  "caption": "Sbiadito: l'approssimazione delle piccole oscillazioni, che a 70° anticipa sempre di più."
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "preset": { "name": "pendulum", "with": { "theta0": 70, "smallAngle": true } },
+>   "caption": "Sbiadito: l'approssimazione delle piccole oscillazioni, che a 70° anticipa sempre di più."
+> }
+> ```
+
+## 41. Macro
+
+`"use"` inserisce una macro scritta in `_data/physics-macros.json`, con i valori dei segnaposto `${...}`. La macro `incline-fbd` usa a sua volta il preset `incline` e aggiunge i pulsanti per le forze e il diagramma di corpo libero.
+
+```physics
+{ "use": { "macro": "incline-fbd", "with": { "alpha": 25 } } }
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> { "use": { "macro": "incline-fbd", "with": { "alpha": 25 } } }
+> ```
+
+## 42. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -1700,7 +1792,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 39. Errore nel JSON
+## 43. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

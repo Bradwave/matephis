@@ -126,6 +126,10 @@
                 ],
                 readouts: [{ label: 'a', value: 'abs(A.ay)', unit: 'm/s²' }, { label: 'T', value: 'A.T.mag', unit: 'N', digits: 1 }]
             },
+            'Preset modificato': {
+                preset: { name: 'table-pulley', with: { mu: 0.3, m2: 1.5 } },
+                objects: [{ id: 'A', label: 'A' }, { id: 'B', label: 'B' }]
+            },
             'Avvisi': {
                 xlin: [0, 10], seed: 42,
                 objects: [{ type: 'partcle', at: [1, 1] }, { type: 'moment', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]

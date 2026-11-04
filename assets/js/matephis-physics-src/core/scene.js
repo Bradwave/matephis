@@ -29,6 +29,7 @@ import { Controls, plainLabel } from './controls.js';
 import { Simulation } from './simulation.js';
 import { PhysicsCompiler, kinematicIds } from './compiler.js';
 import { Solver } from './solver.js';
+import { expandScene } from './presets.js';
 import { Readouts } from './readouts.js';
 import { Graphs, graphPosition } from './graphs.js';
 import { Clock } from './clock.js';
@@ -47,7 +48,10 @@ export class MatephisPhysics {
      */
     constructor(container, source, options = {}) {
         this.container = container;
-        this.config = typeof source === 'string' ? JSON.parse(source) : source;
+        // "preset" and "use" (macros) expand into the scene before anything reads it
+        const expandWarnings = [];
+        const macros = MatephisPhysics.macros || (typeof window !== 'undefined' && window.MatephisPhysicsMacros) || {};
+        this.config = expandScene(typeof source === 'string' ? JSON.parse(source) : source, macros, (m) => expandWarnings.push(m));
         this.options = options;
         this.container.innerHTML = "";
         this.container.setAttribute('data-processed', 'true');
@@ -57,6 +61,7 @@ export class MatephisPhysics {
         this.angleUnit = cfg.angleUnit === 'rad' ? 'rad' : 'deg';
         this.params = {};
         this.warnings = [];
+        expandWarnings.forEach(w => this._addWarning(w));
         this._listeners = [];
 
         this.wrapper = document.createElement("div");
