@@ -5,6 +5,7 @@ import { PhysicsCompiler, kinematicIds } from '../assets/js/matephis-physics-src
 import { arcLengthMap } from '../assets/js/matephis-physics-src/core/geometry.js';
 import { energyValues } from '../assets/js/matephis-physics-src/objects/energy.js';
 import { OBJECT_TYPES } from '../assets/js/matephis-physics-src/objects/index.js';
+import { parseFrames, parseViews, viewTransform, transformStates, frameMap } from '../assets/js/matephis-physics-src/core/views.js';
 import { ExpressionCompiler } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
 
 const VIEW = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 };
@@ -33,6 +34,7 @@ function timed(config, params = {}) {
     s.resolver = new Resolver({ objects, types: OBJECT_TYPES, compiler: s.compiler, config, warn: (m) => warnings.push(m) });
     s.compiler.setIds(s.resolver.ids);
     s.kinIds = kinematicIds(config, ids);
+    s.frameDefs = parseFrames(config, (m) => warnings.push(m));
     s.sim = new Simulation(s, stateNames);
     s.at = (t) => {
         s.sim.prepare(VIEW); // computes the run, so t can be set within it
@@ -457,5 +459,75 @@ describe('Preset e macro', () => {
         const { cfg } = expand({ preset: { name: 'atwood', with: { m1: 3, m2: 2 } } });
         const s = timed(cfg, { m1: 3, m2: 2 }).at(0.5);
         expect(s.num('A.ay')).toBeCloseTo(-g / 5, 3);
+    });
+});
+
+describe('Viste e sistemi di riferimento', () => {
+    it('proietta i punti: di lato −z a destra, dall\'alto −z in su', () => {
+        const states = new Map([['P', { pos: { x: 1, y: 2, z: 3 } }], ['F', { pos: { x: 0, y: 0, z: 0 }, vec: { x: 0, y: -5, z: 0 }, mag: 5 }]]);
+        const side = transformStates(states, viewTransform('side', null));
+        expect(side.get('P').pos).toEqual({ x: -3, y: 2, z: 1 });
+        const top = transformStates(states, viewTransform('top', null));
+        expect(top.get('P').pos).toEqual({ x: 1, y: -3, z: 2 });
+        // The weight, seen from above, goes into the drawing
+        expect(top.get('F').vec.z).toBe(-5);
+        expect(top.get('F').outOfPlane).toBe(true);
+        expect(viewTransform('front', null)).toBe(null);
+    });
+
+    it('legge viste e riferimenti e avvisa per gli errori', () => {
+        const w = [];
+        const frames = parseFrames({ frames: { terreno: null, treno: 'T', giostra: { of: 'D', rotate: true, fictitious: true } } }, (m) => w.push(m));
+        expect(frames.treno).toMatchObject({ of: 'T', rotate: false });
+        expect(w[0]).toMatch(/rotating frame are not drawn/);
+        const views = parseViews({ views: [{ view: 'top', frame: 'treno' }, { view: 'back' }, { frame: 'nave' }] }, frames, (m) => w.push(m));
+        expect(views[0]).toMatchObject({ view: 'top', frame: frames.treno });
+        expect(w.join(' ')).toMatch(/not 'back'/);
+        expect(w.join(' ')).toMatch(/no frame called 'nave'/);
+    });
+
+    const train = () => timed({
+        time: { max: 1 },
+        frames: { terreno: null, treno: 'T' },
+        objects: [
+            { id: 'T', type: 'cart', at: ['4*t', 1], size: [3, 1] },
+            { id: 'B', type: 'particle', at: ['4*t', '3 - g*t^2/2'] },
+            { type: 'trace', of: 'B' },
+            { type: 'velocity', on: 'B' },
+        ],
+    });
+
+    it('nel riferimento del treno la pallina lasciata cadere scende in verticale', () => {
+        const s = train().at(0.6);
+        const f = s.frameDefs.treno;
+        const k = s.sim.kinInFrame(f, VIEW).get('B');
+        expect(k.v.x).toBeCloseTo(0, 6);
+        expect(k.v.y).toBeCloseTo(-g * 0.6, 4);
+        // From the ground: the train's speed too
+        expect(s.num('B.vx')).toBeCloseTo(4, 4);
+        // Its trace, seen from the train, is a vertical line where it started
+        const r = s.resolver;
+        const world = r.resolveAll(VIEW);
+        const start = s.sim.frameStarts.get('treno');
+        const now = world.get(r.objectById('T'));
+        const T = viewTransform('front', (t) => frameMap(f, t === null ? { pos: now.pos, angle: 0 } : s.sim.frameAt(f, t), start));
+        const trace = [...transformStates(world, T).entries()].find(([o]) => o.type === 'trace')[1];
+        trace.points.forEach(p => expect(p.x).toBeCloseTo(0, 6));
+        expect(transformStates(world, T).get(r.objectById('T')).pos.x).toBeCloseTo(0, 9);
+    });
+
+    it('in un riferimento che ruota un corpo fermo sulla giostra è fermo', () => {
+        const s = timed({
+            plane: 'horizontal', time: { max: 3 },
+            frames: { giostra: { of: 'D', rotate: true } },
+            objects: [
+                { id: 'D', type: 'disk', at: [0, 0], radius: 2, rotation: '0.8*t' },
+                { id: 'P', type: 'particle', at: ['1.5*cos(0.8*t)', '1.5*sin(0.8*t)'] },
+            ],
+            readouts: ['P.speed'],
+        }).at(1.7);
+        const k = s.sim.kinInFrame(s.frameDefs.giostra, VIEW).get('P');
+        expect(Math.hypot(k.v.x, k.v.y)).toBeLessThan(1e-4);
+        expect(s.num('P.speed')).toBeCloseTo(1.2, 4);
     });
 });

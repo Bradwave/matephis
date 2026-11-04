@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di fisica generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-physics.js`. Per provare una configurazione mentre la scrivi usa il [playground](/playground/).
 
-**Stato: fase 5d (preset e macro).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene; il risolutore delle equazioni di Newton, che fa muovere i corpi da soli e calcola tensioni, normali e attriti, e lo slittamento in curva; preset e macro per scrivere le scene più comuni in una riga. Più viste della stessa scena e riferimenti in moto arrivano nella fase successiva: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 5 completa (viste e sistemi di riferimento).** Oltre alle fondamenta (finestra in metri, griglia e assi, parametri con slider, gradi e radianti) sono disponibili ambiente, corpi, collegamenti, vettori, riferimenti, scomposizioni, angoli e quote, posizionati gli uni rispetto agli altri con gli ancoraggi. In più: forze automatiche, risultante, coppie azione-reazione, diagramma di corpo libero, pulsanti per mostrare le soluzioni e oggetti trascinabili. In più: tempo e simulazione, con moto analitico o equazioni del moto, eventi, diagrammi del moto e traiettorie; moto lungo un percorso; grafici collegati, barre dell'energia e valori in tempo reale; scene viste dall'alto, strade e automobili, vettori perpendicolari al disegno e confronto tra scene; il risolutore delle equazioni di Newton, che fa muovere i corpi da soli e calcola tensioni, normali e attriti, e lo slittamento in curva; preset e macro per scrivere le scene più comuni in una riga; più viste della stessa scena e sistemi di riferimento in moto. Le opzioni previste dal progetto ma non ancora implementate (stili, valori casuali, vista obliqua…) producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -34,6 +34,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `magnitudes` | `"schematic"`/`"solve"` | `"schematic"` | `"solve"`: i corpi si muovono secondo la seconda legge di Newton (vedi «Risolutore»). Vale anche sul singolo corpo. |
 | `preset` | String/Object | | Una scena pronta: `"atwood"` oppure `{ "name": "incline", "with": {...} }` (vedi «Preset e macro»). |
 | `use` | String/Object/Array | | Una o più macro da `_data/physics-macros.json`: `{ "macro": "incline-fbd", "with": {...} }`. |
+| `views` | Array | | Più viste della scena (vedi «Viste e sistemi di riferimento»); `columns`, `gap` per la disposizione. |
+| `frames`, `frame` | Object, String | | Sistemi di riferimento con nome; `frame` è quello iniziale con una sola vista. |
 
 ### Oggetti
 
@@ -226,6 +228,20 @@ Le forze automatiche prendono i valori della soluzione e si leggono nelle espres
 Tutto ciò che il blocco scrive vince sul preset: le chiavi globali lo sostituiscono, i parametri si uniscono per nome (`"params": { "m1": { "max": 10 } }`), gli oggetti per `id` (`{ "id": "A", "mass": 5 }` cambia solo la massa del blocco; `{ "id": "A", "remove": true }` lo toglie); gli altri oggetti si aggiungono. Gli id degli oggetti dei preset si vedono con `"debug": true`.
 
 Le macro sono pezzi di scena scritti nello stesso formato in `_data/physics-macros.json`, con segnaposto `${nome}`: `"use": { "macro": "incline-fbd", "with": { "alpha": 25 } }`. Un segnaposto che occupa tutta la stringa prende il valore così com'è (un numero resta un numero); `"defaults"` nella macro dà i valori che `with` non indica. Una macro può usare preset e altre macro. Il sito mette le macro nella pagina, quindi funzionano anche nel [playground](/playground/).
+
+### Viste e sistemi di riferimento
+
+`"views": [{ "view": "front" }, { "view": "top" }]` disegna la stessa scena più volte, una per vista, con gli stessi parametri, lo stesso orologio e gli stessi valori. Ogni vista accetta `title`, `xlim`, `ylim`, `aspectRatio`, `grid`, `axes`, `frame` e `id`. Le viste stanno affiancate (`"columns"`, di default 2) e una sotto l'altra sugli schermi stretti.
+
+| `view` | A destra | In alto | Si guarda lungo |
+| :--- | :--- | :--- | :--- |
+| `front` | $+x$ | $+y$ | $-z$ |
+| `side` | $-z$ | $+y$ | $-x$ |
+| `top` | $+x$ | $-z$ | $-y$ |
+
+I punti possono avere tre coordinate, `[x, y, z]` (`z` esce dal foglio nella vista di fronte). Un oggetto con `"views": ["top"]` compare solo in quella vista (o nella vista con quell'`id`); le superfici (suolo, piani, tavoli) non si disegnano dall'alto, e gli angoli solo di fronte. Velocità e forze in tre dimensioni si proiettano; quelle perpendicolari alla vista diventano ⊙ o ⊗. Gli oggetti sono pensati per la vista di fronte: dall'alto un blocco mostra la sua profondità (`depth`, di default l'altezza) e le rotazioni nel piano di fronte non si vedono.
+
+`"frames": { "terreno": null, "treno": "T" }` definisce sistemi di riferimento con un nome: `null` è il terreno, un id è il corpo a cui il riferimento è attaccato; `{ "of": "D", "rotate": true }` ruota anche con il corpo, `"fictitious": true` aggiunge a ogni corpo con forze automatiche la forza apparente $-m\vec a$ del riferimento (solo per riferimenti che non ruotano), `"label"` è il nome sul pulsante. Una vista con `"frame": "treno"` tiene fermo il corpo dove era all'inizio e fa muovere il resto; velocità e accelerazioni sono misurate in quel riferimento, tracce e fantasmi sono le posizioni nel riferimento a ogni istante. Con una sola vista, il pulsante `{ "type": "frame-toggle" }` passa da un riferimento all'altro (`"frame"` dice quello iniziale).
 
 ### Confronto
 
@@ -1772,7 +1788,146 @@ Il pendolo con l'equazione completa e, sbiadito, quello delle piccole oscillazio
 > { "use": { "macro": "incline-fbd", "with": { "alpha": 25 } } }
 > ```
 
-## 42. Avvisi
+## 42. Pendolo conico: due viste
+
+`"views"` disegna la stessa scena da più lati: di fronte la pallina oscilla avanti e indietro, dall'alto gira in cerchio. Il peso visto dall'alto entra nel foglio (⊗), mentre la tensione mostra la sua componente orizzontale, la forza centripeta. Le coordinate sono `[x, y, z]`: `z` esce dal foglio nella vista di fronte.
+
+```physics
+{
+  "views": [
+    { "view": "front", "title": "Di fronte", "xlim": [-2.2, 2.2], "ylim": [-2.6, 0.4] },
+    { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] }
+  ],
+  "forceScale": 0.06,
+  "params": {
+    "L": { "min": 1, "max": 2.5, "step": 0.1, "val": 2, "unit": "m" },
+    "th": { "min": 10, "max": 60, "val": 35, "unit": "deg", "label": "θ" }
+  },
+  "time": { "max": "2*pi*sqrt(L*cos(th)/g)", "loop": true },
+  "objects": [
+    { "type": "ceiling", "y": 0, "from": [-0.6, 0], "to": [0.6, 0] },
+    { "id": "O", "type": "particle", "at": [0, 0, 0], "radius": 3 },
+    { "type": "path", "points": [[0, 0, 0], "B"] },
+    { "type": "path", "points": [[0, 0, 0], [0, "-L*cos(th)", 0]], "dash": "3 4", "views": ["front"] },
+    { "id": "B", "type": "ball", "radius": 0.12, "mass": 1,
+      "at": ["L*sin(th)*cos(sqrt(g/(L*cos(th)))*t)", "-L*cos(th)", "-L*sin(th)*sin(sqrt(g/(L*cos(th)))*t)"] },
+    { "type": "trace", "of": "B", "dash": "2 4" },
+    { "id": "P", "type": "force", "on": "B", "dir": "down", "mag": "g", "label": "\\vec P" },
+    { "id": "T", "type": "force", "on": "B", "dir": "toward:O", "mag": "g/cos(th)", "label": "\\vec T" },
+    { "type": "velocity", "on": "B", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "views": [
+>     { "view": "front", "title": "Di fronte", "xlim": [-2.2, 2.2], "ylim": [-2.6, 0.4] },
+>     { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] }
+>   ],
+>   "forceScale": 0.06,
+>   "params": {
+>     "L": { "min": 1, "max": 2.5, "step": 0.1, "val": 2, "unit": "m" },
+>     "th": { "min": 10, "max": 60, "val": 35, "unit": "deg", "label": "θ" }
+>   },
+>   "time": { "max": "2*pi*sqrt(L*cos(th)/g)", "loop": true },
+>   "objects": [
+>     { "type": "ceiling", "y": 0, "from": [-0.6, 0], "to": [0.6, 0] },
+>     { "id": "O", "type": "particle", "at": [0, 0, 0], "radius": 3 },
+>     { "type": "path", "points": [[0, 0, 0], "B"] },
+>     { "type": "path", "points": [[0, 0, 0], [0, "-L*cos(th)", 0]], "dash": "3 4", "views": ["front"] },
+>     { "id": "B", "type": "ball", "radius": 0.12, "mass": 1,
+>       "at": ["L*sin(th)*cos(sqrt(g/(L*cos(th)))*t)", "-L*cos(th)", "-L*sin(th)*sin(sqrt(g/(L*cos(th)))*t)"] },
+>     { "type": "trace", "of": "B", "dash": "2 4" },
+>     { "id": "P", "type": "force", "on": "B", "dir": "down", "mag": "g", "label": "\\vec P" },
+>     { "id": "T", "type": "force", "on": "B", "dir": "toward:O", "mag": "g/cos(th)", "label": "\\vec T" },
+>     { "type": "velocity", "on": "B", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 43. Pallina che cade in un treno: due riferimenti
+
+La stessa caduta vista da terra (una parabola) e dal treno (una caduta verticale). Nel riferimento del treno il treno sta fermo e il terreno scorre; la velocità è misurata nel riferimento della vista.
+
+```physics
+{
+  "frames": { "terreno": null, "treno": { "of": "T", "label": "treno" } },
+  "views": [
+    { "frame": "terreno", "title": "Visto da terra" },
+    { "frame": "treno", "title": "Visto dal treno" }
+  ],
+  "xlim": [0, 10], "ylim": [0, 5],
+  "time": { "max": 0.85 },
+  "objects": [
+    { "type": "ground", "from": [-20, 0.3], "to": [40, 0.3] },
+    { "id": "T", "type": "cart", "at": ["2.5 + 5*t", 1.3], "size": [4, 1.6], "wheel": 0.3 },
+    { "id": "B", "type": "ball", "radius": 0.15, "at": ["3 + 5*t", "4.6 - g*t^2/2"] },
+    { "type": "trace", "of": "B", "dash": "2 4" },
+    { "type": "velocity", "on": "B", "label": "\\vec v" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "frames": { "terreno": null, "treno": { "of": "T", "label": "treno" } },
+>   "views": [
+>     { "frame": "terreno", "title": "Visto da terra" },
+>     { "frame": "treno", "title": "Visto dal treno" }
+>   ],
+>   "xlim": [0, 10], "ylim": [0, 5],
+>   "time": { "max": 0.85 },
+>   "objects": [
+>     { "type": "ground", "from": [-20, 0.3], "to": [40, 0.3] },
+>     { "id": "T", "type": "cart", "at": ["2.5 + 5*t", 1.3], "size": [4, 1.6], "wheel": 0.3 },
+>     { "id": "B", "type": "ball", "radius": 0.15, "at": ["3 + 5*t", "4.6 - g*t^2/2"] },
+>     { "type": "trace", "of": "B", "dash": "2 4" },
+>     { "type": "velocity", "on": "B", "label": "\\vec v" }
+>   ]
+> }
+> ```
+
+## 44. Riferimento accelerato e forza apparente
+
+Una cassa ferma rispetto al terreno, su un camion che accelera (senza attrito). Il pulsante cambia riferimento: dal camion la cassa accelera all'indietro, e con `"fictitious": true` compare la forza apparente $-m\vec a_{camion}$.
+
+```physics
+{
+  "frames": { "terreno": null, "camion": { "of": "C", "fictitious": true } },
+  "controls": [{ "type": "frame-toggle" }],
+  "xlim": [0, 12], "ylim": [0, 4.5], "forceScale": 0.08,
+  "params": { "a": { "min": 0.5, "max": 4, "step": 0.5, "val": 2, "unit": "m/s²" } },
+  "time": { "max": 2 },
+  "objects": [
+    { "type": "ground", "from": [-20, 0.3], "to": [40, 0.3] },
+    { "id": "C", "type": "cart", "at": ["4 + a*t^2/2", 1.3], "size": [6, 1.4], "wheel": 0.35 },
+    { "id": "B", "type": "block", "at": [4, 2.4], "size": [0.9, 0.8], "mass": 2, "forces": "auto", "label": "m" },
+    { "type": "acceleration", "on": "B", "label": "\\vec a" }
+  ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "frames": { "terreno": null, "camion": { "of": "C", "fictitious": true } },
+>   "controls": [{ "type": "frame-toggle" }],
+>   "xlim": [0, 12], "ylim": [0, 4.5], "forceScale": 0.08,
+>   "params": { "a": { "min": 0.5, "max": 4, "step": 0.5, "val": 2, "unit": "m/s²" } },
+>   "time": { "max": 2 },
+>   "objects": [
+>     { "type": "ground", "from": [-20, 0.3], "to": [40, 0.3] },
+>     { "id": "C", "type": "cart", "at": ["4 + a*t^2/2", 1.3], "size": [6, 1.4], "wheel": 0.35 },
+>     { "id": "B", "type": "block", "at": [4, 2.4], "size": [0.9, 0.8], "mass": 2, "forces": "auto", "label": "m" },
+>     { "type": "acceleration", "on": "B", "label": "\\vec a" }
+>   ]
+> }
+> ```
+
+## 45. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -1792,7 +1947,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 43. Errore nel JSON
+## 46. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

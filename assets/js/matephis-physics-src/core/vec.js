@@ -21,9 +21,10 @@ export const fromAngle = (a, r = 1) => ({ x: r * Math.cos(a), y: r * Math.sin(a)
 export const perp = (a) => ({ x: -a.y, y: a.x, z: 0 });
 export const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: (a.z || 0) + ((b.z || 0) - (a.z || 0)) * t });
 
+/** Unit vector (3D: a direction out of the drawing keeps its z). */
 export function norm(a) {
-    const l = len(a);
-    return l > 1e-12 ? { x: a.x / l, y: a.y / l, z: 0 } : { x: 0, y: 0, z: 0 };
+    const l = Math.hypot(a.x, a.y, a.z || 0);
+    return l > 1e-12 ? { x: a.x / l, y: a.y / l, z: (a.z || 0) / l } : { x: 0, y: 0, z: 0 };
 }
 
 export function rotate(a, ang) {

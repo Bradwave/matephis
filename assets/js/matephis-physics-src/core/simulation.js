@@ -17,6 +17,7 @@ import { integrate, stateAt } from './integrator.js';
 import { energyValues, mechanicalEnergy, totalEnergy } from '../objects/energy.js';
 import { Solver } from './solver.js';
 import { massOf } from '../objects/shared.js';
+import { frameMap } from './views.js';
 
 const DEFAULT_DT = 1 / 240;
 const TRACK_DT = 1 / 60;
@@ -181,6 +182,7 @@ export class Simulation {
         this.tEnd = this.run.tEnd;
         if (this.t > this.tEnd) this.t = this.tEnd;
         this._skids(view);
+        this._frames(view);
 
         // Paths of traced bodies and ghost states, from partial resolutions at other times
         this.tracks = new Map();
@@ -294,6 +296,52 @@ export class Simulation {
         r.timeline = { ...this.timeline(), t: 0 };
     }
 
+    /**
+     * Frames attached to bodies (see views.js): where each body is at t = 0,
+     * and its path over the run, for traces and ghosts seen in the frame.
+     */
+    _frames(view) {
+        this.frameStarts = new Map();
+        this.frameTracks = new Map();
+        const frames = Object.values(this.scene.frameDefs || {}).filter(f => f.of);
+        frames.forEach(f => {
+            const s0 = this._statesAt(0, [f.of], view).get(f.of);
+            if (!s0) { this._warn(`frames '${f.name}': no body '${f.of}'`); return; }
+            this.frameStarts.set(f.name, { pos: s0.com || s0.pos, angle: s0.angle || 0 });
+            const n = Math.max(1, Math.ceil(this.tEnd / TRACK_DT));
+            const track = [];
+            for (let i = 0; i <= n; i++) {
+                const t = Math.min(this.tEnd, i * TRACK_DT);
+                const st = this._statesAt(t, [f.of], view).get(f.of);
+                if (st) track.push({ t, pos: st.com || st.pos, angle: st.angle || 0 });
+            }
+            this.frameTracks.set(f.name, track);
+        });
+    }
+
+    /** Where a frame's body was at time t (between samples of its path). */
+    frameAt(frame, t) {
+        const track = this.frameTracks && this.frameTracks.get(frame.name);
+        if (!track || !track.length) return null;
+        const i = Math.min(track.length - 1, Math.max(0, Math.floor(t / TRACK_DT)));
+        const a = track[i], b = track[Math.min(track.length - 1, i + 1)];
+        const u = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 0;
+        const lerp = (x, y) => x + (y - x) * u;
+        return { pos: { x: lerp(a.pos.x, b.pos.x), y: lerp(a.pos.y, b.pos.y), z: lerp(a.pos.z || 0, b.pos.z || 0) }, angle: lerp(a.angle, b.angle) };
+    }
+
+    /** Velocities and accelerations of the bodies that need them, measured in a frame. */
+    kinInFrame(frame, view) {
+        const out = new Map();
+        const t = Math.min(this.t, this.tEnd);
+        this._kinTargets().forEach(id => {
+            const k = this._kinematics(id, t, view, frame);
+            if (k) out.set(id, k);
+        });
+        this.setTime(this.t);
+        return out;
+    }
+
     /** States of some objects at time t (partial resolution; leaves t set). */
     _statesAt(t, ids, view) {
         this.setTime(t);
@@ -304,12 +352,21 @@ export class Simulation {
      * Velocity and acceleration of a body at time t, by central differences
      * (one-sided, still second order, at the start and at the end of the run).
      */
-    _kinematics(id, t, view) {
+    _kinematics(id, t, view, frame = null) {
         const h = Math.min(DIFF_H, this.tEnd / 4);
         if (!(h > 0)) return null;
+        // In a frame: positions as the frame sees them at each instant (relative velocity, and
+        // in a rotating frame the turning too)
+        const start = frame && frame.of ? this.frameStarts && this.frameStarts.get(frame.name) : null;
         const pos = (tt) => {
-            const st = this._statesAt(tt, [id], view).get(id);
-            return st ? (st.com || st.pos) : null;
+            const states = this._statesAt(tt, start ? [id, frame.of] : [id], view);
+            const st = states.get(id);
+            if (!st) return null;
+            const p = st.com || st.pos;
+            if (!start) return p;
+            const fs = states.get(frame.of);
+            const fm = fs && frameMap(frame, { pos: fs.com || fs.pos, angle: fs.angle || 0 }, start);
+            return fm ? fm.point(p) : null;
         };
         // Three instants t0, t0 + h, t0 + 2h around t, and where t is among them
         const t0 = t - h < 0 ? 0 : t + h > this.tEnd ? this.tEnd - 2 * h : t - h;
@@ -318,9 +375,10 @@ export class Simulation {
         const k = (t - t0) / h; // 0, 1 or 2
         // Derivative of the parabola through the three points, at t
         const d = (p, q, r) => ((2 * k - 3) * p - 4 * (k - 1) * q + (2 * k - 1) * r) / (2 * h);
+        const az = a.z || 0, bz = b.z || 0, cz = c.z || 0;
         return {
-            v: { x: d(a.x, b.x, c.x), y: d(a.y, b.y, c.y), z: 0 },
-            a: { x: (a.x - 2 * b.x + c.x) / (h * h), y: (a.y - 2 * b.y + c.y) / (h * h), z: 0 },
+            v: { x: d(a.x, b.x, c.x), y: d(a.y, b.y, c.y), z: d(az, bz, cz) },
+            a: { x: (a.x - 2 * b.x + c.x) / (h * h), y: (a.y - 2 * b.y + c.y) / (h * h), z: (az - 2 * bz + cz) / (h * h) },
         };
     }
 
@@ -337,6 +395,8 @@ export class Simulation {
         r.objects.forEach(o => {
             if ((o.type === 'velocity' || o.type === 'acceleration') && o.on !== undefined && o.dir === undefined && o.vec === undefined) ids.add(o.on);
             if (this.solver && this.solver.ids.includes(o.id)) ids.add(o.id);
+            // A frame's body: its acceleration for fictitious forces
+            Object.values(this.scene.frameDefs || {}).forEach(f => { if (f.of && f.fictitious) ids.add(f.of); });
             if (this.cfg.magnitudes === 'solve' && o.type === 'pendulum' && o.id) ids.add(o.id);
             if (o.type === 'energy') [].concat(o.of).forEach(id => { if (typeof id === 'string' && r.objectById(id)) ids.add(id); });
             // Seen from above, static friction is the force the motion needs

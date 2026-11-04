@@ -82,8 +82,10 @@ const trace = {
         if (!track || track.length < 2) return null;
         const now = untilNow(obj, tl) ? tl.t : tl.tEnd;
         const from = obj.window !== undefined ? now - r.num(obj.window, 'trace window') : -Infinity;
-        const pts = track.filter(s => s.t <= now + 1e-9 && s.t >= from - 1e-9).map(s => s.pos);
-        return pts.length >= 2 ? { pos: pts[pts.length - 1], points: pts } : null;
+        const kept = track.filter(s => s.t <= now + 1e-9 && s.t >= from - 1e-9);
+        const pts = kept.map(s => s.pos);
+        // The times go with the points: seen in a moving frame, each point is where it was then
+        return pts.length >= 2 ? { pos: pts[pts.length - 1], points: pts, times: kept.map(s => s.t) } : null;
     },
     render(obj, st, ctx, g) {
         const color = obj.color ? ctx.color(obj.color) : ctx.ink;

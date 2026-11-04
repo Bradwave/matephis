@@ -6,6 +6,8 @@
  *       "Mostra" turns into "Nascondi" while pressed.
  *   { "type": "toggle", "label": "Attrito", "param": "mu", "on": 0.3, "off": 0 }
  *       switches a param between two values (slider units).
+ *   { "type": "frame-toggle", "label": "Riferimento" }
+ *       switches the frame the scene is seen in, through "frames" in turn.
  * Objects can also bring their own reveal button (a free-body diagram with
  * "button"): those come after the ones in "controls". State resets on reload.
  */
@@ -47,8 +49,12 @@ export class Controls {
 
     _button(def, i) {
         const scene = this.scene;
-        if (!def || (def.type !== 'reveal' && def.type !== 'toggle')) {
-            scene._addWarning(`controls[${i}]: type must be "reveal" or "toggle"`);
+        if (!def || !['reveal', 'toggle', 'frame-toggle'].includes(def.type)) {
+            scene._addWarning(`controls[${i}]: type must be "reveal", "toggle" or "frame-toggle"`);
+            return;
+        }
+        if (def.type === 'frame-toggle') {
+            this._frameButton(def, i);
             return;
         }
         const label = def.label || (def.type === 'reveal' ? 'Mostra' : def.param);
@@ -88,6 +94,28 @@ export class Controls {
             scene.setParam(key, on ? onV : offV);
             sync();
         });
+    }
+
+    /** Switches the frame the scene is seen in, through the names in "frames". */
+    _frameButton(def, i) {
+        const scene = this.scene;
+        const frames = scene.frameDefs ? Object.values(scene.frameDefs) : [];
+        if (frames.length < 2) {
+            scene._addWarning(`controls[${i}]: "frame-toggle" needs at least two frames in "frames"`);
+            return;
+        }
+        if (scene.viewDefs) scene._addWarning(`controls[${i}]: with "views" each view has its own frame; the button is not needed`);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'matephis-physics-button';
+        const text = () => `${def.label || 'Riferimento'}: ${frames[scene.frameIndex].label}`;
+        btn.textContent = text();
+        btn.addEventListener('click', () => {
+            scene.frameIndex = (scene.frameIndex + 1) % frames.length;
+            btn.textContent = text();
+            scene.requestDraw();
+        });
+        this.el.appendChild(btn);
     }
 
     /** Is a hidden object revealed by a pressed button? */
