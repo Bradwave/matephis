@@ -5,7 +5,8 @@
  *
  * A plain string is an expression, shown with itself as the label. Items
  * take "hidden" (revealed by a button, with an "id" or "type:readout" as the
- * target) and "show" like objects do.
+ * target) and "show" like objects do. With "compare", each compared set's
+ * value follows in brackets ("compare": false on an item leaves it out).
  */
 import { KIN_PROPS } from './compiler.js';
 
@@ -55,6 +56,16 @@ export class Readouts {
         }
     }
 
+    /** Values of a "compare" set (the scene is resolved with its params). */
+    collect(set) {
+        const s = this.scene;
+        this.items.forEach(item => {
+            if (item.compare === false) return;
+            if (!item.others) item.others = new Map();
+            item.others.set(set, s._num(item.value, `readout ${item.label !== undefined ? item.label : item.value}`));
+        });
+    }
+
     /** New values, after the scene was resolved at the current time. */
     update() {
         const s = this.scene;
@@ -62,9 +73,13 @@ export class Readouts {
             const shown = s._isShown(item);
             item.span.hidden = !shown;
             if (!shown) return;
-            let v = s._num(item.value, `readout ${item.label !== undefined ? item.label : item.value}`);
-            if (Math.abs(v) < 0.5 * 10 ** -item.digits) v = 0; // no "-0.00"
-            item.valueEl.textContent = isFinite(v) ? `${v.toFixed(item.digits)}${item.unit ? ` ${item.unit}` : ''}` : '–';
+            const v = s._num(item.value, `readout ${item.label !== undefined ? item.label : item.value}`);
+            const fmt = (x) => {
+                if (Math.abs(x) < 0.5 * 10 ** -item.digits) x = 0; // no "-0.00"
+                return isFinite(x) ? `${x.toFixed(item.digits)}${item.unit ? ` ${item.unit}` : ''}` : '–';
+            };
+            const others = item.others ? [...item.others.entries()].map(([set, x]) => `${set.text}: ${fmt(x)}`) : [];
+            item.valueEl.textContent = fmt(v) + (others.length ? ` (${others.join('; ')})` : '');
         });
     }
 }

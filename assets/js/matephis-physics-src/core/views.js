@@ -10,6 +10,7 @@
  *   front  x right, y up (looking along −z): the usual drawing
  *   side   −z right, y up (looking along −x)
  *   top    x right, −z up (looking down, along −y)
+ *   oblique  x right, y up, z drawn down to the left at 45° and halved (cabinet)
  * Objects take [x, y, z] points; "views": ["top"] on an object draws it only
  * there. Surfaces of the environment (ground, slopes...) are not drawn from
  * above unless an object asks for it.
@@ -23,7 +24,9 @@
  */
 import { add, sub, rotate, outOfPlane } from './vec.js';
 
-export const VIEW_NAMES = ['front', 'side', 'top'];
+export const VIEW_NAMES = ['front', 'side', 'top', 'oblique'];
+/** Oblique (cabinet) view: depth drawn at 45°, halved. */
+const OBLIQUE = { angle: Math.PI / 4, k: 0.5 };
 const VIEW_KEYS = ['view', 'id', 'frame', 'title', 'xlim', 'ylim', 'aspectRatio', 'grid', 'axes'];
 const FRAME_KEYS = ['of', 'rotate', 'fictitious', 'label'];
 
@@ -35,6 +38,12 @@ const PROJECT = {
     front: (p) => ({ x: p.x, y: p.y, z: p.z || 0 }),
     side: (p) => ({ x: -(p.z || 0), y: p.y, z: p.x }),
     top: (p) => ({ x: p.x, y: -(p.z || 0), z: p.y }),
+    // Everything in sight: z (towards the viewer) goes down and to the left, so nothing is end-on
+    oblique: (p) => ({
+        x: p.x - OBLIQUE.k * Math.cos(OBLIQUE.angle) * (p.z || 0),
+        y: p.y - OBLIQUE.k * Math.sin(OBLIQUE.angle) * (p.z || 0),
+        z: 0,
+    }),
 };
 
 /** "frames" as { name: { of, rotate, fictitious, label } } (of: null for the ground). */
@@ -69,7 +78,7 @@ export function parseViews(cfg, frames, warn) {
         const d = v && typeof v === 'object' ? v : typeof v === 'string' ? { view: v } : {};
         Object.keys(d).filter(k => !VIEW_KEYS.includes(k)).forEach(k => warn(`views[${i}]: unknown key '${k}'`));
         const view = d.view !== undefined ? d.view : 'front';
-        if (!VIEW_NAMES.includes(view)) warn(`views[${i}]: view must be "front", "side" or "top", not '${view}'`);
+        if (!VIEW_NAMES.includes(view)) warn(`views[${i}]: view must be "front", "side", "top" or "oblique", not '${view}'`);
         if (d.frame !== undefined && !(frames && frames[d.frame])) warn(`views[${i}]: no frame called '${d.frame}' in "frames"`);
         const overrides = {};
         ['xlim', 'ylim', 'aspectRatio', 'grid', 'axes'].forEach(k => { if (d[k] !== undefined) overrides[k] = d[k]; });

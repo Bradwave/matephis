@@ -131,7 +131,7 @@
                 objects: [{ id: 'A', label: 'A' }, { id: 'B', label: 'B' }]
             },
             'Avvisi': {
-                xlin: [0, 10], seed: 42,
+                xlin: [0, 10], styles: {},
                 objects: [{ type: 'partcle', at: [1, 1] }, { type: 'moment', of: 'A' }, { id: 'A', type: 'block', at: [3, 1] }, { type: 'label', at: 'A.tpo', text: '?' }, { type: 'particle', at: [5, 2], raduis: 4 }]
             }
         },

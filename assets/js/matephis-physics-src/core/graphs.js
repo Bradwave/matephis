@@ -14,6 +14,8 @@
  * marks the current instant: a vertical line (graphs over t) and a point on
  * each curve. "progressive": true draws the curves only up to now.
  *
+ * With "compare", the curves of each compared set are drawn too, faded.
+ *
  * "position" places each graph: "below" the scene (default), "right" of it
  * (in a column beside the scene; under it again on narrow screens), or in
  * "tabs" under the scene, one graph at a time.
@@ -173,16 +175,25 @@ export class Graphs {
         buttons.forEach((b, j) => { b.setAttribute('aria-selected', String(j === 0)); b.tabIndex = j === 0 ? 0 : -1; });
     }
 
-    beginSamples() {
-        this.items.forEach(it => { it.ts = []; it.xs = []; it.ys = it.fys.map(() => []); });
+    /** Samples of slot 0 (the scene) or of a "compare" set (1, 2...). */
+    _slot(it, slot) {
+        if (!slot) return it;
+        if (!it.extra) it.extra = [];
+        if (!it.extra[slot]) it.extra[slot] = { ts: [], xs: [], ys: [] };
+        return it.extra[slot];
+    }
+
+    beginSamples(slot = 0) {
+        this.items.forEach(it => { const d = this._slot(it, slot); d.ts = []; d.xs = []; d.ys = it.fys.map(() => []); });
     }
 
     /** Values at one instant of the run (the scene is resolved there). */
-    addSample(t) {
+    addSample(t, slot = 0) {
         this.items.forEach(it => {
-            it.ts.push(t);
-            it.xs.push(it.overTime ? t : it.fx());
-            it.fys.forEach((f, k) => it.ys[k].push(f()));
+            const d = this._slot(it, slot);
+            d.ts.push(t);
+            d.xs.push(it.overTime ? t : it.fx());
+            it.fys.forEach((f, k) => d.ys[k].push(f()));
         });
     }
 
@@ -190,8 +201,11 @@ export class Graphs {
         this.items.forEach(it => {
             const d = it.def;
             const lim = (v, where) => (Array.isArray(v) && v.length === 2 ? v.map(e => this.scene._num(e, `graphs ${where}`)) : null);
-            it.xlim = lim(d.xlim, 'xlim') || (it.overTime ? [0, Math.max(it.ts[it.ts.length - 1] || 0, 1e-6)] : autoRange(it.xs, 0.05));
-            it.ylim = lim(d.ylim, 'ylim') || autoRange(it.ys.flat());
+            // Limits that hold the scene's curves and the compared ones
+            const all = [it, ...(it.extra || []).filter(Boolean)];
+            const tEnd = Math.max(...all.map(s => s.ts[s.ts.length - 1] || 0), 1e-6);
+            it.xlim = lim(d.xlim, 'xlim') || (it.overTime ? [0, tEnd] : autoRange(all.flatMap(s => s.xs), 0.05));
+            it.ylim = lim(d.ylim, 'ylim') || autoRange(all.flatMap(s => s.ys.flat()));
             if (it.plot) it.plot.view = { xMin: it.xlim[0], xMax: it.xlim[1], yMin: it.ylim[0], yMax: it.ylim[1] };
         });
     }
@@ -231,7 +245,17 @@ export class Graphs {
             const colors = listOf(d.colors);
             const upTo = d.progressive === true ? it.ts.findIndex(tt => tt > t + 1e-9) : -1;
             const n = upTo < 0 ? it.ts.length : upTo;
-            const data = it.ys.map((ys, k) => ({
+            // The compared sets first, faded and dashed, under the scene's curves
+            const data = [];
+            (it.extra || []).forEach(ex => {
+                if (!ex) return;
+                const m = d.progressive === true ? ex.ts.filter(tt => tt <= t + 1e-9).length : ex.ts.length;
+                ex.ys.forEach((ys, k) => data.push({
+                    series: ys.slice(0, m).map((y, j) => [ex.xs[j], y]),
+                    color: colors[k] || COLORS[k % COLORS.length], width: 2, opacity: 0.4, dash: '6,4',
+                }));
+            });
+            it.ys.forEach((ys, k) => data.push({
                 series: ys.slice(0, n).map((y, j) => [it.xs[j], y]),
                 color: colors[k] || COLORS[k % COLORS.length], width: 2.5,
             }));

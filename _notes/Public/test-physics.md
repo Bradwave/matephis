@@ -23,7 +23,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di fi
 | `axes` | Boolean/Object | `false` | Assi con frecce. Oggetto: `labels` (`["x (m)", "y (m)"]`), `numbers` (`true` o passo). |
 | `angleUnit` | `"deg"`/`"rad"` | `"deg"` | Unità dei **numeri** scritti nei campi angolo. |
 | `g` | Number | `9.81` | Accelerazione di gravità, usabile in tutte le espressioni. |
-| `params` | Object | | Slider, come nei grafici, più `unit` e `label` (vedi sotto). |
+| `params` | Object | | Slider, come nei grafici, più `unit`, `label` e `random` (vedi sotto). |
+| `seed` | Number | | Seme dei valori casuali: la stessa variante a ogni caricamento. |
 | `animate` | Boolean/Array | | Pulsante play per gli slider, come nei grafici. |
 | `objects` | Array | `[]` | Gli oggetti della scena. |
 | `debug` | Boolean | `false` | Mostra id e coordinate degli oggetti e la scala (1 m = N px). |
@@ -64,7 +65,7 @@ Tutte le lunghezze sono in metri, salvo dove è indicato «px».
 | `angle` | `of` (piano, pendolo) oppure `points: [A, V, B]` oppure `at` + `from` + `to`; `radius` (px), `label`, `showValue` | `vertex` |
 | `dimension` | `from`, `to`, `offset`, `label` (default: la distanza) | `start`, `end`, `center` |
 | `com` | `of` (id o lista di id, pesati con `mass`) | |
-| `path` | `points`, oppure `arc` `{center, radius, from, to}`, oppure `parametric` `{x, y, t: [t0, t1]}`; `arrow` | `start`, `end`, `point(u)` |
+| `path` | `points`, oppure `arc` `{center, radius, from, to}`, oppure `parametric` `{x, y, t: [t0, t1]}`, oppure `segments` (tratti: `{ "straight": L }`, `{ "turn": angolo, "radius": R }`) con `start` e `heading`; `arrow` | `start`, `end`, `point(u)` |
 | `energy` | `of` (corpo o lista), `bars`, `total`, `zero`, `drag`, `unit`, `digits`, `size` | (vedi «Grafici, energia e valori») |
 | `road` | `path` (o le chiavi di `path`), `width` (7), `lanes` (2), `mu` | `start`, `end`, `point(u)` |
 | `car` | come `block`; `size` `[lunghezza, larghezza]` vista dall'alto, `[lunghezza, altezza]` di lato; `wheel` | come `cart` |
@@ -126,7 +127,7 @@ Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.
 | :--- | :--- | :--- |
 | `resultant` | `on`, `kind` (default `force`), `construction: "tip-to-tail"`, `showValue`, `label` | Somma dei vettori sul corpo, dal centro di massa. Se è nulla scrive $\vec R = 0$. |
 | `pairs` | `between: ["A", "B"]` | Colora allo stesso modo le coppie azione e reazione tra due corpi. Per le forze scritte a mano indica chi la esercita con `"by": "B"`. |
-| `fbd` | `of`, `shape` (`true`: disegna il corpo), `size` (px), `label`, `forces`, `button` | Diagramma di corpo libero in un riquadro sotto la scena, con le forze visibili del corpo. `"forces": "all"` mostra anche quelle nascoste nella scena. `"button": true` aggiunge un pulsante «Mostra corpo libero di …» (o con il testo dato) e il riquadro parte nascosto. I riquadri di una scena usano la stessa scala, così le forze restano confrontabili. |
+| `fbd` | `of`, `shape` (`true`: disegna il corpo), `size` (px), `label`, `forces`, `button`, `click`, `scale` | Diagramma di corpo libero in un riquadro sotto la scena, con le forze visibili del corpo. `"forces": "all"` mostra anche quelle nascoste nella scena. `"button": true` aggiunge un pulsante «Mostra corpo libero di …» (o con il testo dato) e il riquadro parte nascosto. Con `"click": true` il riquadro compare e scompare facendo clic sul corpo (o con Invio dalla tastiera). I riquadri di una scena usano la stessa scala, così le forze restano confrontabili; `"scale": "own"` adatta un riquadro da solo. |
 
 ### Pulsanti e trascinamento
 
@@ -238,6 +239,7 @@ Le macro sono pezzi di scena scritti nello stesso formato in `_data/physics-macr
 | `front` | $+x$ | $+y$ | $-z$ |
 | `side` | $-z$ | $+y$ | $-x$ |
 | `top` | $+x$ | $-z$ | $-y$ |
+| `oblique` | $+x$ | $+y$ | $z$ disegnato in basso a sinistra a 45°, dimezzato |
 
 I punti possono avere tre coordinate, `[x, y, z]` (`z` esce dal foglio nella vista di fronte). Un oggetto con `"views": ["top"]` compare solo in quella vista (o nella vista con quell'`id`); le superfici (suolo, piani, tavoli) non si disegnano dall'alto, e gli angoli solo di fronte. Velocità e forze in tre dimensioni si proiettano; quelle perpendicolari alla vista diventano ⊙ o ⊗. Gli oggetti sono pensati per la vista di fronte: dall'alto un blocco mostra la sua profondità (`depth`, di default l'altezza) e le rotazioni nel piano di fronte non si vedono.
 
@@ -245,7 +247,11 @@ I punti possono avere tre coordinate, `[x, y, z]` (`z` esce dal foglio nella vis
 
 ### Confronto
 
-`"compare": [{ "mu": 0 }, { "mu": 0.4, "label": "strada bagnata" }]` ridisegna la scena per ogni gruppo di valori (in unità dello slider), sbiadita e senza etichette, sotto la scena principale e con le sue stesse scale. Con il tempo ogni gruppo ha la sua simulazione e tutte seguono lo stesso orologio, che dura fino alla fine della più lunga. Sotto la scena una riga dice cosa è sbiadito (il testo di `label`, oppure i valori).
+`"compare": [{ "mu": 0 }, { "mu": 0.4, "label": "strada bagnata" }]` ridisegna la scena per ogni gruppo di valori (in unità dello slider), sbiadita e senza etichette, sotto la scena principale e con le sue stesse scale. Con il tempo ogni gruppo ha la sua simulazione e tutte seguono lo stesso orologio, che dura fino alla fine della più lunga. Sotto la scena una riga dice cosa è sbiadito (il testo di `label`, oppure i valori). I grafici disegnano anche le curve dei gruppi confrontati, tratteggiate, e i valori (`readouts`) li aggiungono tra parentesi (`"compare": false` su un valore lo esclude).
+
+### Valori casuali
+
+Un parametro con `"random": true` prende a ogni caricamento un valore a caso tra `min` e `max`, sul passo `step`; `"random": [20, 40]` restringe l'intervallo, `"random": [1, 2, 5]` sceglie tra questi valori. Sotto la scena compaiono il numero della variante e il pulsante «Nuovi valori». `"seed": 42` fissa la variante; `?seed=42` nell'indirizzo della pagina dà a tutti le stesse varianti (diverse per ogni scena della pagina). Valori e forze risolte danno la soluzione, da nascondere dietro un pulsante (esempio 46).
 
 ### Gradi e radianti
 
@@ -1473,7 +1479,7 @@ L'attrito statico bilancia la forza $\vec F$ nel piano del tavolo. Con `"outOfPl
 
 ## 33. Spazio di frenata: asciutto e bagnato
 
-Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su strada bagnata. Lo spazio di frenata è $v_0^2/(2\mu g)$.
+Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su strada bagnata. Lo spazio di frenata è $v_0^2/(2\mu g)$. I valori e il grafico mostrano anche la frenata confrontata, tra parentesi e tratteggiata.
 
 ```physics
 {
@@ -1491,7 +1497,8 @@ Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su stra
     { "id": "C", "type": "car", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [4.2, 1.3] },
     { "type": "velocity", "on": "C", "label": "\\vec v" }
   ],
-  "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }]
+  "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }],
+  "graphs": [{ "y": "v", "label": "Velocità", "axisLabels": ["t (s)", "v (m/s)"] }]
 }
 ```
 
@@ -1512,7 +1519,8 @@ Due frenate con la stessa velocità iniziale: la macchina sbiadita frena su stra
 >     { "id": "C", "type": "car", "on": "g", "pos": "3 + x", "posUnit": "m", "size": [4.2, 1.3] },
 >     { "type": "velocity", "on": "C", "label": "\\vec v" }
 >   ],
->   "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }]
+>   "readouts": [{ "label": "spazio di frenata", "value": "x", "unit": "m", "digits": 1 }, { "label": "v", "value": "v", "unit": "m/s", "digits": 1 }],
+>   "graphs": [{ "y": "v", "label": "Velocità", "axisLabels": ["t (s)", "v (m/s)"] }]
 > }
 > ```
 
@@ -1790,13 +1798,14 @@ Il pendolo con l'equazione completa e, sbiadito, quello delle piccole oscillazio
 
 ## 42. Pendolo conico: due viste
 
-`"views"` disegna la stessa scena da più lati: di fronte la pallina oscilla avanti e indietro, dall'alto gira in cerchio. Il peso visto dall'alto entra nel foglio (⊗), mentre la tensione mostra la sua componente orizzontale, la forza centripeta. Le coordinate sono `[x, y, z]`: `z` esce dal foglio nella vista di fronte.
+`"views"` disegna la stessa scena da più lati: di fronte la pallina oscilla avanti e indietro, dall'alto gira in cerchio, in prospettiva (vista obliqua) si vede il cono. Il peso visto dall'alto entra nel foglio (⊗), mentre la tensione mostra la sua componente orizzontale, la forza centripeta. Le coordinate sono `[x, y, z]`: `z` esce dal foglio nella vista di fronte.
 
 ```physics
 {
   "views": [
     { "view": "front", "title": "Di fronte", "xlim": [-2.2, 2.2], "ylim": [-2.6, 0.4] },
-    { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] }
+    { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] },
+    { "view": "oblique", "title": "In prospettiva", "xlim": [-2.6, 2.2], "ylim": [-3.4, 0.4] }
   ],
   "forceScale": 0.06,
   "params": {
@@ -1824,7 +1833,8 @@ Il pendolo con l'equazione completa e, sbiadito, quello delle piccole oscillazio
 > {
 >   "views": [
 >     { "view": "front", "title": "Di fronte", "xlim": [-2.2, 2.2], "ylim": [-2.6, 0.4] },
->     { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] }
+>     { "view": "top", "title": "Dall'alto", "xlim": [-2.2, 2.2], "ylim": [-2.2, 2.2] },
+>     { "view": "oblique", "title": "In prospettiva", "xlim": [-2.6, 2.2], "ylim": [-3.4, 0.4] }
 >   ],
 >   "forceScale": 0.06,
 >   "params": {
@@ -1927,14 +1937,133 @@ Una cassa ferma rispetto al terreno, su un camion che accelera (senza attrito). 
 > }
 > ```
 
-## 45. Avvisi
+## 45. Strada a tratti: rettilineo, curva, rettilineo
+
+`"segments"` costruisce un percorso o una strada con tratti che si raccordano: `{ "straight": 20 }`, `{ "turn": 90, "radius": 12 }` (a sinistra se l'angolo è positivo). Sui rettilinei l'attrito è zero, in curva vale $mv^2/R$: oltre $\mu m g$ l'auto slitta.
+
+```physics
+{
+  "plane": "horizontal",
+  "xlim": [-4, 46], "ylim": [-4, 28],
+  "params": {
+    "v": { "min": 5, "max": 20, "step": 0.5, "val": 9, "unit": "m/s" },
+    "mu": { "min": 0.3, "max": 1, "step": 0.05, "val": 0.7, "label": "μ" }
+  },
+  "time": { "max": 7 },
+  "objects": [
+    { "id": "r", "type": "road", "width": 7, "mu": "mu", "start": [0, 0], "heading": 0,
+      "segments": [{ "straight": 20 }, { "turn": 90, "radius": 12 }, { "straight": 14 }] },
+    { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto", "skid": true },
+    { "type": "trace", "of": "C", "dash": "2 4" }
+  ],
+  "readouts": [{ "label": "f", "value": "C.f.mag", "unit": "N", "digits": 0 }, { "label": "μmg", "value": "mu*1200*g", "unit": "N", "digits": 0 }]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "plane": "horizontal",
+>   "xlim": [-4, 46], "ylim": [-4, 28],
+>   "params": {
+>     "v": { "min": 5, "max": 20, "step": 0.5, "val": 9, "unit": "m/s" },
+>     "mu": { "min": 0.3, "max": 1, "step": 0.05, "val": 0.7, "label": "μ" }
+>   },
+>   "time": { "max": 7 },
+>   "objects": [
+>     { "id": "r", "type": "road", "width": 7, "mu": "mu", "start": [0, 0], "heading": 0,
+>       "segments": [{ "straight": 20 }, { "turn": 90, "radius": 12 }, { "straight": 14 }] },
+>     { "id": "C", "type": "car", "follow": "r", "s": "v*t", "orient": "tangent", "offset": -1.75, "mass": 1200, "forces": "auto", "skid": true },
+>     { "type": "trace", "of": "C", "dash": "2 4" }
+>   ],
+>   "readouts": [{ "label": "f", "value": "C.f.mag", "unit": "N", "digits": 0 }, { "label": "μmg", "value": "mu*1200*g", "unit": "N", "digits": 0 }]
+> }
+> ```
+
+## 46. Esercizio con valori casuali
+
+I parametri con `"random"` cambiano a ogni caricamento: sotto la scena c'è il numero della variante e un pulsante per averne un'altra. Con `?seed=42` nell'indirizzo tutti vedono le stesse varianti; la soluzione è nascosta dietro un pulsante.
+
+```physics
+{
+  "preset": { "name": "incline", "with": { "decompose": false } },
+  "params": {
+    "angle": { "min": 15, "max": 35, "step": 1, "random": true },
+    "mass": { "min": 1, "max": 6, "step": 0.5, "random": true },
+    "mu": { "val": 0.8 }
+  },
+  "controls": [{ "type": "reveal", "label": "Mostra la soluzione", "targets": ["type:readout"] }],
+  "readouts": [
+    { "label": "N", "value": "A.N.mag", "unit": "N", "digits": 1, "hidden": true },
+    { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1, "hidden": true }
+  ],
+  "caption": "Calcola la normale e l'attrito statico che tengono fermo il blocco."
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "preset": { "name": "incline", "with": { "decompose": false } },
+>   "params": {
+>     "angle": { "min": 15, "max": 35, "step": 1, "random": true },
+>     "mass": { "min": 1, "max": 6, "step": 0.5, "random": true },
+>     "mu": { "val": 0.8 }
+>   },
+>   "controls": [{ "type": "reveal", "label": "Mostra la soluzione", "targets": ["type:readout"] }],
+>   "readouts": [
+>     { "label": "N", "value": "A.N.mag", "unit": "N", "digits": 1, "hidden": true },
+>     { "label": "f", "value": "A.f.mag", "unit": "N", "digits": 1, "hidden": true }
+>   ],
+>   "caption": "Calcola la normale e l'attrito statico che tengono fermo il blocco."
+> }
+> ```
+
+## 47. Diagrammi di corpo libero con un clic
+
+Con `"click": true` il diagramma di corpo libero di un corpo compare e scompare facendo clic sul corpo.
+
+```physics
+{
+  "xlim": [0, 9], "ylim": [0, 4], "forceScale": 0.08,
+  "objects": [
+    { "id": "g", "type": "ground", "y": 0.4 },
+    { "id": "A", "type": "block", "on": "g", "pos": 0.3, "size": [1.6, 1], "mass": 3, "label": "A", "forces": "auto" },
+    { "id": "B", "type": "block", "on": "A", "size": [0.9, 0.7], "mass": 1, "label": "B", "forces": "auto" },
+    { "id": "C", "type": "ball", "on": "g", "pos": 0.75, "radius": 0.5, "mass": 2, "label": "C", "forces": "auto" },
+    { "type": "fbd", "of": "A", "click": true, "label": "A" },
+    { "type": "fbd", "of": "B", "click": true, "label": "B" },
+    { "type": "fbd", "of": "C", "click": true, "label": "C" }
+  ],
+  "caption": "Fai clic su un corpo (o premi Invio dopo averlo raggiunto con Tab) per il suo diagramma di corpo libero."
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 9], "ylim": [0, 4], "forceScale": 0.08,
+>   "objects": [
+>     { "id": "g", "type": "ground", "y": 0.4 },
+>     { "id": "A", "type": "block", "on": "g", "pos": 0.3, "size": [1.6, 1], "mass": 3, "label": "A", "forces": "auto" },
+>     { "id": "B", "type": "block", "on": "A", "size": [0.9, 0.7], "mass": 1, "label": "B", "forces": "auto" },
+>     { "id": "C", "type": "ball", "on": "g", "pos": 0.75, "radius": 0.5, "mass": 2, "label": "C", "forces": "auto" },
+>     { "type": "fbd", "of": "A", "click": true, "label": "A" },
+>     { "type": "fbd", "of": "B", "click": true, "label": "B" },
+>     { "type": "fbd", "of": "C", "click": true, "label": "C" }
+>   ],
+>   "caption": "Fai clic su un corpo (o premi Invio dopo averlo raggiunto con Tab) per il suo diagramma di corpo libero."
+> }
+> ```
+
+## 48. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
 ```physics
 {
   "xlin": [0, 10],
-  "seed": 42,
+  "styles": {},
   "params": { "theta": { "min": 0, "max": 90, "val": 30 } },
   "objects": [
     { "type": "partcle", "at": [1, 1] },
@@ -1947,7 +2076,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 46. Errore nel JSON
+## 49. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

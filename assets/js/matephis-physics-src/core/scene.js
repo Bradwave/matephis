@@ -30,6 +30,7 @@ import { Simulation } from './simulation.js';
 import { PhysicsCompiler, kinematicIds } from './compiler.js';
 import { Solver } from './solver.js';
 import { expandScene } from './presets.js';
+import { randomValues, mixSeed, urlSeed } from './random.js';
 import { parseFrames, parseViews, viewTransform, transformStates, frameMap } from './views.js';
 import { massOf } from '../objects/shared.js';
 import { scale as scaleVec } from './vec.js';
@@ -114,6 +115,7 @@ export class MatephisPhysics {
         this.compiler.setIds(this.resolver.ids);
         this.params.g = DEFAULT_G;
         if (cfg.g !== undefined) this.params.g = this._num(cfg.g, 'g');
+        this._initRandom();
         SliderManager.initValues(cfg.params || {}, this.params, (v, ctx) => this._eval(v, ctx));
         if (timed) this.sim = new Simulation(this, stateNames);
         this._initCompare(timed ? stateNames : null);
@@ -182,15 +184,38 @@ export class MatephisPhysics {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
+        if (this.seed !== undefined) this._initVariantLine();
 
         const draggable = objects.some(o => o.drag !== undefined);
+        // Free-body diagrams that a click on their body shows and hides
+        this._clicked = new Set();
+        if (objects.some(o => o.type === 'fbd' && o.click === true)) {
+            const toggle = (e) => {
+                const g = e.target.closest && e.target.closest('[data-fbd]');
+                if (!g) return false;
+                const fbd = this.resolver.objects[Number(g.getAttribute('data-fbd'))];
+                if (!fbd) return false;
+                if (this._clicked.has(fbd)) this._clicked.delete(fbd); else this._clicked.add(fbd);
+                this.requestDraw();
+                return true;
+            };
+            this._listen(this.svg, 'click', (e) => { if (toggle(e)) e.stopPropagation(); });
+            this._listen(this.svg, 'keydown', (e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && toggle(e)) {
+                    e.preventDefault();
+                    // The body is drawn again: give it the focus back
+                    this._refocus = e.target.closest('[data-fbd]').getAttribute('data-fbd');
+                }
+            });
+        }
         if (draggable) this.dragger = new DragController(this);
 
         this.lightbox = new LightboxBridge(this);
         // A click on a scene you can drag things in must not open the lightbox
         if (!options.noLightbox && !draggable) {
             this.svg.classList.add('zoomable');
-            this.svg.addEventListener('click', () => this.toggleLightbox());
+            // Clicking a body that shows its free-body diagram is not a click on the scene
+            this.svg.addEventListener('click', (e) => { if (!(e.target.closest && e.target.closest('[data-fbd]'))) this.toggleLightbox(); });
         }
 
         if (cfg.caption) {
@@ -327,6 +352,55 @@ export class MatephisPhysics {
         this.viewGrid = grid;
         this._layoutViews(targetWidth);
         this._useViewport(this.viewports[0]);
+    }
+
+    /**
+     * Params with "random" (random.js): their starting values from the seed,
+     * written into the params' "val" before the sliders are made.
+     */
+    _initRandom() {
+        const params = this.config.params || {};
+        const names = Object.keys(params).filter(n => params[n] && params[n].random !== undefined && params[n].random !== false);
+        if (!names.length) {
+            if (this.config.seed !== undefined) this._addWarning('seed: no param has "random"');
+            return;
+        }
+        MatephisPhysics._randomScenes = (MatephisPhysics._randomScenes || 0) + 1;
+        const index = MatephisPhysics._randomScenes - 1;
+        const fromUrl = urlSeed();
+        if (typeof this.config.seed === 'number') this.seed = Math.floor(this.config.seed);
+        else if (fromUrl !== null) this.seed = mixSeed(fromUrl, index) % 100000;
+        else this.seed = 1 + Math.floor(Math.random() * 99999);
+        this._applyRandom();
+    }
+
+    _applyRandom() {
+        const params = this.config.params;
+        const values = randomValues(params, this.seed, (m) => this._addWarning(m));
+        Object.entries(values).forEach(([name, v]) => { params[name] = { ...params[name], val: v }; });
+        return values;
+    }
+
+    /** "Variante 12345" and a button for another one, under the sliders. */
+    _initVariantLine() {
+        const line = document.createElement('div');
+        line.className = 'matephis-physics-variant';
+        const text = document.createElement('span');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'matephis-physics-button';
+        btn.textContent = 'Nuovi valori';
+        const show = () => { text.textContent = `Variante ${this.seed}`; };
+        show();
+        btn.addEventListener('click', () => {
+            this.seed = 1 + Math.floor(Math.random() * 99999);
+            const values = this._applyRandom();
+            Object.entries(values).forEach(([name, v]) => this.setParam(name, v, false));
+            show();
+            this.requestDraw();
+        });
+        line.append(text, btn);
+        this.wrapper.appendChild(line);
     }
 
     /** Config of a view: the scene's, with the view's own limits and look. */
@@ -597,6 +671,7 @@ export class MatephisPhysics {
         }
         if (this.readouts) this.readouts.update();
         if (this.graphs) this.graphs.update();
+        if (this.controls) this.controls.update();
         if (this.config.debug && !this._viewT) this._drawDebug(cs);
 
         if (this._warningsDirty) this._renderWarnings();
@@ -769,8 +844,9 @@ export class MatephisPhysics {
         // A decomposition shortcut follows its vector
         if (obj.__parent && !this._isShown(obj.__parent, ignoreHidden)) return false;
         // An object with its own button starts hidden
-        const hidden = obj.hidden === true || (obj.button !== undefined && obj.button !== false);
-        if (!ignoreHidden && hidden && !(this.controls && this.controls.isRevealed(obj))) return false;
+        const hidden = obj.hidden === true || (obj.button !== undefined && obj.button !== false) || obj.click === true;
+        const revealed = (this.controls && this.controls.isRevealed(obj)) || (this._clicked && this._clicked.has(obj));
+        if (!ignoreHidden && hidden && !revealed) return false;
         if (obj.show === undefined) return true;
         const v = typeof obj.show === 'boolean' ? obj.show : this.resolver.num(obj.show, `${describe(obj)} show`);
         return !!v && !Number.isNaN(v);
@@ -784,6 +860,7 @@ export class MatephisPhysics {
     _initCompare(stateNames) {
         const sets = Array.isArray(this.config.compare) ? this.config.compare : [];
         const defs = this.config.params || {};
+        let slot = 0;
         this.compareSets = sets.map((set, i) => {
             if (!set || typeof set !== 'object') {
                 this._addWarning(`compare[${i}]: a set of params, like { "mu": 0 }`);
@@ -798,7 +875,8 @@ export class MatephisPhysics {
                 const unit = d.unit === 'deg' ? '°' : d.unit ? ` ${d.unit}` : '';
                 return `${d.label || k} = ${v}${unit}`;
             }).join(', ');
-            return { values, text, sim: stateNames ? new Simulation(this, stateNames, { graphs: false }) : null };
+            slot += 1;
+            return { values, text, sim: stateNames ? new Simulation(this, stateNames, { graphSlot: slot }) : null };
         }).filter(Boolean);
         if (!this.compareSets.length) return;
         this.compareEl = document.createElement('div');
@@ -837,6 +915,8 @@ export class MatephisPhysics {
                 }
                 const states = r.resolveAll(view);
                 r.scales = scales;
+                // The readouts of this set, at its own state
+                if (this.readouts) this.readouts.collect(c);
                 const g = this._svg('g', { opacity: 0.35 }, this.compareGroup);
                 r.objects.forEach(obj => {
                     const def = OBJECT_TYPES[obj.type];
@@ -874,7 +954,11 @@ export class MatephisPhysics {
             this.sim.prepare(view);
             r.timeline = this.sim.timeline();
             // In a frame: velocities and accelerations measured there (forces do not change)
-            if (frame && frame.of && this.sim.frameStarts) r.timeline.kinView = this.sim.kinInFrame(frame, view);
+            if (frame && frame.of && this.sim.frameStarts) {
+                r.timeline.kinView = this.sim.kinInFrame(frame, view);
+                const gf = this.sim.ghostsInFrame && this.sim.ghostsInFrame.get(frame.name);
+                if (gf) r.timeline.ghosts = gf;
+            }
             if (this.clock) this.clock.update();
         }
         const world = r.resolveAll({ xMin: cs.xMin, xMax: cs.xMax, yMin: cs.yMin, yMax: cs.yMax });
@@ -925,6 +1009,12 @@ export class MatephisPhysics {
             const a = obj.tail === 'tip' ? { x: st.pos.x - w.x, y: st.pos.y - w.y } : st.pos;
             segs.push({ key: obj, a, b: { x: a.x + w.x, y: a.y + w.y } });
         });
+        // Apparent forces of the frame, so they do not lie on top of the others
+        const fict = frame && frame.fictitious && !frame.rotate ? this._fictitiousForces(states, frame, T) : [];
+        fict.forEach(f => {
+            const k = r.scales.force;
+            segs.push({ key: f, a: f.pos, b: { x: f.pos.x + f.vec.x * k, y: f.pos.y + f.vec.y * k } });
+        });
         const offsets = collinearOffsets(segs, this.pxPerMetre);
         ctx.vectorOffset = (obj) => offsets.get(obj) || 0;
         const panels = [];
@@ -947,13 +1037,27 @@ export class MatephisPhysics {
                 g.setAttribute('data-drag', index);
                 g.classList.add('mp-draggable');
             }
+            // A body whose free-body diagram opens with a click (fbd with "click": true)
+            const fbd = main && obj.id !== undefined ? r.objects.find(o => o.type === 'fbd' && o.click === true && o.of === obj.id) : null;
+            if (fbd) {
+                g.setAttribute('data-fbd', r.objects.indexOf(fbd));
+                g.classList.add('mp-clickable');
+                g.setAttribute('tabindex', '0');
+                g.setAttribute('role', 'button');
+                g.setAttribute('aria-pressed', String(!!(this._clicked && this._clicked.has(fbd))));
+                g.setAttribute('aria-label', `Corpo libero di ${plainLabel(obj.label !== undefined ? obj.label : obj.id)}`);
+                if (this._refocus === g.getAttribute('data-fbd')) {
+                    this._refocus = null;
+                    g.focus({ preventScroll: true });
+                }
+            }
             try {
                 def.render(obj, state, ctx, g);
             } catch (e) {
                 this._addWarning(`${describe(obj)}: ${e.message}`);
             }
         });
-        if (frame && frame.fictitious && !frame.rotate) this._drawFictitious(ctx, states, frame, T);
+        if (fict.length) this._drawFictitious(ctx, fict);
         // Panels sit outside the views: once, from the main one
         if (!main) return;
         this.panelHost.textContent = '';
@@ -974,25 +1078,37 @@ export class MatephisPhysics {
             const span = Math.max(box.x1 - box.x0, box.y1 - box.y0);
             return span > 0 ? room / span : Infinity;
         });
-        let k = Math.min(...fits);
+        // "scale": "own" fits a panel by itself (its forces are not compared with the others')
+        const shared = fits.filter((f, i) => fbds[i][0].scale !== 'own');
+        let k = shared.length ? Math.min(...shared) : Infinity;
         if (!isFinite(k)) k = this.pxPerMetre;
-        fbds.forEach(([obj, st]) => this._drawFreeBody(obj, st, ctx, k));
+        fbds.forEach(([obj, st], i) => this._drawFreeBody(obj, st, ctx, obj.scale === 'own' && isFinite(fits[i]) ? fits[i] : k));
     }
 
     /**
      * In an accelerating (not rotating) frame: −m a of the frame on each body
-     * with automatic forces, dashed, labelled as an apparent force.
+     * with automatic forces, as {pos, vec} in the view's coordinates.
      */
-    _drawFictitious(ctx, states, frame, T) {
+    _fictitiousForces(states, frame, T) {
         const r = this.resolver;
         const k = r.timeline && r.timeline.kin.get(frame.of);
-        if (!k || Math.hypot(k.a.x, k.a.y, k.a.z || 0) < 1e-9) return;
-        const g = this._svg('g', { class: 'matephis-physics-fictitious' }, this.layerGroups.annotations);
-        r.objects.filter(o => o.forces === 'auto' && o.id !== frame.of).forEach(o => {
+        if (!k || Math.hypot(k.a.x, k.a.y, k.a.z || 0) < 1e-9) return [];
+        return r.objects.filter(o => o.forces === 'auto' && o.id !== frame.of).map(o => {
             const st = states.get(o);
-            if (!st || !this._isShown(o) || !this._inView(o)) return;
+            if (!st || !this._isShown(o) || !this._inView(o)) return null;
             const F = scaleVec(k.a, -massOf(o, r));
-            drawVector(ctx, st.com || st.pos, T ? T.vec(F) : F, r.scales.force, {
+            return { pos: st.com || st.pos, vec: T ? T.vec(F) : F };
+        }).filter(Boolean);
+    }
+
+    /** The apparent forces: dashed, labelled, in the lanes worked out with the other vectors. */
+    _drawFictitious(ctx, forces) {
+        const g = this._svg('g', { class: 'matephis-physics-fictitious' }, this.layerGroups.annotations);
+        forces.forEach(f => {
+            const off = ctx.vectorOffset ? ctx.vectorOffset(f) : 0;
+            const n = Math.hypot(f.vec.x, f.vec.y) || 1;
+            const pos = off ? { ...f.pos, x: f.pos.x - f.vec.y / n * off / this.pxPerMetre, y: f.pos.y + f.vec.x / n * off / this.pxPerMetre } : f.pos;
+            drawVector(ctx, pos, f.vec, this.resolver.scales.force, {
                 color: this._kindColor('force'), head: 'filled', width: 2, dash: '6 4', label: '\\vec F_{app}',
             }, g);
         });

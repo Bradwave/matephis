@@ -31,7 +31,7 @@ function offsetPolyline(points, d, closed) {
 }
 
 const road = {
-    keys: ['path', 'points', 'arc', 'parametric', 'samples', 'width', 'lanes', 'mu'],
+    keys: ['path', 'points', 'arc', 'parametric', 'segments', 'start', 'heading', 'samples', 'width', 'lanes', 'mu'],
     layer: 'environment',
     anchorNames: ['start', 'end', 'point(u)'],
     resolve(obj, r) {

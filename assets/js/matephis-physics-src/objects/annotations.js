@@ -472,6 +472,77 @@ const com = {
  *   "parametric": { "x": "...", "y": "...", "t": [t0, t1] }
  */
 /**
+ * Pieces that follow on from one another, as a car drives:
+ *   "start": [0, 0], "heading": 0,
+ *   "segments": [{ "straight": 20 }, { "turn": 90, "radius": 12 }, { "straight": 10 }]
+ * A turn is to the left for a positive angle. `build(d)` gives the pieces of
+ * the line d to the left (a lane): straights move sideways, turns change
+ * radius. Each piece is exact, so a body following them has the right
+ * velocity and acceleration.
+ */
+function segmentPath(obj, r, where) {
+    const start = obj.start !== undefined ? r.point(obj.start, `${where} start`) : { x: 0, y: 0, z: 0 };
+    const h0 = obj.heading !== undefined ? r.angle(obj.heading, `${where} heading`) : 0;
+    if (!start || !isFinite(h0)) return null;
+    const specs = [];
+    for (const [i, seg] of obj.segments.entries()) {
+        if (seg && seg.straight !== undefined) {
+            const L = r.num(seg.straight, `${where} segments[${i}] straight`);
+            if (!(L > 0)) { r.warn(`${where} segments[${i}]: "straight" must be a positive length`); return null; }
+            specs.push({ kind: 'line', L });
+        } else if (seg && seg.turn !== undefined) {
+            const ang = r.angle(seg.turn, `${where} segments[${i}] turn`);
+            const R = seg.radius !== undefined ? r.num(seg.radius, `${where} segments[${i}] radius`) : NaN;
+            if (!isFinite(ang) || ang === 0 || !(R > 0)) { r.warn(`${where} segments[${i}]: a turn needs an angle and a positive "radius"`); return null; }
+            specs.push({ kind: 'arc', ang, R });
+        } else {
+            r.warn(`${where} segments[${i}]: { "straight": length } or { "turn": angle, "radius": r }`);
+            return null;
+        }
+    }
+    const build = (d) => {
+        let P = add(start, scale(perp(fromAngle(h0)), d)), heading = h0, s0 = 0;
+        const pieces = [];
+        for (const sp of specs) {
+            const dir = fromAngle(heading);
+            if (sp.kind === 'line') {
+                pieces.push({ kind: 'line', P, dir, L: sp.L, s0 });
+                P = add(P, scale(dir, sp.L));
+                s0 += sp.L;
+            } else {
+                const sign = Math.sign(sp.ang);
+                const Rd = sp.R - sign * d;
+                if (!(Rd > 0)) return null;
+                const c = add(P, scale(perp(dir), sign * Rd));
+                const a0 = heading - sign * Math.PI / 2;
+                const L = Rd * Math.abs(sp.ang);
+                pieces.push({ kind: 'arc', c, R: Rd, a0, sign, L, s0 });
+                heading += sp.ang;
+                P = add(c, fromAngle(a0 + sp.ang, Rd));
+                s0 += L;
+            }
+        }
+        const at = (sv) => {
+            const pc = pieces.find(q => sv <= q.s0 + q.L) || pieces[pieces.length - 1];
+            const u = Math.min(Math.max(sv - pc.s0, 0), pc.L);
+            if (pc.kind === 'line') return { point: add(pc.P, scale(pc.dir, u)), tangent: pc.dir };
+            const a = pc.a0 + pc.sign * u / pc.R;
+            return { point: add(pc.c, fromAngle(a, pc.R)), tangent: fromAngle(a + pc.sign * Math.PI / 2) };
+        };
+        return { pieces, at, length: s0 };
+    };
+    const centre = build(0);
+    if (!centre) return null;
+    // Points to draw: the ends of straights, turns every 3°
+    const points = [centre.at(0).point];
+    centre.pieces.forEach(pc => {
+        const n = pc.kind === 'line' ? 1 : Math.max(2, Math.ceil(pc.L / pc.R / (Math.PI / 60)));
+        for (let k = 1; k <= n; k++) points.push(centre.at(pc.s0 + pc.L * k / n).point);
+    });
+    return { points, at: centre.at, length: centre.length, offset: (d) => build(d) };
+}
+
+/**
  * Geometry of a path from "points", "arc" or "parametric" (also a road's):
  * the drawn points, the length, and at(s), point and tangent at distance s
  * from the start (exact for arcs and parametric curves). Null if it cannot
@@ -531,8 +602,15 @@ export function pathGeometry(obj, r, where = `path${obj.id ? ` '${obj.id}'` : ''
             r.warn(`${where} parametric: ${e.message}`);
             return null;
         }
+    } else if (Array.isArray(obj.segments)) {
+        const sp = segmentPath(obj, r, where);
+        if (!sp) return null;
+        pts = sp.points;
+        at = sp.at;
+        exactLength = sp.length;
+        offset = sp.offset;
     } else {
-        r.warn(`${where}: needs 'points', 'arc' or 'parametric'`);
+        r.warn(`${where}: needs 'points', 'arc', 'parametric' or 'segments'`);
         return null;
     }
     if (pts.length < 2) return null;
@@ -564,7 +642,7 @@ export function pathGeometry(obj, r, where = `path${obj.id ? ` '${obj.id}'` : ''
 }
 
 const path = {
-    keys: ['points', 'arc', 'parametric', 'samples', 'arrow', 'width'],
+    keys: ['points', 'arc', 'parametric', 'segments', 'start', 'heading', 'samples', 'arrow', 'width'],
     layer: 'connections',
     anchorNames: ['start', 'end', 'point(u)'],
     resolve(obj, r) {
@@ -703,7 +781,7 @@ function sourceOf(o, r) {
  * text) adds a button that shows and hides the panel, which starts hidden.
  */
 const fbd = {
-    keys: ['of', 'shape', 'size', 'kind', 'forces', 'button'],
+    keys: ['of', 'shape', 'size', 'kind', 'forces', 'button', 'scale', 'click'],
     layer: 'annotations',
     anchorNames: [],
     panel: true,
