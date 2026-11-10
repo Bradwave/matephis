@@ -144,11 +144,12 @@ const energy = {
         const barW = 30, gap = 18, padX = 18;
         const W = Math.max(150, padX * 2 + n * barW + (n - 1) * gap);
         const H = obj.size !== undefined ? r.num(obj.size, 'energy size') : PANEL_H;
-        const top = 24, bottom = 30;
         const values = bars.map(b => b.value).filter(isFinite);
         // The range of the whole run, so bars keep one scale while time runs
         const up = Math.max(st.maxPos || 0, ...values, 0);
         const down = Math.max(st.maxNeg || 0, ...values.map(v => -v), 0);
+        // Room under the lowest negative bar for its value, above the names
+        const top = 24, bottom = down > 1e-9 ? 46 : 30;
         const k = (H - top - bottom) / Math.max(up + down, 1e-9);
         const base = top + up * k;
 
@@ -159,6 +160,8 @@ const energy = {
             class: 'matephis-plot-svg matephis-physics-svg', role: 'img', 'aria-label': 'Grafico a barre delle energie',
         });
         svg.style.fontFamily = 'var(--font-plot, monospace)';
+        // Its own size: a long caption must not stretch the chart
+        svg.style.width = `${W}px`;
         panel.appendChild(svg);
         host.appendChild(panel);
         const g = createSvgElement('g', {});
