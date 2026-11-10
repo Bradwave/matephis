@@ -190,6 +190,7 @@ Con l'orologio fantasmi e traccia compaiono man mano (`"upTo": "now"`); senza `"
 | `colors` | | colori delle curve |
 | `position` | `"below"` | `"below"` sotto la scena; `"right"` a destra (sotto di nuovo se lo schermo è stretto); `"tabs"` sotto la scena in schede, un grafico alla volta (il titolo è il nome della scheda) |
 | `plot` | | altre opzioni del motore dei grafici, passate così come sono |
+| `fill` | | area tra una curva e l'asse dei tempi (l'impulso sotto $F(t)$, lo spostamento sotto $v(t)$): `true`, oppure `{ "curve": 0, "from", "to", "upTo": "now", "color", "opacity", "hatch", "signed" }` o una lista; con `"upTo": "now"` l'area si ferma all'istante attuale e cresce mentre il tempo scorre |
 
 Le espressioni sono valutate su tutto il moto già calcolato, quindi leggono stato, parametri e valori degli oggetti (`A.speed`, `A.N.mag`). Nelle equazioni del moto (`ode`) invece si usano solo parametri e variabili di stato.
 
@@ -2056,7 +2057,46 @@ Con `"click": true` il diagramma di corpo libero di un corpo compare e scompare 
 > }
 > ```
 
-## 48. Avvisi
+## 48. Impulso: area che cresce nel tempo
+
+Una spinta che dura poco agisce sul carrello. Con `"fill": { "upTo": "now" }` l'area sotto $F(t)$ si colora fino all'istante attuale: è l'impulso, che lo stato `J` integra insieme al moto e che coincide con la quantità di moto del carrello.
+
+```physics
+{
+  "xlim": [0, 4], "ylim": [0, 1.2],
+  "params": { "F0": { "val": 2, "min": 0.5, "max": 4, "unit": "N", "label": "F_max" } },
+  "state": { "x": 0.5, "v": 0, "J": 0 },
+  "ode": { "x": "v", "v": "F0*exp(-((t-1)/0.3)^2)/0.5", "J": "F0*exp(-((t-1)/0.3)^2)" },
+  "time": { "max": 2.5 },
+  "objects": [
+    { "id": "g", "type": "ground", "y": 0.3 },
+    { "id": "A", "type": "cart", "on": "g", "pos": "x", "posUnit": "m", "size": [0.5, 0.25], "mass": 0.5 },
+    { "type": "velocity", "on": "A", "label": "\\vec v" }
+  ],
+  "readouts": [ { "label": "J", "value": "J", "unit": "N·s", "digits": 3 }, { "label": "p", "value": "0.5*v", "unit": "kg·m/s", "digits": 3 } ],
+  "graphs": [ { "y": "F0*exp(-((t-1)/0.3)^2)", "label": "Forza", "axisLabels": ["t (s)", "F (N)"], "fill": { "upTo": "now", "hatch": true }, "position": "right" } ]
+}
+```
+
+> [!DETAILS] Codice JSON
+> ```json
+> {
+>   "xlim": [0, 4], "ylim": [0, 1.2],
+>   "params": { "F0": { "val": 2, "min": 0.5, "max": 4, "unit": "N", "label": "F_max" } },
+>   "state": { "x": 0.5, "v": 0, "J": 0 },
+>   "ode": { "x": "v", "v": "F0*exp(-((t-1)/0.3)^2)/0.5", "J": "F0*exp(-((t-1)/0.3)^2)" },
+>   "time": { "max": 2.5 },
+>   "objects": [
+>     { "id": "g", "type": "ground", "y": 0.3 },
+>     { "id": "A", "type": "cart", "on": "g", "pos": "x", "posUnit": "m", "size": [0.5, 0.25], "mass": 0.5 },
+>     { "type": "velocity", "on": "A", "label": "\\vec v" }
+>   ],
+>   "readouts": [ { "label": "J", "value": "J", "unit": "N·s", "digits": 3 }, { "label": "p", "value": "0.5*v", "unit": "kg·m/s", "digits": 3 } ],
+>   "graphs": [ { "y": "F0*exp(-((t-1)/0.3)^2)", "label": "Forza", "axisLabels": ["t (s)", "F (N)"], "fill": { "upTo": "now", "hatch": true }, "position": "right" } ]
+> }
+> ```
+
+## 49. Avvisi
 
 Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, riferimenti e ancoraggi inesistenti e angoli sospetti finiscono nel riquadro sotto il diagramma.
 
@@ -2076,7 +2116,7 @@ Chiavi scritte male (con suggerimento), opzioni e tipi non ancora implementati, 
 }
 ```
 
-## 49. Errore nel JSON
+## 50. Errore nel JSON
 
 Un JSON non valido mostra un errore al posto del diagramma.
 

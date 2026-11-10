@@ -67,6 +67,8 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `width` | Number | Spessore linea o raggio bordo punto. |
 | `dash` | String | Pattern tratteggio (es. `"5,5"`). |
 | `label` | String | Etichetta (mostrata sul grafico o in legenda). |
+| `fill` | Boolean/Object | Area tra la curva (`fn` o `series`) e l'asse x: `true`, oppure `{ "to", "range", "color", "opacity", "hatch", "signed", "negColor" }` (vedi «Aree e somme di Riemann»). |
+| `riemann` | Object | Rettangoli sotto una funzione: `{ "n", "range", "rule", "color", "negColor", "opacity", "signed", "showValue", "valueLabel", "digits" }`. |
 
 ---
 
@@ -1332,6 +1334,66 @@ Con `"interactive": true` pan e zoom lavorano nello spazio logaritmico (il grafi
     {"fn": "x", "label": "x", "color": "summer2"},
     {"fn": "x^2", "label": "x²", "color": "summer6"},
     {"fn": "sqrt(x)", "label": "√x", "color": "summer4"}
+  ]
+}
+```
+
+## 13. Aree e somme di Riemann
+
+`"fill"` colora la regione tra la curva e l'asse x (oppure, con `"to"`, tra la curva e un'altra funzione di `x` o un numero). `"range"` è l'intervallo, anche con espressioni e parametri; `"signed": true` colora in `negColor` le parti sotto l'asse, `"hatch": true` usa un tratteggio come alla lavagna. Funziona anche con le serie di dati (`series`), quindi con i grafici delle scene di fisica.
+
+```json
+{
+  "aspectRatio": "2:1", "xlim": [-0.5, 6.5], "ylim": [-1.5, 1.5],
+  "params": { "b": { "val": 4, "min": 0, "max": 6.3, "step": 0.1 } },
+  "data": [ { "fn": "sin(x)", "color": "blue", "fill": { "range": [0, "b"], "signed": true } } ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "2:1", "xlim": [-0.5, 6.5], "ylim": [-1.5, 1.5],
+  "params": { "b": { "val": 4, "min": 0, "max": 6.3, "step": 0.1 } },
+  "data": [ { "fn": "sin(x)", "color": "blue", "fill": { "range": [0, "b"], "signed": true } } ]
+}
+```
+
+`"riemann"` disegna `n` rettangoli sotto una funzione (`"rule"`: `left`, `right`, `mid` o `trapezoid`); `n` può essere uno slider. Con `"showValue": true` la somma è scritta in alto a sinistra.
+
+```json
+{
+  "aspectRatio": "3:2", "xlim": [-0.2, 2.2], "ylim": [-0.3, 4.5],
+  "params": { "n": { "val": 6, "min": 1, "max": 60, "step": 1 } },
+  "data": [ { "fn": "x^2", "color": "red1", "riemann": { "n": "n", "range": [0, 2], "rule": "left", "showValue": true } } ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "3:2", "xlim": [-0.2, 2.2], "ylim": [-0.3, 4.5],
+  "params": { "n": { "val": 6, "min": 1, "max": 60, "step": 1 } },
+  "data": [ { "fn": "x^2", "color": "red1", "riemann": { "n": "n", "range": [0, 2], "rule": "left", "showValue": true } } ]
+}
+```
+
+Tratteggio e area tra due curve.
+
+```json
+{
+  "aspectRatio": "3:2", "xlim": [-0.2, 4.2], "ylim": [-0.3, 4.5],
+  "data": [
+    { "fn": "4*exp(-(x-2)^2)", "color": "blue", "fill": { "hatch": true, "range": [0.5, 3.5] } },
+    { "fn": "1", "dash": "4,4", "color": "green", "fill": { "to": "4*exp(-(x-2)^2)", "range": [1, 3] } }
+  ]
+}
+```
+
+```matephis
+{
+  "aspectRatio": "3:2", "xlim": [-0.2, 4.2], "ylim": [-0.3, 4.5],
+  "data": [
+    { "fn": "4*exp(-(x-2)^2)", "color": "blue", "fill": { "hatch": true, "range": [0.5, 3.5] } },
+    { "fn": "1", "dash": "4,4", "color": "green", "fill": { "to": "4*exp(-(x-2)^2)", "range": [1, 3] } }
   ]
 }
 ```
