@@ -87,6 +87,8 @@ export class SliderManager {
 
         for (let key in config.params) {
             const p = config.params[key];
+            // "slider": false keeps the param (a button or a drag sets it) without a slider
+            if (p && p.slider === false) continue;
             const row = document.createElement("div");
             row.className = "matephis-slider-row";
             if (config.sliderBorder) row.classList.add('slider-bordered');

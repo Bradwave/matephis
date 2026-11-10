@@ -134,7 +134,7 @@ Le forze automatiche sono forze come le altre: si scompongono con `"vector": "A.
 `"controls"` aggiunge pulsanti sotto la scena:
 
 - `{ "type": "reveal", "label": "Mostra forze", "targets": ["A.*"] }` mostra gli oggetti con `"hidden": true` che corrispondono ai bersagli (id con `*`, oppure `"type:decompose"`); premuto di nuovo li nasconde. «Mostra» diventa «Nascondi» mentre è premuto.
-- `{ "type": "toggle", "label": "Molla rigida", "param": "k", "on": 20, "off": 8 }` alterna un parametro tra due valori.
+- `{ "type": "toggle", "label": "Molla rigida", "param": "k", "on": 20, "off": 8 }` alterna un parametro tra due valori. Un parametro con `"slider": false` non ha lo slider: lo cambiano solo i pulsanti (o il trascinamento).
 
 `"drag"` su un oggetto lo rende trascinabile e cambia un parametro come farebbe il suo slider:
 
