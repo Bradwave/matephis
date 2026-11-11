@@ -16,6 +16,10 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
     doc.data['plot'] = true if content =~ /"graphs"\s*:/
   end
 
+  if content.include?('language-sets') || content.include?('matephis-sets') || content =~ /```\s*sets/
+    doc.data['sets'] = true
+  end
+
   if content.include?('language-slides') || content.include?('matephis-slides') || content =~ /```\s*slides/
     doc.data['slides'] = true
   end

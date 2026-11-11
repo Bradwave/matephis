@@ -32,11 +32,14 @@
     {%- else -%}
     <link href="{{ site.baseurl }}/assets/css/style.css?v=2.16" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
-    {%- if page.plot or page.physics -%}
+    {%- if page.plot or page.physics or page.sets -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v=2.0" rel="stylesheet" />
     {%- endif -%}
     {%- if page.physics -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-physics.css?v=0.8" rel="stylesheet" />
+    {%- endif -%}
+    {%- if page.sets -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-sets.css?v=0.2" rel="stylesheet" />
     {%- endif -%}
     {%- if page.circuit -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-circuit.css?v=1.1" rel="stylesheet" />
@@ -287,6 +290,9 @@
     {%- comment -%} Macros for "use" in physics blocks (_data/physics-macros.json) {%- endcomment -%}
     <script>window.MatephisPhysicsMacros = {{ site.data["physics-macros"] | jsonify }};</script>
     <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=1.1"></script>
+    {%- endif -%}
+    {%- if page.sets -%}
+    <script src="{{ site.baseurl }}/assets/js/matephis-sets.js?v=0.3"></script>
     {%- endif -%}
     {%- if page.circuit -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.1"></script>

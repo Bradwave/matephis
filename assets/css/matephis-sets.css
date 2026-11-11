@@ -1,0 +1,282 @@
+/* ==========================================================================
+   Matephis Sets
+   Diagrams reuse matephis-plot.css (container, stage, sliders, warnings);
+   this file only holds what is specific to sets diagrams.
+   ========================================================================== */
+
+/* Captions (*italic paragraph* right after a diagram), as for plots */
+.matephis-sets + div.language-sets + p:has(> em:only-child),
+.matephis-sets + pre + p:has(> em:only-child) {
+  text-align: left;
+  font-size: 0.85rem;
+  color: #888;
+  font-family: var(--font);
+  font-style: normal;
+  margin-top: calc(-1 * var(--space-sm, 1rem));
+  margin-bottom: var(--space-lg);
+  margin-left: var(--space-sm);
+  margin-right: var(--space-sm);
+}
+
+.matephis-sets-svg {
+  --sets-ink: #1f1f1f;
+  --sets-soft: #8a8a8a;
+  --sets-region: rgba(0, 0, 0, 0.035);
+  overflow: visible;
+}
+
+[data-theme="dark"] .matephis-sets-svg {
+  --sets-ink: #e2e8f0;
+  --sets-soft: #94a3b8;
+  --sets-region: rgba(255, 255, 255, 0.05);
+}
+
+.matephis-sets-svg .mps-outline {
+  fill: none;
+  stroke: var(--sets-ink);
+  stroke-width: 1.6px;
+}
+
+.matephis-sets-svg .mps-axis {
+  stroke: var(--sets-soft);
+  stroke-width: 1px;
+}
+
+.matephis-sets-svg .mps-interval {
+  stroke: var(--sets-ink);
+  stroke-width: 2.4px;
+  stroke-linecap: round;
+}
+
+.matephis-sets-svg .mps-end-closed {
+  fill: var(--sets-ink);
+  stroke: var(--sets-ink);
+  stroke-width: 1.4px;
+}
+
+.matephis-sets-svg .mps-end-open {
+  fill: var(--bg, #fff);
+  stroke: var(--sets-ink);
+  stroke-width: 1.6px;
+}
+
+.matephis-sets-svg .mps-region,
+.matephis-sets-svg .mps-region-side {
+  fill: none;
+  stroke: var(--sets-ink);
+  stroke-width: 1.6px;
+}
+
+.matephis-sets-svg circle.mps-region,
+.matephis-sets-svg .mps-region-fill {
+  fill: var(--sets-region);
+  stroke: none;
+}
+
+.matephis-sets-svg circle.mps-region {
+  stroke: var(--sets-ink);
+}
+
+.matephis-sets-svg .mps-dot {
+  fill: var(--sets-ink);
+}
+
+.matephis-sets-svg .mps-hit {
+  fill: transparent;
+}
+
+.matephis-sets-svg .mps-el {
+  cursor: default;
+  outline: none;
+}
+
+.matephis-sets-svg .mps-el:focus-visible .mps-hit {
+  stroke: var(--accent, #B01A00);
+  stroke-width: 1.5px;
+}
+
+.matephis-sets-svg .mps-arrow-line {
+  stroke-width: 1.4px;
+  stroke-linecap: round;
+}
+
+.matephis-sets-svg .mps-header-arrow {
+  stroke-width: 1.4px;
+}
+
+.matephis-sets-svg .mps-loop {
+  stroke-width: 1.8px;
+  fill-opacity: 0.08;
+}
+
+.matephis-sets-svg .mps-loop-strong {
+  stroke-width: 2.2px;
+  fill-opacity: 0.1;
+}
+
+.matephis-sets-svg .mps-ring {
+  fill: none;
+  stroke-width: 2px;
+}
+
+.matephis-sets-svg .mps-band {
+  stroke-width: 5px;
+  stroke-linecap: butt;
+  stroke-opacity: 0.85;
+}
+
+.matephis-sets-svg .mps-region-highlight {
+  fill-opacity: 0.2;
+  stroke-width: 1.6px;
+}
+
+.matephis-sets-svg .mps-curve-highlight {
+  fill: none;
+  stroke-width: 3px;
+}
+
+.matephis-sets-svg .mps-probe-handle {
+  stroke: var(--bg, #fff);
+  stroke-width: 2px;
+}
+
+.matephis-sets-svg .mps-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.matephis-sets-svg .mps-draggable.is-dragging {
+  cursor: grabbing;
+}
+
+/* Hover: the element, its arrows and their ends stay; the rest fades */
+.matephis-sets-svg .mps-arrow,
+.matephis-sets-svg .mps-el,
+.matephis-sets-svg .mps-sample {
+  transition: opacity 0.12s ease;
+}
+
+.matephis-sets-svg.mps-focus .mps-arrow:not(.mps-lit),
+.matephis-sets-svg.mps-focus .mps-el:not(.mps-lit) {
+  opacity: 0.18;
+}
+
+.matephis-sets-svg.mps-focus .mps-arrow.mps-lit .mps-arrow-line {
+  stroke-width: 2.4px;
+}
+
+.matephis-sets-svg.mps-focus .mps-el.mps-lit .mps-dot {
+  r: 4.6px;
+}
+
+/* ==========================================================================
+   Buttons (same look as physics scenes) and properties badges
+   ========================================================================== */
+
+.matephis-sets-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs, 0.5rem);
+  margin: var(--space-xs, 0.5rem) 0;
+}
+
+.matephis-sets-buttons .matephis-physics-button {
+  font: inherit;
+  font-size: var(--scale-sm, 0.9rem);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.matephis-sets-buttons .matephis-physics-button:hover,
+.matephis-sets-buttons .matephis-physics-button:focus-visible {
+  border-color: var(--accent);
+}
+
+.matephis-sets-buttons .matephis-physics-button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.matephis-sets-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.3rem 0;
+  font-size: var(--scale-sm, 0.9rem);
+}
+
+.matephis-sets-properties:empty {
+  display: none;
+}
+
+.matephis-sets-props-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.matephis-sets-props-name {
+  font-style: italic;
+  margin-right: 0.2rem;
+}
+
+.matephis-sets-chip {
+  border: 1px solid var(--border, #ccc);
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+
+.matephis-sets-chip.is-yes {
+  color: #2f8f46;
+  border-color: #2f8f46;
+}
+
+.matephis-sets-chip.is-no {
+  color: #B01A00;
+  border-color: #B01A00;
+}
+
+[data-theme="dark"] .matephis-sets-chip.is-yes {
+  color: #4ade80;
+  border-color: #4ade80;
+}
+
+[data-theme="dark"] .matephis-sets-chip.is-no {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.matephis-sets-chip.is-unknown {
+  color: #888;
+}
+
+.matephis-sets-props-note {
+  color: #888;
+  font-size: 0.8em;
+}
+
+.matephis-sets-readouts {
+  text-align: center;
+  font-size: var(--scale-sm, 0.95rem);
+  margin: 0.2rem 0;
+}
+
+.matephis-sets-readouts:empty {
+  display: none;
+}
+
+/* matephis-plot.css turns pointer events off inside plots: elements (for
+   hover) and probe handles (for dragging) take them back */
+.matephis-sets-svg .mps-el .mps-hit,
+.matephis-sets-svg .mps-el .mps-dot,
+.matephis-sets-svg .mps-draggable {
+  pointer-events: all;
+}
+
+.matephis-sets-svg .mps-ring {
+  pointer-events: all;
+}
