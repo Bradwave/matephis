@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SliderManager, paramScale } from '../assets/js/matephis-plot-src/ui/slider-manager.js';
+import { SliderManager, paramScale, snapToStep, formatValue, valueWidth } from '../assets/js/matephis-plot-src/ui/slider-manager.js';
 import { ExpressionCompiler } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
 
 const initParams = (defs) => {
@@ -27,5 +27,39 @@ describe('Unità dei parametri', () => {
         });
         expect(params.m).toBe(2);
         expect(params.k).toBe(6);
+    });
+});
+
+describe('Valori degli slider', () => {
+    it('aggancia i valori al passo senza rumore numerico', () => {
+        expect(snapToStep(0.30000000000000004, 0, 1, 0.1)).toBe(0.3);
+        expect(snapToStep(0.7000000000000001, 0.1, 5, 0.1)).toBe(0.7);
+        expect(snapToStep(2.26, -1, 10, 0.25)).toBe(2.25);
+        expect(snapToStep(-0.04, -1, 1, 0.1)).toBe(0);
+        expect(Object.is(snapToStep(-0.04, -1, 1, 0.1), -0)).toBe(false);
+    });
+
+    it('resta dentro [min, max] anche quando max non è sulla griglia', () => {
+        expect(snapToStep(-5, 0, 1, 0.1)).toBe(0);
+        expect(snapToStep(9.9, 0, 9.85, 0.1)).toBe(9.8);
+        expect(snapToStep(3.3, 0, Math.PI, Math.PI / 16)).toBeLessThanOrEqual(Math.PI);
+    });
+
+    it('mostra sempre lo stesso numero di decimali, senza "-0"', () => {
+        expect(formatValue(1, 2)).toBe('1.00');
+        expect(formatValue(1.1, 2)).toBe('1.10');
+        expect(formatValue(-0.001, 2)).toBe('0.00');
+        expect(formatValue(30, 1, '°')).toBe('30.0°');
+        expect(formatValue(2.5, 2, ' kg')).toBe('2.50 kg');
+    });
+
+    it('riserva lo spazio del valore più lungo dell\'intervallo', () => {
+        expect(valueWidth(0, 10, 1)).toBe(4);           // "10.0"
+        expect(valueWidth(-1, 10, 2)).toBe(5);          // "-1.00" e "10.00"
+        expect(valueWidth(-10, 5, 0)).toBe(3);          // "-10"
+        expect(valueWidth(0, 90, 0, '°')).toBe(3);      // "90°"
+        for (let v = -1; v <= 10; v += 0.37) {
+            expect(formatValue(v, 2).length).toBeLessThanOrEqual(valueWidth(-1, 10, 2));
+        }
     });
 });
