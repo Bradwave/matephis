@@ -32,7 +32,8 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `marginLeft` | String | `0` | Margine sinistro CSS personalizzato (es. `"-25px"`). |
 | `marginRight` | String | `auto` | Margine destro CSS personalizzato. |
 | `border` | Boolean | `false` | Aggiunge un bordo al contenitore del grafico. |
-| `sliderBorder` | Boolean | `false` | Aggiunge un bordo e padding agli slider. |
+| `sliderBorder` | Boolean | `false` | Racchiude gli slider in una tabella con bordi. |
+| `sliderLayout` | String | `"auto"` | `"inline"`: ogni slider su una riga; `"stacked"`: etichetta e valore sopra la barra; `"auto"`: passa a `"stacked"` (per tutti gli slider) quando un'etichetta lascia troppo poco spazio alla barra. |
 | `boxPlot` | Boolean | `false` | Racchiude il grafico in un box con assi sui bordi. |
 | `boxNumbersInside` | Boolean | `false` | Se `true` e `boxPlot` attivo, mostra i numeri all'interno del box (più piccoli). |
 | `sampleStep` | Number | 2 | Passo di campionamento in pixel. Valori più bassi (es. 1) migliorano la qualità ma riducono le performance. |
@@ -366,6 +367,81 @@ Le opzioni `border` e `sliderBorder` possono essere usate per aggiungere bordi a
   },
   "data": [
     { "fn": "sin(k*x + w)", "label": "Onda Variabile" }
+  ]
+}
+```
+
+#### Etichette LaTeX ed etichette lunghe
+Le etichette degli slider accettano LaTeX tra `$...$`. Gli slider condividono le colonne, quindi etichette, valori e barre restano allineati. Con etichette lunghe (o su schermi stretti) tutti gli slider passano al layout `"stacked"`.
+
+```json
+{
+  "cssWidth": "80%",
+  "align": "left",
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "params": {
+    "A": { "label": "$A$", "min": 0, "max": 2.5, "step": 0.05, "val": 1 },
+    "omega": { "label": "$\\omega$", "min": 0.1, "max": 5, "step": 0.1, "val": 1 },
+    "phi": { "label": "$\\varphi_0$", "min": -180, "max": 180, "step": 1, "val": 0, "unit": "deg" }
+  },
+  "data": [
+    { "fn": "A*sin(omega*x + phi)", "label": "$A\\sin(\\omega x + \\varphi_0)$" }
+  ]
+}
+```
+
+```matephis
+{
+  "cssWidth": "80%",
+  "align": "left",
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "params": {
+    "A": { "label": "$A$", "min": 0, "max": 2.5, "step": 0.05, "val": 1 },
+    "omega": { "label": "$\\omega$", "min": 0.1, "max": 5, "step": 0.1, "val": 1 },
+    "phi": { "label": "$\\varphi_0$", "min": -180, "max": 180, "step": 1, "val": 0, "unit": "deg" }
+  },
+  "data": [
+    { "fn": "A*sin(omega*x + phi)", "label": "$A\\sin(\\omega x + \\varphi_0)$" }
+  ]
+}
+```
+
+```json
+{
+  "cssWidth": "80%",
+  "align": "left",
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "sliderBorder": true,
+  "params": {
+    "A": { "label": "Ampiezza dell'oscillazione $A$", "min": 0, "max": 2.5, "step": 0.05, "val": 1 },
+    "omega": { "label": "Pulsazione $\\omega$", "min": 0.1, "max": 5, "step": 0.1, "val": 1, "unit": "rad/s" }
+  },
+  "data": [
+    { "fn": "A*sin(omega*x)" }
+  ]
+}
+```
+
+```matephis
+{
+  "cssWidth": "80%",
+  "align": "left",
+  "aspectRatio": "2:1",
+  "xlim": [-10, 10],
+  "ylim": [-3, 3],
+  "sliderBorder": true,
+  "params": {
+    "A": { "label": "Ampiezza dell'oscillazione $A$", "min": 0, "max": 2.5, "step": 0.05, "val": 1 },
+    "omega": { "label": "Pulsazione $\\omega$", "min": 0.1, "max": 5, "step": 0.1, "val": 1, "unit": "rad/s" }
+  },
+  "data": [
+    { "fn": "A*sin(omega*x)" }
   ]
 }
 ```
