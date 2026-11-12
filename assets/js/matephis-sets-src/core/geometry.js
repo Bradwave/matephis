@@ -148,3 +148,49 @@ export function arrowHeadPoints(x, y, a, size) {
     const f = (v) => +v.toFixed(2);
     return `${f(x)},${f(y)} ${f(p1[0])},${f(p1[1])} ${f(p2[0])},${f(p2[1])}`;
 }
+
+/** Do segments ab and cd meet (touching and overlapping included)? */
+export function segmentsMeet(a, b, c, d, eps = 1e-12) {
+    const cross = (o, p, q) => (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]);
+    const d1 = cross(c, d, a), d2 = cross(c, d, b), d3 = cross(a, b, c), d4 = cross(a, b, d);
+    if (((d1 > eps && d2 < -eps) || (d1 < -eps && d2 > eps)) && ((d3 > eps && d4 < -eps) || (d3 < -eps && d4 > eps))) return true;
+    // Touching or collinear: an endpoint lies on the other segment
+    const tol = Math.sqrt(eps);
+    return distToSegment(a, c, d) <= tol || distToSegment(b, c, d) <= tol
+        || distToSegment(c, a, b) <= tol || distToSegment(d, a, b) <= tol;
+}
+
+/**
+ * Is a polyline simple (it never meets itself)? Consecutive pieces share an
+ * endpoint and are not compared; with `closed` the last point joins the first.
+ * `tol` is a distance under which two points count as the same.
+ */
+export function isSimplePolyline(pts, { closed = false, tol = 1e-9 } = {}) {
+    const n = pts.length;
+    const segs = [];
+    for (let i = 0; i + 1 < n; i++) segs.push([pts[i], pts[i + 1]]);
+    if (closed && n > 2) segs.push([pts[n - 1], pts[0]]);
+    const m = segs.length;
+    const eps = tol * tol;
+    for (let i = 0; i < m; i++) {
+        for (let j = i + 2; j < m; j++) {
+            if (closed && i === 0 && j === m - 1) continue;
+            const [a, b] = segs[i], [c, d] = segs[j];
+            // Quick reject on bounding boxes
+            if (Math.max(a[0], b[0]) < Math.min(c[0], d[0]) - tol || Math.max(c[0], d[0]) < Math.min(a[0], b[0]) - tol
+                || Math.max(a[1], b[1]) < Math.min(c[1], d[1]) - tol || Math.max(c[1], d[1]) < Math.min(a[1], b[1]) - tol) continue;
+            if (segmentsMeet(a, b, c, d, eps)) return false;
+        }
+    }
+    return true;
+}
+
+/** Is a point inside a polygon (even-odd rule)? */
+export function insidePolygon(poly, p) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+}

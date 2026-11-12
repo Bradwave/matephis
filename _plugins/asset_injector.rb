@@ -18,6 +18,8 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 
   if content.include?('language-sets') || content.include?('matephis-sets') || content =~ /```\s*sets/
     doc.data['sets'] = true
+    # Graphs beside a sets diagram are drawn by the plot engine
+    doc.data['plot'] = true if content =~ /"plot"\s*:\s*\{/
   end
 
   if content.include?('language-slides') || content.include?('matephis-slides') || content =~ /```\s*slides/

@@ -12,6 +12,7 @@
  *   "collisions(f)"            elements with the same image (f not injective)
  *   "properties(f)"            injective / surjective / bijective badge
  *   "arrows(f)"                the arrows of a map (to hide or reveal them)
+ *   "image(g, image(f))"       an image or preimage as the argument of another
  */
 
 export const OPS = ['image', 'preimage', 'collisions', 'properties', 'arrows'];
@@ -26,6 +27,7 @@ const CALL_RE = /^\s*([A-Za-z]+)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*([\s\S
 export function parseArgument(arg) {
     if (arg === undefined || arg === null) return null;
     const s = String(arg).trim();
+    if (/^(image|preimage)\s*\(/.test(s) && s.endsWith(')')) return { kind: 'selector', src: s };
     if (s.startsWith('{') && s.endsWith('}')) {
         const inner = s.slice(1, -1).trim();
         return { kind: 'elements', ids: inner ? inner.split(',').map(x => x.trim()).filter(Boolean) : [] };

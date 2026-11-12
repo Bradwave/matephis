@@ -7,6 +7,7 @@ import { roundedHullPath, convexHull, insideHull } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
 import { parseInterval, evalInterval, intervalTeX } from '../core/interval.js';
 import { intersect } from '../core/model.js';
+import { parseSelector } from '../core/selectors.js';
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -23,7 +24,7 @@ export function drawLayer(scene, layer) {
             drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'image'), label, layer.key);
         } else if (op === 'preimage') {
             const res = model.preimage(map, arg);
-            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg)}\\right)`;
+            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
             drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'preimage'), label, layer.key);
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
@@ -55,14 +56,23 @@ export function drawLayer(scene, layer) {
 
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */
 function imageLabel(scene, map, arg, res) {
-    const of = arg ? argTeX(arg) : setLabelText(scene.model, map.from);
+    const of = arg ? argTeX(arg, scene.model) : setLabelText(scene.model, map.from);
     let s = `${map.label}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
+    if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
     return s;
 }
 
-function argTeX(arg) {
+function argTeX(arg, model) {
     if (!arg) return '';
+    if (arg.kind === 'selector') {
+        // image(f) -> f(A), preimage(f, …) -> f^{-1}(…)
+        const sel = parseSelector(arg.src);
+        const m = sel && model.mapById.get(sel.map);
+        if (!m) return arg.src;
+        const inner = sel.arg ? argTeX(sel.arg, model) : setLabelText(model, m.from);
+        return sel.op === 'image' ? `${m.label}\\left(${inner}\\right)` : `${m.label}^{-1}\\left(${inner}\\right)`;
+    }
     if (arg.kind === 'elements') return `\\{${arg.ids.join(',\\,')}\\}`;
     if (arg.kind === 'interval') return arg.src.replace(/inf(inity)?/gi, '\\infty');
     return arg.id;
@@ -90,8 +100,38 @@ function drawResult(scene, res, color, label, key) {
         });
         if (pts.length) anchorPt = farthest(pts, P, row);
     } else if (res.kind === 'interval' || res.kind === 'intervals') {
-        const parts = res.kind === 'interval' ? [res.I] : res.parts.map(([a, b]) => ({ lo: a, hi: b, loClosed: true, hiClosed: true }));
+        const parts = res.kind === 'interval' ? [res.I] : res.parts;
         parts.forEach(I => { anchorPt = band(scene, g, res.set, P, I, color) || anchorPt; });
+    } else if (res.kind === 'cells' || res.kind === 'level') {
+        // Preimage in the plane: grid cells (a region), and for a single value its level curve
+        const toPt = (x, y) => P.toPx([x, y]).map(f2).join(',');
+        const cells = res.cells.map(([x0, y0, x1, y1]) => `M${toPt(x0, y0)}L${toPt(x1, y0)}L${toPt(x1, y1)}L${toPt(x0, y1)}Z`).join('');
+        if (cells) {
+            const path = scene.svgEl('path', { d: cells, class: 'mps-cells-highlight' }, g);
+            path.style.fill = color;
+        }
+        if (res.kind === 'level' && res.segments.length) {
+            const d = res.segments.map(([a, b]) => `M${toPt(a[0], a[1])}L${toPt(b[0], b[1])}`).join('');
+            const path = scene.svgEl('path', { d, class: 'mps-level-highlight' }, g);
+            path.style.stroke = color;
+        }
+        // The label goes next to the drawing: at the middle of the level curve, or of the region
+        if (res.kind === 'level' && res.segments.length) {
+            const m = res.segments[Math.floor(res.segments.length / 2)][0];
+            const q = P.toPx(m);
+            anchorPt = [q[0] + 6, q[1] - 8];
+        } else if (res.cells.length) {
+            let A = 0, cx = 0, cy = 0;
+            res.cells.forEach(([x0, y0, x1, y1]) => {
+                const a = (x1 - x0) * (y1 - y0);
+                A += a;
+                cx += a * (x0 + x1) / 2;
+                cy += a * (y0 + y1) / 2;
+            });
+            anchorPt = P.toPx([cx / A, cy / A]);
+        } else {
+            anchorPt = [P.box.x + 6, P.box.y + 14];
+        }
     } else if (res.kind === 'region') {
         const pts = res.polygon.map(p => P.toPx(p));
         if (pts.length < 3) return;
@@ -100,9 +140,11 @@ function drawResult(scene, res, color, label, key) {
         poly.style.stroke = color;
         anchorPt = [P.box.x + 6, P.box.y + 14];
     } else if (res.kind === 'curve') {
-        const pts = res.points.map(p => P.toPx(p));
-        const pl = scene.svgEl('polyline', { points: pts.map(p => `${f2(p[0])},${f2(p[1])}`).join(' '), class: 'mps-curve-highlight' }, g);
-        pl.style.stroke = color;
+        (res.lines || [res.points]).forEach(line => {
+            const pts = line.map(p => P.toPx(p));
+            const pl = scene.svgEl('polyline', { points: pts.map(p => `${f2(p[0])},${f2(p[1])}`).join(' '), class: 'mps-curve-highlight' }, g);
+            pl.style.stroke = color;
+        });
         anchorPt = [P.box.x + 6, P.box.y + 14];
     }
     if (label && anchorPt) layerLabel(scene, g, P, anchorPt, label, color, res.kind);
@@ -146,9 +188,10 @@ function band(scene, g, set, P, I, color) {
     const lo = Math.max(isFinite(I.lo) ? I.lo : w[0], w[0]), hi = Math.min(isFinite(I.hi) ? I.hi : w[1], w[1]);
     if (!(hi >= lo)) return null;
     const row = scene.layout.orient === 'row';
-    // Beside the segment, away from the arrows (on the side of the end labels)
+    // Beside the segment, away from the arrows (on the side of the end labels);
+    // on a dynagraph that side has the tick numbers: the band goes on the line itself
     const side = P.tickSide === 'after' ? 1 : -1;
-    const off = 9 * side;
+    const off = scene.dynagraph ? 0 : 9 * side;
     const shift = (p) => (row ? [p[0] + off, p[1]] : [p[0], p[1] + off]);
     const a = shift(P.toPx(lo)), b = shift(P.toPx(hi));
     const line = scene.svgEl('line', { x1: f2(a[0]), y1: f2(a[1]), x2: f2(b[0]), y2: f2(b[1]), class: 'mps-band' }, g);
@@ -162,7 +205,8 @@ function band(scene, g, set, P, I, color) {
         });
     // Label next to the middle of the band
     const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    return row ? [m[0] + 10 * side, m[1]] : [m[0], m[1] + 12 * side];
+    const away = scene.dynagraph ? -side : side;
+    return row ? [m[0] + 10 * away, m[1]] : [m[0], m[1] + 12 * away];
 }
 
 /** Label of a layer, beside its group, in the layer's colour. */
@@ -170,7 +214,8 @@ function layerLabel(scene, g, P, at, label, color, kind) {
     const row = scene.layout.orient === 'row';
     const size = scene.fontSize * 0.9;
     if (P.kind === 'interval') {
-        const side = P.tickSide === 'after' ? 1 : -1;
+        // On a dynagraph the label goes on the side without tick numbers
+        const side = (P.tickSide === 'after' ? 1 : -1) * (scene.dynagraph ? -1 : 1);
         if (kind === 'points') {
             // Next to the outermost ring, on the side of the end labels
             if (row) scene.text(at[0] + 16 * side, at[1], label, { parent: g, color, size, anchor: side < 0 ? 'end' : 'start' });
@@ -285,8 +330,9 @@ export function renderProperties(scene, layers) {
 /** A TeX label as plain text: "g \\circ f" -> "g ∘ f", "a_1" -> "a1". */
 export function plain(label) {
     return String(label)
-        .replace(/\\circ/g, '∘').replace(/\\infty/g, '∞').replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{N\}/g, 'ℕ')
+        .replace(/\\circ/g, '∘').replace(/\\pi/g, 'π').replace(/\\infty/g, '∞').replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{N\}/g, 'ℕ')
         .replace(/\\mathbb\{Z\}/g, 'ℤ').replace(/\\mathbb\{Q\}/g, 'ℚ').replace(/\\times/g, '×')
-        .replace(/\^\{?([0-9])\}?/g, (m, d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])
+        .replace(/\^\{?(-?[0-9]+)\}?/g, (m, d) => [...d].map(c => (c === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[c])).join(''))
+        .replace(/\\left|\\right/g, '')
         .replace(/\$/g, '').replace(/\\[A-Za-z]+\s*/g, '').replace(/[{}_^]/g, '').trim();
 }

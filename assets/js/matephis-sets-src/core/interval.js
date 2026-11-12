@@ -119,6 +119,7 @@ export function niceNumber(v) {
 /** TeX of an interval: "\left[0, \tfrac{1}{2}\right)". Uses ";" when an endpoint has a decimal comma. */
 export function intervalTeX(I) {
     if (I.lo === -Infinity && I.hi === Infinity) return '\\mathbb{R}';
+    if (isPoint(I)) return `\\{${niceNumber(I.lo)}\\}`;
     const lo = niceNumber(I.lo), hi = niceNumber(I.hi);
     const sep = lo.includes('{,}') || hi.includes('{,}') ? ';\\,' : ',\\,';
     return `\\left${I.loClosed ? '[' : '('}${lo}${sep}${hi}\\right${I.hiClosed ? ']' : ')'}`;
@@ -196,4 +197,45 @@ export function strictlyMonotone(vs) {
         else if (s !== sign) return false;
     }
     return true;
+}
+
+/** Is an interval a single point [a, a]? */
+export function isPoint(I) {
+    return I.lo === I.hi && I.loClosed && I.hiClosed;
+}
+
+/**
+ * Union of intervals, as a sorted list of disjoint intervals. Two intervals
+ * that touch are joined when the common endpoint belongs to one of them.
+ */
+export function unionIntervals(list, eps = 1e-9) {
+    const parts = list.filter(I => I && !isEmpty(I)).map(I => ({ ...I })).sort((a, b) => a.lo - b.lo || (b.loClosed ? 1 : 0) - (a.loClosed ? 1 : 0));
+    const out = [];
+    parts.forEach(I => {
+        const last = out[out.length - 1];
+        const tol = eps * Math.max(1, Math.abs(I.lo));
+        if (last && (I.lo < last.hi - tol || (Math.abs(I.lo - last.hi) <= tol && (I.loClosed || last.hiClosed)))) {
+            if (I.hi > last.hi + tol) {
+                last.hi = I.hi;
+                last.hiClosed = I.hiClosed;
+            } else if (Math.abs(I.hi - last.hi) <= tol) {
+                last.hiClosed = last.hiClosed || I.hiClosed;
+            }
+            if (Math.abs(I.lo - last.lo) <= tol) last.loClosed = last.loClosed || I.loClosed;
+        } else {
+            out.push(I);
+        }
+    });
+    return out;
+}
+
+/** Do two intervals have a point in common? */
+export function overlaps(A, B, eps = 1e-9) {
+    if (isEmpty(A) || isEmpty(B)) return false;
+    const lo = Math.max(A.lo, B.lo), hi = Math.min(A.hi, B.hi);
+    const tol = eps * Math.max(1, isFinite(lo) ? Math.abs(lo) : 0);
+    if (hi < lo - tol) return false;
+    if (hi > lo + tol) return true;
+    // They meet at one point: it must belong to both
+    return contains(A, lo, tol) && contains(B, lo, tol);
 }

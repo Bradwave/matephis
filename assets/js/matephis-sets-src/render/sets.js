@@ -57,7 +57,10 @@ function drawInterval(scene, set, P, g, color) {
         { t: I.lo, px: a, closed: I.loClosed, inf: !isFinite(I.lo) || I.lo < w[0], dir: ang + Math.PI },
         { t: I.hi, px: b, closed: I.hiClosed, inf: !isFinite(I.hi) || I.hi > w[1], dir: ang },
     ];
-    const tickDraw = set.def.endpoints !== false;
+    // A dynagraph has ticks with numbers; the endpoints then need no number of their own
+    const ticks = scene.dynagraph && scene.dynagraph.ticks !== false;
+    if (ticks) drawTicks(scene, set, P, g);
+    const tickDraw = set.def.endpoints !== false && !ticks;
     ends.forEach(e => {
         if (e.inf) {
             const head = scene.svgEl('polygon', { points: arrowHeadPoints(e.px[0] + 6 * Math.cos(e.dir), e.px[1] + 6 * Math.sin(e.dir), e.dir, 9) }, g);
@@ -77,6 +80,31 @@ function drawInterval(scene, set, P, g, color) {
             scene.text(x, y + (before ? -22 : 24), niceNumber(e.t), { ...opts, baseline: 'middle' });
         }
     });
+}
+
+/** A step of 1, 2 or 5 times a power of ten, giving about `n` ticks over a span. */
+export function niceStep(span, n = 8) {
+    const raw = span / n;
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const m = raw / p;
+    return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+
+/** Ticks and numbers along an interval of a dynagraph, at multiples of a step. */
+function drawTicks(scene, set, P, g) {
+    const w = set.window;
+    const given = scene.dynagraph.ticks;
+    // About one number every 48 px, so fractions fit side by side
+    const room = Math.max(2, Math.floor(P.length / 48));
+    const step = typeof given === 'number' && given > 0 && (w[1] - w[0]) / given <= 60 ? given : niceStep(w[1] - w[0], Math.min(8, room));
+    const size = scene.fontSize * 0.8;
+    const before = P.tickSide === 'before';
+    for (let k = Math.ceil(w[0] / step - 1e-9); k * step <= w[1] + 1e-9; k++) {
+        const t = k * step;
+        const [x, y] = P.toPx(t);
+        scene.svgEl('line', { x1: f2(x), y1: f2(y - 5), x2: f2(x), y2: f2(y + 5), class: 'mps-tick' }, g);
+        scene.text(x, y + (before ? -18 : 19), niceNumber(Math.abs(t) < 1e-12 ? 0 : t), { size, parent: scene.groups.labels, color: scene.ink });
+    }
 }
 
 function drawRect(scene, set, P, g, color) {
@@ -164,9 +192,12 @@ export function drawHeader(scene, maps) {
         if (!pairs.has(key)) pairs.set(key, []);
         pairs.get(key).push(m);
     });
-    pairs.forEach(list => {
+    pairs.forEach((list, key) => {
         const { from, to } = list[0];
         if (from === to) return;
+        // Maps both ways (f and its inverse): two parallel arrows, the way back
+        // under (row) or left of (column) the way there, each with its label
+        const back = pairs.has(`${to.id}>${from.id}`) ? (from.index < to.index ? 0 : 1) : -1;
         const A = names.get(from.id), B = names.get(to.id);
         const dir = Math.sign(B.u - A.u) || 1;
         const u1 = A.u + dir * (A.half + 10), u2 = B.u - dir * (B.half + 10);
@@ -174,16 +205,18 @@ export function drawHeader(scene, maps) {
         const color = list.length === 1 && list[0].color ? scene.color(list[0].color) : scene.ink;
         // Row: a horizontal arrow between the names. Column: a vertical one
         // under the names (right-aligned at hv), its label on the left
-        const ax = hv - 8;
-        const [x1, y1] = row ? [u1, hv] : [ax, u1];
-        const [x2, y2] = row ? [u2, hv] : [ax, u2];
+        const shift = back === 0 ? -3 : back === 1 ? 3 : 0;
+        const ax = hv - 8 - (row ? 0 : shift);
+        const hy = hv + (row ? shift : 0);
+        const [x1, y1] = row ? [u1, hy] : [ax, u1];
+        const [x2, y2] = row ? [u2, hy] : [ax, u2];
         const g = scene.svgEl('g', { class: 'mps-map-header' }, groups.header);
         const line = scene.svgEl('line', { x1: f2(x1), y1: f2(y1), x2: f2(x2), y2: f2(y2), class: 'mps-header-arrow' }, g);
         line.style.stroke = color;
         const head = scene.svgEl('polygon', { points: arrowHeadPoints(x2, y2, Math.atan2(y2 - y1, x2 - x1), 8) }, g);
         head.style.fill = color;
         const label = list.map(m => m.label).join(',\\ ');
-        if (row) scene.text((x1 + x2) / 2, hv - 14, label, { parent: g, color });
-        else scene.text(ax - 8, (y1 + y2) / 2, label, { parent: g, color, anchor: 'end' });
+        if (row) scene.text((x1 + x2) / 2, back === 1 ? hy + 16 : hy - 14, label, { parent: g, color });
+        else scene.text(back === -1 ? ax - 8 : hv - 22, (y1 + y2) / 2 + (back === 0 ? -10 : back === 1 ? 10 : 0), label, { parent: g, color, anchor: 'end' });
     });
 }
