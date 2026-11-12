@@ -313,13 +313,20 @@ export function renderProperties(scene, layers) {
             } catch (e) { /* plain text below */ }
         }
         if (!typeset) name.textContent = `${plain(map.label)}: ${plain(from)} → ${plain(to)}`;
-        row.appendChild(name);
+        // Two blocks that wrap as wholes: the name (with the note), the chips
+        const head = document.createElement('span');
+        head.className = 'matephis-sets-props-head';
+        head.appendChild(name);
+        row.appendChild(head);
+        const chips = document.createElement('span');
+        chips.className = 'matephis-sets-props-chips';
+        row.appendChild(chips);
         const chip = (text, ok, title) => {
             const c = document.createElement('span');
             c.className = `matephis-sets-chip ${ok === true ? 'is-yes' : ok === false ? 'is-no' : 'is-unknown'}`;
             c.textContent = `${text} ${ok === true ? '✓' : ok === false ? '✗' : '?'}`;
             if (title) c.title = title;
-            row.appendChild(c);
+            chips.appendChild(c);
         };
         if (!p.isFunction) chip('funzione', false, p.problems.join('; '));
         if (!p.into) chip(`a valori in ${plain(setLabelText(scene.model, map.to))}`, false, p.problems.join('; '));
@@ -333,7 +340,7 @@ export function renderProperties(scene, layers) {
             const note = document.createElement('span');
             note.className = 'matephis-sets-props-note';
             note.textContent = 'verifica numerica';
-            row.appendChild(note);
+            head.appendChild(note);
         }
         el.appendChild(row);
     });
