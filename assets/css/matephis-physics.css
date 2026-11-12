@@ -210,6 +210,66 @@
    Time: readouts and graphs under the scene, energy charts
    ========================================================================== */
 
+/* Speed stepper in the clock row: ‹ 1× › */
+.matephis-physics-speed {
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  height: 26px;
+  border: 1px solid var(--border, #e1e1e1);
+  font-family: var(--font-plot, monospace);
+  font-size: 0.85rem;
+  background: var(--plot-bg, #fff);
+}
+
+.matephis-physics-speed-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  /* Same tone as the play / replay icons beside it */
+  color: var(--text, #0d0d0d);
+  opacity: 0.7;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.matephis-physics-speed-btn:hover:not(:disabled) {
+  background: var(--bg2, #f7f5f5);
+  opacity: 1;
+}
+
+.matephis-physics-speed-btn:focus-visible {
+  outline: 2px solid var(--accent, #B01A00);
+  outline-offset: -2px;
+}
+
+.matephis-physics-speed-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.matephis-physics-speed-val {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--border, #e1e1e1);
+  border-right: 1px solid var(--border, #e1e1e1);
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+  box-sizing: content-box;
+}
+
+@media (pointer: coarse) {
+  .matephis-physics-speed { height: 34px; }
+  .matephis-physics-speed-btn { width: 32px; }
+}
+
 .matephis-physics-readouts {
   display: flex;
   flex-wrap: wrap;
