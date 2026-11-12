@@ -16,7 +16,7 @@ import {
     samplePositions, imageFromSamples, strictlyMonotone, unionIntervals, overlaps,
 } from './interval.js';
 import { isSimplePolyline, insidePolygon } from './geometry.js';
-import { parseArgument } from './selectors.js';
+import { parseArgument, parseSelector } from './selectors.js';
 
 export const SET_KINDS = ['finite', 'interval', 'rect', 'disk'];
 
@@ -57,6 +57,9 @@ export class SetsModel {
         this.setById = new Map();
         this.maps = [];
         this.mapById = new Map();
+        // A dynagraph with "scale": "shared" draws every line with the same window
+        const dg = cfg.dynagraph;
+        this.sharedWindow = !!dg && !(typeof dg === 'object' && dg.scale === 'own');
         (Array.isArray(cfg.sets) ? cfg.sets : []).forEach((def, i) => this._addSet(def, i));
         (Array.isArray(cfg.maps) ? cfg.maps : []).forEach((def, i) => this._addMap(def, i));
         this.refresh();
@@ -146,6 +149,13 @@ export class SetsModel {
                 });
             }
         });
+        if (this.sharedWindow) {
+            const lines = this.sets.filter(st => st.kind === 'interval');
+            if (lines.length > 1) {
+                const w = [Math.min(...lines.map(st => st.window[0])), Math.max(...lines.map(st => st.window[1]))];
+                lines.forEach(st => { st.window = w.slice(); });
+            }
+        }
         this.maps.forEach(map => {
             if (map.kind !== 'piecewise') return;
             map.pieces.forEach(pc => { pc.I = pc.on ? evalInterval(pc.on, ev) : null; });
@@ -338,7 +348,7 @@ export class SetsModel {
                 this.warn(`map '${map.id}'${where}: needs "expr"`);
                 return;
             }
-            const piece = { index: k, fns: this._compileExprs(map, pc.expr, where) };
+            const piece = { index: k, fns: this._compileExprs(map, pc.expr, where), src: pc };
             if (pc.on !== undefined) {
                 if (dIn === 2) {
                     this.warn(`map '${map.id}'${where}: "on" takes an interval of numbers; in the plane use "if"`);
@@ -713,6 +723,47 @@ export class SetsModel {
         return out;
     }
 
+    /**
+     * The map as one expression in x, for the plot engine: an expression as
+     * written, pieces as nested "cond ? expr : …" (NaN where no piece
+     * applies), a composition by substitution. Null when it cannot be one
+     * (an inverse, pairs, the plane).
+     */
+    exprString(map) {
+        if (!map || this.dim(map.from) === 2) return null;
+        if (map.kind === 'expr') return typeof map.def.expr === 'string' || typeof map.def.expr === 'number' ? `(${map.def.expr})` : null;
+        if (map.kind === 'piecewise') {
+            if (map.pieces.some(pc => Array.isArray(pc.src.expr))) return null;
+            let out = '(0/0)';
+            for (let k = map.pieces.length - 1; k >= 0; k--) {
+                const pc = map.pieces[k];
+                const conds = [];
+                if (pc.on) {
+                    const { lo, hi, loClosed, hiClosed } = pc.on;
+                    const inf = (e) => /inf|∞/i.test(String(e));
+                    if (lo === hi) conds.push(`x == (${lo})`);
+                    else {
+                        if (!inf(lo)) conds.push(`x ${loClosed ? '>=' : '>'} (${lo})`);
+                        if (!inf(hi)) conds.push(`x ${hiClosed ? '<=' : '<'} (${hi})`);
+                    }
+                }
+                if (pc.src.if !== undefined) conds.push(`(${pc.src.if})`);
+                out = conds.length ? `(${conds.join(' && ')}) ? (${pc.src.expr}) : ${out}` : `(${pc.src.expr})`;
+            }
+            return `(${out})`;
+        }
+        if (map.kind === 'compose') {
+            let e = 'x';
+            for (const part of map.parts) {
+                const pe = this.exprString(part);
+                if (pe === null) return null;
+                e = substituteX(pe, e);
+            }
+            return e;
+        }
+        return null;
+    }
+
     // =====================================================================
     // IMAGE, PREIMAGE, COLLISIONS, PROPERTIES
     // =====================================================================
@@ -730,7 +781,7 @@ export class SetsModel {
     image(map, arg = null) {
         const key = `image|${map.id}|${JSON.stringify(arg)}`;
         if (this._cache.has(key)) return this._cache.get(key);
-        const res = this._image(map, arg);
+        const res = this._spread(arg, (a) => this._image(map, a), map.to);
         this._cache.set(key, res);
         return res;
     }
@@ -747,7 +798,7 @@ export class SetsModel {
         if (from.kind === 'finite') {
             let ids = from.elements.map(e => e.id);
             if (arg && arg.kind === 'elements') ids = arg.ids.filter(id => from.elementById.has(id));
-            else if (arg && arg.kind === 'element') ids = from.elementById.has(arg.id) ? [arg.id] : [];
+            else if (arg && arg.kind === 'element') ids = from.elementById.has(String(arg.id)) ? [String(arg.id)] : [];
             const values = [];
             ids.forEach(id => this.apply(map, id).forEach(v => values.push(v)));
             if (to.kind === 'finite') {
@@ -772,6 +823,12 @@ export class SetsModel {
         if (arg && arg.kind === 'interval' && from.kind === 'interval') {
             const J = this._argInterval(arg);
             if (J) D = intersect(from.I, J);
+        }
+        // The image of a single point (a value from another selector)
+        if (arg && arg.kind === 'element' && arg.value !== undefined) {
+            const vs = this.containsPoint(from, arg.value) ? this.apply(map, arg.value) : [];
+            if (to.kind === 'finite') return { kind: 'elements', set: to, ids: to.elements.map(e => e.id).filter(id => vs.includes(id)), outside: [] };
+            return { kind: 'points', set: to, points: vs.filter(v => SetsModel.validPoint(v)) };
         }
         if (dIn === 1) {
             if (dOut === 1) {
@@ -803,6 +860,38 @@ export class SetsModel {
             return { kind: 'region', set: to, polygon: pts };
         }
         return null;
+    }
+
+    /**
+     * Runs an image or preimage on an argument that may be another selector
+     * ("image(g, image(f))"): its result becomes the argument; a union of
+     * intervals or a list of values is done piece by piece and joined.
+     */
+    _spread(arg, run, set) {
+        const a = this._resolveArg(arg);
+        if (a === undefined) return null;
+        if (a && a.kind === 'intervals') return mergeResults(a.parts.map(I => run(isPoint(I) ? { kind: 'element', value: I.lo } : { kind: 'interval', I })), set);
+        if (a && a.kind === 'values') return mergeResults(a.values.map(v => run({ kind: 'element', value: v })), set);
+        return run(a);
+    }
+
+    /** A selector used as an argument -> the argument it stands for (undefined when it fails). */
+    _resolveArg(arg) {
+        if (!arg || arg.kind !== 'selector') return arg;
+        const sel = parseSelector(arg.src);
+        const inner = sel && this.mapById.get(sel.map);
+        if (!inner || !['image', 'preimage'].includes(sel.op)) {
+            this.warn(`'${arg.src}': only image(…) and preimage(…) of a map can be used as an argument`);
+            return undefined;
+        }
+        const res = sel.op === 'image' ? this.image(inner, sel.arg) : this.preimage(inner, sel.arg);
+        if (!res) return undefined;
+        if (res.kind === 'elements') return { kind: 'elements', ids: res.ids };
+        if (res.kind === 'interval') return { kind: 'interval', I: res.I };
+        if (res.kind === 'intervals') return { kind: 'intervals', parts: res.parts };
+        if (res.kind === 'points') return { kind: 'values', values: res.points };
+        this.warn(`'${arg.src}': a region of the plane cannot be used as an argument yet`);
+        return undefined;
     }
 
     /** Image of a part D of an interval domain, into an interval: a union of intervals (one per piece). */
@@ -839,7 +928,7 @@ export class SetsModel {
     preimage(map, arg) {
         const key = `pre|${map.id}|${JSON.stringify(arg)}`;
         if (this._cache.has(key)) return this._cache.get(key);
-        const res = this._preimage(map, arg);
+        const res = this._spread(arg, (a) => this._preimage(map, a), map.from);
         this._cache.set(key, res);
         return res;
     }
@@ -868,11 +957,13 @@ export class SetsModel {
                 const J = this._argInterval(arg);
                 return J ? [J] : [];
             }
-            const ids = arg.kind === 'elements' ? arg.ids : [arg.id];
+            const ids = arg.kind === 'elements' ? arg.ids : [arg.value !== undefined ? arg.value : arg.id];
             const out = [];
             ids.forEach(t => {
                 let y;
-                if (dOut === 0) {
+                if (typeof t === 'number' || Array.isArray(t)) {
+                    y = t;
+                } else if (dOut === 0) {
                     if (!to.elementById.has(t)) {
                         this.warn(`preimage(${map.id}, …): '${t}' is not an element of ${to.id}`);
                         return;
@@ -1047,7 +1138,7 @@ export class SetsModel {
             if (!J) return null;
             return (v) => typeof v === 'number' && contains(J, v, 1e-12);
         }
-        const y = this.evaluate(arg.id);
+        const y = arg.value !== undefined ? arg.value : this.evaluate(arg.id);
         return (v) => typeof v === 'number' && Math.abs(v - y) <= 1e-9 * Math.max(1, Math.abs(y));
     }
 
@@ -1302,6 +1393,39 @@ export class SetsModel {
         }
         return out;
     }
+}
+
+/**
+ * Replaces the variable x in an expression with another expression:
+ * "x^2 + 2x" with "(t+1)" -> "(t+1)^2 + 2(t+1)". Names that contain an x
+ * (exp, max) are left alone.
+ */
+export function substituteX(src, by) {
+    return String(src).replace(/(?<![A-Za-z_])x(?![A-Za-z0-9_])/g, `(${by})`);
+}
+
+/** Joins results of the same kind (pieces of one image or preimage). */
+function mergeResults(list, set) {
+    const rs = list.filter(Boolean);
+    if (!rs.length) return null;
+    if (rs.every(r => r.kind === 'elements')) {
+        const ids = new Set([].concat(...rs.map(r => r.ids)));
+        const all = rs[0].set.elements.map(e => e.id).filter(id => ids.has(id));
+        return { kind: 'elements', set: rs[0].set, ids: all, outside: [].concat(...rs.map(r => r.outside || [])) };
+    }
+    const parts = [];
+    let ok = true;
+    rs.forEach(r => {
+        if (r.kind === 'interval') parts.push(r.I);
+        else if (r.kind === 'intervals') parts.push(...r.parts);
+        else if (r.kind === 'points') r.points.forEach(v => (typeof v === 'number' ? parts.push(interval(v, v)) : (ok = false)));
+        else ok = false;
+    });
+    if (!ok) return rs[0];
+    const u = unionIntervals(parts);
+    if (!u.length) return { kind: 'points', set: rs[0].set || set, points: [] };
+    if (u.every(isPoint)) return { kind: 'points', set: rs[0].set, points: u.map(P => P.lo) };
+    return u.length === 1 ? { kind: 'interval', set: rs[0].set, I: u[0] } : { kind: 'intervals', set: rs[0].set, parts: u };
 }
 
 /** Bounding box [x0, y0, x1, y1] of points. */

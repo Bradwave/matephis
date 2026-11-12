@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di insiemi e funzioni generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-sets.js` a partire da un blocco ```` ```sets ````. Per provare una configurazione mentre la scrivi usa il [playground](/playground/) (motore «sets»).
 
-**Stato: fase 1 (insiemi e funzioni).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione o come inversa; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate, dynagraph e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fasi 1 e 2 (insiemi, funzioni, dynagraph e grafici).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione o come inversa; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui; dynagraph (rette parallele) e, accanto al diagramma, il grafico delle funzioni collegato al punto. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -24,6 +24,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `probe` | Object/Array | | Punto su un dominio continuo, con la freccia verso la sua immagine (vedi «Domini continui»). |
 | `params`, `animate` | | | Slider, come nei grafici. Usabili negli estremi degli intervalli e nelle espressioni. |
 | `layout` | `"row"`/`"column"` | `"row"` | Insiemi affiancati (elementi in colonna) o uno sotto l'altro (elementi in riga). |
+| `dynagraph` | Boolean/Object | | Dynagraph: gli intervalli diventano rette parallele una sotto l'altra, con la stessa scala, tacche e numeri (vedi «Dynagraph e grafici»). |
+| `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
 | `hover` | Boolean | `true` | Passando sopra un elemento (o con Tab) si evidenziano le sue frecce, immagini e controimmagini. |
 | `reorder` | Boolean | `true` | Riordina gli elementi del codominio per ridurre gli incroci e tenere l'immagine in un unico blocco. Un insieme con `"order": "given"` mantiene il suo ordine. |
 | `mapLabels` | Boolean | `true` | Freccia $A \xrightarrow{f} B$ tra i nomi degli insiemi. |
@@ -72,6 +74,7 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | :--- | :--- |
 | `image(f)` | Immagine $f(A)$, cerchiata (finita) o evidenziata sul codominio (continua). |
 | `image(f, {a_1, a_2})`, `image(h, [0, 1/2])` | Immagine di un sottoinsieme o di un sotto-intervallo. |
+| `image(g, image(f))`, `preimage(f, preimage(g, {c}))` | Un'immagine o una controimmagine come argomento di un'altra: $g(f(A))$, $f^{-1}(g^{-1}(\{c\}))$. |
 | `preimage(f, b_1)`, `preimage(f, {b_1, b_2})` | Controimmagine di un elemento o di un sottoinsieme. |
 | `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
 | `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
@@ -97,7 +100,31 @@ L'immagine di un intervallo è calcolata campionando la funzione, che si suppone
 
 Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni continue e iniettive.
 
-`probe`: `{ "map": "h", "at": "p" }` mette un punto in $x = p$ con la freccia verso $h(p)$ e il valore. Se `at` è un parametro il punto si trascina e muove lo slider; nel piano `at` è una coppia (`["p", "q"]`). Opzioni: `label`, `color`, `showValue`, `drag`.
+`probe`: `{ "map": "h", "at": "p" }` mette un punto in $x = p$ con la freccia verso $h(p)$ e il valore. Se `at` è un parametro il punto si trascina e muove lo slider; nel piano `at` è una coppia (`["p", "q"]`). Su una composizione il punto segue i passaggi, $x \to f(x) \to g(f(x))$, attraverso gli insiemi intermedi. Opzioni: `label`, `color`, `showValue`, `drag`, `trace` (lascia le frecce dei punti già visitati, sbiadite: mostra dove la funzione allunga, ripiega o non arriva).
+
+Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
+
+### Dynagraph e grafici
+
+`"dynagraph": true`, oppure un oggetto con:
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `scale` | `"shared"` | `"shared"`: tutte le rette hanno la stessa finestra, così lo stesso numero sta nello stesso punto su ogni retta; `"own"`: ognuna la sua. |
+| `ticks` | `true` | Tacche e numeri: `true` (passo automatico), un numero (il passo), `false` (solo gli estremi). |
+| `arrows` | `9` | Quante frecce di esempio per funzione (sottili; quella del punto è la più evidente). Una funzione con `samples` usa il suo. |
+
+`"plot"` disegna, con il motore dei grafici, i grafici delle funzioni accanto al diagramma. Le formule sono quelle delle funzioni (scritte una volta sola) e i parametri sono gli stessi: muovendo il punto sul diagramma si muovono i punti sui grafici, e trascinando un punto su un grafico si muove il punto sul diagramma. Le funzioni nel grafico senza un colore ne ricevono uno, che vale anche per le loro frecce.
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `maps` | tutte quelle disegnabili | Le funzioni da disegnare: da numeri a numeri, date da un'espressione, a tratti, da coppie di numeri, composizioni e inverse (come grafico riflesso). |
+| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti) o `"below"`. |
+| `probe` | `true` | I punti $(x, f(x))$ del punto del diagramma, con la linea tratteggiata fino all'asse $x$. Per $g \circ f$ anche $(f(x), g(f(x)))$ sul grafico di $g$ e $(x, g(f(x)))$ su quello di $g \circ f$. |
+| `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
+| `identity` | con `construction` | Disegna la retta $y = x$. |
+
+Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
 
 ## Esempi
 
@@ -344,5 +371,95 @@ Lo jacobiano non cambia segno, ma il bordo fa due giri: la funzione non è iniet
   ],
   "maps": [{ "id": "q", "from": "D", "to": "E", "expr": ["x^2 - y^2", "2*x*y"], "samples": 7 }],
   "show": ["image(q)", "properties(q)"]
+}
+```
+
+### Un dynagraph
+
+$f(x) = x^2 - 1$: trascina il punto. Le frecce sbiadite restano dove sei passato: a sinistra e a destra di $0$ arrivano negli stessi punti, perché $f$ non è iniettiva.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] },
+    { "id": "Y", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }
+  ],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2 - 1" }],
+  "params": { "p": { "min": -3, "max": 3, "step": 0.01, "val": 1.5, "label": "x" } },
+  "probe": { "map": "f", "at": "p", "trace": true }
+}
+```
+
+### Composizione su un dynagraph
+
+Il punto passa da $X$ a $Y$ con $f$ e da $Y$ a $Z$ con $g$; il pulsante mostra $g \circ f$ in un passo solo. L'immagine di $g \circ f$ è $g(f(X))$.
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "X", "label": "X", "interval": "[-2, 2]" },
+    { "id": "Y", "label": "Y", "interval": "[-2, 2]" },
+    { "id": "Z", "label": "Z", "interval": "[-2, 2]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x/2 + 1/2", "color": "blue" },
+    { "id": "g", "from": "Y", "to": "Z", "expr": "x^2 - 1", "color": "orange" },
+    { "id": "gf", "compose": ["f", "g"] }
+  ],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "highlights": [{ "of": "image(g, image(f))", "hidden": true }],
+  "show": ["properties(gf)"],
+  "controls": [
+    { "type": "reveal", "label": "Mostra g ∘ f", "targets": ["arrows(gf)"] },
+    { "type": "reveal", "label": "Mostra g(f(X))", "targets": ["image(g, image(f))"] }
+  ]
+}
+```
+
+### Dynagraph e grafico
+
+Lo stesso punto sul dynagraph e sul grafico: trascina l'uno o l'altro.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "label": "X", "interval": "[-2, 2]" },
+    { "id": "Y", "label": "Y", "interval": "[-2, 2]" }
+  ],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "piecewise": [
+    { "on": "[-2, 0)", "expr": "-x - 1" },
+    { "on": "[0, 2]", "expr": "x^2 / 2" }
+  ] }],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1.2, "label": "x" } },
+  "probe": { "map": "f", "at": "p" },
+  "plot": { "maps": ["f"] },
+  "show": ["properties(f)"]
+}
+```
+
+### Composizione: dynagraph e costruzione sul grafico
+
+$f(x) = \frac{x + 1}{2}$ e $g(x) = \frac{x^2}{2}$ su $[0, 2]$. Sul grafico il punto sale fino al grafico di $f$, va di lato fino alla retta $y = x$ (così $f(x)$ diventa un'ascissa), sale fino al grafico di $g$ e torna sopra $x$: lì sta il grafico di $g \circ f$.
+
+```sets
+{
+  "dynagraph": { "ticks": 0.5 },
+  "sets": [
+    { "id": "X", "label": "X", "interval": "[0, 2]" },
+    { "id": "Y", "label": "Y", "interval": "[0, 2]" },
+    { "id": "Z", "label": "Z", "interval": "[0, 2]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "(x + 1)/2" },
+    { "id": "g", "from": "Y", "to": "Z", "expr": "x^2/2" },
+    { "id": "gf", "compose": ["f", "g"], "arrows": true }
+  ],
+  "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "plot": { "maps": ["f", "g", "gf"], "construction": true }
 }
 ```

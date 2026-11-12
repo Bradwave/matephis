@@ -151,6 +151,15 @@ describe('Configurazione', () => {
         expect(w.some(x => /'shw'.*did you mean 'show'/.test(x))).toBe(true);
     });
 
+    it('"dynagraph" e "plot": opzioni e avvisi', () => {
+        expect(validateConfig({ dynagraph: { ticks: 1, arrows: 5, scale: 'own' }, plot: { maps: ['f'], xlim: [0, 1] } })).toEqual([]);
+        const w = validateConfig({ dynagraph: { tick: 1 }, layout: 'row', plot: { position: 'left' } });
+        expect(w.some(x => /dynagraph: unknown option 'tick'.*did you mean 'ticks'/.test(x))).toBe(true);
+        expect(w.some(x => /"layout": "row" is ignored/.test(x))).toBe(true);
+        expect(w.some(x => /"position" must be "right" or "below"/.test(x))).toBe(true);
+        expect(validateConfig({ probe: { map: 'f', at: 'p', trace: true } })).toEqual([]);
+    });
+
     it('"piecewise" e "inverse" sono opzioni delle funzioni', () => {
         const w = validateConfig({ maps: [{ id: 'f', piecewise: [] }, { id: 'g', inverse: 'f' }, { id: 'h', iterate: 2 }] });
         expect(w).toEqual(["map 'h': option 'iterate' is not implemented yet and is ignored"]);

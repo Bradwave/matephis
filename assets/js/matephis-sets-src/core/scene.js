@@ -24,8 +24,13 @@ import { Interaction } from '../ui/interaction.js';
 import { drawSets, drawElements, drawHeader } from '../render/sets.js';
 import { drawMapArrows, drawRoutedMaps, drawProbes } from '../render/arrows.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
+import { LinkedPlot } from '../render/linked-plot.js';
 
 let uidCounter = 0;
+
+/** Beside a plot: the narrowest each may be before they go one under the other, and the gap. */
+const SIDE_MIN = 280;
+const SIDE_GAP = 16;
 
 /** Plain colour names, mapped to the site's palette. */
 const COLOR_NAMES = {
@@ -69,6 +74,13 @@ export class MatephisSets {
         this._applyLayout();
 
         validateConfig(cfg).forEach(w => this._addWarning(w));
+        // A dynagraph: parallel lines one under the other, same scale, ticks
+        const dg = cfg.dynagraph;
+        this.dynagraph = dg ? {
+            ticks: typeof dg === 'object' && dg.ticks !== undefined ? dg.ticks : true,
+            arrows: typeof dg === 'object' && dg.arrows !== undefined ? dg.arrows : 9,
+        } : null;
+        this.orient = this.dynagraph || cfg.layout === 'column' ? 'column' : 'row';
 
         const paramNames = Object.keys(cfg.params || {});
         this.compiler = new ExpressionCompiler({
@@ -86,6 +98,14 @@ export class MatephisSets {
             this.palettes = createPalettes(this._isDark());
             this.draw();
         });
+
+        // A plot of the maps' graphs beside (or under) the diagram; it colours its maps first
+        if (cfg.plot && typeof cfg.plot === 'object') {
+            this.plotPosition = cfg.plot.position === 'below' ? 'below' : 'right';
+            this.plotHost = document.createElement('div');
+            this.plotHost.className = `matephis-sets-plot is-${this.plotPosition}`;
+            this.linked = new LinkedPlot(this, this.plotHost);
+        }
 
         this._initLayers();
         this._initSVG();
@@ -109,6 +129,7 @@ export class MatephisSets {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
+        if (this.linked) this.linked.mount();
 
         this.interaction = new Interaction(this);
         this.draw();
@@ -170,7 +191,7 @@ export class MatephisSets {
     _applyLayout() {
         const cfg = this.config;
         const w = this.wrapper;
-        if (cfg.fullWidth) cfg.cssWidth = '100%';
+        if (cfg.fullWidth || (cfg.plot && cfg.plot.position !== 'below' && !cfg.cssWidth)) cfg.cssWidth = '100%';
         if (cfg.cssWidth) {
             w.style.maxWidth = cssLength(cfg.cssWidth);
             w.style.width = '100%';
@@ -182,18 +203,34 @@ export class MatephisSets {
         if (cfg.marginRight !== undefined) w.style.marginRight = cssLength(cfg.marginRight);
     }
 
+    /** Width of the diagram out of the width there is: half of it when the plot is beside it. */
+    _setsWidth(total) {
+        if (this.plotPosition === 'right' && total >= 2 * SIDE_MIN) return Math.floor((total - SIDE_GAP) / 2);
+        return total;
+    }
+
     _initSVG() {
         const cfg = this.config;
         let targetWidth = cfg.width || 600;
-        if (cfg.fullWidth) {
+        if (cfg.fullWidth || this.plotPosition === 'right') {
             const cw = this.wrapper.clientWidth;
-            targetWidth = cw > 50 ? cw : Math.min(window.innerWidth || 600, 600);
+            targetWidth = this._setsWidth(cw > 50 ? cw : Math.min(window.innerWidth || 600, 600));
+            if (cfg.width) targetWidth = Math.min(targetWidth, cfg.width);
         }
         this.width = Math.max(160, targetWidth);
         this.height = 200;
         this.plotStage = document.createElement('div');
         this.plotStage.className = 'matephis-plot-stage';
-        this.wrapper.appendChild(this.plotStage);
+        if (this.plotHost) {
+            // The diagram and the plot side by side (they wrap on narrow screens), or one under the other
+            this.split = document.createElement('div');
+            this.split.className = `matephis-sets-split is-${this.plotPosition}`;
+            this.split.appendChild(this.plotStage);
+            this.split.appendChild(this.plotHost);
+            this.wrapper.appendChild(this.split);
+        } else {
+            this.wrapper.appendChild(this.plotStage);
+        }
         this.svg = createSvgElement('svg', {
             width: this.width, height: this.height, viewBox: `0 0 ${this.width} ${this.height}`,
             class: 'matephis-plot-svg matephis-sets-svg', role: 'img',
@@ -288,7 +325,7 @@ export class MatephisSets {
         if (!window.ResizeObserver) return;
         this.resizeObserver = new ResizeObserver(entries => {
             for (const entry of entries) {
-                const w = Math.round(entry.contentRect.width);
+                const w = this._setsWidth(Math.round(entry.contentRect.width));
                 if (w > 10 && Math.abs(w - this.width) > 2) this.resize(w);
             }
         });
@@ -297,7 +334,7 @@ export class MatephisSets {
 
     /** Re-lays out at a new width (text keeps its pixel size). */
     resize(w) {
-        if (!this.config.fullWidth && this.config.width && w > this.config.width) w = this.config.width;
+        if ((!this.config.fullWidth || this.plotPosition === 'right') && this.config.width && w > this.config.width) w = this.config.width;
         this.width = Math.max(160, w);
         this.draw();
     }
@@ -420,8 +457,8 @@ export class MatephisSets {
         const footer = this.layers.some(l => (l.arrows && this._routed(l.map) && this._curveShown(l))
             || (l.sel && l.sel.op === 'collisions' && this.isVisible(l)));
         this.layout = computeLayout(this.model, {
-            width: this.width, orient: cfg.layout, fontSize: this.fontSize,
-            measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: cfg.layout === 'column' ? 'column' : 'row' }),
+            width: this.width, orient: this.orient, fontSize: this.fontSize,
+            measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: this.orient }),
             footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined,
             height: typeof cfg.height === 'number' ? cfg.height : undefined,
         });
@@ -429,6 +466,8 @@ export class MatephisSets {
         this.svg.setAttribute('width', this.width);
         this.svg.setAttribute('height', this.height);
         this.svg.setAttribute('viewBox', `0 0 ${this.width} ${this.height}`);
+        // Beside a plot the stage is a flex item: it takes exactly the diagram's width
+        if (this.split) this.plotStage.style.width = `${this.width}px`;
         Object.values(this.groups).forEach(g => { g.textContent = ''; });
         this.interaction.reset();
 
@@ -460,6 +499,7 @@ export class MatephisSets {
         drawProbes(this);
         renderProperties(this, props);
         if (this.controls) this.controls.update();
+        if (this.linked) this.linked.sync();
         this.interaction.bind();
         if (this._warningsDirty) this._renderWarnings();
     }
@@ -486,6 +526,7 @@ export class MatephisSets {
         if (this.resizeObserver) this.resizeObserver.disconnect();
         if (this.sliders) this.sliders.destroy();
         if (this.interaction) this.interaction.destroy();
+        if (this.linked) this.linked.destroy();
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = '';

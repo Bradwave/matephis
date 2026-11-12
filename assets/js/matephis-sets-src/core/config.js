@@ -10,12 +10,12 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot",
 ];
 
 /** Root keys of later phases. */
 export const PLANNED_ROOT_KEYS = [
-    "venn", "relations", "partition", "iterate", "dynagraph", "cd", "steps", "enumerate", "diagonal", "order",
+    "venn", "relations", "partition", "iterate", "cd", "steps", "enumerate", "diagonal", "order", "sync",
 ];
 
 export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "color", "window", "order", "labelSide", "endpoints"];
@@ -26,7 +26,10 @@ export const MAP_KEYS = [
 ];
 export const PLANNED_MAP_KEYS = ["preset", "sequence", "iterate"];
 export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color", "label", "hidden", "fill"];
-export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue"];
+export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue", "trace"];
+export const DYNAGRAPH_KEYS = ["scale", "ticks", "arrows"];
+/** Keys of "plot" read by the sets engine; any other key goes to the plot itself. */
+export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity"];
 
 const didYouMean = (word, candidates) => {
     const s = suggest(word, candidates);
@@ -66,6 +69,15 @@ export function validateConfig(config) {
     (Array.isArray(config.highlights) ? config.highlights : []).forEach((h, i) => {
         if (h && typeof h === 'object') checkKeys(h, HIGHLIGHT_KEYS, [], `highlights[${i}]`, warnings);
     });
+    if (config.dynagraph !== undefined && config.dynagraph !== true && config.dynagraph !== false) {
+        if (config.dynagraph && typeof config.dynagraph === 'object') checkKeys(config.dynagraph, DYNAGRAPH_KEYS, [], 'dynagraph', warnings);
+        else warnings.push('"dynagraph" must be true or an object like { "ticks": 1 }');
+    }
+    if (config.dynagraph && config.layout === 'row') warnings.push('a dynagraph is drawn with its lines one under the other; "layout": "row" is ignored');
+    if (config.plot !== undefined && (!config.plot || typeof config.plot !== 'object')) warnings.push('"plot" must be an object like { "maps": ["f"] }');
+    if (config.plot && config.plot.position !== undefined && !['right', 'below'].includes(config.plot.position)) {
+        warnings.push(`plot: "position" must be "right" or "below", got '${config.plot.position}'`);
+    }
     if (config.probe !== undefined) {
         const probes = Array.isArray(config.probe) ? config.probe : [config.probe];
         probes.forEach((p, i) => { if (p && typeof p === 'object') checkKeys(p, PROBE_KEYS, [], `probe[${i}]`, warnings); });

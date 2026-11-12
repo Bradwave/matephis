@@ -119,6 +119,25 @@
   stroke-width: 2px;
 }
 
+/* Dynagraphs: thin sample arrows (the probe is the strong one), ticks */
+.matephis-sets-svg .mps-thin .mps-arrow-line {
+  stroke-width: 1px;
+  stroke-opacity: 0.55;
+}
+
+.matephis-sets-svg .mps-thin .mps-arrow-head {
+  opacity: 0.55;
+}
+
+.matephis-sets-svg .mps-tick {
+  stroke: var(--sets-soft);
+  stroke-width: 1.2px;
+}
+
+.matephis-sets-svg .mps-trace {
+  opacity: 0.22;
+}
+
 .matephis-sets-svg .mps-band {
   stroke-width: 5px;
   stroke-linecap: butt;
@@ -295,4 +314,34 @@
 
 .matephis-sets-svg .mps-ring {
   pointer-events: all;
+}
+
+/* ==========================================================================
+   A plot of the maps' graphs beside or under the diagram ("plot")
+   ========================================================================== */
+
+.matephis-sets-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.matephis-sets-split > .matephis-plot-stage {
+  flex: 0 0 auto;
+}
+
+.matephis-sets-plot.is-right {
+  flex: 1 1 280px;
+  min-width: 260px;
+}
+
+.matephis-sets-plot.is-below {
+  flex: 1 1 100%;
+}
+
+/* The plot's own sliders are hidden (the diagram's move both); no margin under it */
+.matephis-sets-plot .matephis-plot-container {
+  margin-bottom: 0;
 }

@@ -55,10 +55,11 @@ function outsideSpot(scene, map, k, n) {
 export function drawMapArrows(scene, map, { routed = false } = {}) {
     const { model, layout, groups } = scene;
     const base = map.color ? scene.color(map.color) : scene.ink;
-    const g = scene.svgEl('g', { class: 'mps-map', 'data-map': map.id }, groups.arrows);
+    const g = scene.svgEl('g', { class: `mps-map${scene.dynagraph ? ' mps-thin' : ''}`, 'data-map': map.id }, groups.arrows);
     // An inverse runs back along its base map's arrows: when those are drawn, it bends away from them
     const baseShown = map.kind === 'inverse' && scene.layers.some(l => l.arrows && l.map === map.base && scene.isVisible(l));
-    const bendSize = map.def.bend !== undefined ? Number(map.def.bend) : routed ? 0.28 : baseShown ? 0.2 : 0;
+    // On a dynagraph the arrows of a composition go straight across the middle line
+    const bendSize = map.def.bend !== undefined ? Number(map.def.bend) : routed ? (scene.dynagraph ? 0 : 0.28) : baseShown ? 0.2 : 0;
     const dash = map.def.dash !== undefined ? map.def.dash : routed;
     const outside = [];
     const draw = (src, srcKey, srcPx, t, trimStart) => {
@@ -79,7 +80,7 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
         const style = scene.arrowStyle.get(`${map.id}|${src}|${targetKey(t)}`);
         if (style) color = style;
         const bend = bendSize ? bendTowardsFooter(layout, srcPx, toPx, bendSize) : 0;
-        const a = arrow(scene, g, { from: srcPx, to: toPx, color, bend, trimStart, trimEnd, dash });
+        const a = arrow(scene, g, { from: srcPx, to: toPx, color, bend, trimStart, trimEnd, dash, head: scene.dynagraph ? 6 : undefined });
         if (typeof t !== 'string') {
             const dot = scene.svgEl('circle', { cx: f2(toPx[0]), cy: f2(toPx[1]), r: 2.6, class: 'mps-sample' }, a);
             dot.style.fill = color;
@@ -93,7 +94,8 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
             model.apply(map, id).forEach(t => draw(id, `${map.from.id}|${id}`, [pos.x, pos.y], t, 7));
         });
     } else {
-        model.arrowSamples(map.from, map.def.samples).forEach(p => {
+        const spec = map.def.samples !== undefined ? map.def.samples : scene.dynagraph ? scene.dynagraph.arrows : undefined;
+        model.arrowSamples(map.from, spec).forEach(p => {
             const srcPx = pointPx(layout, map.from, p);
             if (!srcPx) return;
             const dot = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 2.6, class: 'mps-sample' }, g);
@@ -186,18 +188,74 @@ export function drawProbes(scene) {
         const color = scene.color(p.color, 'probe');
         const g = scene.svgEl('g', { class: 'mps-probe' }, scene.groups.probe);
         const inside = scene.model.containsPoint(map.from, x, 1e-12);
+        const isCompose = map.kind === 'compose';
+        // A composition is followed step by step, x -> f(x) -> g(f(x)), across the sets in between
+        const steps = (x0) => {
+            if (!isCompose) return null;
+            const vals = [x0];
+            for (const part of map.parts) {
+                const prev = vals[vals.length - 1];
+                const next = prev === undefined ? [] : scene.model.apply(part, prev);
+                vals.push(next.length ? next[0] : undefined);
+            }
+            return vals;
+        };
+        // Values off the drawn part of a line get no arrow (the value is still written)
+        const visible = (set, v) => typeof v === 'string' || inWindow(set, v);
+        const drawFor = (x0, faint) => {
+            const parent = faint ? scene.svgEl('g', { class: 'mps-trace' }, traceGroup) : g;
+            const w = faint ? 1.4 : 2.2, head = faint ? 7 : 10;
+            if (isCompose) {
+                const vals = steps(x0);
+                map.parts.forEach((part, k) => {
+                    const a = pointPx(scene.layout, part.from, vals[k]), b = pointPx(scene.layout, part.to, vals[k + 1]);
+                    if (!a || !b || vals[k + 1] === undefined || !visible(part.from, vals[k]) || !visible(part.to, vals[k + 1])) return;
+                    arrow(scene, parent, { from: a, to: b, color, trimStart: 7, trimEnd: 5, width: w, head });
+                    if (!faint) {
+                        const dot = scene.svgEl('circle', { cx: f2(b[0]), cy: f2(b[1]), r: 4.5, class: 'mps-probe-target' }, parent);
+                        dot.style.fill = color;
+                    }
+                });
+                // The same point reached in one step, when the composition's arrows are shown
+                const last = vals[vals.length - 1];
+                const direct = scene.layers.find(l => l.arrows && l.map === map);
+                const end = last !== undefined && visible(map.to, last) ? pointPx(scene.layout, map.to, last) : null;
+                if (!faint && end && direct && scene.isVisible(direct)) {
+                    arrow(scene, parent, { from: pointPx(scene.layout, map.from, x0), to: end, color, trimStart: 7, trimEnd: 5, width: 1.6, head: 9, dash: '6 4' });
+                }
+                return last === undefined ? [] : [last];
+            }
+            const vs = scene.model.apply(map, x0);
+            const from = pointPx(scene.layout, map.from, x0);
+            vs.forEach(y => {
+                const px = typeof y === 'string' || (SetsModel.validPoint(y) && visible(map.to, y)) ? pointPx(scene.layout, map.to, y) : null;
+                if (!px || !from) return;
+                arrow(scene, parent, { from, to: px, color, trimStart: 7, trimEnd: 5, width: w, head });
+                if (!faint) {
+                    const dot = scene.svgEl('circle', { cx: f2(px[0]), cy: f2(px[1]), r: 4.5, class: 'mps-probe-target' }, parent);
+                    dot.style.fill = color;
+                }
+            });
+            return vs;
+        };
+        // "trace": the arrows of the places the point has been, faint
+        const traceGroup = p.trace ? scene.svgEl('g', { class: 'mps-traces' }, g) : null;
+        if (p.trace) {
+            if (!scene.traces) scene.traces = new Map();
+            const list = scene.traces.get(i) || [];
+            const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+            if (inside && !(list.length && same(list[list.length - 1], x))) list.push(two ? x.slice() : x);
+            while (list.length > 120) list.shift();
+            scene.traces.set(i, list);
+            list.slice(0, -1).forEach(t => drawFor(t, true));
+        }
         // Several values for a relation (the inverse of a map that is not injective), none where undefined
-        const ys = inside ? scene.model.apply(map, x) : [];
-        const shown = ys.map(y => ({ y, px: typeof y === 'string' || SetsModel.validPoint(y) ? pointPx(scene.layout, map.to, y) : null })).filter(t => t.px);
-        shown.forEach(({ px }) => {
-            arrow(scene, g, { from: srcPx, to: px, color, trimStart: 7, trimEnd: 5, width: 2.2, head: 10 });
-            const dot = scene.svgEl('circle', { cx: f2(px[0]), cy: f2(px[1]), r: 4.5, class: 'mps-probe-target' }, g);
-            dot.style.fill = color;
-        });
+        const ys = inside ? drawFor(x, false) : [];
+        const shown = isCompose ? [] : ys.map(y => ({ y, px: typeof y === 'string' || (SetsModel.validPoint(y) && visible(map.to, y)) ? pointPx(scene.layout, map.to, y) : null })).filter(t => t.px);
         // Where the value goes is decided by the kind of map, not by the value,
         // so it never jumps between the drawing and the line under it
-        const multi = map.kind === 'inverse' || (map.kind === 'compose' && map.parts.some(m => m.kind === 'inverse'));
-        const below = two || map.to.kind !== 'interval' || multi;
+        const multi = map.kind === 'inverse' || (isCompose && map.parts.some(m => m.kind === 'inverse'));
+        const below = two || map.to.kind !== 'interval' || multi || isCompose;
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
@@ -208,7 +266,14 @@ export function drawProbes(scene) {
             const valid = ys.filter(y => typeof y === 'string' || SetsModel.validPoint(y) || (y && typeof y === 'object' && 'outside' in y));
             const rhs = valid.length === 0 ? '\\text{non definita}'
                 : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(valueTeX).join(',\\,')}\\right\\}`;
-            const tex = `${name}\\left(${fmt(x)}\\right) ${rhs}`;
+            let tex = `${name}\\left(${fmt(x)}\\right) ${rhs}`;
+            if (isCompose && p.label === undefined && valid.length === 1) {
+                // (g ∘ f)(x) = g(f(x)) = g(f(x) as a number) = value
+                const vals = steps(x);
+                const nested = map.parts.reduce((acc, part) => `${part.label}\\left(${acc}\\right)`, fmt(x));
+                const lastPart = map.parts[map.parts.length - 1];
+                tex = `\\left(${map.label}\\right)\\left(${fmt(x)}\\right) = ${nested} = ${lastPart.label}\\left(${fmt(vals[vals.length - 2])}\\right) ${rhs}`;
+            }
             if (below) {
                 // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it
                 readouts.push({ tex, color });
@@ -265,7 +330,7 @@ function renderReadouts(scene, items) {
     if (!el) {
         el = scene.readoutEl = document.createElement('div');
         el.className = 'matephis-sets-readouts';
-        scene.plotStage.after(el);
+        (scene.split || scene.plotStage).after(el);
     }
     el.textContent = '';
     if (!scene.readoutHeights) scene.readoutHeights = [];

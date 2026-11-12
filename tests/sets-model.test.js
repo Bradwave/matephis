@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ExpressionCompiler } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
-import { SetsModel, intersect } from '../assets/js/matephis-sets-src/core/model.js';
+import { SetsModel, intersect, substituteX } from '../assets/js/matephis-sets-src/core/model.js';
 import {
     parseInterval, evalInterval, intervalTeX, niceNumber, isSubset, sameInterval, contains,
     imageFromSamples, strictlyMonotone,
@@ -452,5 +452,89 @@ describe('Verifiche nel piano', () => {
         expect(region.kind).toBe('cells');
         const area = region.cells.reduce((s, [x0, y0, x1, y1]) => s + (x1 - x0) * (y1 - y0), 0);
         expect(area).toBeCloseTo(Math.PI / 16, 1);
+    });
+});
+
+describe('Selettori annidati', () => {
+    it('image(g, image(f)) è g(f(X)), come image(g ∘ f)', () => {
+        const { m, map } = model({
+            sets: [{ id: 'X', interval: '[-2,2]' }, { id: 'Y', interval: '[-2,2]' }, { id: 'Z', interval: '[-2,2]' }],
+            maps: [
+                { id: 'f', from: 'X', to: 'Y', expr: 'x/2 + 1/2' },
+                { id: 'g', from: 'Y', to: 'Z', expr: 'x^2 - 1' },
+                { id: 'gf', compose: ['f', 'g'] },
+            ],
+        });
+        const nested = m.image(map('g'), parseArgument('image(f)'));
+        const direct = m.image(map('gf'));
+        expect(nested.kind).toBe('interval');
+        expect(nested.I.lo).toBeCloseTo(-1, 6);
+        expect(nested.I.hi).toBeCloseTo(1.25, 6);
+        expect(direct.I.lo).toBeCloseTo(nested.I.lo, 6);
+        expect(direct.I.hi).toBeCloseTo(nested.I.hi, 6);
+    });
+
+    it('tra insiemi finiti, e con una controimmagine dentro', () => {
+        const { m, map } = model({
+            sets: [{ id: 'A', elements: ['1', '2', '3'] }, { id: 'B', elements: ['x', 'y'] }, { id: 'C', elements: ['p', 'q'] }],
+            maps: [
+                { id: 'f', from: 'A', to: 'B', pairs: { 1: 'x', 2: 'x', 3: 'y' } },
+                { id: 'g', from: 'B', to: 'C', pairs: { x: 'p', y: 'q' } },
+            ],
+        });
+        expect(m.image(map('g'), parseArgument('image(f, {1})')).ids).toEqual(['p']);
+        expect(m.preimage(map('f'), parseArgument('preimage(g, {p})')).ids).toEqual(['1', '2']);
+    });
+
+    it('un\'unione di intervalli come argomento', () => {
+        const { m, map } = model({
+            sets: [{ id: 'I', interval: '[-2,2]' }, { id: 'J', interval: '[0,4]' }, { id: 'K', interval: '[0,4]' }],
+            maps: [{ id: 's', from: 'I', to: 'J', expr: 'x^2' }, { id: 'h', from: 'J', to: 'K', expr: 'x' }],
+        });
+        // s^{-1}([1, 4]) = [-2, -1] ∪ [1, 2]; its image under s is [1, 4] again
+        const back = m.image(map('s'), parseArgument('preimage(s, [1, 4])'));
+        expect(back.kind).toBe('interval');
+        expect(back.I.lo).toBeCloseTo(1, 6);
+        expect(back.I.hi).toBeCloseTo(4, 6);
+    });
+});
+
+describe('Espressioni per il grafico', () => {
+    const { m, map } = model({
+        sets: [{ id: 'X', interval: '[-2,2]' }, { id: 'Y', interval: '[-2,2]' }, { id: 'Z', interval: '[-2,2]' }],
+        maps: [
+            { id: 'f', from: 'X', to: 'Y', expr: 'x/2 + 1/2' },
+            { id: 'g', from: 'Y', to: 'Z', expr: 'x^2 - 1' },
+            { id: 'gf', compose: ['f', 'g'] },
+            { id: 'p', from: 'X', to: 'Y', piecewise: [{ on: '[-2, 0)', expr: '-x - 1' }, { on: 0, expr: '0' }, { if: 'x > 0', expr: 'x^2/2' }] },
+            { id: 'r', inverse: 'f' },
+        ],
+    });
+    const compiler = new ExpressionCompiler({ getParams: () => ({}), getPoints: () => ({}), paramNames: [] });
+    const at = (src, x) => compiler.fn(src, ['x'])(x);
+
+    it('sostituisce x senza toccare exp o max', () => {
+        expect(substituteX('x^2 + 2x - exp(x) + max(x, 1)', 'p')).toBe('(p)^2 + 2(p) - exp((p)) + max((p), 1)');
+    });
+
+    it('una composizione e una funzione a tratti diventano una formula sola', () => {
+        expect(at(m.exprString(map('gf')), 1)).toBeCloseTo(0, 12);
+        expect(at(m.exprString(map('gf')), 3)).toBeCloseTo(3, 12);
+        const e = m.exprString(map('p'));
+        expect(at(e, -1)).toBe(0);
+        expect(at(e, 0)).toBe(0);
+        expect(at(e, 2)).toBe(2);
+        expect(m.exprString(map('r'))).toBe(null);
+    });
+});
+
+describe('Dynagraph', () => {
+    it('con la scala condivisa tutte le rette hanno la stessa finestra', () => {
+        const sets = [{ id: 'X', interval: '[0,1]' }, { id: 'Y', interval: '[-2,3]' }];
+        const shared = model({ dynagraph: true, sets }).m;
+        expect(shared.setById.get('X').window).toEqual([-2, 3]);
+        expect(shared.setById.get('Y').window).toEqual([-2, 3]);
+        const own = model({ dynagraph: { scale: 'own' }, sets }).m;
+        expect(own.setById.get('X').window).toEqual([0, 1]);
     });
 });

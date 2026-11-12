@@ -23,7 +23,21 @@ the ```` ```sets ```` syntax must update that page: the function exercises
 - Not covered yet: inverses of maps from or into the plane, images of
   piecewise maps in the plane, preimages into the plane.
 
-## 2. Dynagraphs, linked plots and composition
+## 2. Dynagraphs, linked plots and composition — 2a–2c done, 2d open
+
+Done (documented in `test-sets.md`): `"dynagraph"` (shared scale, ticks,
+thin sample arrows), probe `"trace"`, probes that step through a
+composition (with the direct dashed arrow when `arrows(gf)` is shown),
+nested selectors (`image(g, image(f))`), and `"plot"` (graphs from the maps'
+own formulas, params kept in sync both ways, `"construction"`). The site
+loads the plot engine on pages whose sets blocks have a `"plot"`
+(`_plugins/asset_injector.rb`). Inverses are drawn as reflected graphs.
+
+Still open: 2d (`"sync"` between separate blocks; reserved, warns), which
+needs a change in the plot engine's slider manager.
+
+The original plan follows.
+
 
 A dynagraph is a set of parallel number lines with arrows x → f(x). The
 engine already draws most of it (intervals in `"layout": "column"`, sampled

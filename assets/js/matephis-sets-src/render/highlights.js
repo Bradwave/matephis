@@ -7,6 +7,7 @@ import { roundedHullPath, convexHull, insideHull } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
 import { parseInterval, evalInterval, intervalTeX } from '../core/interval.js';
 import { intersect } from '../core/model.js';
+import { parseSelector } from '../core/selectors.js';
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -23,7 +24,7 @@ export function drawLayer(scene, layer) {
             drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'image'), label, layer.key);
         } else if (op === 'preimage') {
             const res = model.preimage(map, arg);
-            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg)}\\right)`;
+            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
             drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'preimage'), label, layer.key);
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
@@ -55,15 +56,23 @@ export function drawLayer(scene, layer) {
 
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */
 function imageLabel(scene, map, arg, res) {
-    const of = arg ? argTeX(arg) : setLabelText(scene.model, map.from);
+    const of = arg ? argTeX(arg, scene.model) : setLabelText(scene.model, map.from);
     let s = `${map.label}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
     if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
     return s;
 }
 
-function argTeX(arg) {
+function argTeX(arg, model) {
     if (!arg) return '';
+    if (arg.kind === 'selector') {
+        // image(f) -> f(A), preimage(f, …) -> f^{-1}(…)
+        const sel = parseSelector(arg.src);
+        const m = sel && model.mapById.get(sel.map);
+        if (!m) return arg.src;
+        const inner = sel.arg ? argTeX(sel.arg, model) : setLabelText(model, m.from);
+        return sel.op === 'image' ? `${m.label}\\left(${inner}\\right)` : `${m.label}^{-1}\\left(${inner}\\right)`;
+    }
     if (arg.kind === 'elements') return `\\{${arg.ids.join(',\\,')}\\}`;
     if (arg.kind === 'interval') return arg.src.replace(/inf(inity)?/gi, '\\infty');
     return arg.id;
@@ -179,9 +188,10 @@ function band(scene, g, set, P, I, color) {
     const lo = Math.max(isFinite(I.lo) ? I.lo : w[0], w[0]), hi = Math.min(isFinite(I.hi) ? I.hi : w[1], w[1]);
     if (!(hi >= lo)) return null;
     const row = scene.layout.orient === 'row';
-    // Beside the segment, away from the arrows (on the side of the end labels)
+    // Beside the segment, away from the arrows (on the side of the end labels);
+    // on a dynagraph that side has the tick numbers: the band goes on the line itself
     const side = P.tickSide === 'after' ? 1 : -1;
-    const off = 9 * side;
+    const off = scene.dynagraph ? 0 : 9 * side;
     const shift = (p) => (row ? [p[0] + off, p[1]] : [p[0], p[1] + off]);
     const a = shift(P.toPx(lo)), b = shift(P.toPx(hi));
     const line = scene.svgEl('line', { x1: f2(a[0]), y1: f2(a[1]), x2: f2(b[0]), y2: f2(b[1]), class: 'mps-band' }, g);
@@ -195,7 +205,8 @@ function band(scene, g, set, P, I, color) {
         });
     // Label next to the middle of the band
     const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    return row ? [m[0] + 10 * side, m[1]] : [m[0], m[1] + 12 * side];
+    const away = scene.dynagraph ? -side : side;
+    return row ? [m[0] + 10 * away, m[1]] : [m[0], m[1] + 12 * away];
 }
 
 /** Label of a layer, beside its group, in the layer's colour. */
@@ -203,7 +214,8 @@ function layerLabel(scene, g, P, at, label, color, kind) {
     const row = scene.layout.orient === 'row';
     const size = scene.fontSize * 0.9;
     if (P.kind === 'interval') {
-        const side = P.tickSide === 'after' ? 1 : -1;
+        // On a dynagraph the label goes on the side without tick numbers
+        const side = (P.tickSide === 'after' ? 1 : -1) * (scene.dynagraph ? -1 : 1);
         if (kind === 'points') {
             // Next to the outermost ring, on the side of the end labels
             if (row) scene.text(at[0] + 16 * side, at[1], label, { parent: g, color, size, anchor: side < 0 ? 'end' : 'start' });
