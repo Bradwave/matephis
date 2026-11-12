@@ -2,6 +2,7 @@
 title: Esercizi sulle funzioni
 feed: show
 plot: true
+sets: true
 tags:
   - esercizi
   - funzioni
@@ -47,6 +48,29 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 		- $G_2 = \lbrace (1, a), (2, b) \rbrace$
 		- $G_3 = \lbrace (1, a), (1, b), (2, c), (3, c) \rbrace$
 		- $G_4 = \lbrace (1, c), (2, b), (3, a) \rbrace$
+
+		Dopo aver risposto, verifica con il diagramma: ciascun pulsante mostra le frecce di uno dei sottoinsiemi e le sue proprietà.
+		```sets
+		{
+		  "mapLabels": false,
+		  "sets": [
+		    { "id": "A", "elements": ["1", "2", "3"], "order": "given" },
+		    { "id": "B", "elements": ["a", "b", "c"], "order": "given" }
+		  ],
+		  "maps": [
+		    { "id": "g1", "label": "G_1", "from": "A", "to": "B", "pairs": { "1": "a", "2": "a", "3": "b" }, "hidden": true },
+		    { "id": "g2", "label": "G_2", "from": "A", "to": "B", "pairs": { "1": "a", "2": "b" }, "hidden": true, "color": "blue" },
+		    { "id": "g3", "label": "G_3", "from": "A", "to": "B", "pairs": { "1": ["a", "b"], "2": "c", "3": "c" }, "hidden": true, "color": "orange" },
+		    { "id": "g4", "label": "G_4", "from": "A", "to": "B", "pairs": { "1": "c", "2": "b", "3": "a" }, "hidden": true, "color": "purple" }
+		  ],
+		  "controls": [
+		    { "type": "reveal", "label": "Mostra G₁", "targets": ["arrows(g1)", "properties(g1)"] },
+		    { "type": "reveal", "label": "Mostra G₂", "targets": ["arrows(g2)", "properties(g2)"] },
+		    { "type": "reveal", "label": "Mostra G₃", "targets": ["arrows(g3)", "properties(g3)"] },
+		    { "type": "reveal", "label": "Mostra G₄", "targets": ["arrows(g4)", "properties(g4)"] }
+		  ]
+		}
+		```
 	3. Quale proprietà deve avere un sottoinsieme $G \subseteq A \times B$ per essere il grafico di una funzione da $A$ a $B$? Esprimila a parole, con i quantificatori e in termini di "rette verticali" nel diagramma cartesiano.
 	[sol: 2. $G_1$: funzione né iniettiva né suriettiva; $G_2$: non è il grafico di una funzione da $A$ a $B$ (a $3$ non è associato nulla); $G_3$: non lo è (a $1$ sono associati due elementi); $G_4$: funzione biiettiva. 3. Per ogni $x \in A$ esiste uno e un solo $y \in B$ tale che $(x, y) \in G$: ogni retta verticale per un elemento di $A$ interseca $G$ in esattamente un punto.]
 3. **[EE]** Quali dei seguenti sottoinsiemi del piano cartesiano sono il grafico di una funzione reale di variabile reale? In caso affermativo, determina l'espressione analitica della funzione, il suo dominio e la sua immagine.
@@ -59,6 +83,21 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	7. $\lbrace (x, y) \in \mathbb{R}^2 : xy = 1 \rbrace$
 	[sol: 1. no; 2. sì, $y = \root 3 \of {x}$, dominio e immagine $\mathbb{R}$; 3. sì, $y = \sqrt{1 - x^2}$, dominio $-1 \leq x \leq 1$, immagine $0 \leq y \leq 1$; 4. no; 5. sì, dominio $\mathbb{R}$, immagine $y \geq 0$; 6. no; 7. sì, $y = 1/x$, dominio e immagine $\mathbb{R} \setminus \lbrace 0 \rbrace$.]
 4. **[E]** Per ciascuna delle seguenti funzioni, scrivi la definizione algebrica utilizzando la giusta notazione, determina dominio naturale e immagine, realizza un dynagraph e un grafico cartesiano.
+
+	Un dynagraph rappresenta dominio e codominio come due rette parallele e collega ogni $x$ alla sua immagine con una freccia. Ad esempio, questo è il dynagraph di $g(x) = 1 - \frac x 2$: trascina il punto e osserva dove vanno le frecce.
+	```sets
+	{
+	  "dynagraph": { "ticks": 1 },
+	  "sets": [
+	    { "id": "X", "label": "\\mathbb{R}", "interval": "R", "window": [-4, 4] },
+	    { "id": "Y", "label": "\\mathbb{R}", "interval": "R", "window": [-4, 4] }
+	  ],
+	  "maps": [{ "id": "g", "from": "X", "to": "Y", "expr": "1 - x/2" }],
+	  "params": { "p": { "min": -4, "max": 4, "step": 0.01, "val": 2, "label": "x" } },
+	  "probe": { "map": "g", "at": "p", "trace": true }
+	}
+	```
+
 	1. La funzione che associa a ogni numero reale $x$ il numero reale ottenuto addizionando 5 a $x$.
 	2. La funzione che associa a ogni numero naturale $n$ il numero naturale doppio di $n$.
 	3. La funzione che associa a ogni numero reale $x$ il numero reale ottenuto addizionando 5 al doppio di $x$.
@@ -215,6 +254,25 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	4. $f_4 : [0, +\infty) \to [0, +\infty)$
 	5. $f_5 : [-1, 2] \to [0, 4]$
 	6. $f_6 : (-\infty, -1] \to [1, +\infty)$
+
+	Con il diagramma puoi verificare le risposte quando dominio e codominio sono intervalli limitati, come per $f_5$: scegli con gli slider il dominio $[a, b]$ e il codominio $[c, d]$ e osserva come cambiano l'immagine e le proprietà della funzione. Che cosa succede se l'immagine non è contenuta nel codominio?
+	```sets
+	{
+	  "layout": "column",
+	  "sets": [
+	    { "id": "D", "interval": "[a, b]" },
+	    { "id": "C", "interval": "[c, d]" }
+	  ],
+	  "maps": [{ "id": "f", "from": "D", "to": "C", "expr": "x^2", "samples": 7 }],
+	  "params": {
+	    "a": { "min": -3, "max": 3, "step": 0.5, "val": -1 },
+	    "b": { "min": -3, "max": 3, "step": 0.5, "val": 2 },
+	    "c": { "min": -2, "max": 9, "step": 0.5, "val": 0 },
+	    "d": { "min": -2, "max": 9, "step": 0.5, "val": 4 }
+	  },
+	  "show": ["image(f)", "collisions(f)", "properties(f)"]
+	}
+	```
 	[sol: 1. né iniettiva né suriettiva; 2. suriettiva, non iniettiva; 3. iniettiva, non suriettiva; 4. biiettiva, inversa $\sqrt{x}$; 5. suriettiva, non iniettiva; 6. biiettiva, inversa $-\sqrt{x}$.]
 3. **[EE/F]** Per ciascuna delle seguenti funzioni stabilisci se è invertibile (eventualmente restringendo dominio e codominio), determina l'espressione analitica dell'inversa, il suo dominio e la sua immagine. Rappresenta nello stesso piano cartesiano i grafici di $f$ e di $f^{-1}$.
 	1. $f(x) = 3x - 2$
@@ -241,11 +299,45 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. Calcola $f^{-1}(-2)$, $f^{-1}(1)$, $f^{-1}(4)$ e $f^{-1}(0)$.
 	3. Risolvi la disequazione $f^{-1}(x) \geq 0$.
 	4. In quali punti si intersecano i grafici di $f$ e di $f^{-1}$?
+
+	Dopo aver risposto, verifica con il dynagraph di $f$: trascina il punto per leggere i valori di $f$; il pulsante mostra le frecce di $f^{-1}$, che percorrono al contrario quelle di $f$.
+	```sets
+	{
+	  "dynagraph": { "ticks": 1 },
+	  "sets": [
+	    { "id": "X", "label": "[-4, 3]", "interval": "[-4, 3]" },
+	    { "id": "Y", "label": "[-3, 4]", "interval": "[-3, 4]" }
+	  ],
+	  "maps": [
+	    { "id": "f", "from": "X", "to": "Y", "piecewise": [
+	      { "on": "[-4, -1)", "expr": "-3 + (x + 4)/3" },
+	      { "on": "[-1, 1)", "expr": "-2 + 3*(x + 1)/2" },
+	      { "on": "[1, 3]", "expr": "1 + 3*(x - 1)/2" }
+	    ] },
+	    { "id": "finv", "inverse": "f", "hidden": true, "color": "blue" }
+	  ],
+	  "params": { "p": { "min": -4, "max": 3, "step": 0.01, "val": 0, "label": "x" } },
+	  "probe": { "map": "f", "at": "p" },
+	  "controls": [{ "type": "reveal", "label": "Mostra f⁻¹", "targets": ["arrows(finv)", "properties(finv)"] }]
+	}
+	```
 	[sol: 1. $f$ è strettamente crescente; dominio di $f^{-1}$: $-3 \leq x \leq 4$, immagine: $-4 \leq y \leq 3$. 2. $-1$; $1$; $3$; $\frac 1 3$. 3. $-\frac 1 2 \leq x \leq 4$, perché $f(0) = -\frac 1 2$. 4. Nei punti fissi di $f$, che stanno sulla bisettrice: $(-\frac 5 2; -\frac 5 2)$ e $(1; 1)$.]
 5. **[EE/F]** Siano $A$ e $B$ due insiemi finiti con $3$ e $2$ elementi rispettivamente.
 	1. Quante sono le funzioni da $A$ a $B$? Quante di esse sono suriettive? Quante iniettive?
 	2. Rispondi alle stesse domande nel caso in cui $A$ e $B$ abbiano entrambi $3$ elementi.
 	3. Spiega perché non può esistere una funzione iniettiva da un insieme con $4$ elementi a un insieme con $3$ elementi (*principio dei cassetti*). Che cosa si può dire, in generale, del numero degli elementi di due insiemi finiti tra i quali esiste una biiezione?
+
+	Nel diagramma è rappresentato un tentativo: comunque si scelgano le frecce, almeno due finiscono nello stesso elemento.
+	```sets
+	{
+	  "sets": [
+	    { "id": "A", "elements": ["1", "2", "3", "4"], "order": "given" },
+	    { "id": "B", "elements": ["a", "b", "c"], "order": "given" }
+	  ],
+	  "maps": [{ "id": "f", "from": "A", "to": "B", "pairs": { "1": "a", "2": "b", "3": "c", "4": "b" } }],
+	  "show": ["collisions(f)", "properties(f)"]
+	}
+	```
 	[sol: 1. $2^3 = 8$ funzioni, di cui $6$ suriettive e nessuna iniettiva; 2. $3^3 = 27$ funzioni, di cui $6$ suriettive e $6$ iniettive (tutte biiettive); 3. almeno due elementi del dominio avrebbero la stessa immagine; due insiemi finiti tra i quali esiste una biiezione hanno lo stesso numero di elementi.]
 
 ### Composizione di funzioni
@@ -262,6 +354,27 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	3. Sia ancora $f(x) = 2x + 1$. Determina una funzione $k$ tale che $k(f(x)) = 4x^2 + 4x$ per ogni $x$.
 	[sol: 1. ad esempio $F = r \circ s \circ t$ con $t(x) = x - 1$, $s(x) = x^2 + 4$, $r(x) = \sqrt x$; $G = u \circ v$ con $v(x) = x^2 - 4$, $u(x) = 1/x$; $H = c \circ a \circ \ell$ con $\ell(x) = 2x - 1$, $a(x) = \lvert x \rvert$, $c(x) = x^3$. 2. $g(x) = 3x - 3$. 3. $k(t) = t^2 - 1$, perché $4x^2 + 4x = (2x + 1)^2 - 1$.]
 3. **[F]** Siano $f(x) = \sqrt{x}$ e $g(x) = 1 - x^2$. Determina dominio e immagine di $f \circ g$ e di $g \circ f$. Le funzioni $g \circ f$ e $k(x) = 1 - x$ sono la stessa funzione? Rappresentale entrambe.
+
+	Nel dynagraph di $f \circ g$ il punto passa prima per $g$ e poi per $f$: trascinalo e cerca le $x$ per cui la freccia di $f$ non parte. Il pulsante mostra il dominio di $f \circ g$.
+	```sets
+	{
+	  "dynagraph": { "ticks": 1 },
+	  "sets": [
+	    { "id": "X", "label": "[-2, 2]", "interval": "[-2, 2]" },
+	    { "id": "Y", "label": "[-3, 1]", "interval": "[-3, 1]" },
+	    { "id": "Z", "label": "[0, 2]", "interval": "[0, 2]" }
+	  ],
+	  "maps": [
+	    { "id": "g", "from": "X", "to": "Y", "expr": "1 - x^2", "color": "orange" },
+	    { "id": "f", "from": "Y", "to": "Z", "expr": "sqrt(x)", "color": "blue" },
+	    { "id": "fg", "label": "f \\circ g", "compose": ["g", "f"] }
+	  ],
+	  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 0.5, "label": "x" } },
+	  "probe": { "map": "fg", "at": "p", "trace": true },
+	  "highlights": [{ "of": "preimage(g, [0, 1])", "label": "\\mathrm{dom}\\,(f \\circ g)", "hidden": true, "id": "dom" }],
+	  "controls": [{ "type": "reveal", "label": "Mostra il dominio di f ∘ g", "targets": ["dom"] }]
+	}
+	```
 	[sol: $f(g(x)) = \sqrt{1 - x^2}$, dominio $-1 \leq x \leq 1$, immagine $0 \leq y \leq 1$; $g(f(x)) = 1 - x$ con dominio $x \geq 0$, immagine $y \leq 1$. Non sono la stessa funzione: hanno la stessa espressione ma domini diversi, e il grafico di $g \circ f$ è solo una semiretta.]
 4. **[PD]** In figura sono rappresentati i grafici delle funzioni $f$ e $g$, entrambi formati da segmenti. La funzione $f$ è definita nell'intervallo $[-3, 4]$, la funzione $g$ nell'intervallo $[-2, 3]$.
 	```matephis
@@ -495,6 +608,29 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	1. Dimostra che $f(X \cup Y) = f(X) \cup f(Y)$.
 	2. Dimostra che $f(X \cap Y) \subseteq f(X) \cap f(Y)$ e mostra, con $f(x) = x^2$, che l'inclusione può essere stretta.
 	3. Per quali funzioni vale sempre $f(X \cap Y) = f(X) \cap f(Y)$?
+
+	Nel diagramma $f(x) = x^2$ è definita su $A = \lbrace -2, -1, 0, 1, 2 \rbrace$, con $X = \lbrace -2, -1, 0 \rbrace$ e $Y = \lbrace 0, 1 \rbrace$. Prevedi le tre immagini, poi verifica con i pulsanti.
+	```sets
+	{
+	  "sets": [
+	    { "id": "A", "elements": ["-2", "-1", "0", "1", "2"], "order": "given" },
+	    { "id": "B", "elements": ["0", "1", "4"], "order": "given" }
+	  ],
+	  "maps": [{ "id": "f", "from": "A", "to": "B", "expr": "x^2" }],
+	  "highlights": [
+	    { "set": "A", "elements": ["-2", "-1", "0"], "label": "X", "color": "orange" },
+	    { "set": "A", "elements": ["0", "1"], "label": "Y", "color": "blue" },
+	    { "of": "image(f, {-2, -1, 0})", "label": "f(X)", "color": "orange", "hidden": true, "id": "fX" },
+	    { "of": "image(f, {0, 1})", "label": "f(Y)", "color": "blue", "hidden": true, "id": "fY" },
+	    { "of": "image(f, {0})", "label": "f(X \\cap Y)", "color": "red", "hidden": true, "id": "fXY" }
+	  ],
+	  "controls": [
+	    { "type": "reveal", "label": "Mostra f(X)", "targets": ["fX"] },
+	    { "type": "reveal", "label": "Mostra f(Y)", "targets": ["fY"] },
+	    { "type": "reveal", "label": "Mostra f(X ∩ Y)", "targets": ["fXY"] }
+	  ]
+	}
+	```
 	[sol: 2. ad esempio $X = \lbrace -1 \rbrace$, $Y = \lbrace 1 \rbrace$: $f(X \cap Y)$ è vuoto, mentre $f(X) \cap f(Y) = \lbrace 1 \rbrace$; 3. per le funzioni iniettive.]
 8. **[AD]** Una funzione $f : \mathbb{R} \to \mathbb{R}$ tale che $f(f(x)) = x$ per ogni $x$ si dice *involuzione*.
 	1. Dimostra che un'involuzione è biiettiva e coincide con la propria inversa.
