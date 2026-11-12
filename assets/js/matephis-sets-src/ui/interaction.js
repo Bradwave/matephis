@@ -1,7 +1,7 @@
 /**
  * Pointer and keyboard interaction of a sets diagram:
  *   - hovering (or focusing) an element lights up its arrows, its images and
- *     its preimages, and fades the rest ("hover": false turns it off);
+ *     its preimages, and dims the rest ("hover": false turns it off);
  *   - probe handles can be dragged along their set.
  * The drawing is rebuilt on every frame, so nodes, links and drag handles are
  * registered again by each draw (reset + add*), and bind() wires them up.

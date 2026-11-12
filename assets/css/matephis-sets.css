@@ -149,13 +149,8 @@
   cursor: grabbing;
 }
 
-/* Hover: the element, its arrows and their ends stay; the rest fades */
-.matephis-sets-svg .mps-arrow,
-.matephis-sets-svg .mps-el,
-.matephis-sets-svg .mps-sample {
-  transition: opacity 0.12s ease;
-}
-
+/* Hover: the element, its arrows and their ends stay; the rest is dimmed
+   at once (no transition, as in the rest of the site) */
 .matephis-sets-svg.mps-focus .mps-arrow:not(.mps-lit),
 .matephis-sets-svg.mps-focus .mps-el:not(.mps-lit) {
   opacity: 0.18;
