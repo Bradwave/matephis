@@ -276,6 +276,15 @@
   display: none;
 }
 
+/* One line per probe, tall enough for a fraction from the start; it keeps
+   the tallest height it has had (set from JS), so nothing under it jumps */
+.matephis-sets-readout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1em;
+}
+
 /* matephis-plot.css turns pointer events off inside plots: elements (for
    hover) and probe handles (for dragging) take them back */
 .matephis-sets-svg .mps-el .mps-hit,

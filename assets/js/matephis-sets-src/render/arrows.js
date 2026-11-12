@@ -194,6 +194,11 @@ export function drawProbes(scene) {
             const dot = scene.svgEl('circle', { cx: f2(px[0]), cy: f2(px[1]), r: 4.5, class: 'mps-probe-target' }, g);
             dot.style.fill = color;
         });
+        // Where the value goes is decided by the kind of map, not by the value,
+        // so it never jumps between the drawing and the line under it
+        const multi = map.kind === 'inverse' || (map.kind === 'compose' && map.parts.some(m => m.kind === 'inverse'));
+        const below = two || map.to.kind !== 'interval' || multi;
+        if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
             const valueTeX = (y) => (typeof y === 'string' ? String((map.to.elementById.get(y) || { label: y }).label)
@@ -204,12 +209,12 @@ export function drawProbes(scene) {
             const rhs = valid.length === 0 ? '\\text{non definita}'
                 : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(valueTeX).join(',\\,')}\\right\\}`;
             const tex = `${name}\\left(${fmt(x)}\\right) ${rhs}`;
-            if (two || map.to.kind !== 'interval' || shown.length !== 1) {
+            if (below) {
                 // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it
                 readouts.push({ tex, color });
             } else {
-                // Over the middle of the arrow, so it never sits on the image's label
-                const toPx = shown[0].px;
+                // Over the middle of the arrow, so it never sits on the image's label (next to the point when there is no arrow)
+                const toPx = shown.length ? shown[0].px : srcPx;
                 const mx = (srcPx[0] + toPx[0]) / 2, my = (srcPx[1] + toPx[1]) / 2;
                 const row = scene.layout.orient === 'row';
                 scene.text(mx + (row ? 0 : 10), my + (row ? -14 : 0), tex, {
@@ -249,7 +254,12 @@ export function drawProbes(scene) {
     if (readouts.length || scene.readoutEl) renderReadouts(scene, readouts);
 }
 
-/** Values of plane probes, under the diagram (MathJax when the page has it). */
+/**
+ * Values of probes, under the diagram (MathJax when the page has it). A
+ * formula changes height with its content (fractions, braces): each line
+ * keeps the tallest height it has had, so what is under it never jumps.
+ */
+
 function renderReadouts(scene, items) {
     let el = scene.readoutEl;
     if (!el) {
@@ -258,9 +268,22 @@ function renderReadouts(scene, items) {
         scene.plotStage.after(el);
     }
     el.textContent = '';
-    items.forEach(({ tex, color }) => {
+    if (!scene.readoutHeights) scene.readoutHeights = [];
+    items.forEach(({ tex, color }, k) => {
         const line = document.createElement('div');
+        line.className = 'matephis-sets-readout';
         line.style.color = color;
+        const keep = () => {
+            const h = line.getBoundingClientRect().height;
+            if (h > (scene.readoutHeights[k] || 0)) scene.readoutHeights[k] = h;
+            if (scene.readoutHeights[k]) line.style.minHeight = `${scene.readoutHeights[k]}px`;
+        };
+        if (tex === null) {
+            // No value now (the point is outside the set): keep the line's place
+            el.appendChild(line);
+            keep();
+            return;
+        }
         const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
         if (mj) {
             try {
@@ -272,6 +295,7 @@ function renderReadouts(scene, items) {
             line.textContent = tex.replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\left|\\right|\\,/g, '').replace(/\\tfrac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2');
         }
         el.appendChild(line);
+        keep();
     });
 }
 
