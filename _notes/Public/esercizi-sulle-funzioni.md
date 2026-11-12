@@ -301,7 +301,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	1. È positiva per $x < -1$, negativa per $-1 < x < 2$ e per $2 < x < 4$, positiva per $x > 4$.
 	2. È negativa per ogni $x \neq 0$ e $x \neq 3$.
 	3. Si annulla in $-2$, $0$ e $5$, ed è positiva per $x > 5$ e per $x < -2$.
-	[sol: 1. ad esempio $(x + 1)(x - 2)^2(x - 4)$; 2. ad esempio $-x^2(x - 3)^2$; 3. ad esempio $x^2(x + 2)(x - 5)$. Nessuna è unica: si può moltiplicare per una costante positiva, aumentare di due la molteplicità di uno zero, moltiplicare per un fattore sempre positivo come $x^2 + 1$.]
+	[sol: 1. ad esempio $(x + 1)(x - 2)^2(x - 4)$; 2. ad esempio $-x^2(x - 3)^2$; 3. ad esempio $x^2(x + 2)(x - 5)$. Con il grado minimo, la 1 e la 2 sono uniche a meno di un fattore costante positivo, che non cambia il segno; nella 3 si può anche scegliere quale zero rendere doppio: vanno bene pure $(x + 2)^2 x (x - 5)$ e $(x + 2) x (x - 5)^2$. Senza il vincolo sul grado si può aumentare di due la molteplicità di uno zero o moltiplicare per un fattore sempre positivo, come $x^2 + 1$.]
 3. **[EE]** Stabilisci se le seguenti funzioni sono pari, dispari o né pari né dispari. Giustifica la risposta sia algebricamente sia descrivendo la simmetria del grafico.
 	1. $f(x) = x^4 - 3x^2 + 1$
 	2. $f(x) = x^3 - x$
@@ -365,7 +365,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	3. $f(x) = \dfrac{x + 1}{x - 2}$
 	4. $f(x) = \dfrac{x}{(x - 1)^2}$
 	5. $f(x) = \dfrac{x^2 - 4}{x^2 - 1}$
-	[sol: 1. positiva per $x > 1$; 2. positiva per $x \neq 1$; 3. positiva per $x < -1 \lor x > 2$; 4. positiva per $x > 0 \land x \neq 1$; 5. positiva per $x < -2 \lor -1 < x < 1 \lor x > 2$. Vicino a uno zero del denominatore di molteplicità dispari la funzione cambia segno ("salto" da un estremo all'altro dell'asse $y$), di molteplicità pari no.]
+	[sol: 1. positiva per $x > 1$; 2. positiva per $x \neq 1$; 3. positiva per $x < -1 \lor x > 2$; 4. positiva per $x > 0 \land x \neq 1$; 5. positiva per $x < -2 \lor -1 < x < 1 \lor x > 2$. Vicino a uno zero del denominatore di molteplicità dispari la funzione cambia segno: da un lato assume valori positivi grandi quanto si vuole, dall'altro valori negativi grandi quanto si vuole in valore assoluto. Vicino a uno zero di molteplicità pari, invece, ha lo stesso segno da entrambi i lati.]
 3. **[PD]** In figura è rappresentato il grafico di una funzione fratta $f$, il cui numeratore e il cui denominatore sono polinomi di grado non superiore a $2$. Scrivi una possibile espressione analitica di $f$, motivando ogni scelta.
 	```matephis
 	{
@@ -474,8 +474,9 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	6. Se $g \circ f$ è iniettiva, allora $g$ è iniettiva.
 	7. Se $g \circ f$ è suriettiva, allora $g$ è suriettiva.
 	8. Il prodotto di due funzioni dispari è dispari.
-	9. La composizione di una funzione pari con una funzione qualsiasi è pari.
-	[sol: 1. V; 2. F, ad esempio $x$ e $-x$; 3. V; 4. F, ad esempio $x \cdot x$ su $\mathbb{R}$; 5. V; 6. F, ad esempio $f(x) = \sqrt x$ e $g(x) = x^2$; 7. V; 8. F, è pari; 9. F: $g \circ f$ è pari se $f$ è pari (ad esempio $\sqrt{x^2 + 1}$), ma non necessariamente se è pari solo $g$ (ad esempio $g(x) = x^2$, $f(x) = x + 1$).]
+	9. Se $g$ è pari, allora $g \circ f$ è pari, qualunque sia $f$.
+	10. Se $f$ è pari, allora $g \circ f$ è pari, qualunque sia $g$.
+	[sol: 1. V; 2. F, ad esempio $x$ e $-x$; 3. V; 4. F, ad esempio $x \cdot x$ su $\mathbb{R}$; 5. V; 6. F, ad esempio $f(x) = \sqrt x$ e $g(x) = x^2$; 7. V; 8. F, è pari; 9. F, ad esempio $g(x) = x^2$ e $f(x) = x + 1$: $(x + 1)^2$ non è pari; 10. V, perché $g(f(-x)) = g(f(x))$ (ad esempio $\sqrt{x^2 + 1}$).]
 5. **[PD]** Rispondi giustificando.
 	1. Esiste una funzione $f : \mathbb{R} \to \mathbb{R}$ che sia sia pari sia dispari?
 	2. Se $f$ è dispari ed è definita in $0$, quanto vale $f(0)$?
@@ -619,7 +620,7 @@ In queste attività i grafici hanno uno o più **slider**. Prima di muoverli, se
 	  ]
 	}
 	```
-	1. **Prevedi.** Per quali valori di $k$ l'equazione $f(x) = k$ ha $0$, $1$, $2$, $3$ soluzioni? E l'equazione $g(x) = k$? Riporta le previsioni in una tabella.
+	1. **Prevedi.** Quante soluzioni ha l'equazione $f(x) = k$, al variare di $k$? E l'equazione $g(x) = k$? Riporta le previsioni in una tabella.
 	2. **Verifica** con lo slider, correggendo la tabella dove necessario.
 	3. Il numero di soluzioni dell'equazione è a sua volta una funzione di $k$: chiamala $N(k)$. Traccia il grafico di $N$ per ciascuna delle due funzioni. Quali sono dominio e immagine di $N$?
 	4. **Giustifica.** Che cosa deve accadere al grafico di $N$ perché la funzione di partenza sia iniettiva? E perché sia suriettiva su $\mathbb{R}$? Applica la risposta a $f$ e a $g$.
@@ -690,7 +691,7 @@ In queste attività i grafici hanno uno o più **slider**. Prima di muoverli, se
 	3. Il grafico di $f(2x - 4)$ si ottiene da quello di $f(2x)$ con una traslazione di $4$ o di $2$ unità? Prevedi, poi verifica.
 	4. **Giustifica.** Come cambiano il dominio e l'immagine di $g$ al variare dei parametri? Che ruolo ha il punto evidenziato?
 	5. Scegli i parametri in modo che il grafico di $g$ passi per i punti $(1; 0)$ e $(5; 4)$. La soluzione è unica?
-	[sol: $f(x - 2)$ si sposta a destra di $2$ ($h = 2$), $f(x) - 2$ in basso ($k = -2$), $-f(x)$ si riflette rispetto all'asse $x$ ($a = -1$), $f(-x)$ rispetto all'asse $y$ ($b = -1$), $2f(x)$ si dilata verticalmente ($a = 2$), $f(2x)$ si comprime orizzontalmente ($b = 2$). Poiché $f(2x - 4) = f(2(x - 2))$, la traslazione è di $2$ unità. Il punto evidenziato $(h; k)$ è l'immagine dell'origine: il dominio di $g$ è $x \geq h$ se $b > 0$, $x \leq h$ se $b < 0$; l'immagine è $y \geq k$ se $a > 0$, $y \leq k$ se $a < 0$. Al punto 5, ad esempio $a = 2$, $b = 1$, $h = 1$, $k = 0$; la soluzione non è unica, perché conta solo il prodotto $a\sqrt{b}$: va bene anche $a = 1$, $b = 4$, valore che però lo slider non permette di raggiungere.]
+	[sol: $f(x - 2)$ si sposta a destra di $2$ ($h = 2$), $f(x) - 2$ in basso ($k = -2$), $-f(x)$ si riflette rispetto all'asse $x$ ($a = -1$), $f(-x)$ rispetto all'asse $y$ ($b = -1$), $2f(x)$ si dilata verticalmente ($a = 2$), $f(2x)$ si comprime orizzontalmente ($b = 2$). Poiché $f(2x - 4) = f(2(x - 2))$, la traslazione è di $2$ unità. Il punto evidenziato $(h; k)$ è l'immagine dell'origine: il dominio di $g$ è $x \geq h$ se $b > 0$, $x \leq h$ se $b < 0$; l'immagine è $y \geq k$ se $a > 0$, $y \leq k$ se $a < 0$. Al punto 5, ad esempio $a = 2$, $b = 1$, $h = 1$, $k = 0$. La soluzione non è unica: con $h = 1$ e $k = 0$ conta solo il prodotto $a\sqrt{b} = 2$ (va bene anche $a = 1$, $b = 4$, valore che però lo slider non permette di raggiungere); inoltre $(1; 0)$ non deve essere per forza il punto evidenziato: ad esempio con $h = 0$ si trova $a\sqrt b = \frac{4}{\sqrt 5 - 1} = \sqrt 5 + 1$ e $k = -(\sqrt 5 + 1)$.]
 4. **[F] Restrizioni.** Nel grafico è rappresentata la funzione $f(x) = x^2 - 2x$ ristretta all'intervallo $[a, b]$ (in rosso), con $a$ e $b$ comandati da slider ($a < b$). Il segmento verde sull'asse $y$ rappresenta l'immagine della restrizione.
 	```matephis
 	{
@@ -823,7 +824,7 @@ In queste attività i grafici hanno uno o più **slider**. Prima di muoverli, se
 	- **(c)** per ogni $x_1 < x_2$ si ha $f(x_1) \geq f(x_2)$.
 	- **(d)** $f$ è costante in almeno un intervallo.
 	[sol: (b)]
-9. **[F+]** Il polinomio $x^3 + x^2 - 2x$ si può scomporre nella forma $x(x - 1)(x + 2)$. Quante sono le intersezioni del grafico della funzione $f(x) = x^3 + x^2 - 2x$ con l'asse delle ascisse?
+9. **[E]** Il polinomio $x^3 + x^2 - 2x$ si può scomporre nella forma $x(x - 1)(x + 2)$. Quante sono le intersezioni del grafico della funzione $f(x) = x^3 + x^2 - 2x$ con l'asse delle ascisse?
 	- **(a)** 1
 	- **(b)** 2
 	- **(c)** 3
@@ -1099,7 +1100,7 @@ In queste attività i grafici hanno uno o più **slider**. Prima di muoverli, se
   "axisArrows": true,
   "axisLabels": ["t", "f"],
   "data": [
-    { "fn": "10*3^x", "domain": [0, 3], "color": "red1" }
+    { "fn": "10*3^x", "domain": [0, 2.1], "color": "red1" }
   ]
 }
 ```

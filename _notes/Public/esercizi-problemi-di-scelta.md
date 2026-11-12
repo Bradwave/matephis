@@ -27,7 +27,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	2. Quando conviene il parcheggio Aurora? Quando conviene il parcheggio Bellavista?
 	3. Se hai a disposizione un budget di 100 €, quale parcheggio ti permette di lasciare l'auto più a lungo?
 	4. In realtà i parcheggi fanno pagare ogni ora *iniziata*: come cambiano i grafici? Le risposte precedenti cambiano?
-	[sol: 1. $A(t) = 10 + 2t$, $B(t) = 3t$, con $t \geq 0$ in ore; 2. Bellavista per soste inferiori a $10$ ore, Aurora per soste superiori, indifferente per $10$ ore; 3. Aurora: $45$ ore contro circa $33$ ore; 4. i grafici diventano "a gradini"; la soglia resta $10$ ore, ma con Bellavista le ore complete pagabili con 100 € sono $33$.]
+	[sol: 1. $A(t) = 10 + 2t$, $B(t) = 3t$, con $t \geq 0$ in ore; 2. Bellavista per soste inferiori a $10$ ore, Aurora per soste superiori, indifferente per $10$ ore; 3. Aurora: $45$ ore contro circa $33$ ore; 4. i grafici diventano "a gradini": Bellavista conviene fino a $9$ ore, per soste comprese tra $9$ e $10$ ore (cioè $10$ ore iniziate) i due parcheggi costano uguale, oltre le $10$ ore conviene Aurora; con Bellavista le ore complete pagabili con 100 € sono $33$.]
 2. **[E]** **Bici in città.** Il grafico rappresenta il costo mensile di tre abbonamenti per il noleggio di biciclette elettriche, in funzione del numero $x$ di ore di utilizzo nel mese.
 	```matephis
 	{
@@ -62,287 +62,30 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	```matephis
 	{
 	  "aspectRatio": "2:1",
-	  "xlim": [
-	    -0.4,
-	    10.4
-	  ],
+	  "xlim": [-0.4, 10.4],
 	  "ylim": [-1, 31],
-	  "axisLabels": [
-	    "w",
-	    "€"
-	  ],
+	  "axisLabels": ["w", "€"],
 	  "legend": true,
 	  "data": [
-	    {
-	      "fn": "5",
-	      "domain": [
-	        0,
-	        2
-	      ],
-	      "color": "red1",
-	      "label": "P"
-	    },
-	    {
-	      "fn": "6.5",
-	      "domain": [
-	        2,
-	        3
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "8.0",
-	      "domain": [
-	        3,
-	        4
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "9.5",
-	      "domain": [
-	        4,
-	        5
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "11.0",
-	      "domain": [
-	        5,
-	        6
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "12.5",
-	      "domain": [
-	        6,
-	        7
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "14.0",
-	      "domain": [
-	        7,
-	        8
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "15.5",
-	      "domain": [
-	        8,
-	        9
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "fn": "17.0",
-	      "domain": [
-	        9,
-	        10
-	      ],
-	      "color": "red1"
-	    },
-	    {
-	      "points": [
-	        [
-	          2,
-	          5
-	        ],
-	        [
-	          3,
-	          6.5
-	        ],
-	        [
-	          4,
-	          8.0
-	        ],
-	        [
-	          5,
-	          9.5
-	        ],
-	        [
-	          6,
-	          11.0
-	        ],
-	        [
-	          7,
-	          12.5
-	        ],
-	        [
-	          8,
-	          14.0
-	        ],
-	        [
-	          9,
-	          15.5
-	        ],
-	        [
-	          10,
-	          17.0
-	        ]
-	      ],
-	      "radius": 3.5,
-	      "fillColor": "red1"
-	    },
-	    {
-	      "points": [
-	        [
-	          0,
-	          5
-	        ],
-	        [
-	          2,
-	          6.5
-	        ],
-	        [
-	          3,
-	          8.0
-	        ],
-	        [
-	          4,
-	          9.5
-	        ],
-	        [
-	          5,
-	          11.0
-	        ],
-	        [
-	          6,
-	          12.5
-	        ],
-	        [
-	          7,
-	          14.0
-	        ],
-	        [
-	          8,
-	          15.5
-	        ],
-	        [
-	          9,
-	          17.0
-	        ]
-	      ],
-	      "radius": 3.5,
-	      "fillColor": "#fff",
-	      "strokeColor": "red1",
-	      "strokeWidth": 2
-	    },
-	    {
-	      "fn": "9",
-	      "domain": [
-	        0,
-	        5
-	      ],
-	      "color": "black1",
-	      "label": "Q"
-	    },
-	    {
-	      "fn": "11",
-	      "domain": [
-	        5,
-	        6
-	      ],
-	      "color": "black1"
-	    },
-	    {
-	      "fn": "13",
-	      "domain": [
-	        6,
-	        7
-	      ],
-	      "color": "black1"
-	    },
-	    {
-	      "fn": "15",
-	      "domain": [
-	        7,
-	        8
-	      ],
-	      "color": "black1"
-	    },
-	    {
-	      "fn": "17",
-	      "domain": [
-	        8,
-	        9
-	      ],
-	      "color": "black1"
-	    },
-	    {
-	      "fn": "19",
-	      "domain": [
-	        9,
-	        10
-	      ],
-	      "color": "black1"
-	    },
-	    {
-	      "points": [
-	        [
-	          5,
-	          9
-	        ],
-	        [
-	          6,
-	          11
-	        ],
-	        [
-	          7,
-	          13
-	        ],
-	        [
-	          8,
-	          15
-	        ],
-	        [
-	          9,
-	          17
-	        ],
-	        [
-	          10,
-	          19
-	        ]
-	      ],
-	      "radius": 3.5,
-	      "fillColor": "black1"
-	    },
-	    {
-	      "points": [
-	        [
-	          0,
-	          9
-	        ],
-	        [
-	          5,
-	          11
-	        ],
-	        [
-	          6,
-	          13
-	        ],
-	        [
-	          7,
-	          15
-	        ],
-	        [
-	          8,
-	          17
-	        ],
-	        [
-	          9,
-	          19
-	        ]
-	      ],
-	      "radius": 3.5,
-	      "fillColor": "#fff",
-	      "strokeColor": "black1",
-	      "strokeWidth": 2
-	    }
+	    { "fn": "5", "domain": [0, 2], "color": "red1", "label": "P" },
+	    { "fn": "6.5", "domain": [2, 3], "color": "red1" },
+	    { "fn": "8", "domain": [3, 4], "color": "red1" },
+	    { "fn": "9.5", "domain": [4, 5], "color": "red1" },
+	    { "fn": "11", "domain": [5, 6], "color": "red1" },
+	    { "fn": "12.5", "domain": [6, 7], "color": "red1" },
+	    { "fn": "14", "domain": [7, 8], "color": "red1" },
+	    { "fn": "15.5", "domain": [8, 9], "color": "red1" },
+	    { "fn": "17", "domain": [9, 10], "color": "red1" },
+	    { "points": [[2, 5], [3, 6.5], [4, 8], [5, 9.5], [6, 11], [7, 12.5], [8, 14], [9, 15.5], [10, 17]], "radius": 3.5, "fillColor": "red1" },
+	    { "points": [[0, 5], [2, 6.5], [3, 8], [4, 9.5], [5, 11], [6, 12.5], [7, 14], [8, 15.5], [9, 17]], "radius": 3.5, "fillColor": "#fff", "strokeColor": "red1", "strokeWidth": 2 },
+	    { "fn": "9", "domain": [0, 5], "color": "black1", "label": "Q" },
+	    { "fn": "11", "domain": [5, 6], "color": "black1" },
+	    { "fn": "13", "domain": [6, 7], "color": "black1" },
+	    { "fn": "15", "domain": [7, 8], "color": "black1" },
+	    { "fn": "17", "domain": [8, 9], "color": "black1" },
+	    { "fn": "19", "domain": [9, 10], "color": "black1" },
+	    { "points": [[5, 9], [6, 11], [7, 13], [8, 15], [9, 17], [10, 19]], "radius": 3.5, "fillColor": "black1" },
+	    { "points": [[0, 9], [5, 11], [6, 13], [7, 15], [8, 17], [9, 19]], "radius": 3.5, "fillColor": "#fff", "strokeColor": "black1", "strokeWidth": 2 }
 	  ]
 	}
 	```
@@ -379,7 +122,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 2. **[EE]** Perché, in un problema di scelta, è importante determinare con cura il dominio delle funzioni? Fai un esempio in cui il valore che rende massima (o minima) la funzione non appartiene al dominio, e spiega come si trova in quel caso la scelta migliore.
 	[sol: il dominio è fissato dal contesto e dai vincoli; se il vertice di una parabola non appartiene al dominio, la scelta migliore si trova in un estremo del dominio, come nel caso del teatro con 320 posti o del recinto con il muro di 40 m.]
 3. **[F]** Nel caso continuo il ricavo massimo del teatro si ottiene con uno sconto di 2,50 €. È sempre vero che, nel caso discreto, la scelta migliore è il numero intero più vicino al valore ottimo del caso continuo? Rispondi prima nel caso in cui la funzione sia quadratica, poi in generale.
-	[sol: per una funzione quadratica sì, perché il grafico è simmetrico rispetto all'asse della parabola e il valore dipende solo dalla distanza dal vertice (se l'ottimo è a metà tra due interi, entrambi vanno bene). In generale no: per una funzione non simmetrica, come il costo medio $c(q)$ dell'esercizio sui vasi, l'intero più vicino all'ottimo può non essere il migliore.]
+	[sol: per una funzione quadratica sì, perché il grafico è simmetrico rispetto all'asse della parabola e il valore dipende solo dalla distanza dal vertice (se l'ottimo è a metà tra due interi, entrambi vanno bene). In generale no: se il grafico non è simmetrico rispetto all'ottimo, bisogna confrontare i valori nei due interi più vicini. Ad esempio $f(x) = 3(2{,}4 - x)$ per $x \leq 2{,}4$ e $f(x) = x - 2{,}4$ per $x > 2{,}4$ ha il minimo in $x = 2{,}4$, ma $f(2) = 1{,}2$ e $f(3) = 0{,}6$: conviene l'intero più lontano, perché a sinistra dell'ottimo la funzione è più ripida. Per il costo medio $c(q)$ dell'esercizio sui vasi, invece, l'intero più vicino all'ottimo ($224$) è anche il migliore, ma lo si scopre solo confrontando $c(223)$ e $c(224)$.]
 4. **[PD]** Un'alternativa A si dice *dominata* da un'alternativa B se, per ogni valore della variabile, A non è mai più conveniente di B. Considera l'esercizio sulla bolletta della luce.
 	1. La tariffa A è dominata dalla tariffa B? È dominata dalla tariffa C?
 	2. Eppure la tariffa A non è mai la più conveniente. È una contraddizione?
@@ -541,7 +284,7 @@ In queste attività i grafici hanno uno o più **slider**. Prima di muoverli, se
 [sol: 1. $S = (\lvert x - 1 \rvert + \lvert x - 2 \rvert + \lvert x - 6 \rvert + \lvert x - 7 \rvert + \lvert x - 9 \rvert) + (\lvert y - 1 \rvert + \lvert y - 5 \rvert + \lvert y - 2 \rvert + \lvert y - 6 \rvert + \lvert y - 3 \rvert)$: il primo addendo dipende solo da $x$, il secondo solo da $y$. 2. Le mediane: $(6; 3)$, con $S = 21 \text{ km}$. 3. Un punto qualsiasi con $4 \leq x \leq 6$ e $3 \leq y \leq 5$: la soluzione non è unica. 4. In generale no.]
 
 **Luce che costa [F]** Una lampadina LED costa 8 €, assorbe una potenza di 10 W e dura 15 000 ore; una lampadina alogena con la stessa luminosità costa 1,50 €, assorbe 42 W e dura 2000 ore. L'energia elettrica costa 0,30 € per kWh.
-1. Esprimi la spesa totale (acquisto delle lampadine e consumo) in funzione del numero $t$ di ore di accensione, per $0 \leq t \leq 15\,000$, nei due casi. Perché la funzione relativa all'alogena è "a gradini" con una pendenza?
+1. Esprimi la spesa totale (acquisto delle lampadine e consumo) in funzione del numero $t$ di ore di accensione, per $0 < t \leq 15\,000$, nei due casi. Perché la funzione relativa all'alogena è "a gradini" con una pendenza?
 2. Dopo quante ore di accensione la lampadina LED diventa più conveniente? Se la luce è accesa 3 ore al giorno, dopo quanti giorni?
 3. Quanto si risparmia in tutto, con la LED, nell'arco della sua durata?
 [sol: 1. $L(t) = 8 + 0{,}003\,t$; $H(t) = 1{,}50 \cdot \lceil t / 2000 \rceil + 0{,}0126\,t$: ogni 2000 ore si compra una nuova lampadina (gradino), mentre il consumo cresce in modo proporzionale al tempo. 2. dopo circa $677$ ore, cioè dopo circa $226$ giorni. 3. $H(15\,000) - L(15\,000) = 201 - 53 = 148$ €.]
