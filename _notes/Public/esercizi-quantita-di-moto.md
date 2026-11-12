@@ -80,7 +80,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	  "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
 	  "time": {"max": 5, "stopWhen": "x1 < 0.3 || x2 > 3.7 || x1 > 3.7 || x2 < 0.3"},
 	  "objects": [
-	    {"id": "g", "type": "ground", "y": 0.3},
+	    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
 	    {
 	      "id": "A",
 	      "type": "cart",
@@ -109,7 +109,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	}
 	```
 	[sol: Il carrello pesante prosegue nello stesso verso, rallentato; quello leggero parte più veloce di quanto andasse il pesante. Se il leggero colpisce il pesante fermo, rimbalza indietro.]
-19. **[F]** Una persona cammina da poppa a prua su una barca ferma in acqua calma, vicina al molo. Prima di avviare la simulazione prevedi: la barca si muove? In che verso? Dove si trova il centro di massa del sistema persona più barca alla fine? Poi cambia le masse: quando la barca si sposta di più? Trascura l'attrito dell'acqua.
+19. **[F]** Una persona cammina da poppa a prua su una barca ferma in acqua calma, con la prua vicina al molo. Prima di avviare la simulazione prevedi: la barca si muove? In che verso? Dove si trova il centro di massa del sistema persona più barca alla fine? Poi cambia le masse: quando la barca si sposta di più? Trascura l'attrito dell'acqua.
 	```physics
 	{
 	  "xlim": [0, 10],
@@ -127,7 +127,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	    {
 	      "id": "B",
 	      "type": "block",
-	      "at": ["5 - m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5))", 0.65],
+	      "at": ["3.3 + m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5))", 0.65],
 	      "size": [4.4, 0.5],
 	      "mass": "M",
 	      "color": "gray"
@@ -135,7 +135,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	    {
 	      "id": "U",
 	      "type": "block",
-	      "at": ["5 - m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5)) - 1.6 + 3.2*(t/5)^2*(3 - 2*t/5)", 1.3],
+	      "at": ["3.3 + m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5)) + 1.6 - 3.2*(t/5)^2*(3 - 2*t/5)", 1.3],
 	      "size": [0.35, 0.8],
 	      "mass": "m",
 	      "color": "red1"
@@ -146,17 +146,15 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	  "readouts": [
 	    {
 	      "label": "spostamento della barca",
-	      "value": "-m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5))",
+	      "value": "m/(m + M)*(3.2*(t/5)^2*(3 - 2*t/5))",
 	      "unit": "m",
 	      "digits": 2
 	    }
 	  ]
 	}
 	```
-	[sol: La barca si sposta verso il molo, in verso opposto alla persona; il centro di massa resta fermo. Lo spostamento della barca è $\frac{m}{m + M}$ volte lo spostamento della persona rispetto alla barca: è maggiore se la barca è leggera.]
-20. **[F]** *Inventa il problema.* Scrivi il testo di un problema la cui soluzione sia l'equazione
-	$$(27 \text{ kg})(-3{,}0 \text{ m/s}) + (30 \text{ kg})(+4{,}0 \text{ m/s}) = (27 \text{ kg} + 30 \text{ kg})\,v$$
-	e risolvilo. Poi fai lo stesso per $(0{,}020 \text{ kg})(300 \text{ m/s}) - (10 \text{ N})(0{,}40 \text{ s}) = (0{,}020 \text{ kg})(100 \text{ m/s})$. (Etkina, 6.25 e 6.26)
+	[sol: La barca si allontana dal molo, in verso opposto alla persona; il centro di massa resta fermo. Lo spostamento della barca è $\frac{m}{m + M}$ volte lo spostamento della persona rispetto alla barca: è maggiore se la barca è leggera.]
+20. **[F]** *Inventa il problema.* Scrivi il testo di un problema la cui soluzione sia l'equazione $(27 \text{ kg})(-3{,}0 \text{ m/s}) + (30 \text{ kg})(+4{,}0 \text{ m/s})$ $= (27 \text{ kg} + 30 \text{ kg})\,v$ e risolvilo. Poi fai lo stesso per $(0{,}020 \text{ kg})(300 \text{ m/s})$ $- (10 \text{ N})(0{,}40 \text{ s})$ $= (0{,}020 \text{ kg})(100 \text{ m/s})$. (Etkina, 6.25 e 6.26)
 	[sol: Per esempio: due bambini sui pattini si scontrano e restano abbracciati; $v \approx 0{,}68 \text{ m/s}$. La seconda: un proiettile rallentato per $0{,}40 \text{ s}$ da una forza di $10 \text{ N}$.]
 21. **[F]** *Inventa il problema.* Inventa una situazione fisica rappresentata da ciascuno dei due diagrammi a barre impulso-quantità di moto. Nel primo il sistema è un solo oggetto $O$, nel secondo è formato da due oggetti; la colonna grigia è l'impulso esterno. (Etkina, 6.34)
 	```matephis
@@ -258,12 +256,12 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	- **(c)** L'intensità della forza è diversa.
 	- **(d)** Nel secondo esperimento l'oggetto cade più lentamente.
 	[sol: (b): il peso è lo stesso, cambia l'intervallo di tempo.]
-2. **[E]** Un carretto pieno di palle mediche procede lungo una strada. Una palla da $3 \text{ kg}$ cade improvvisamente dal carretto. Che cosa succede alla velocità del carretto? (Etkina, 6.4 delle domande a scelta multipla)
+2. **[E]** Un carretto pieno di palle mediche procede lungo una strada. Una palla da $3 \text{ kg}$ cade da un'apertura nel fondo del carretto, senza che nessuno la spinga. Che cosa succede alla velocità del carretto? (Etkina, 6.4 delle domande a scelta multipla)
 	- **(a)** Il carretto rallenta.
 	- **(b)** La velocità del carretto non cambia.
 	- **(c)** Il carretto accelera.
 	- **(d)** Servono altre informazioni sul moto della palla.
-	[sol: (d): dipende da come cade la palla. Se cade semplicemente (con la velocità del carretto), la velocità non cambia; se viene spinta in avanti o indietro, sì.]
+	[sol: (b): quando si stacca, la palla ha la stessa velocità orizzontale del carretto, e nessuno le dà una spinta orizzontale; la quantità di moto orizzontale del sistema carretto più palla si conserva e nessuna delle due parti cambia velocità. Se la palla venisse spinta in avanti o indietro, invece, la velocità del carretto cambierebbe.]
 3. **[E]** In quale situazione la quantità di moto di una pallina da tennis cambia di più? (Etkina, 6.10 delle domande a scelta multipla)
 	- **(a)** Colpisce la racchetta e si ferma.
 	- **(b)** Colpisce la racchetta e torna indietro.
@@ -453,7 +451,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	- **(c)** Plastilina: 2; gomma: 1.
 	- **(d)** Plastilina: 3; gomma: 2.
 	[sol: (a): la plastilina resta sul piatto, che poi ne sostiene il peso; la gomma rimbalza, quindi l'area sotto la curva è circa doppia.]
-11. **[F]** Due carrelli a ventola, uno di massa doppia dell'altro, sono fermi su una rotaia orizzontale senza attrito. Le ventole esercitano su entrambi la stessa forza costante. Quale risposta confronta correttamente le quantità di moto dei carrelli dopo che hanno percorso la **stessa distanza**? (Etkina, 6.14 delle domande a scelta multipla)
+11. **[F]** Due carrelli a ventola, A e B, sono fermi; la massa di A è doppia di quella di B. I carrelli sono su una rotaia orizzontale senza attrito. Le ventole esercitano su entrambi la stessa forza costante. Quale risposta confronta correttamente le quantità di moto dei carrelli dopo che hanno percorso la **stessa distanza**? (Etkina, 6.14 delle domande a scelta multipla)
 	- **(a)** $p_A = p_B$, perché le forze risultanti sono uguali.
 	- **(b)** $p_A = p_B$, perché le distanze percorse sono uguali.
 	- **(c)** $p_A > p_B$, perché la forza agisce sul carrello A (più pesante) per un intervallo di tempo più lungo.
@@ -481,7 +479,7 @@ Dove non diversamente indicato, assumi $g = 9{,}81 \text{ m/s}^2$ e trascura la 
 	- **(b)** $0{,}002 \text{ m/s}$.
 	- **(c)** $0{,}08 \text{ m/s}$.
 	- **(d)** $0{,}8 \text{ m/s}$.
-	[sol: (b): il sangue cambia quantità di moto di $0{,}128 \text{ kg}\cdot\text{m/s}$, il corpo ne acquista altrettanta: $0{,}128/70 \approx 0{,}0018 \text{ m/s}$.]
+	[sol: (a): il sistema sangue più corpo è isolato e la sua quantità di moto totale è nulla. Quando il sangue scende a $0{,}8 \text{ m/s}$, il corpo sale con una quantità di moto opposta: $(0{,}080)(0{,}8)/70 \approx 0{,}0009 \text{ m/s}$. Il valore $0{,}002 \text{ m/s}$ è la *variazione* di velocità del corpo, che passa da $0{,}0009 \text{ m/s}$ verso il basso a $0{,}0009 \text{ m/s}$ verso l'alto.]
 
 **Il lancio dello Space Shuttle.** (Etkina, 6.84–6.89) Al decollo lo Space Shuttle aveva una massa di circa $2{,}1 \times 10^6 \text{ kg}$, in gran parte carburante. I cinque motori fornivano complessivamente al decollo una spinta di $3{,}46 \times 10^7 \text{ N}$.
 
@@ -511,87 +509,20 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Qual è il modulo della quantità di moto di una pallina da $57 \text{ g}$ che viaggia a $30 \text{ m/s}$?
 	- A che velocità deve muoversi la tua racchetta, di $320 \text{ g}$, per avere una quantità di moto dello stesso modulo?
 	- Corri a $5{,}0 \text{ m/s}$ verso la pallina, che ti viene incontro a $30 \text{ m/s}$. Qual è il modulo della quantità di moto del sistema formato da te ($60 \text{ kg}$) e dalla pallina? In ogni caso, specifica rispetto a che cosa misuri le velocità.
-	[sol: $1{,}7 \text{ kg}\cdot\text{m/s}$; $5{,}3 \text{ m/s}$; circa $298 \text{ kg}\cdot\text{m/s}$ rispetto al terreno, nel tuo verso.]
-2. **Le regole del tennis [EE]** Una pallina da tennis da $57 \text{ g}$ che colpisce un muro a $25 \text{ m/s}$ rimbalza con la stessa velocità in modulo. (Etkina, 6.2 e 6.6)
+	[sol: $1{,}7 \text{ kg}\cdot\text{m/s}$; $5{,}3 \text{ m/s}$; circa $3{,}0 \times 10^2 \text{ kg}\cdot\text{m/s}$ rispetto al terreno, nel tuo verso (la pallina conta pochissimo).]
+2. **Il cuore pompa il sangue [E]** A ogni battito circa $80 \text{ g}$ di sangue vengono spinti dal cuore nell'aorta. Il sangue parte da fermo rispetto al corpo e nell'aorta ha una velocità di circa $1{,}0 \text{ m/s}$. Se la spinta dura $0{,}17 \text{ s}$, qual è la forza media esercitata dal cuore sul sangue? (Etkina, 6.14)
+	[sol: Circa $0{,}47 \text{ N}$.]
+3. **Le regole del tennis [EE]** Una pallina da tennis da $57 \text{ g}$ che colpisce un muro a $25 \text{ m/s}$ rimbalza con la stessa velocità in modulo. (Etkina, 6.2 e 6.6)
 	- Determina la quantità di moto iniziale della pallina e la sua variazione (modulo, direzione e verso).
 	- Il regolamento del tennis stabilisce che una pallina lasciata cadere da $100$ pollici ($2{,}54 \text{ m}$) su una lastra di cemento deve rimbalzare fino a un'altezza compresa tra $53$ e $58$ pollici. Entro quali valori deve essere la variazione di quantità di moto della pallina nel rimbalzo? Qual è il rapporto tra la velocità dopo e prima del rimbalzo?
 	[sol: $1{,}4 \text{ kg}\cdot\text{m/s}$ verso il muro; variazione $2{,}9 \text{ kg}\cdot\text{m/s}$ in verso opposto. Variazione tra circa $0{,}70$ e $0{,}71 \text{ kg}\cdot\text{m/s}$ verso l'alto; rapporto tra $0{,}73$ e $0{,}76$.]
-3. **Una mela che cade [EE/F]** Una mela da $100 \text{ g}$ si stacca da un ramo. (Etkina, 6.10, 6.11 e 6.12)
-	- Quanto vale l'impulso esercitato dalla Terra sulla mela nei primi $0{,}50 \text{ s}$ di caduta? E nei $0{,}50 \text{ s}$ successivi?
-	- Quanto vale l'impulso nei primi $0{,}50 \text{ m}$ di caduta? E nei $0{,}50 \text{ m}$ successivi?
-	- Perché gli impulsi sono uguali nei due intervalli di tempo e diversi nei due tratti di uguale lunghezza? Rispondi con il grafico velocità-tempo della mela.
-	[sol: $0{,}49 \text{ N}\cdot\text{s}$ in entrambi gli intervalli di tempo; $0{,}31$ e $0{,}13 \text{ N}\cdot\text{s}$ nei due tratti: il secondo tratto è percorso più in fretta.]
 4. **Crash test [EE]** In una prova d'urto un furgone di $2000 \text{ kg}$ urta un pilastro di cemento. L'urto dura $0{,}10 \text{ s}$ e l'impulso esercitato dal pilastro sul furgone è $7{,}5 \times 10^3 \text{ N}\cdot\text{s}$. (Etkina, 6.13)
 	- Determina tutto ciò che puoi sull'urto con queste informazioni.
 	- Se il furgone fosse costruito in modo da accartocciarsi di più, così che l'urto durasse il triplo, quanto varrebbe la forza media esercitata dal pilastro?
-	[sol: Velocità iniziale $3{,}75 \text{ m/s}$ se si ferma; forza media $7{,}5 \times 10^4 \text{ N}$; accelerazione media $37{,}5 \text{ m/s}^2$. Con durata tripla, $2{,}5 \times 10^4 \text{ N}$.]
-5. **Il cuore pompa il sangue [E]** A ogni battito circa $80 \text{ g}$ di sangue vengono spinti dal cuore nell'aorta. Il sangue parte da fermo rispetto al corpo e nell'aorta ha una velocità di circa $1{,}0 \text{ m/s}$. Se la spinta dura $0{,}17 \text{ s}$, qual è la forza media esercitata dal cuore sul sangue? (Etkina, 6.14)
-	[sol: Circa $0{,}47 \text{ N}$.]
-6. **Prendere una palla da basket [F]** Una tua amica afferra un pallone da basket che è appena passato attraverso il canestro; mentre lo afferra, le sue mani si abbassano di $0{,}20 \text{ m}$. Stima la durata dell'arresto del pallone e la forza media che le mani esercitano su di esso. Indica tutte le ipotesi e le stime che fai. (Etkina, 6.16)
-	[sol: Con una caduta di circa $1 \text{ m}$ dal canestro alle mani, $v \approx 4{,}4 \text{ m/s}$; con decelerazione costante l'arresto dura circa $0{,}09 \text{ s}$ e la forza media è circa $35 \text{ N}$ per un pallone da $0{,}6 \text{ kg}$.]
-7. **Lavare la porta del garage [F]** Con la canna dell'acqua lavi la porta del garage. Ogni secondo escono dalla canna $0{,}8 \text{ kg}$ d'acqua a $9{,}0 \text{ m/s}$, che colpiscono la porta perpendicolarmente e scivolano lungo la sua superficie. Quanto vale la forza che il getto esercita sulla porta? Quali ipotesi hai fatto? Come cambierebbe la forza se l'acqua rimbalzasse indietro? (Etkina, 6.19)
-	[sol: Circa $7{,}2 \text{ N}$, se l'acqua perde tutta la velocità perpendicolare alla porta. Se rimbalzasse con la stessa velocità, il doppio.]
-8. **L'uovo [EE]** Un uovo da $50 \text{ g}$ rotola giù dal piano della cucina, alto $1{,}0 \text{ m}$, e si rompe sul pavimento in circa $0{,}010 \text{ s}$. Quanto vale l'impulso esercitato dal pavimento sull'uovo? E la forza media? Confrontala con il peso dell'uovo. (Etkina, 6.20)
+	[sol: Velocità iniziale $3{,}8 \text{ m/s}$ se si ferma; forza media $7{,}5 \times 10^4 \text{ N}$; accelerazione media $38 \text{ m/s}^2$. Con durata tripla, $2{,}5 \times 10^4 \text{ N}$.]
+5. **L'uovo [EE]** Un uovo da $50 \text{ g}$ rotola giù dal piano della cucina, alto $1{,}0 \text{ m}$, e si rompe sul pavimento in circa $0{,}010 \text{ s}$. Quanto vale l'impulso esercitato dal pavimento sull'uovo? E la forza media? Confrontala con il peso dell'uovo. (Etkina, 6.20)
 	[sol: Impulso circa $0{,}22 \text{ N}\cdot\text{s}$ verso l'alto; forza media circa $22 \text{ N}$, una quarantina di volte il peso.]
-9. **Il sensore di forza [F]** Lasci cadere una pallina da $78 \text{ g}$ su un sensore di forza che si trova $0{,}40 \text{ m}$ più in basso; la pallina rimbalza. Il grafico rappresenta, in modo schematico, la forza esercitata dalla pallina sul sensore. (Etkina, 6.23, con altri numeri)
-	```matephis
-	{
-	  "aspectRatio": "2:1",
-	  "xlim": [-0.002, 0.032],
-	  "ylim": [-5, 50],
-	  "xStep": 0.005,
-	  "yStep": 10,
-	  "axisLabels": ["t", "F"],
-	  "axisUnitMeasures": ["s", "N"],
-	  "axisLabelStyle": "italic",
-	  "data": [
-	    {
-	      "fn": "x < 0.005 ? 0 : (x < 0.015 ? 4300*(x - 0.005) : (x < 0.025 ? 43 - 4300*(x - 0.015) : 0))",
-	      "domain": [0, 0.03],
-	      "color": "summer6"
-	    }
-	  ]
-	}
-	```
-	- Stima l'impulso dall'area sotto il grafico e la velocità della pallina subito dopo il rimbalzo. A che altezza risale?
-	- Senza guardare il grafico, quale forza massima ti aspetteresti se la pallina rimbalzasse fino all'altezza di partenza e l'urto durasse $0{,}020 \text{ s}$, con un grafico triangolare?
-	[sol: Area $\frac12 \cdot 0{,}020 \cdot 43 \approx 0{,}43 \text{ N}\cdot\text{s}$; velocità prima del rimbalzo $2{,}8 \text{ m/s}$, dopo circa $2{,}7 \text{ m/s}$: risale a circa $0{,}37 \text{ m}$. Forza massima attesa circa $44 \text{ N}$.]
-10. **L'airbag [F]** Il grafico rappresenta la forza esercitata da un airbag sulla testa di un passeggero durante un incidente. La testa ha una massa di $8{,}0 \text{ kg}$. (Etkina, 6.24, con un altro grafico)
-	```matephis
-	{
-	  "aspectRatio": "2:1",
-	  "xlim": [-5, 125],
-	  "ylim": [-150, 2300],
-	  "xStep": 10,
-	  "yStep": 500,
-	  "axisLabels": ["t", "F"],
-	  "axisUnitMeasures": ["ms", "N"],
-	  "axisLabelStyle": "italic",
-	  "params": {"n": {"val": 1, "min": 1, "max": 50, "step": 1, "label": "rettangoli"}},
-	  "data": [
-	    {
-	      "fn": "x < 0 ? 0 : (x < 100 ? 2000*sin(pi*x/100) : 0)",
-	      "domain": [0, 120],
-	      "color": "summer6",
-	      "riemann": {
-	        "n": "n",
-	        "range": [0, 100],
-	        "rule": "mid",
-	        "showValue": true,
-	        "valueLabel": "\\text{area (N·ms)}",
-	        "digits": 0
-	      }
-	    }
-	  ]
-	}
-	```
-	- Stima l'impulso esercitato dall'airbag sulla testa contando i quadretti; poi usa lo slider per approssimare l'area con un numero crescente di rettangoli. Attenzione alle unità: l'area è in $\text{N}\cdot\text{ms}$.
-	- Qual era la velocità della testa subito prima dell'urto contro l'airbag?
-	- Qual è la forza media? Confrontala con la forza massima.
-	[sol: Circa $127 \text{ N}\cdot\text{s}$; velocità circa $16 \text{ m/s}$ (circa $57 \text{ km/h}$); forza media $1{,}27 \times 10^3 \text{ N}$, circa i due terzi della massima.]
-11. **Frattura dello zigomo [F]** Lo zigomo si può fratturare se è sottoposto a una forza di $900 \text{ N}$ per almeno $6{,}0 \text{ ms}$. Un disco da hockey ($0{,}17 \text{ kg}$) che colpisce un volto non protetto può esercitare una forza del genere. Quale variazione di velocità del disco serve per produrre quell'impulso? Una maschera imbottita raddoppia la durata dell'arresto: come cambia la forza sul volto? (Etkina, 6.46)
-	[sol: Circa $32 \text{ m/s}$ (circa $114 \text{ km/h}$); a parità di impulso la forza media si dimezza.]
-12. **Laboratorio virtuale: misura l'impulso [EE]** Un carrello va a sbattere contro un sensore di forza dotato di respingente. Come in laboratorio, hai solo i grafici dei sensori (forza e velocità); massa e velocità iniziale cambiano a ogni caricamento della pagina.
+6. **Laboratorio virtuale: misura l'impulso [EE]** Un carrello va a sbattere contro un sensore di forza dotato di respingente. Come in laboratorio, hai solo i grafici dei sensori (forza e velocità); massa e velocità iniziale cambiano a ogni caricamento della pagina.
 	```physics
 	{
 	  "xlim": [0, 4],
@@ -623,10 +554,11 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	  },
 	  "state": {"x": 1.2, "v": "v0"},
 	  "ode": {"x": "v", "v": "-(x > 2.95 ? max(0, k*(x - 2.95) + 2*(-ln(e)/sqrt(pi^2 + ln(e)^2))*sqrt(k*m)*v) : 0)/m"},
-	  "time": {"max": 6, "stopWhen": "x < 0.4"},
+	  "time": {"max": 10, "stopWhen": "x < 0.4"},
 	  "objects": [
-	    {"id": "g", "type": "ground", "y": 0.3},
+	    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
 	    {"type": "block", "at": [3.55, 0.5], "size": [0.3, 0.4], "color": "gray", "label": "F"},
+	    {"type": "spring", "from": [3.4, 0.43], "to": ["max(x + 0.25, 3.2)", 0.43], "coils": 5, "width": 0.12},
 	    {
 	      "id": "A",
 	      "type": "cart",
@@ -664,25 +596,97 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Avvia la simulazione. Dal grafico forza-tempo stima l'impulso esercitato dal sensore sul carrello (conta i quadretti, o approssima l'area con un triangolo).
 	- Dal grafico della velocità ricava la variazione di velocità del carrello e, usando l'impulso, la sua massa. Controlla con il pulsante.
 	- L'urto è elastico? Quale frazione dell'energia cinetica viene persa?
-13. **Pioggia sul tetto [PD]** Durante un nubifragio record sono caduti $304{,}8 \text{ mm}$ di pioggia in $42 \text{ minuti}$. Stima la forza media esercitata dalla pioggia sul tetto di una casa di $10 \text{ m} \times 16 \text{ m}$. Indica le ipotesi che fai (per esempio sulla velocità delle gocce). (Etkina, 6.71)
-	[sol: Massa d'acqua circa $4{,}9 \times 10^4 \text{ kg}$ in $2520 \text{ s}$, cioè circa $19 \text{ kg/s}$; con gocce a circa $9 \text{ m/s}$ che si fermano sul tetto, circa $170 \text{ N}$, trascurabile rispetto al peso dell'acqua che si accumula.]
-14. **Grandine [F]** Un chicco di grandine da $30 \text{ g}$, grande come una pallina da golf ($4{,}3 \text{ cm}$ di diametro), cade a circa $16 \text{ m/s}$. Stima la forza che esercita sulla testa di una persona. Lo zigomo si frattura con una forza di $900 \text{ N}$ o più per almeno $6 \text{ ms}$: il chicco può rompere un osso? (Etkina, 7.37)
+	[sol: I valori cambiano a ogni caricamento. L'impulso è l'area sotto il grafico forza-tempo ed è uguale a $m\,(v_f - v_i)$: il carrello arriva a $v_0$ e riparte a $-e\,v_0$, quindi $J = m\,v_0\,(1 + e)$ e $m = J/\Delta v$. L'urto non è elastico, perché il carrello riparte più lentamente di come è arrivato: la frazione di energia cinetica persa è $1 - (v_f/v_i)^2$.]
+7. **Una mela che cade [EE/F]** Una mela da $100 \text{ g}$ si stacca da un ramo. (Etkina, 6.10, 6.11 e 6.12)
+	- Quanto vale l'impulso esercitato dalla Terra sulla mela nei primi $0{,}50 \text{ s}$ di caduta? E nei $0{,}50 \text{ s}$ successivi?
+	- Quanto vale l'impulso nei primi $0{,}50 \text{ m}$ di caduta? E nei $0{,}50 \text{ m}$ successivi?
+	- Perché gli impulsi sono uguali nei due intervalli di tempo e diversi nei due tratti di uguale lunghezza? Rispondi con il grafico velocità-tempo della mela.
+	[sol: $0{,}49 \text{ N}\cdot\text{s}$ in entrambi gli intervalli di tempo; $0{,}31$ e $0{,}13 \text{ N}\cdot\text{s}$ nei due tratti: il secondo tratto è percorso più in fretta.]
+8. **Prendere una palla da basket [F]** Una tua amica afferra un pallone da basket che è appena passato attraverso il canestro; mentre lo afferra, le sue mani si abbassano di $0{,}20 \text{ m}$. Stima la durata dell'arresto del pallone e la forza media che le mani esercitano su di esso. Indica tutte le ipotesi e le stime che fai. (Etkina, 6.16)
+	[sol: Con una caduta di circa $1 \text{ m}$ dal canestro alle mani, $v \approx 4{,}4 \text{ m/s}$; con decelerazione costante l'arresto dura circa $0{,}09 \text{ s}$. Per un pallone da $0{,}6 \text{ kg}$ la forza risultante media che lo ferma è circa $29 \text{ N}$; le mani devono anche sostenerne il peso ($5{,}9 \text{ N}$), quindi spingono verso l'alto con circa $35 \text{ N}$.]
+9. **Lavare la porta del garage [F]** Con la canna dell'acqua lavi la porta del garage. Ogni secondo escono dalla canna $0{,}8 \text{ kg}$ d'acqua a $9{,}0 \text{ m/s}$, che colpiscono la porta perpendicolarmente e scivolano lungo la sua superficie. Quanto vale la forza che il getto esercita sulla porta? Quali ipotesi hai fatto? Come cambierebbe la forza se l'acqua rimbalzasse indietro? (Etkina, 6.19)
+	[sol: Circa $7{,}2 \text{ N}$, se l'acqua perde tutta la velocità perpendicolare alla porta. Se rimbalzasse con la stessa velocità, il doppio.]
+10. **Il sensore di forza [F]** Lasci cadere una pallina da $78 \text{ g}$ su un sensore di forza che si trova $0{,}40 \text{ m}$ più in basso; la pallina rimbalza. Il grafico rappresenta, in modo schematico, la forza esercitata dalla pallina sul sensore. (Etkina, 6.23, con altri numeri)
+	```matephis
+	{
+	  "aspectRatio": "2:1",
+	  "xlim": [-0.002, 0.032],
+	  "ylim": [-5, 50],
+	  "xStep": 0.005,
+	  "yStep": 10,
+	  "axisLabels": ["t", "F"],
+	  "axisUnitMeasures": ["s", "N"],
+	  "axisLabelStyle": "italic",
+	  "data": [
+	    {
+	      "fn": "x < 0.005 ? 0 : (x < 0.015 ? 4300*(x - 0.005) : (x < 0.025 ? 43 - 4300*(x - 0.015) : 0))",
+	      "domain": [0, 0.03],
+	      "color": "summer6"
+	    }
+	  ]
+	}
+	```
+	- Stima l'impulso dall'area sotto il grafico e la velocità della pallina subito dopo il rimbalzo. A che altezza risale?
+	- Senza guardare il grafico, quale forza massima ti aspetteresti se la pallina rimbalzasse fino all'altezza di partenza e l'urto durasse $0{,}020 \text{ s}$, con un grafico triangolare?
+	[sol: Area $\frac12 \cdot 0{,}020 \cdot 43 \approx 0{,}43 \text{ N}\cdot\text{s}$; velocità prima del rimbalzo $2{,}8 \text{ m/s}$, dopo circa $2{,}7 \text{ m/s}$: risale a circa $0{,}37 \text{ m}$. Forza massima attesa circa $44 \text{ N}$.]
+11. **L'airbag [F]** Il grafico rappresenta la forza esercitata da un airbag sulla testa di un passeggero durante un incidente. La testa ha una massa di $8{,}0 \text{ kg}$. (Etkina, 6.24, con un altro grafico)
+	```matephis
+	{
+	  "aspectRatio": "2:1",
+	  "xlim": [-5, 125],
+	  "ylim": [-150, 2300],
+	  "xStep": 10,
+	  "yStep": 500,
+	  "axisLabels": ["t", "F"],
+	  "axisUnitMeasures": ["ms", "N"],
+	  "axisLabelStyle": "italic",
+	  "params": {"n": {"val": 1, "min": 1, "max": 50, "step": 1, "label": "rettangoli"}},
+	  "data": [
+	    {
+	      "fn": "x < 0 ? 0 : (x < 100 ? 2000*sin(pi*x/100) : 0)",
+	      "domain": [0, 120],
+	      "color": "summer6",
+	      "riemann": {
+	        "n": "n",
+	        "range": [0, 100],
+	        "rule": "mid",
+	        "showValue": true,
+	        "valueLabel": "\\text{area (N·ms)}",
+	        "digits": 0
+	      }
+	    }
+	  ]
+	}
+	```
+	- Stima l'impulso esercitato dall'airbag sulla testa contando i quadretti; poi usa lo slider per approssimare l'area con un numero crescente di rettangoli. Attenzione alle unità: l'area è in $\text{N}\cdot\text{ms}$.
+	- Qual era la velocità della testa subito prima dell'urto contro l'airbag?
+	- Qual è la forza media? Confrontala con la forza massima.
+	[sol: Circa $127 \text{ N}\cdot\text{s}$; velocità circa $16 \text{ m/s}$ (circa $57 \text{ km/h}$); forza media $1{,}27 \times 10^3 \text{ N}$, circa i due terzi della massima.]
+12. **Frattura dello zigomo [F]** Lo zigomo si può fratturare se è sottoposto a una forza di $900 \text{ N}$ per almeno $6{,}0 \text{ ms}$. Un disco da hockey ($0{,}17 \text{ kg}$) che colpisce un volto non protetto può esercitare una forza del genere. Quale variazione di velocità del disco serve per produrre quell'impulso? Una maschera imbottita raddoppia la durata dell'arresto: come cambia la forza sul volto? (Etkina, 6.46)
+	[sol: Circa $32 \text{ m/s}$ (circa $114 \text{ km/h}$); a parità di impulso la forza media si dimezza.]
+13. **Grandine [F]** Un chicco di grandine da $30 \text{ g}$, grande come una pallina da golf ($4{,}3 \text{ cm}$ di diametro), cade a circa $16 \text{ m/s}$. Stima la forza che esercita sulla testa di una persona. Lo zigomo si frattura con una forza di $900 \text{ N}$ o più per almeno $6 \text{ ms}$: il chicco può rompere un osso? (Etkina, 7.37)
 	[sol: Supponendo che si fermi in circa $1 \text{ cm}$, l'urto dura circa $1 \text{ ms}$ e la forza media è di qualche centinaio di newton: troppo poco e troppo breve per fratturare lo zigomo, ma fa male.]
-15. **Il martello [F]** Un carpentiere solleva un martello (testa di $0{,}80 \text{ kg}$) e lo lascia cadere sul chiodo senza spingerlo. Dopo l'impatto martello e chiodo si muovono insieme per $0{,}005 \text{ s}$, poi si fermano. Stima la velocità del martello prima dell'impatto e la forza media che esercita sul chiodo. (Etkina, 6.67)
+14. **Il martello [F]** Un carpentiere solleva un martello (testa di $0{,}80 \text{ kg}$) e lo lascia cadere sul chiodo senza spingerlo. Dopo l'impatto martello e chiodo si muovono insieme per $0{,}005 \text{ s}$, poi si fermano. Stima la velocità del martello prima dell'impatto e la forza media che esercita sul chiodo. (Etkina, 6.67)
 	[sol: Con una caduta di circa $30 \text{ cm}$, $v \approx 2{,}4 \text{ m/s}$ e forza media circa $400 \text{ N}$.]
+15. **Pioggia sul tetto [PD]** Durante un nubifragio record sono caduti $304{,}8 \text{ mm}$ di pioggia in $42 \text{ minuti}$. Stima la forza media esercitata dalla pioggia sul tetto di una casa di $10 \text{ m} \times 16 \text{ m}$. Indica le ipotesi che fai (per esempio sulla velocità delle gocce). (Etkina, 6.71)
+	[sol: Massa d'acqua circa $4{,}9 \times 10^4 \text{ kg}$ in $2520 \text{ s}$, cioè circa $19 \text{ kg/s}$; con gocce a circa $9 \text{ m/s}$ che si fermano sul tetto, circa $170 \text{ N}$, trascurabile rispetto al peso dell'acqua che si accumula.]
+16. **L'asciugacapelli [PD]** Tieni un asciugacapelli appeso per il filo: spento, il filo è verticale; acceso, il filo forma un angolo di $5°$ con la verticale. Disegna il diagramma delle forze nei due casi e spiega l'esperimento con la quantità di moto. Sai che l'asciugacapelli ($420 \text{ g}$) spinge $0{,}03 \text{ m}^3$ di aria al secondo, perpendicolarmente al filo, e che $1 \text{ m}^3$ di aria ha massa $1{,}2 \text{ kg}$: con che velocità esce l'aria? (Etkina, 6.72 e 6.73)
+	[sol: L'aria spinta da una parte spinge l'asciugacapelli dall'altra; la forza orizzontale è $mg\tan 5° \approx 0{,}36 \text{ N}$ e l'aria esce a circa $10 \text{ m/s}$.]
 
 ### Urti e conservazione della quantità di moto
 
-{:start="16"}
-16. **Il cannone sulla nave [E]** Un cannone montato sulla poppa di una nave spara orizzontalmente una palla da $50 \text{ kg}$ a $150 \text{ m/s}$. Il cannone e la nave hanno una massa complessiva di $40\,000 \text{ kg}$ e sono inizialmente fermi. Con che velocità si muove la nave subito dopo lo sparo? Quali ipotesi hai fatto? (Etkina, 6.36)
+{:start="17"}
+17. **Il cannone sulla nave [E]** Un cannone montato sulla poppa di una nave spara orizzontalmente una palla da $50 \text{ kg}$ a $150 \text{ m/s}$. Il cannone e la nave hanno una massa complessiva di $40\,000 \text{ kg}$ e sono inizialmente fermi. Con che velocità si muove la nave subito dopo lo sparo? Quali ipotesi hai fatto? (Etkina, 6.36)
 	[sol: Circa $0{,}19 \text{ m/s}$ in verso opposto alla palla, trascurando la resistenza dell'acqua durante lo sparo.]
-17. **Lo slittino [EE]** Uno slittino da $10 \text{ kg}$ con sopra una bambina di $30 \text{ kg}$ scivola senza attrito verso est a $6{,}0 \text{ m/s}$. La bambina salta giù dal retro dello slittino, che schizza in avanti a $20 \text{ m/s}$. Qual era la velocità orizzontale della bambina, rispetto al terreno, nell'istante in cui ha lasciato lo slittino? (Etkina, 6.37)
-	[sol: Circa $1{,}3 \text{ m/s}$ verso est: si muove ancora in avanti, ma più lentamente.]
 18. **Il vagone del carbone [E]** Un vagone da $10\,000 \text{ kg}$ passa a $2{,}0 \text{ m/s}$ sotto un silo, che lascia cadere $1000 \text{ kg}$ di carbone nel vagone. Qual è la velocità finale del vagone carico? (Etkina, 6.38)
 	[sol: Circa $1{,}8 \text{ m/s}$.]
 19. **Guglielmo Tell [E]** Una freccia da $80 \text{ g}$ attraversa una mela da $100 \text{ g}$ in equilibrio sulla testa di Guglielmo Tell. La freccia ha una velocità di $50 \text{ m/s}$ prima di attraversare la mela e di $40 \text{ m/s}$ dopo. Con che velocità parte la mela? (Etkina, 6.51)
 	[sol: $8{,}0 \text{ m/s}$ nel verso della freccia.]
-20. **Previsione [EE]** Due carrelli con il velcro si vengono incontro e restano attaccati. Masse e velocità iniziali sono scritte sotto la scena (cambiano a ogni caricamento della pagina). Prima di avviare la simulazione prevedi la velocità finale e l'energia cinetica persa; poi verifica.
+20. **Gli stadi del razzo [E]** Un razzo da $5000 \text{ kg}$ espelle un serbatoio di carburante da $10\,000 \text{ kg}$. Prima dell'espulsione razzo e serbatoio viaggiano insieme a $200 \text{ m/s}$ rispetto alle stelle lontane; dopo, il serbatoio viaggia a $50 \text{ m/s}$ in verso opposto a quello iniziale. Qual è la velocità del razzo? (Etkina, 6.56)
+	[sol: $700 \text{ m/s}$ nel verso iniziale.]
+21. **Lo slittino [EE]** Uno slittino da $10 \text{ kg}$ con sopra una bambina di $30 \text{ kg}$ scivola senza attrito verso est a $6{,}0 \text{ m/s}$. La bambina salta giù dal retro dello slittino, che schizza in avanti a $20 \text{ m/s}$. Qual era la velocità orizzontale della bambina, rispetto al terreno, nell'istante in cui ha lasciato lo slittino? (Etkina, 6.37)
+	[sol: Circa $1{,}3 \text{ m/s}$ verso est: si muove ancora in avanti, ma più lentamente.]
+22. **Previsione [EE]** Due carrelli con il velcro si vengono incontro e restano attaccati. Masse e velocità iniziali sono scritte sotto la scena (cambiano a ogni caricamento della pagina). Prima di avviare la simulazione prevedi la velocità finale e l'energia cinetica persa; poi verifica.
 	```physics
 	{
 	  "xlim": [0, 4],
@@ -726,7 +730,7 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	  "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
 	  "time": {"max": 6, "stopWhen": "x1 < 0.3 || x2 > 3.7 || x1 > 3.7 || x2 < 0.3"},
 	  "objects": [
-	    {"id": "g", "type": "ground", "y": 0.3},
+	    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
 	    {
 	      "id": "A",
 	      "type": "cart",
@@ -767,7 +771,11 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	  "controls": [{"type": "reveal", "label": "Mostra la velocità dopo l'urto", "targets": ["vf"]}]
 	}
 	```
-21. **I dati del laboratorio [F]** Questi sono i dati di un urto senza velcro raccolti in classe da un gruppo (masse in kg, velocità in m/s):
+23. **Il meccanico alla deriva [EE]** Un astronauta di $90 \text{ kg}$ (tuta e attrezzi compresi) si sta allontanando dalla sua navicella a $0{,}20 \text{ m/s}$. Ha con sé solo una chiave inglese da $0{,}50 \text{ kg}$. Con che velocità, e in che verso, deve lanciarla per tornare verso la navicella a $0{,}10 \text{ m/s}$? La sua compagna, $60 \text{ kg}$, ferma a $10 \text{ m}$ dalla navicella e senza carburante, lancia la sua bombola d'ossigeno da $3{,}0 \text{ kg}$ lontano dalla navicella a $15 \text{ m/s}$: con che velocità rincula, e per quanto tempo deve trattenere il respiro? (Etkina, 6.54 e 6.55)
+	[sol: Circa $54 \text{ m/s}$ in verso opposto alla navicella (difficile!). La compagna rincula a $0{,}75 \text{ m/s}$ e arriva in circa $13 \text{ s}$.]
+24. **Decadimento del potassio [EE]** Alcuni nuclei di potassio, presenti nei tessuti del corpo, sono radioattivi: ciascuno decade in un nucleo figlio, di massa circa $70\,000$ volte quella di un elettrone, e un elettrone veloce. Se dopo il decadimento il nucleo figlio si muove a $200 \text{ m/s}$, con che velocità si muove l'elettrone? Quali ipotesi fai? Il risultato ti sembra plausibile? (Etkina, 6.53)
+	[sol: $1{,}4 \times 10^7 \text{ m/s}$, se il nucleo era fermo e non viene emessa nessun'altra particella. È circa il 5% della velocità della luce: siamo al limite in cui le leggi di Newton cominciano a non bastare (e in realtà nel decadimento beta viene emessa anche un'altra particella, il neutrino).]
+25. **I dati del laboratorio [F]** Questi sono i dati di un urto senza velcro raccolti in classe da un gruppo (masse in kg, velocità in m/s):
 	
 	| $m_A$ | $m_B$ | $v_{A,i}$ | $v_{B,i}$ | $v_{A,f}$ | $v_{B,f}$ |
 	| ---: | ---: | ---: | ---: | ---: | ---: |
@@ -777,16 +785,7 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Supponendo che una sola delle quattro velocità sia stata misurata male, quale ti sembra la candidata più probabile? Che valore avrebbe dovuto avere perché si conservasse la quantità di moto? Con quel valore, l'urto risulterebbe elastico?
 	- Quali errori di procedura possono aver prodotto una misura del genere con i sensori di posizione?
 	[sol: La quantità di moto aumenta del 26% e l'energia cinetica quasi raddoppia, il che è impossibile senza una fonte di energia. Probabilmente $v_{B,f}$: dovrebbe valere circa $0{,}709 \text{ m/s}$; l'energia cinetica finale sarebbe allora circa il 96% di quella iniziale, quasi elastico.]
-22. **La particella misteriosa [PD]** Stai studiando una particella X appena scoperta, di massa $M$ e velocità $u$ sconosciute (costante). La fai urtare frontalmente contro particelle di prova di massa nota $m$, ferme, con cui resta attaccata, e misuri la velocità $v$ della particella composta. Masse e velocità sono espresse in unità di riferimento $m_0$ e $v_0$. (Etkina, 6.47)
-
-	| $m$ ($m_0$) | 2,0 | 4,0 | 6,0 | 8,0 | 10,0 |
-	| :--- | ---: | ---: | ---: | ---: | ---: |
-	| $v$ ($v_0$) | 0,55 | 0,45 | 0,35 | 0,30 | 0,25 |
-
-	- Ricava un'espressione per $v$ in funzione di $M$, $m$ e $u$. Quali ipotesi fai?
-	- Determina $M$ e $u$ dai dati. Suggerimento: riscrivi l'espressione in modo che una nuova grandezza dipenda linearmente da $m$, rappresenta i dati in un grafico e traccia la retta che li approssima meglio.
-	[sol: $v = \frac{Mu}{M + m}$, quindi $\frac1v = \frac1u + \frac{m}{Mu}$: retta in $m$. Dai dati $u \approx 0{,}83\,v_0$ e $M \approx 4{,}4\,m_0$.]
-23. **È fisicamente possibile? [F]** Il grafico rappresenta la posizione di due carrelli su una rotaia orizzontale, prima e dopo un urto. Il carrello A ha massa $2{,}0 \text{ kg}$, il carrello B $1{,}0 \text{ kg}$; attrito e resistenza dell'aria sono trascurabili. (Etkina, 7.52, con altri numeri)
+26. **È fisicamente possibile? [F]** Il grafico rappresenta la posizione di due carrelli su una rotaia orizzontale, prima e dopo un urto. Il carrello A ha massa $2{,}0 \text{ kg}$, il carrello B $1{,}0 \text{ kg}$; attrito e resistenza dell'aria sono trascurabili. (Etkina, 7.52, con altri numeri)
 	```matephis
 	{
 	  "aspectRatio": "2:1",
@@ -808,7 +807,7 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Se sì, di che tipo di urto si tratta?
 	- Riproduci l'urto con le mani, una per carrello.
 	[sol: Sì: la quantità di moto è $3{,}0 \text{ kg}\cdot\text{m/s}$ prima e dopo; anche l'energia cinetica, $2{,}25 \text{ J}$, si conserva: l'urto è elastico.]
-24. **Il pendolo balistico [F]** Per misurare la velocità di un proiettile lo si spara contro un blocco di legno da $2{,}0 \text{ kg}$ appeso a un filo lungo $2{,}0 \text{ m}$, in cui il proiettile si conficca. Nella simulazione il proiettile è rallentato moltissimo, per poterlo vedere.
+27. **Il pendolo balistico [F]** Per misurare la velocità di un proiettile lo si spara contro un blocco di legno da $2{,}0 \text{ kg}$ appeso a un filo lungo $2{,}0 \text{ m}$, in cui il proiettile si conficca. Nella simulazione il proiettile è rallentato moltissimo, per poterlo vedere.
 	```physics
 	{
 	  "xlim": [0, 6],
@@ -844,43 +843,50 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Un proiettile da $10 \text{ g}$ fa salire il blocco di $5{,}0 \text{ cm}$. Qual era la sua velocità? Verifica con la simulazione.
 	- Quale frazione dell'energia cinetica del proiettile diventa energia interna?
 	[sol: Nell'urto si conserva solo la quantità di moto; nell'oscillazione solo l'energia meccanica. Velocità del blocco circa $0{,}99 \text{ m/s}$, del proiettile circa $200 \text{ m/s}$. Circa il 99,5%.]
-25. **La freccia nel blocco [F]** Una freccia da $50 \text{ g}$ si conficca in un blocco da $350 \text{ g}$ fermo su una rotaia a cuscino d'aria. Il blocco con la freccia va poi a comprimere di $0{,}10 \text{ m}$ una molla di costante elastica $4000 \text{ N/m}$. Qual era la velocità della freccia? Per confermare il risultato, spari una freccia identica, nello stesso modo, in un blocco da $3{,}50 \text{ kg}$ appeso a dei fili, che sale di $0{,}50 \text{ m}$: i due esperimenti sono in accordo? (Etkina, 7.50 e 7.51)
+28. **La freccia nel blocco [F]** Una freccia da $50 \text{ g}$ si conficca in un blocco da $350 \text{ g}$ fermo su una rotaia a cuscino d'aria. Il blocco con la freccia va poi a comprimere di $0{,}10 \text{ m}$ una molla di costante elastica $4000 \text{ N/m}$. Qual era la velocità della freccia? Per confermare il risultato, spari una freccia identica, nello stesso modo, in un blocco da $3{,}50 \text{ kg}$ appeso a dei fili, che sale di $0{,}50 \text{ m}$: i due esperimenti sono in accordo? (Etkina, 7.50 e 7.51)
 	[sol: Primo esperimento: blocco e freccia a $10 \text{ m/s}$, freccia a $80 \text{ m/s}$. Secondo: blocco a $3{,}1 \text{ m/s}$, freccia a circa $222 \text{ m/s}$: i due esperimenti non sono in accordo, e conviene rivedere le ipotesi (attriti, deformazioni, misure).]
-26. **Tamponamento [F]** Un SUV di $2045 \text{ kg}$ tampona un'auto di $1220 \text{ kg}$ ferma allo stop. I due veicoli restano incastrati e strisciano per $4{,}6 \text{ m}$ prima di fermarsi. Se il coefficiente di attrito tra pneumatici e asfalto è $0{,}70$, qual era la velocità del SUV? Separa il processo in due fasi e indica quale principio usi in ciascuna. (Etkina, 6.75)
+29. **Tamponamento [F]** Un SUV di $2045 \text{ kg}$ tampona un'auto di $1220 \text{ kg}$ ferma allo stop. I due veicoli restano incastrati e strisciano per $4{,}6 \text{ m}$ prima di fermarsi. Se il coefficiente di attrito tra pneumatici e asfalto è $0{,}70$, qual era la velocità del SUV? Separa il processo in due fasi e indica quale principio usi in ciascuna. (Etkina, 6.75)
 	[sol: Subito dopo l'urto i veicoli hanno circa $7{,}9 \text{ m/s}$; il SUV andava a circa $12{,}7 \text{ m/s}$ (circa $46 \text{ km/h}$).]
-27. **Urto frontale [PD]** Un'auto di $1340 \text{ kg}$ che viaggia verso est a $13{,}6 \text{ m/s}$ urta frontalmente un'auto di $1930 \text{ kg}$ che viaggia verso ovest a $20{,}5 \text{ m/s}$; le auto restano incastrate. Se l'urto dura $0{,}10 \text{ s}$, quale forza serve per trattenere una persona di $68 \text{ kg}$ nell'auto più piccola? E nell'auto più grande? Spiega perché, in uno scontro tra due auto di massa diversa alla stessa velocità, chi viaggia sull'auto più piccola rischia di più. (Etkina, 6.65 e 6.66)
-	[sol: Velocità comune circa $6{,}5 \text{ m/s}$ verso ovest; circa $1{,}4 \times 10^4 \text{ N}$ nell'auto piccola e $9{,}5 \times 10^3 \text{ N}$ in quella grande.]
-28. **Il meccanico alla deriva [EE]** Un astronauta di $90 \text{ kg}$ (tuta e attrezzi compresi) si sta allontanando dalla sua navicella a $0{,}20 \text{ m/s}$. Ha con sé solo una chiave inglese da $0{,}50 \text{ kg}$. Con che velocità, e in che verso, deve lanciarla per tornare verso la navicella a $0{,}10 \text{ m/s}$? La sua compagna, $60 \text{ kg}$, ferma a $10 \text{ m}$ dalla navicella e senza carburante, lancia la sua bombola d'ossigeno da $3{,}0 \text{ kg}$ lontano dalla navicella a $15 \text{ m/s}$: con che velocità rincula, e per quanto tempo deve trattenere il respiro? (Etkina, 6.54 e 6.55)
-	[sol: Circa $54 \text{ m/s}$ in verso opposto alla navicella (difficile!). La compagna rincula a $0{,}75 \text{ m/s}$ e arriva in circa $13 \text{ s}$.]
-29. **Gli stadi del razzo [E]** Un razzo da $5000 \text{ kg}$ espelle un serbatoio di carburante da $10\,000 \text{ kg}$. Prima dell'espulsione razzo e serbatoio viaggiano insieme a $200 \text{ m/s}$ rispetto alle stelle lontane; dopo, il serbatoio viaggia a $50 \text{ m/s}$ in verso opposto a quello iniziale. Qual è la velocità del razzo? (Etkina, 6.56)
-	[sol: $700 \text{ m/s}$ nel verso iniziale.]
-30. **Decadimento del potassio [EE]** Alcuni nuclei di potassio, presenti nei tessuti del corpo, sono radioattivi: ciascuno decade in un nucleo figlio, di massa circa $70\,000$ volte quella di un elettrone, e un elettrone veloce. Se dopo il decadimento il nucleo figlio si muove a $200 \text{ m/s}$, con che velocità si muove l'elettrone? Quali ipotesi fai? Il risultato ti sembra plausibile? (Etkina, 6.53)
-	[sol: $1{,}4 \times 10^7 \text{ m/s}$, se il nucleo era fermo e non viene emessa nessun'altra particella. È circa il 5% della velocità della luce: siamo al limite in cui le leggi di Newton cominciano a non bastare (e in realtà nel decadimento beta viene emessa anche un'altra particella, il neutrino).]
-31. **La seppia [F]** Le seppie si muovono a reazione: riempiono d'acqua la cavità del mantello e la espellono rapidamente attraverso un sifone. Una seppia lunga $15 \text{ cm}$ e larga $5 \text{ cm}$, con la stessa densità dell'acqua, raggiunge $3 \text{ m/s}$ dopo aver espulso l'acqua. Stima la velocità dell'acqua espulsa rispetto al fondale. Indica le ipotesi che fai. (Etkina, 6.52)
+30. **La seppia [F]** Le seppie si muovono a reazione: riempiono d'acqua la cavità del mantello e la espellono rapidamente attraverso un sifone. Una seppia lunga $15 \text{ cm}$ e larga $5 \text{ cm}$, con la stessa densità dell'acqua, raggiunge $3 \text{ m/s}$ dopo aver espulso l'acqua. Stima la velocità dell'acqua espulsa rispetto al fondale. Indica le ipotesi che fai. (Etkina, 6.52)
 	[sol: Con una massa di circa $0{,}2 \text{ kg}$ e circa $0{,}07 \text{ kg}$ d'acqua espulsa, la velocità dell'acqua è circa $9 \text{ m/s}$: il risultato dipende molto dalla stima della quantità d'acqua.]
-32. **Moderatore di neutroni [PD]** In un reattore nucleare i neutroni prodotti dalla fissione sono troppo veloci: vanno rallentati, facendoli urtare contro i nuclei di un *moderatore* (acqua, acqua pesante, grafite). Considera urti elastici e frontali di un neutrone contro un nucleo fermo di massa $A$ volte quella del neutrone.
+31. **La particella misteriosa [PD]** Stai studiando una particella X appena scoperta, di massa $M$ e velocità $u$ sconosciute (costante). La fai urtare frontalmente contro particelle di prova di massa nota $m$, ferme, con cui resta attaccata, e misuri la velocità $v$ della particella composta. Masse e velocità sono espresse in unità di riferimento $m_0$ e $v_0$. (Etkina, 6.47)
+
+	| $m$ ($m_0$) | 2,0 | 4,0 | 6,0 | 8,0 | 10,0 |
+	| :--- | ---: | ---: | ---: | ---: | ---: |
+	| $v$ ($v_0$) | 0,55 | 0,45 | 0,35 | 0,30 | 0,25 |
+
+	- Ricava un'espressione per $v$ in funzione di $M$, $m$ e $u$. Quali ipotesi fai?
+	- Determina $M$ e $u$ dai dati. Suggerimento: riscrivi l'espressione in modo che una nuova grandezza dipenda linearmente da $m$, rappresenta i dati in un grafico e traccia la retta che li approssima meglio.
+	[sol: $v = \frac{Mu}{M + m}$, quindi $\frac1v = \frac1u + \frac{m}{Mu}$: retta in $m$. Dai dati $u \approx 0{,}83\,v_0$ e $M \approx 4{,}4\,m_0$.]
+32. **Urto frontale [PD]** Un'auto di $1340 \text{ kg}$ che viaggia verso est a $13{,}6 \text{ m/s}$ urta frontalmente un'auto di $1930 \text{ kg}$ che viaggia verso ovest a $20{,}5 \text{ m/s}$; le auto restano incastrate. Se l'urto dura $0{,}10 \text{ s}$, quale forza serve per trattenere una persona di $68 \text{ kg}$ nell'auto più piccola? E nell'auto più grande? Spiega perché, in uno scontro tra due auto di massa diversa alla stessa velocità, chi viaggia sull'auto più piccola rischia di più. (Etkina, 6.65 e 6.66)
+	[sol: Velocità comune circa $6{,}5 \text{ m/s}$ verso ovest; circa $1{,}4 \times 10^4 \text{ N}$ nell'auto piccola e $9{,}5 \times 10^3 \text{ N}$ in quella grande.]
+33. **Moderatore di neutroni [PD]** In un reattore nucleare i neutroni prodotti dalla fissione sono troppo veloci: vanno rallentati, facendoli urtare contro i nuclei di un *moderatore* (acqua, acqua pesante, grafite). Considera urti elastici e frontali di un neutrone contro un nucleo fermo di massa $A$ volte quella del neutrone.
 	- Usando il riferimento del centro di massa, ricava la frazione di energia cinetica che il neutrone conserva dopo un urto.
 	- Calcola questa frazione per l'idrogeno ($A = 1$), il deuterio ($A = 2$) e il carbonio ($A = 12$). Quale nucleo è il moderatore più efficace?
 	- Un neutrone di fissione ha circa $2 \text{ MeV}$ e va rallentato fino a circa $0{,}025 \text{ eV}$. Quanti urti frontali servirebbero con il carbonio? (Gli urti reali non sono frontali e ne servono di più, poco più di un centinaio.)
 	[sol: Frazione $\left(\frac{A - 1}{A + 1}\right)^2$: $0$ per l'idrogeno, $0{,}11$ per il deuterio, $0{,}72$ per il carbonio. Il più efficace è l'idrogeno. Con il carbonio circa $55$ urti frontali.]
-33. **Effetto fionda [AD]** Una sonda si muove a $10 \text{ km/s}$ verso un pianeta, che le viene incontro a $13 \text{ km/s}$ rispetto al Sole. Modellizza l'incontro, che in realtà avviene senza contatto grazie alla gravità, come un urto elastico unidimensionale con un corpo di massa enorme. Con che velocità si allontana la sonda dopo l'incontro, rispetto al Sole? Da dove viene l'energia guadagnata dalla sonda? È così che sono state accelerate le sonde *Voyager*.
+34. **La caduta del meteorite [PD]** Circa $65$ milioni di anni fa un meteorite di circa $10 \text{ km}$ di diametro e $2 \times 10^{15} \text{ kg}$ di massa, a circa $10 \text{ km/s}$, si schiantò dove oggi c'è il golfo del Messico. Stima la variazione di velocità della Terra ($6 \times 10^{24} \text{ kg}$) dovuta all'impatto e la forza media che il meteorite esercitò sulla Terra. Indica le ipotesi che fai. (Etkina, 6.60)
+	[sol: Circa $3 \times 10^{-6} \text{ m/s}$; se l'impatto dura circa il tempo che il meteorite impiega a percorrere il proprio diametro (circa $1 \text{ s}$), la forza media è dell'ordine di $10^{19} \text{ N}$.]
+35. **Effetto fionda [AD]** Una sonda si muove a $10 \text{ km/s}$ verso un pianeta, che le viene incontro a $13 \text{ km/s}$ rispetto al Sole. Modellizza l'incontro, che in realtà avviene senza contatto grazie alla gravità, come un urto elastico unidimensionale con un corpo di massa enorme. Con che velocità si allontana la sonda dopo l'incontro, rispetto al Sole? Da dove viene l'energia guadagnata dalla sonda? È così che sono state accelerate le sonde *Voyager*.
 	[sol: Nel riferimento del pianeta la sonda arriva a $23 \text{ km/s}$ e riparte a $23 \text{ km/s}$; rispetto al Sole $36 \text{ km/s}$. L'energia viene dal moto del pianeta, che rallenta in modo impercettibile.]
-34. **Il razzo di palline [AD]** Appoggia una pallina da tennis sopra un pallone da basket e lasciali cadere insieme da un'altezza $h$ (all'aperto!). La pallina schizza molto più in alto di $h$. Considera gli urti elastici, la massa della pallina trascurabile rispetto a quella del pallone, e immagina che il pallone rimbalzi sul pavimento un istante prima di urtare la pallina.
+36. **Il razzo di palline [AD]** Appoggia una pallina da tennis sopra un pallone da basket e lasciali cadere insieme da un'altezza $h$ (all'aperto!). La pallina schizza molto più in alto di $h$. Considera gli urti elastici, la massa della pallina trascurabile rispetto a quella del pallone, e immagina che il pallone rimbalzi sul pavimento un istante prima di urtare la pallina.
 	- Con quali velocità si incontrano pallone e pallina? Usa il riferimento del pallone per trovare la velocità della pallina dopo l'urto.
 	- Fino a che altezza sale la pallina?
 	- Se il rapporto tra le masse è $0{,}1$, quanto vale l'altezza?
 	[sol: Il pallone sale a $v$, la pallina scende a $v$: nel riferimento del pallone arriva a $2v$ e riparte a $2v$, cioè a $3v$ rispetto al suolo; sale fino a $9h$. Con rapporto $0{,}1$, circa $7h$.]
+37. **Bracci rotanti [AD]** Due bracci leggeri uguali possono ruotare in un piano orizzontale attorno a un asse comune. Alle loro estremità sono fissate due palline di massa $m$ e $3m$, collegate da una molla compressa leggera. Quando la molla si distende, i bracci vengono spinti in versi opposti, ruotano e alla fine le palline si scontrano. Di quale angolo ruota ciascun braccio prima dell'urto? Quali ipotesi fai? (Etkina, 6.69)
+	[sol: Durante la spinta, brevissima, la molla agisce lungo la direzione del moto delle palline, mentre i bracci leggeri e liberi di ruotare possono esercitare solo forze lungo sé stessi, perpendicolari al moto: subito dopo la spinta le palline hanno quantità di moto opposte, quindi velocità in rapporto $3 : 1$. Poi i bracci continuano a esercitare forze perpendicolari alla velocità, che cambiano la direzione delle quantità di moto (la quantità di moto del sistema non si conserva, perché l'asse esercita forze esterne) ma non il modulo delle velocità. Le palline percorrono quindi archi in rapporto $3 : 1$. Se partono vicine, si incontrano dopo aver percorso in tutto un giro: la pallina leggera ruota di $270°$, la pesante di $90°$.]
 
 ### Urti in due dimensioni
 
-{:start="35"}
-35. **Incrocio [EE]** Un'auto di $1180 \text{ kg}$ che viaggia verso sud a $24 \text{ m/s}$ urta un furgone di $2470 \text{ kg}$ che viaggia verso est a $16 \text{ m/s}$; i veicoli restano agganciati. Determina velocità, direzione e verso dei due veicoli subito dopo l'urto. Rappresenta la soluzione con il triangolo delle quantità di moto. (Etkina, 6.58)
+{:start="38"}
+38. **Incrocio [EE]** Un'auto di $1180 \text{ kg}$ che viaggia verso sud a $24 \text{ m/s}$ urta un furgone di $2470 \text{ kg}$ che viaggia verso est a $16 \text{ m/s}$; i veicoli restano agganciati. Determina velocità, direzione e verso dei due veicoli subito dopo l'urto. Rappresenta la soluzione con il triangolo delle quantità di moto. (Etkina, 6.58)
 	[sol: Circa $13 \text{ m/s}$, a $36°$ a sud della direzione est.]
-36. **Pattinatori [EE]** Mentre pattini sul ghiaccio verso est a $8{,}0 \text{ m/s}$ (la tua massa è $60 \text{ kg}$) ti scontri con un pattinatore di $80 \text{ kg}$ che va verso nord a $9{,}0 \text{ m/s}$; restate aggrappati. In che direzione e con che velocità vi muovete subito dopo? Quale frazione dell'energia cinetica è diventata energia interna? (Etkina, 6.59)
+39. **Pattinatori [EE]** Mentre pattini sul ghiaccio verso est a $8{,}0 \text{ m/s}$ (la tua massa è $60 \text{ kg}$) ti scontri con un pattinatore di $80 \text{ kg}$ che va verso nord a $9{,}0 \text{ m/s}$; restate aggrappati. In che direzione e con che velocità vi muovete subito dopo? Quale frazione dell'energia cinetica è diventata energia interna? (Etkina, 6.59)
 	[sol: Circa $6{,}2 \text{ m/s}$ a $56°$ a nord della direzione est; circa il 48% dell'energia cinetica.]
-37. **Beach volley [F]** Il pallone ($280 \text{ g}$) vola verso est a $8{,}0 \text{ m/s}$ quando una giocatrice lo colpisce di bagher verso nord: la forza media esercitata dai polsi è di $84 \text{ N}$ e dura $0{,}010 \text{ s}$. Determina la velocità del pallone dopo il colpo. Il risultato ti sembra ragionevole? (Etkina, 6.61)
+40. **Beach volley [F]** Il pallone ($280 \text{ g}$) vola verso est a $8{,}0 \text{ m/s}$ quando una giocatrice lo colpisce di bagher verso nord: la forza media esercitata dai polsi è di $84 \text{ N}$ e dura $0{,}010 \text{ s}$. Determina la velocità del pallone dopo il colpo. Il risultato ti sembra ragionevole? (Etkina, 6.61)
 	[sol: Circa $8{,}5 \text{ m/s}$ a $21°$ a nord della direzione est: il pallone continua quasi nella stessa direzione, per deviarlo davvero serve un impulso più grande.]
-38. **Il tavolo da biliardo [F]** Due dischi uguali scivolano senza attrito su un piano; il disco A colpisce B, fermo, non al centro. Il parametro d'urto cambia a ogni caricamento della pagina.
+41. **Il tavolo da biliardo [F]** Due dischi uguali, di massa $0{,}20 \text{ kg}$, scivolano senza attrito su un piano; il disco A arriva a $0{,}80 \text{ m/s}$ e colpisce B, fermo, non al centro. L'urto è elastico. Il parametro d'urto (la distanza tra la retta su cui si muove A e il centro di B) cambia a ogni caricamento della pagina.
 	```physics
 	{
 	  "plane": "horizontal",
@@ -969,25 +975,21 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	- Avvia e mostra le misure. Verifica che le componenti $x$ e $y$ della quantità di moto totale siano le stesse prima e dopo l'urto e controlla la previsione.
 	- Verifica che $v_{A,i}^2 = v_{A,f}^2 + v_{B,f}^2$. Che cosa significa?
 	[sol: L'angolo è $90°$: con masse uguali e urto elastico le due velocità finali e quella iniziale formano un triangolo rettangolo, e la conservazione dell'energia cinetica è il teorema di Pitagora.]
-39. **La caduta del meteorite [PD]** Circa $65$ milioni di anni fa un meteorite di circa $10 \text{ km}$ di diametro e $2 \times 10^{15} \text{ kg}$ di massa, a circa $10 \text{ km/s}$, si schiantò dove oggi c'è il golfo del Messico. Stima la variazione di velocità della Terra ($6 \times 10^{24} \text{ kg}$) dovuta all'impatto e la forza media che il meteorite esercitò sulla Terra. Indica le ipotesi che fai. (Etkina, 6.60)
-	[sol: Circa $3 \times 10^{-6} \text{ m/s}$; se l'impatto dura circa il tempo che il meteorite impiega a percorrere il proprio diametro (circa $1 \text{ s}$), la forza media è dell'ordine di $10^{19} \text{ N}$.]
-40. **La plastilina e il blocco [PD]** In un primo esperimento una pallina di plastilina da $30 \text{ g}$ viene lanciata orizzontalmente a $1{,}3 \text{ m/s}$ dal bordo di un tavolo e cade sul pavimento a $0{,}60 \text{ m}$ dal tavolo. In un secondo esperimento la stessa pallina, lanciata allo stesso modo, colpisce un blocco di legno posto sul bordo del tavolo e vi resta attaccata: il blocco cade sul pavimento a $0{,}06 \text{ m}$ dal tavolo. Rappresenta il secondo esperimento con diagrammi a barre per le componenti $x$ e $y$, scegliendo prima come sistema il solo blocco e poi blocco e pallina (stato iniziale: subito prima dell'urto; finale: subito prima che il blocco tocchi il pavimento). Determina la massa del blocco e l'altezza del tavolo. (Etkina, 6.70)
+42. **La plastilina e il blocco [PD]** In un primo esperimento una pallina di plastilina da $30 \text{ g}$ viene lanciata orizzontalmente a $1{,}3 \text{ m/s}$ dal bordo di un tavolo e cade sul pavimento a $0{,}60 \text{ m}$ dal tavolo. In un secondo esperimento la stessa pallina, lanciata allo stesso modo, colpisce un blocco di legno posto sul bordo del tavolo e vi resta attaccata: il blocco cade sul pavimento a $0{,}06 \text{ m}$ dal tavolo. Rappresenta il secondo esperimento con diagrammi a barre per le componenti $x$ e $y$, scegliendo prima come sistema il solo blocco e poi blocco e pallina (stato iniziale: subito prima dell'urto; finale: subito prima che il blocco tocchi il pavimento). Determina la massa del blocco e l'altezza del tavolo. (Etkina, 6.70)
 	[sol: Il tempo di caduta è $0{,}46 \text{ s}$, quindi il tavolo è alto circa $1{,}0 \text{ m}$. La velocità dopo l'urto è un decimo di quella della pallina, quindi la massa totale è dieci volte quella della pallina: il blocco ha circa $270 \text{ g}$.]
-41. **L'asciugacapelli [PD]** Tieni un asciugacapelli appeso per il filo: spento, il filo è verticale; acceso, il filo forma un angolo di $5°$ con la verticale. Disegna il diagramma delle forze nei due casi e spiega l'esperimento con la quantità di moto. Sai che l'asciugacapelli ($420 \text{ g}$) spinge $0{,}03 \text{ m}^3$ di aria al secondo, perpendicolarmente al filo, e che $1 \text{ m}^3$ di aria ha massa $1{,}2 \text{ kg}$: con che velocità esce l'aria? (Etkina, 6.72 e 6.73)
-	[sol: L'aria spinta da una parte spinge l'asciugacapelli dall'altra; la forza orizzontale è $mg\tan 5° \approx 0{,}36 \text{ N}$ e l'aria esce a circa $10 \text{ m/s}$.]
 
 ### Centro di massa
 
-{:start="42"}
-42. **La barca e il molo [EE]** Una persona di $70 \text{ kg}$ si trova a poppa di una barca di $280 \text{ kg}$, ferma in acqua, con la prua che tocca quasi il molo. La persona cammina di $4{,}0 \text{ m}$ lungo la barca verso il molo. Di quanto si sposta la barca, e in che verso? Di quanto si sposta la persona rispetto al molo? Trascura l'attrito dell'acqua.
+{:start="43"}
+43. **La barca e il molo [EE]** Una persona di $70 \text{ kg}$ si trova a poppa di una barca di $280 \text{ kg}$, ferma in acqua, con la prua che tocca quasi il molo. La persona cammina di $4{,}0 \text{ m}$ lungo la barca verso il molo. Di quanto si sposta la barca, e in che verso? Di quanto si sposta la persona rispetto al molo? Trascura l'attrito dell'acqua.
 	[sol: La barca si allontana dal molo di $0{,}80 \text{ m}$; la persona si avvicina al molo di $3{,}2 \text{ m}$.]
-43. **Il fuoco d'artificio [F]** Un razzo viene lanciato con velocità di $8 \text{ m/s}$ inclinata di circa $63°$ sull'orizzontale e, nel punto più alto, esplode in due frammenti che si muovono in direzioni diverse. Nella simulazione puoi cambiare il rapporto tra le masse dei frammenti.
+44. **Il fuoco d'artificio [F]** Un razzo viene lanciato con velocità di $8 \text{ m/s}$ inclinata di circa $63°$ sull'orizzontale e, nel punto più alto, esplode in due frammenti che si muovono in direzioni diverse. Nella simulazione puoi cambiare il rapporto tra le masse dei frammenti.
 	```physics
 	{
 	  "xlim": [-0.5, 9.5],
 	  "ylim": [0, 3.8],
 	  "aspectRatio": "5:2",
-	  "params": {"k": {"val": 1, "min": 0.25, "max": 3, "step": 0.25, "label": "m_1 / m_2"}},
+	  "params": {"k": {"val": 1, "min": 0.5, "max": 3, "step": 0.25, "label": "m_1 / m_2"}},
 	  "time": {
 	    "max": 1.6,
 	    "stopWhen": "t > 8*sin(1.1)/g && (t < 8*sin(1.1)/g ? 8*sin(1.1)*t - g*t^2/2 : (8*sin(1.1))^2/(2*g) + (-1.5)*(t - 8*sin(1.1)/g) - g*(t - 8*sin(1.1)/g)^2/2) < 0 || t > 8*sin(1.1)/g && (t < 8*sin(1.1)/g ? 8*sin(1.1)*t - g*t^2/2 : (8*sin(1.1))^2/(2*g) + (1.5/k)*(t - 8*sin(1.1)/g) - g*(t - 8*sin(1.1)/g)^2/2) < 0"
@@ -1040,14 +1042,12 @@ Per ogni problema disegna lo schizzo degli stati iniziale e finale, scegli il si
 	}
 	```
 	- Che traiettoria segue il centro di massa dei due frammenti dopo l'esplosione? Prevedi, poi verifica.
-	- Se uno dei due frammenti cadesse verticalmente sotto il punto dell'esplosione, a che distanza dal punto di lancio cadrebbe l'altro, di massa uguale?
+	- Se subito dopo l'esplosione uno dei due frammenti fosse fermo, e quindi cadesse verticalmente partendo da fermo, a che distanza dal punto di lancio cadrebbe l'altro, di massa uguale?
 	[sol: Il centro di massa prosegue lungo la parabola che avrebbe seguito il razzo intero, finché nessun frammento tocca il suolo. L'altro frammento cadrebbe a $1{,}5$ volte la gittata del razzo intero.]
-44. **Pianeti extrasolari [F]** Il Sole e Giove ruotano attorno al loro centro di massa comune. La massa di Giove è circa $1/1047$ di quella del Sole e la distanza tra i due è circa $7{,}78 \times 10^{11} \text{ m}$.
+45. **Pianeti extrasolari [F]** Il Sole e Giove ruotano attorno al loro centro di massa comune. La massa di Giove è circa $1/1047$ di quella del Sole e la distanza tra i due è circa $7{,}78 \times 10^{11} \text{ m}$.
 	- A che distanza dal centro del Sole si trova il centro di massa? È dentro o fuori dal Sole (raggio $6{,}96 \times 10^8 \text{ m}$)?
 	- Giove percorre la sua orbita a circa $13 \text{ km/s}$. Con che velocità «oscilla» il Sole attorno al centro di massa? E a causa della Terra ($1/333\,000$ della massa solare, $29{,}8 \text{ km/s}$)?
 	- Il metodo delle velocità radiali, con cui sono stati scoperti molti pianeti extrasolari, misura questa oscillazione delle stelle attraverso l'effetto Doppler. Gli spettrografi migliori arrivano a circa $0{,}1$–$1 \text{ m/s}$. Un osservatore lontano scoprirebbe Giove? E la Terra?
-	[sol: Circa $7{,}4 \times 10^8 \text{ m}$, poco fuori dalla superficie del Sole (1,07 raggi solari). Circa $12{,}5 \text{ m/s}$ per Giove e $0{,}09 \text{ m/s}$ per la Terra: Giove sì, la Terra appena al limite delle possibilità attuali.]
-45. **Tutti insieme, saltate! [PD]** Stima la velocità di rinculo della Terra se tutti gli abitanti del Nord America (circa $3{,}7 \times 10^8$ persone) saltassero contemporaneamente verso l'alto. Che cosa succede al centro di massa del sistema Terra più persone? E quando le persone ricadono? (Etkina, 6.63)
+	[sol: Circa $7{,}4 \times 10^8 \text{ m}$, poco fuori dalla superficie del Sole (1,07 raggi solari). Circa $12 \text{ m/s}$ per Giove e $0{,}09 \text{ m/s}$ per la Terra: Giove sì, la Terra appena al limite delle possibilità attuali.]
+46. **Tutti insieme, saltate! [PD]** Stima la velocità di rinculo della Terra se tutti gli abitanti del Nord America (circa $3{,}7 \times 10^8$ persone) saltassero contemporaneamente verso l'alto. Che cosa succede al centro di massa del sistema Terra più persone? E quando le persone ricadono? (Etkina, 6.63)
 	[sol: Con $70 \text{ kg}$ a testa e circa $3 \text{ m/s}$ di velocità di stacco, circa $10^{-14} \text{ m/s}$; il centro di massa resta dove era, e quando le persone atterrano la Terra si ferma di nuovo.]
-46. **Bracci rotanti [AD]** Due bracci leggeri uguali possono ruotare in un piano orizzontale attorno a un asse comune. Alle loro estremità sono fissate due palline di massa $m$ e $3m$, collegate da una molla compressa leggera. Quando la molla si distende, i bracci vengono spinti in versi opposti, ruotano e alla fine le palline si scontrano. Di quale angolo ruota ciascun braccio prima dell'urto? Quali ipotesi fai? (Etkina, 6.69)
-	[sol: Le palline hanno quantità di moto opposte, quindi velocità in rapporto $3 : 1$ e percorrono archi in rapporto $3 : 1$. Se partono vicine, si incontrano dopo aver percorso in tutto un giro: la pallina leggera ruota di $270°$, la pesante di $90°$.]
