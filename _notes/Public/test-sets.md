@@ -79,7 +79,7 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
 | `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
 | `collisions(f)` | Elementi con la stessa immagine: frecce e immagine comune in rosso. |
-| `properties(f)` | Riquadro sotto il diagramma: iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Le ragioni sono nel tooltip. |
+| `properties(f)` | Riquadro sotto il diagramma: $f\colon A \to B$ (in TeX, come le etichette) e iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Una relazione che non è una funzione mostra solo «funzione ✗» e «biiettiva ✗»: iniettiva e suriettiva si dicono delle funzioni. Le ragioni sono nel tooltip. |
 | `arrows(f)` | Le frecce di `f` (per mostrarle con un pulsante). |
 
 I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
@@ -286,6 +286,19 @@ $f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: l'immagine è $[0, 1) \cup 
   ] }],
   "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
   "probe": { "map": "f", "at": "p" },
+  "show": ["image(f)", "properties(f)"]
+}
+```
+
+### Un minimo all'interno del dominio
+
+$f_1(x) = x^2$ da $[-1, 2]$ in $[0, 4]$: il minimo $0$ è preso in $x = 0$, dentro il dominio, e $f_1$ è suriettiva (ma non iniettiva).
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "D", "interval": "[-1, 2]" }, { "id": "C", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "label": "f_1", "from": "D", "to": "C", "expr": "x^2" }],
   "show": ["image(f)", "properties(f)"]
 }
 ```

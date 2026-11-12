@@ -905,11 +905,43 @@ export class SetsModel {
             const v = this._raw1(map, S.lo);
             return isFinite(v) ? interval(v, v) : null;
         }
-        const values = samplePositions(S, SAMPLES_1D, map.from.window).map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
+        const samples = samplePositions(S, SAMPLES_1D, map.from.window);
+        const values = samples.map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
+        // A minimum or maximum inside the segment usually falls between two
+        // samples: find it, so that x^2 on [-1, 2] reaches 0 exactly
+        values.push(...this._refineExtrema(map, samples, values));
         const limits = [];
         if (!S.loClosed && isFinite(S.lo)) limits.push({ v: this._limitAt(map, S.lo, 1) });
         if (!S.hiClosed && isFinite(S.hi)) limits.push({ v: this._limitAt(map, S.hi, -1) });
         return imageFromSamples(values, limits);
+    }
+
+    /**
+     * The smallest and largest sampled values, when they are at an inner
+     * sample, refined by golden-section search between its neighbours.
+     */
+    _refineExtrema(map, samples, values) {
+        const out = [];
+        const n = values.length;
+        [1, -1].forEach(sign => {
+            let best = -1;
+            for (let i = 0; i < n; i++) {
+                const v = values[i].v;
+                if (typeof v === 'number' && isFinite(v) && (best < 0 || sign * v < sign * values[best].v)) best = i;
+            }
+            if (best <= 0 || best >= n - 1 || values[best].nearOpen) return;
+            const g = (t) => sign * this._raw1(map, t);
+            let a = samples[best - 1].t, b = samples[best + 1].t;
+            const r = (Math.sqrt(5) - 1) / 2;
+            let c = b - r * (b - a), d = a + r * (b - a), gc = g(c), gd = g(d);
+            for (let k = 0; k < 80 && b - a > 1e-15 * Math.max(1, Math.abs(a)); k++) {
+                if (gc < gd) { b = d; d = c; gd = gc; c = b - r * (b - a); gc = g(c); }
+                else { a = c; c = d; gc = gd; d = a + r * (b - a); gd = g(d); }
+            }
+            const t = (a + b) / 2, v = this._raw1(map, t);
+            if (isFinite(v) && sign * v < sign * values[best].v) out.push({ v, nearOpen: false });
+        });
+        return out;
     }
 
     /** Interval of a selector argument ("[0, 1/2]"), or one already computed. */
@@ -1178,7 +1210,9 @@ export class SetsModel {
             ['injective', 'surjective'].forEach(k => { if (typeof claims[k] === 'boolean') res[k] = claims[k]; });
             res.claimed = true;
         }
-        // A relation that is not a function is not a bijection
+        // A relation that is not a function is neither injective nor
+        // surjective (those words are about functions), nor a bijection
+        if (res.isFunction === false && !res.claimed) res.injective = res.surjective = null;
         res.bijective = res.isFunction === false ? false
             : res.injective === true && res.surjective === true ? true
                 : res.injective === false || res.surjective === false ? false : null;

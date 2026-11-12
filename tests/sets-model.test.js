@@ -129,6 +129,29 @@ describe('Insiemi finiti', () => {
         expect(p.isFunction).toBe(false);
         expect(p.problems).toContain('a_1 ha 2 immagini');
         expect(p.problems).toContain('a_3 non ha immagine');
+        // Injective and surjective are not claimed for a relation
+        expect(p.injective).toBe(null);
+        expect(p.surjective).toBe(null);
+        expect(p.bijective).toBe(false);
+    });
+
+    it('un minimo all\'interno del dominio: x^2 da [-1, 2] su [0, 4] è suriettiva', () => {
+        const { m, map } = model({
+            sets: [{ id: 'D', interval: '[-1, 2]' }, { id: 'C', interval: '[0, 4]' }],
+            maps: [{ id: 'f', from: 'D', to: 'C', expr: 'x^2' }],
+        });
+        const img = m.image(map('f'));
+        expect(img.I.lo).toBeCloseTo(0, 12);
+        expect(img.I.loClosed).toBe(true);
+        expect(m.properties(map('f'))).toMatchObject({ into: true, injective: false, surjective: true, bijective: false });
+    });
+
+    it('un massimo all\'interno: sin su [0, 3] su [0, 1]', () => {
+        const { m, map } = model({
+            sets: [{ id: 'D', interval: '[0, 3]' }, { id: 'C', interval: '[0, 1]' }],
+            maps: [{ id: 'f', from: 'D', to: 'C', expr: 'sin(x)' }],
+        });
+        expect(m.properties(map('f')).surjective).toBe(true);
     });
 
     it('avvisa per elementi sconosciuti', () => {
@@ -384,7 +407,7 @@ describe('Inverse', () => {
         });
         expect(m.apply(map('r'), 0.25)).toEqual([-0.5, 0.5]);
         const p = m.properties(map('r'));
-        expect(p).toMatchObject({ isFunction: false, injective: true, surjective: true, bijective: false });
+        expect(p).toMatchObject({ isFunction: false, injective: null, surjective: null, bijective: false });
         expect(m.image(map('r')).I).toMatchObject({ lo: -1, hi: 1 });
     });
 

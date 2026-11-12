@@ -303,7 +303,16 @@ export function renderProperties(scene, layers) {
         row.className = 'matephis-sets-props-row';
         const name = document.createElement('span');
         name.className = 'matephis-sets-props-name';
-        name.textContent = `${plain(map.label)}: ${plain(setLabelText(scene.model, map.from))} → ${plain(setLabelText(scene.model, map.to))}`;
+        const from = setLabelText(scene.model, map.from), to = setLabelText(scene.model, map.to);
+        const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
+        let typeset = false;
+        if (mj) {
+            try {
+                name.appendChild(window.MathJax.tex2svg(`${map.label}\\colon ${from} \\to ${to}`, { display: false }));
+                typeset = true;
+            } catch (e) { /* plain text below */ }
+        }
+        if (!typeset) name.textContent = `${plain(map.label)}: ${plain(from)} → ${plain(to)}`;
         row.appendChild(name);
         const chip = (text, ok, title) => {
             const c = document.createElement('span');
@@ -314,8 +323,11 @@ export function renderProperties(scene, layers) {
         };
         if (!p.isFunction) chip('funzione', false, p.problems.join('; '));
         if (!p.into) chip(`a valori in ${plain(setLabelText(scene.model, map.to))}`, false, p.problems.join('; '));
-        chip('iniettiva', p.injective);
-        chip('suriettiva', p.surjective);
+        // Injective and surjective are said of functions only
+        if (p.isFunction || p.claimed) {
+            chip('iniettiva', p.injective);
+            chip('suriettiva', p.surjective);
+        }
         chip('biiettiva', p.bijective);
         if (!p.exact && !p.claimed) {
             const note = document.createElement('span');
