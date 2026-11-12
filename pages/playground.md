@@ -5,13 +5,14 @@ permalink: /playground/
 content-type: static
 plot: true
 physics: true
+sets: true
 ---
 
 <link href="{{ site.baseurl }}/assets/css/matephis-playground.css?v=0.1" rel="stylesheet" />
 
 <div class="playground" id="playground">
 <div class="playground-bar">
-<label>Motore <select id="pg-engine"><option value="physics">physics</option><option value="matephis">matephis (grafici)</option></select></label>
+<label>Motore <select id="pg-engine"><option value="physics">physics</option><option value="sets">sets (insiemi)</option><option value="matephis">matephis (grafici)</option></select></label>
 <label>Esempio <select id="pg-example"></select></label>
 <button type="button" id="pg-copy">Copia blocco</button>
 <span class="playground-status" id="pg-status" role="status"></span>
@@ -22,4 +23,4 @@ physics: true
 </div>
 </div>
 
-<script src="{{ site.baseurl }}/assets/js/matephis-playground.js?v=0.9"></script>
+<script src="{{ site.baseurl }}/assets/js/matephis-playground.js?v=0.10"></script>
