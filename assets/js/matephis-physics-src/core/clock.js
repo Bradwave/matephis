@@ -7,8 +7,14 @@
  * Playback stops while the scene is off screen and when the page is hidden.
  */
 import { MatephisIcons } from '../../matephis-plot-src/ui/icons.js';
+import { paintRange } from '../../matephis-plot-src/ui/slider-manager.js';
 
 const SPEEDS = [0.25, 0.5, 1, 2];
+
+const chevron = (d) => `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true"><path d="${d}"/></svg>`;
+const CHEVRON_LEFT = chevron('M10 3.5 5.5 8l4.5 4.5');
+const CHEVRON_RIGHT = chevron('M6 3.5 10.5 8 6 12.5');
+const speedText = (s) => `${s}×`;
 
 export class Clock {
     /**
@@ -55,18 +61,32 @@ export class Clock {
         this.slider.addEventListener('input', () => { this.pause(); this.seek(parseFloat(this.slider.value)); });
         el.appendChild(this.slider);
 
-        this.speedSel = document.createElement('select');
-        this.speedSel.className = 'matephis-physics-speed';
-        this.speedSel.setAttribute('aria-label', 'Velocità di riproduzione');
-        [...new Set([...SPEEDS, this.speed])].sort((a, b) => a - b).forEach(s => {
-            const o = document.createElement('option');
-            o.value = s;
-            o.textContent = `${s}×`;
-            if (s === this.speed) o.selected = true;
-            this.speedSel.appendChild(o);
-        });
-        this.speedSel.addEventListener('change', () => { this.speed = parseFloat(this.speedSel.value); });
-        el.appendChild(this.speedSel);
+        // Speed: ‹ 1× › stepper through the preset speeds
+        this.speeds = [...new Set([...SPEEDS, this.speed])].sort((a, b) => a - b);
+        const speedEl = document.createElement('div');
+        speedEl.className = 'matephis-physics-speed';
+        speedEl.setAttribute('role', 'group');
+        speedEl.setAttribute('aria-label', 'Velocità di riproduzione');
+        const stepBtn = (icon, label, dir) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'matephis-physics-speed-btn';
+            b.innerHTML = icon;
+            b.setAttribute('aria-label', label);
+            b.title = label;
+            b.addEventListener('click', () => this.setSpeed(this.speeds[this.speeds.indexOf(this.speed) + dir]));
+            return b;
+        };
+        this.slowerBtn = stepBtn(CHEVRON_LEFT, 'Più lento', -1);
+        this.speedVal = document.createElement('output');
+        this.speedVal.className = 'matephis-physics-speed-val';
+        this.speedVal.setAttribute('aria-live', 'polite');
+        // Room for the longest speed ("0.25×"), so the row never shifts
+        this.speedVal.style.width = `${Math.max(...this.speeds.map(s => speedText(s).length))}ch`;
+        this.fasterBtn = stepBtn(CHEVRON_RIGHT, 'Più veloce', 1);
+        speedEl.append(this.slowerBtn, this.speedVal, this.fasterBtn);
+        el.appendChild(speedEl);
+        this.setSpeed(this.speed);
 
         // Pause off screen; autoplay the first time the scene is seen
         this._autoplay = cfg.autoplay === true;
@@ -85,12 +105,26 @@ export class Clock {
         this.update();
     }
 
+    /** Playback speed, one of this.speeds; the arrows stop at the ends. */
+    setSpeed(s) {
+        if (!(s > 0)) return;
+        this.speed = s;
+        this.speedVal.textContent = speedText(s);
+        const i = this.speeds.indexOf(s);
+        this.slowerBtn.disabled = i <= 0;
+        this.fasterBtn.disabled = i >= this.speeds.length - 1;
+    }
+
     /** Syncs the slider and the readout with the simulation. */
     update() {
         const { t, clockEnd: tEnd } = this.sim;
         this.slider.max = tEnd;
         this.slider.value = t;
+        paintRange(this.slider);
         this.readout.textContent = `t = ${t.toFixed(2)} s`;
+        // Room for the longest time, so the track does not resize while playing
+        const chars = `t = ${Math.max(t, tEnd || 0).toFixed(2)} s`.length;
+        if (chars > (parseFloat(this.readout.style.width) || 0)) this.readout.style.width = `${chars}ch`;
     }
 
     seek(t) {

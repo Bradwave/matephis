@@ -4,7 +4,7 @@
 
 export const VALID_ROOT_KEYS = [
     "width", "height", "aspectRatio", "cssWidth", "fullWidth", "align",
-    "marginLeft", "marginRight", "border", "sliderBorder",
+    "marginLeft", "marginRight", "border", "sliderBorder", "sliderLayout",
     "xlim", "ylim", "interactive", "theme", "legend", "legendWidth", "legendPosition",
     "padding", "marginBottom", "grid", "gridOpacity", "axisArrows", "axisLabels",
     "xStep", "yStep", "xStepSecondary", "yStepSecondary", "showSecondaryGrid", "showGrid",

@@ -10,7 +10,7 @@ import { angleParamWarning } from './angles.js';
 export const ROOT_KEYS = [
     "xlim", "ylim", "aspectRatio", "width", "fullWidth", "cssWidth", "align", "border", "padding",
     "marginBottom", "marginLeft", "marginRight", "theme", "title", "caption", "ariaLabel",
-    "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder",
+    "grid", "axes", "plane", "angleUnit", "g", "params", "animate", "showSliders", "sliderBorder", "sliderLayout",
     "objects", "debug", "fontSize", "forceScale", "vectorScale", "labelHalo", "applyAt", "controls",
     "time", "state", "ode", "events", "graphs", "readouts", "outOfPlane", "compare", "magnitudes",
     "preset", "use", "views", "frames", "frame", "columns", "gap", "seed",
