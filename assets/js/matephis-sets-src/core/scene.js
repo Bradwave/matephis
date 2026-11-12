@@ -421,7 +421,7 @@ export class MatephisSets {
             || (l.sel && l.sel.op === 'collisions' && this.isVisible(l)));
         this.layout = computeLayout(this.model, {
             width: this.width, orient: cfg.layout, fontSize: this.fontSize,
-            measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false }),
+            measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: cfg.layout === 'column' ? 'column' : 'row' }),
             footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined,
             height: typeof cfg.height === 'number' ? cfg.height : undefined,
         });

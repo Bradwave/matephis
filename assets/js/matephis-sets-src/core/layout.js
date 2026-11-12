@@ -23,7 +23,7 @@ const MARGIN = 16;
  * A set with "order": "given" (or the root option "reorder": false) keeps the
  * order of its config.
  */
-export function elementOrder(model, { reorder = true } = {}) {
+export function elementOrder(model, { reorder = true, orient = 'row' } = {}) {
     const order = new Map();
     model.sets.forEach(set => {
         if (set.kind === 'finite') order.set(set.id, set.elements.map(e => e.id));
@@ -32,19 +32,31 @@ export function elementOrder(model, { reorder = true } = {}) {
     // Sets in the order they are drawn: a set's order depends on the sets before it
     model.sets.forEach(set => {
         if (set.kind !== 'finite' || set.def.order === 'given') return;
-        const incoming = model.maps.filter(m => m.kind !== 'compose' && m.to === set && m.from.kind === 'finite' && m.from.index < set.index);
+        const incoming = model.maps.filter(m => m.kind !== 'compose' && m.to === set && m.from.index < set.index
+            && (m.from.kind === 'finite' || m.from.kind === 'interval'));
         if (!incoming.length) return;
         const scores = new Map();
+        const add = (b, pos) => {
+            if (typeof b !== 'string') return;
+            const s = scores.get(b) || { sum: 0, n: 0 };
+            s.sum += pos;
+            s.n += 1;
+            scores.set(b, s);
+        };
         incoming.forEach(map => {
+            if (map.from.kind === 'interval') {
+                // Along the drawn part of the line: top first in a row (hi is at the top), left first in a column
+                const w = map.from.window;
+                for (let i = 0; i <= 40; i++) {
+                    const t = w[0] + (w[1] - w[0]) * i / 40;
+                    if (!model.containsPoint(map.from, t)) continue;
+                    model.apply(map, t).forEach(b => add(b, orient === 'column' ? i / 40 : 1 - i / 40));
+                }
+                return;
+            }
             const src = order.get(map.from.id);
             src.forEach((aId, i) => {
-                model.apply(map, aId).forEach(b => {
-                    if (typeof b !== 'string') return;
-                    const s = scores.get(b) || { sum: 0, n: 0 };
-                    s.sum += i / Math.max(1, src.length - 1);
-                    s.n += 1;
-                    scores.set(b, s);
-                });
+                model.apply(map, aId).forEach(b => add(b, i / Math.max(1, src.length - 1)));
             });
         });
         const given = set.elements.map(e => e.id);

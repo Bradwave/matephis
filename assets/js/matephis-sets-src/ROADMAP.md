@@ -8,13 +8,20 @@ Syntax below is a proposal until it lands in `test-sets.md`. Any change to
 the ```` ```sets ```` syntax must update that page: the function exercises
 (`claude/esercizi-funzioni`) use these blocks.
 
-## 1. What the function exercises need
+## 1. What the function exercises need — done
 
-- `piecewise` maps (`[{ "if": "x < 0", "expr": "-x" }, { "expr": "x^2" }]`).
-- `inverse`: the inverse of an injective map, with arrows reversed; a warning
-  when the map is not injective on its domain.
-- `preimage` for more cases: plane → interval, and interval → finite.
-- A numeric injectivity check for maps into the plane (no more "?" chips).
+- `piecewise` maps: pieces `on` an interval (or a point) or `if` a
+  condition; images are unions of intervals, injectivity checks each piece
+  and that their images are disjoint, gaps make the map undefined.
+- `inverse`: the inverse of a map between finite sets and intervals, a
+  relation when the map is not bijective (the properties badge says why;
+  no warning, since showing that is often the point).
+- `preimage` from an interval into a finite set, and from the plane into an
+  interval (level curves and regions).
+- Numeric checks into the plane: curves (self-intersection), plane → plane
+  (sign of the Jacobian, simple boundary, coverage of the codomain).
+- Not covered yet: inverses of maps from or into the plane, images of
+  piecewise maps in the plane, preimages into the plane.
 
 ## 2. Dynagraphs, linked plots and composition
 

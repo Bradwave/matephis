@@ -56,7 +56,9 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
     const { model, layout, groups } = scene;
     const base = map.color ? scene.color(map.color) : scene.ink;
     const g = scene.svgEl('g', { class: 'mps-map', 'data-map': map.id }, groups.arrows);
-    const bendSize = map.def.bend !== undefined ? Number(map.def.bend) : routed ? 0.28 : 0;
+    // An inverse runs back along its base map's arrows: when those are drawn, it bends away from them
+    const baseShown = map.kind === 'inverse' && scene.layers.some(l => l.arrows && l.map === map.base && scene.isVisible(l));
+    const bendSize = map.def.bend !== undefined ? Number(map.def.bend) : routed ? 0.28 : baseShown ? 0.2 : 0;
     const dash = map.def.dash !== undefined ? map.def.dash : routed;
     const outside = [];
     const draw = (src, srcKey, srcPx, t, trimStart) => {
@@ -184,27 +186,35 @@ export function drawProbes(scene) {
         const color = scene.color(p.color, 'probe');
         const g = scene.svgEl('g', { class: 'mps-probe' }, scene.groups.probe);
         const inside = scene.model.containsPoint(map.from, x, 1e-12);
-        const y = inside ? scene.model.apply(map, x)[0] : undefined;
-        const toPx = y !== undefined && SetsModel.validPoint(y) ? pointPx(scene.layout, map.to, y) : null;
-        if (toPx) {
-            arrow(scene, g, { from: srcPx, to: toPx, color, trimStart: 7, trimEnd: 5, width: 2.2, head: 10 });
-            const dot = scene.svgEl('circle', { cx: f2(toPx[0]), cy: f2(toPx[1]), r: 4.5, class: 'mps-probe-target' }, g);
+        // Several values for a relation (the inverse of a map that is not injective), none where undefined
+        const ys = inside ? scene.model.apply(map, x) : [];
+        const shown = ys.map(y => ({ y, px: typeof y === 'string' || SetsModel.validPoint(y) ? pointPx(scene.layout, map.to, y) : null })).filter(t => t.px);
+        shown.forEach(({ px }) => {
+            arrow(scene, g, { from: srcPx, to: px, color, trimStart: 7, trimEnd: 5, width: 2.2, head: 10 });
+            const dot = scene.svgEl('circle', { cx: f2(px[0]), cy: f2(px[1]), r: 4.5, class: 'mps-probe-target' }, g);
             dot.style.fill = color;
-            if (p.showValue !== false) {
-                const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
-                const name = p.label !== undefined ? String(p.label) : map.label;
+        });
+        if (inside && p.showValue !== false) {
+            const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
+            const valueTeX = (y) => (typeof y === 'string' ? String((map.to.elementById.get(y) || { label: y }).label)
+                : y && typeof y === 'object' && !Array.isArray(y) && 'outside' in y ? `${niceNumber(y.outside)} \\notin ${setLabelText(scene.model, map.to)}`
+                    : fmt(y));
+            const name = p.label !== undefined ? String(p.label) : map.label;
+            const valid = ys.filter(y => typeof y === 'string' || SetsModel.validPoint(y) || (y && typeof y === 'object' && 'outside' in y));
+            const rhs = valid.length === 0 ? '\\text{non definita}'
+                : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(valueTeX).join(',\\,')}\\right\\}`;
+            const tex = `${name}\\left(${fmt(x)}\\right) ${rhs}`;
+            if (two || map.to.kind !== 'interval' || shown.length !== 1) {
+                // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it
+                readouts.push({ tex, color });
+            } else {
                 // Over the middle of the arrow, so it never sits on the image's label
-                const tex = `${name}\\left(${fmt(x)}\\right) = ${fmt(y)}`;
-                if (two || map.to.kind !== 'interval') {
-                    // In the plane the drawing is crowded: the value goes in a line under it
-                    readouts.push({ tex, color });
-                } else {
-                    const mx = (srcPx[0] + toPx[0]) / 2, my = (srcPx[1] + toPx[1]) / 2;
-                    const row = scene.layout.orient === 'row';
-                    scene.text(mx + (row ? 0 : 10), my + (row ? -14 : 0), tex, {
-                        parent: g, color, anchor: row ? 'middle' : 'start', size: scene.fontSize * 0.9,
-                    });
-                }
+                const toPx = shown[0].px;
+                const mx = (srcPx[0] + toPx[0]) / 2, my = (srcPx[1] + toPx[1]) / 2;
+                const row = scene.layout.orient === 'row';
+                scene.text(mx + (row ? 0 : 10), my + (row ? -14 : 0), tex, {
+                    parent: g, color, anchor: row ? 'middle' : 'start', size: scene.fontSize * 0.9,
+                });
             }
         }
         const handle = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 6.5, class: 'mps-probe-handle' }, g);
@@ -259,7 +269,7 @@ function renderReadouts(scene, items) {
                 line.textContent = tex;
             }
         } else {
-            line.textContent = tex.replace(/\\left|\\right|\\,/g, '').replace(/\\tfrac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2');
+            line.textContent = tex.replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\left|\\right|\\,/g, '').replace(/\\tfrac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2');
         }
         el.appendChild(line);
     });

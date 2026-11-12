@@ -58,6 +58,7 @@ function imageLabel(scene, map, arg, res) {
     const of = arg ? argTeX(arg) : setLabelText(scene.model, map.from);
     let s = `${map.label}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
+    if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
     return s;
 }
 
@@ -90,8 +91,38 @@ function drawResult(scene, res, color, label, key) {
         });
         if (pts.length) anchorPt = farthest(pts, P, row);
     } else if (res.kind === 'interval' || res.kind === 'intervals') {
-        const parts = res.kind === 'interval' ? [res.I] : res.parts.map(([a, b]) => ({ lo: a, hi: b, loClosed: true, hiClosed: true }));
+        const parts = res.kind === 'interval' ? [res.I] : res.parts;
         parts.forEach(I => { anchorPt = band(scene, g, res.set, P, I, color) || anchorPt; });
+    } else if (res.kind === 'cells' || res.kind === 'level') {
+        // Preimage in the plane: grid cells (a region), and for a single value its level curve
+        const toPt = (x, y) => P.toPx([x, y]).map(f2).join(',');
+        const cells = res.cells.map(([x0, y0, x1, y1]) => `M${toPt(x0, y0)}L${toPt(x1, y0)}L${toPt(x1, y1)}L${toPt(x0, y1)}Z`).join('');
+        if (cells) {
+            const path = scene.svgEl('path', { d: cells, class: 'mps-cells-highlight' }, g);
+            path.style.fill = color;
+        }
+        if (res.kind === 'level' && res.segments.length) {
+            const d = res.segments.map(([a, b]) => `M${toPt(a[0], a[1])}L${toPt(b[0], b[1])}`).join('');
+            const path = scene.svgEl('path', { d, class: 'mps-level-highlight' }, g);
+            path.style.stroke = color;
+        }
+        // The label goes next to the drawing: at the middle of the level curve, or of the region
+        if (res.kind === 'level' && res.segments.length) {
+            const m = res.segments[Math.floor(res.segments.length / 2)][0];
+            const q = P.toPx(m);
+            anchorPt = [q[0] + 6, q[1] - 8];
+        } else if (res.cells.length) {
+            let A = 0, cx = 0, cy = 0;
+            res.cells.forEach(([x0, y0, x1, y1]) => {
+                const a = (x1 - x0) * (y1 - y0);
+                A += a;
+                cx += a * (x0 + x1) / 2;
+                cy += a * (y0 + y1) / 2;
+            });
+            anchorPt = P.toPx([cx / A, cy / A]);
+        } else {
+            anchorPt = [P.box.x + 6, P.box.y + 14];
+        }
     } else if (res.kind === 'region') {
         const pts = res.polygon.map(p => P.toPx(p));
         if (pts.length < 3) return;
@@ -100,9 +131,11 @@ function drawResult(scene, res, color, label, key) {
         poly.style.stroke = color;
         anchorPt = [P.box.x + 6, P.box.y + 14];
     } else if (res.kind === 'curve') {
-        const pts = res.points.map(p => P.toPx(p));
-        const pl = scene.svgEl('polyline', { points: pts.map(p => `${f2(p[0])},${f2(p[1])}`).join(' '), class: 'mps-curve-highlight' }, g);
-        pl.style.stroke = color;
+        (res.lines || [res.points]).forEach(line => {
+            const pts = line.map(p => P.toPx(p));
+            const pl = scene.svgEl('polyline', { points: pts.map(p => `${f2(p[0])},${f2(p[1])}`).join(' '), class: 'mps-curve-highlight' }, g);
+            pl.style.stroke = color;
+        });
         anchorPt = [P.box.x + 6, P.box.y + 14];
     }
     if (label && anchorPt) layerLabel(scene, g, P, anchorPt, label, color, res.kind);
@@ -285,8 +318,9 @@ export function renderProperties(scene, layers) {
 /** A TeX label as plain text: "g \\circ f" -> "g ∘ f", "a_1" -> "a1". */
 export function plain(label) {
     return String(label)
-        .replace(/\\circ/g, '∘').replace(/\\infty/g, '∞').replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{N\}/g, 'ℕ')
+        .replace(/\\circ/g, '∘').replace(/\\pi/g, 'π').replace(/\\infty/g, '∞').replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{N\}/g, 'ℕ')
         .replace(/\\mathbb\{Z\}/g, 'ℤ').replace(/\\mathbb\{Q\}/g, 'ℚ').replace(/\\times/g, '×')
-        .replace(/\^\{?([0-9])\}?/g, (m, d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])
+        .replace(/\^\{?(-?[0-9]+)\}?/g, (m, d) => [...d].map(c => (c === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[c])).join(''))
+        .replace(/\\left|\\right/g, '')
         .replace(/\$/g, '').replace(/\\[A-Za-z]+\s*/g, '').replace(/[{}_^]/g, '').trim();
 }

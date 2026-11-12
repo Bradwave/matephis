@@ -164,9 +164,12 @@ export function drawHeader(scene, maps) {
         if (!pairs.has(key)) pairs.set(key, []);
         pairs.get(key).push(m);
     });
-    pairs.forEach(list => {
+    pairs.forEach((list, key) => {
         const { from, to } = list[0];
         if (from === to) return;
+        // Maps both ways (f and its inverse): two parallel arrows, the way back
+        // under (row) or left of (column) the way there, each with its label
+        const back = pairs.has(`${to.id}>${from.id}`) ? (from.index < to.index ? 0 : 1) : -1;
         const A = names.get(from.id), B = names.get(to.id);
         const dir = Math.sign(B.u - A.u) || 1;
         const u1 = A.u + dir * (A.half + 10), u2 = B.u - dir * (B.half + 10);
@@ -174,16 +177,18 @@ export function drawHeader(scene, maps) {
         const color = list.length === 1 && list[0].color ? scene.color(list[0].color) : scene.ink;
         // Row: a horizontal arrow between the names. Column: a vertical one
         // under the names (right-aligned at hv), its label on the left
-        const ax = hv - 8;
-        const [x1, y1] = row ? [u1, hv] : [ax, u1];
-        const [x2, y2] = row ? [u2, hv] : [ax, u2];
+        const shift = back === 0 ? -3 : back === 1 ? 3 : 0;
+        const ax = hv - 8 - (row ? 0 : shift);
+        const hy = hv + (row ? shift : 0);
+        const [x1, y1] = row ? [u1, hy] : [ax, u1];
+        const [x2, y2] = row ? [u2, hy] : [ax, u2];
         const g = scene.svgEl('g', { class: 'mps-map-header' }, groups.header);
         const line = scene.svgEl('line', { x1: f2(x1), y1: f2(y1), x2: f2(x2), y2: f2(y2), class: 'mps-header-arrow' }, g);
         line.style.stroke = color;
         const head = scene.svgEl('polygon', { points: arrowHeadPoints(x2, y2, Math.atan2(y2 - y1, x2 - x1), 8) }, g);
         head.style.fill = color;
         const label = list.map(m => m.label).join(',\\ ');
-        if (row) scene.text((x1 + x2) / 2, hv - 14, label, { parent: g, color });
-        else scene.text(ax - 8, (y1 + y2) / 2, label, { parent: g, color, anchor: 'end' });
+        if (row) scene.text((x1 + x2) / 2, back === 1 ? hy + 16 : hy - 14, label, { parent: g, color });
+        else scene.text(back === -1 ? ax - 8 : hv - 22, (y1 + y2) / 2 + (back === 0 ? -10 : back === 1 ? 10 : 0), label, { parent: g, color, anchor: 'end' });
     });
 }

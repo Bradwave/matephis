@@ -39,6 +39,16 @@ describe('Ordine degli elementi', () => {
         expect(elementOrder(m).get('B')).toEqual(['z', 'x', 'y']);
     });
 
+    it('da un intervallo: il codominio segue la posizione sulla retta', () => {
+        const m = model({
+            sets: [{ id: 'R', interval: '[-3,3]' }, { id: 'S', elements: ['-1', '0', '1'] }],
+            maps: [{ id: 'sgn', from: 'R', to: 'S', piecewise: [{ on: '[-3,0)', expr: '-1' }, { on: 0, expr: '0' }, { on: '(0,3]', expr: '1' }] }],
+        });
+        // In a row the line goes up (hi at the top), in a column to the right
+        expect(elementOrder(m).get('S')).toEqual(['1', '0', '-1']);
+        expect(elementOrder(m, { orient: 'column' }).get('S')).toEqual(['-1', '0', '1']);
+    });
+
     it('"order": "given" e reorder: false mantengono l\'ordine scritto', () => {
         const cfg = { ...LAVAGNA, sets: [LAVAGNA.sets[0], { ...LAVAGNA.sets[1], order: 'given' }] };
         expect(elementOrder(model(cfg)).get('B')).toEqual(['b_1', 'b_2', 'b_3']);
@@ -139,5 +149,10 @@ describe('Configurazione', () => {
         expect(w).toContain("Option 'venn' is not implemented yet and is ignored");
         expect(w.some(x => /unknown option 'colr'.*did you mean 'color'/.test(x))).toBe(true);
         expect(w.some(x => /'shw'.*did you mean 'show'/.test(x))).toBe(true);
+    });
+
+    it('"piecewise" e "inverse" sono opzioni delle funzioni', () => {
+        const w = validateConfig({ maps: [{ id: 'f', piecewise: [] }, { id: 'g', inverse: 'f' }, { id: 'h', iterate: 2 }] });
+        expect(w).toEqual(["map 'h': option 'iterate' is not implemented yet and is ignored"]);
     });
 });

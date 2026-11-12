@@ -20,8 +20,11 @@ export const PLANNED_ROOT_KEYS = [
 
 export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "color", "window", "order", "labelSide", "endpoints"];
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
-export const MAP_KEYS = ["id", "label", "from", "to", "pairs", "expr", "compose", "samples", "color", "image", "claims", "hidden", "route", "dash", "bend", "arrows"];
-export const PLANNED_MAP_KEYS = ["preset", "sequence", "iterate", "inverse", "piecewise"];
+export const MAP_KEYS = [
+    "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
+    "claims", "hidden", "route", "dash", "bend", "arrows",
+];
+export const PLANNED_MAP_KEYS = ["preset", "sequence", "iterate"];
 export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color", "label", "hidden", "fill"];
 export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue"];
 

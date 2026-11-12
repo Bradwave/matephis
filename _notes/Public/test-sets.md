@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di insiemi e funzioni generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-sets.js` a partire da un blocco ```` ```sets ````. Per provare una configurazione mentre la scrivi usa il [playground](/playground/) (motore «sets»).
 
-**Stato: fase 1 (insiemi e funzioni).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione o come composizione; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate, dynagraph e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fase 1 (insiemi e funzioni).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione o come inversa; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate, dynagraph e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -53,8 +53,10 @@ Un elemento con un valore numerico (`"2"`, oppure `{ "id": "a", "value": 2 }`) p
 | `id`, `label` | Nome; l'etichetta di default è l'id. |
 | `from`, `to` | Dominio e codominio (id di insiemi). |
 | `pairs` | Coppie `{ "a_1": "b_1" }`; un array (`{ "a_1": ["b_1", "b_2"] }`) dà una relazione che non è una funzione, e il motore lo segnala. |
-| `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. |
+| `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
+| `piecewise` | Funzione a tratti: `[{ "on": "(-inf, 0)", "expr": "-x" }, { "on": 0, "expr": "0" }, { "on": "(0, +inf)", "expr": "1" }]`. Ogni tratto vale su un intervallo (`on`, oppure un numero per un solo punto) o dove vale una condizione (`if`: `"x^2 + y^2 < 1"`, anche nel piano); un tratto senza `on` e `if` vale ovunque altrove. Si usa il primo tratto che vale; dove non ne vale nessuno la funzione non è definita (e il motore lo segnala). Immagine, controimmagine e iniettività tengono conto dei salti tra un tratto e l'altro. |
 | `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g`. Il motore controlla che il codominio di `f` sia il dominio di `g`. |
+| `inverse` | `"f"`: l'inversa di `f`, dal codominio al dominio di `f` (non servono `from` e `to`; etichetta di default $f^{-1}$). Ogni valore va nei punti dove `f` lo assume: se `f` non è biiettiva l'inversa è una relazione e il riquadro delle proprietà lo spiega. Le sue frecce si curvano per non coprire quelle di `f`. Per funzioni tra insiemi finiti e intervalli. |
 | `samples` | Frecce da un dominio continuo: quanti punti (default 5 su un intervallo, 9 nel piano) oppure la lista dei punti. |
 | `image` | Immagine data a mano (`"[1/4, 3/4]"`) invece di quella calcolata. |
 | `claims` | `{ "injective": true }`: proprietà dichiarate, quando la verifica numerica non basta. |
@@ -71,9 +73,10 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | `image(f)` | Immagine $f(A)$, cerchiata (finita) o evidenziata sul codominio (continua). |
 | `image(f, {a_1, a_2})`, `image(h, [0, 1/2])` | Immagine di un sottoinsieme o di un sotto-intervallo. |
 | `preimage(f, b_1)`, `preimage(f, {b_1, b_2})` | Controimmagine di un elemento o di un sottoinsieme. |
-| `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. |
+| `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
+| `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
 | `collisions(f)` | Elementi con la stessa immagine: frecce e immagine comune in rosso. |
-| `properties(f)` | Riquadro sotto il diagramma: iniettiva, suriettiva, biiettiva (e se è una funzione a valori nel codominio). |
+| `properties(f)` | Riquadro sotto il diagramma: iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Le ragioni sono nel tooltip. |
 | `arrows(f)` | Le frecce di `f` (per mostrarle con un pulsante). |
 
 I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
@@ -84,7 +87,15 @@ I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
 
 ### Domini continui
 
-L'immagine di un intervallo è calcolata campionando la funzione, che si suppone continua: un estremo dell'immagine è incluso se viene raggiunto, escluso se viene solo avvicinato (verso un estremo aperto del dominio). Iniettività (monotonia stretta) e suriettività sono quindi **verifiche numeriche**, segnalate come tali nel riquadro; con `claims` si dichiarano. Nel piano l'immagine è il bordo trasformato: è corretta per le trasformazioni affini e, in generale, per le funzioni continue e iniettive.
+L'immagine di un intervallo è calcolata campionando la funzione, che si suppone continua su ogni tratto: un estremo dell'immagine è incluso se viene raggiunto, escluso se viene solo avvicinato (verso un estremo aperto del dominio o di un tratto). L'immagine di una funzione a tratti può essere un'unione di intervalli. Le proprietà sono quindi **verifiche numeriche**, segnalate come tali nel riquadro; con `claims` si dichiarano:
+
+- da un intervallo in un intervallo: iniettiva se ogni tratto è strettamente monotono e le immagini dei tratti sono disgiunte; non definita dove l'espressione non dà un numero (`sqrt(x)` per $x < 0$) o tra due tratti;
+- da un intervallo in un insieme finito: mai iniettiva; suriettiva se ogni elemento è un valore;
+- da un intervallo nel piano (una curva): iniettiva se la curva non si incontra mai (attenzione agli estremi: $t \mapsto (\cos t, \sin t)$ è iniettiva su $[0, 2\pi)$ ma non su $[0, 2\pi]$); mai suriettiva;
+- dal piano in un intervallo: mai iniettiva;
+- dal piano nel piano: iniettiva se lo jacobiano non cambia segno e il bordo va in una curva che non si incontra; suriettiva se l'immagine (per una funzione iniettiva, l'interno del bordo trasformato) arriva vicino a ogni punto del codominio.
+
+Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni continue e iniettive.
 
 `probe`: `{ "map": "h", "at": "p" }` mette un punto in $x = p$ con la freccia verso $h(p)$ e il valore. Se `at` è un parametro il punto si trascina e muove lo slider; nel piano `at` è una coppia (`["p", "q"]`). Opzioni: `label`, `color`, `showValue`, `drag`.
 
@@ -208,5 +219,130 @@ $x^2$ su $(-1, 1)$ ha immagine $[0, 1)$: $0$ è raggiunto, $1$ no. La controimma
   "params": { "a": { "min": 0, "max": 1, "step": 0.01, "val": 0.8 }, "b": { "min": 0, "max": 1, "step": 0.01, "val": 0.7 } },
   "probe": { "map": "c", "at": ["a", "b"] },
   "show": ["image(c)", "properties(c)"]
+}
+```
+
+### Funzione segno
+
+Una funzione a tratti da $\mathbb{R}$ in un insieme finito. La controimmagine di $1$ è l'intervallo $(0, +\infty)$.
+
+```sets
+{
+  "sets": [
+    { "id": "R", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] },
+    { "id": "S", "elements": ["-1", "0", "1"] }
+  ],
+  "maps": [{
+    "id": "sgn", "label": "\\operatorname{sgn}", "from": "R", "to": "S", "samples": 7,
+    "piecewise": [
+      { "on": "(-inf, 0)", "expr": "-1" },
+      { "on": 0, "expr": "0" },
+      { "on": "(0, +inf)", "expr": "1" }
+    ]
+  }],
+  "show": ["properties(sgn)"],
+  "highlights": [{ "of": "preimage(sgn, 1)", "hidden": true }],
+  "controls": [{ "type": "reveal", "label": "Mostra la controimmagine di 1", "targets": ["preimage(sgn, 1)"] }]
+}
+```
+
+### Una biiezione non continua
+
+$f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: l'immagine è $[0, 1) \cup [1, 2] = [0, 2]$ e i due tratti non si sovrappongono, quindi $f$ è biiettiva.
+
+```sets
+{
+  "sets": [{ "id": "I", "interval": "[0,2]" }, { "id": "J", "interval": "[0,2]" }],
+  "maps": [{ "id": "f", "from": "I", "to": "J", "samples": 9, "piecewise": [
+    { "on": "[0, 1)", "expr": "x" },
+    { "on": "[1, 2]", "expr": "3 - x" }
+  ] }],
+  "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
+  "probe": { "map": "f", "at": "p" },
+  "show": ["image(f)", "properties(f)"]
+}
+```
+
+### L'inversa di una funzione non iniettiva
+
+L'inversa di $f$ manda $1$ in due elementi e $3$ in nessuno: è una relazione, non una funzione.
+
+```sets
+{
+  "sets": [
+    { "id": "A", "elements": ["a", "b", "c"] },
+    { "id": "B", "elements": ["1", "2", "3"] }
+  ],
+  "maps": [
+    { "id": "f", "from": "A", "to": "B", "pairs": { "a": "1", "b": "1", "c": "2" } },
+    { "id": "finv", "inverse": "f", "hidden": true, "color": "blue" }
+  ],
+  "show": ["properties(f)"],
+  "controls": [{ "type": "reveal", "label": "Mostra l'inversa", "targets": ["arrows(finv)", "properties(finv)"] }]
+}
+```
+
+### L'inversa di $x^2$
+
+Su $[-1, 1]$ ogni valore positivo ha due controimmagini: trascina il punto su $[0, 1]$.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "J", "interval": "[0,1]" }, { "id": "I", "interval": "[-1,1]" }],
+  "maps": [
+    { "id": "s", "from": "I", "to": "J", "expr": "x^2", "hidden": true },
+    { "id": "r", "label": "s^{-1}", "inverse": "s", "samples": 5 }
+  ],
+  "params": { "q": { "min": 0, "max": 1, "step": 0.01, "val": 0.25, "label": "y" } },
+  "probe": { "map": "r", "at": "q" },
+  "show": ["properties(r)"]
+}
+```
+
+### Curve di livello
+
+$F(x, y) = x^2 + y^2$ dal quadrato in $[0, 2]$: la controimmagine di $1$ è un arco di circonferenza, quella di $[0, \tfrac14]$ un quarto di disco.
+
+```sets
+{
+  "sets": [
+    { "id": "Q", "label": "[0,1]^2", "rect": ["[0,1]", "[0,1]"] },
+    { "id": "L", "interval": "[0,2]" }
+  ],
+  "maps": [{ "id": "F", "from": "Q", "to": "L", "expr": "x^2 + y^2", "samples": 4 }],
+  "show": ["properties(F)"],
+  "highlights": [
+    { "of": "preimage(F, 1)", "label": "F^{-1}(1)" },
+    { "of": "preimage(F, [0, 1/4])", "color": "blue", "label": "F^{-1}([0, \\tfrac14])" }
+  ]
+}
+```
+
+### Una curva chiusa non è iniettiva
+
+```sets
+{
+  "sets": [
+    { "id": "T", "label": "[0, 2\\pi]", "interval": "[0, 2*pi]" },
+    { "id": "D", "label": "D", "disk": { "center": [0, 0], "radius": 1 } }
+  ],
+  "maps": [{ "id": "c", "from": "T", "to": "D", "expr": ["cos(x)", "sin(x)"], "samples": 6 }],
+  "show": ["image(c)", "properties(c)"]
+}
+```
+
+### $z \mapsto z^2$ sul disco
+
+Lo jacobiano non cambia segno, ma il bordo fa due giri: la funzione non è iniettiva.
+
+```sets
+{
+  "sets": [
+    { "id": "D", "label": "D", "disk": { "center": [0, 0], "radius": 1 } },
+    { "id": "E", "label": "D", "disk": { "center": [0, 0], "radius": 1 } }
+  ],
+  "maps": [{ "id": "q", "from": "D", "to": "E", "expr": ["x^2 - y^2", "2*x*y"], "samples": 7 }],
+  "show": ["image(q)", "properties(q)"]
 }
 ```

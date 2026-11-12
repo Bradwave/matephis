@@ -1,8 +1,9 @@
 /**
  * The mathematics of a sets diagram, without any drawing: sets (finite,
  * intervals, rectangles, disks), maps between them (pairs, expressions,
- * compositions), and what can be computed from them: images, preimages,
- * collisions, injectivity, surjectivity, whether a map lands in its codomain.
+ * piecewise expressions, compositions, inverses), and what can be computed
+ * from them: images, preimages, collisions, injectivity, surjectivity,
+ * whether a map is defined everywhere and lands in its codomain.
  *
  * Points of continuous sets are numbers (intervals) or [x, y] (rectangles and
  * disks). Elements of finite sets are referred to by id.
@@ -11,9 +12,10 @@
  * that depend on params (interval endpoints) after a slider moves.
  */
 import {
-    parseInterval, evalInterval, interval, contains, isSubset, sameInterval,
-    samplePositions, imageFromSamples, strictlyMonotone,
+    parseInterval, evalInterval, interval, contains, isSubset, sameInterval, isEmpty, isPoint,
+    samplePositions, imageFromSamples, strictlyMonotone, unionIntervals, overlaps,
 } from './interval.js';
+import { isSimplePolyline, insidePolygon } from './geometry.js';
 import { parseArgument } from './selectors.js';
 
 export const SET_KINDS = ['finite', 'interval', 'rect', 'disk'];
@@ -144,6 +146,14 @@ export class SetsModel {
                 });
             }
         });
+        this.maps.forEach(map => {
+            if (map.kind !== 'piecewise') return;
+            map.pieces.forEach(pc => { pc.I = pc.on ? evalInterval(pc.on, ev) : null; });
+            const withI = map.pieces.filter(pc => pc.I);
+            withI.forEach((a, i) => withI.slice(i + 1).forEach(b => {
+                if (overlaps(a.I, b.I)) this.warn(`map '${map.id}': pieces ${a.index + 1} and ${b.index + 1} overlap; where they do, the first one is used`);
+            }));
+        });
         this._cache = new Map();
     }
 
@@ -189,6 +199,14 @@ export class SetsModel {
         }
         const map = { id, def, index: i, label: def.label !== undefined ? def.label : id, color: def.color };
 
+        if (def.inverse !== undefined) {
+            if (this._readInverse(map, def)) {
+                this.maps.push(map);
+                this.mapById.set(id, map);
+            }
+            return;
+        }
+
         if (Array.isArray(def.compose)) {
             const parts = def.compose.map(m => this.mapById.get(String(m)));
             if (parts.length < 2 || parts.some(p => !p)) {
@@ -220,11 +238,15 @@ export class SetsModel {
         if (def.pairs !== undefined) {
             map.kind = 'pairs';
             this._readPairs(map, def.pairs);
+        } else if (def.piecewise !== undefined) {
+            map.kind = 'piecewise';
+            if (def.expr !== undefined) this.warn(`map '${id}': has both "piecewise" and "expr"; "expr" is ignored`);
+            this._readPiecewise(map, def.piecewise);
         } else if (def.expr !== undefined) {
             map.kind = 'expr';
             this._readExpr(map, def.expr);
         } else {
-            this.warn(`map '${id}': needs "pairs", "expr" or "compose"`);
+            this.warn(`map '${id}': needs "pairs", "expr", "piecewise", "compose" or "inverse"`);
             return;
         }
         this.maps.push(map);
@@ -265,32 +287,126 @@ export class SetsModel {
     }
 
     _readExpr(map, expr) {
+        map.fns = this._compileExprs(map, expr);
+        map.outDim = map.fns.length;
+    }
+
+    /** One expression (or two, into the plane) in x (and y, from the plane) -> functions. */
+    _compileExprs(map, expr, where = '') {
         const { from, to } = map;
         const dIn = this.dim(from), dOut = this.dim(to);
         const srcs = Array.isArray(expr) ? expr.map(String) : [String(expr)];
         const outDim = srcs.length;
         if (dOut > 0 && outDim !== dOut) {
-            this.warn(`map '${map.id}': ${to.id} is ${dOut === 1 ? 'an interval: "expr" needs one expression' : 'in the plane: "expr" needs two expressions, ["...", "..."]'}`);
+            this.warn(`map '${map.id}'${where}: ${to.id} is ${dOut === 1 ? 'an interval: "expr" needs one expression' : 'in the plane: "expr" needs two expressions, ["...", "..."]'}`);
         }
-        if (dOut === 0 && outDim !== 1) this.warn(`map '${map.id}': a finite codomain needs one expression`);
+        if (dOut === 0 && outDim !== 1) this.warn(`map '${map.id}'${where}: a finite codomain needs one expression`);
         const vars = dIn === 2 ? ['x', 'y'] : ['x'];
         try {
-            map.fns = srcs.map(s => this.compile(s, vars));
+            return srcs.map(s => this.compile(s, vars));
         } catch (e) {
-            this.warn(`map '${map.id}': ${e.message}`);
-            map.fns = srcs.map(() => () => NaN);
+            this.warn(`map '${map.id}'${where}: ${e.message}`);
+            return srcs.map(() => () => NaN);
         }
-        map.outDim = outDim;
+    }
+
+    /**
+     * "piecewise": [{ "on": "(-inf, 0)", "expr": "-x" }, { "on": "[0, +inf)", "expr": "x^2" }]
+     * A piece applies on an interval ("on", a number for a single point) or
+     * where a condition holds ("if": "x^2 + y^2 < 1"); a piece with neither
+     * applies everywhere else. The first piece that applies is used; where
+     * none does, the map is not defined.
+     */
+    _readPiecewise(map, pieces) {
+        map.pieces = [];
+        if (!Array.isArray(pieces) || !pieces.length) {
+            this.warn(`map '${map.id}': "piecewise" needs a list of pieces, like [{ "on": "(-inf, 0)", "expr": "-x" }, { "on": "[0, +inf)", "expr": "x^2" }]`);
+            return;
+        }
+        const dIn = this.dim(map.from);
+        const vars = dIn === 2 ? ['x', 'y'] : ['x'];
+        pieces.forEach((pc, k) => {
+            const where = `, piece ${k + 1}`;
+            if (!pc || typeof pc !== 'object') {
+                this.warn(`map '${map.id}'${where}: expected an object like { "on": "[0, 1]", "expr": "x" }`);
+                return;
+            }
+            for (const key in pc) {
+                if (!['on', 'if', 'expr'].includes(key)) this.warn(`map '${map.id}'${where}: unknown option '${key}' (use "on", "if", "expr")`);
+            }
+            if (pc.expr === undefined) {
+                this.warn(`map '${map.id}'${where}: needs "expr"`);
+                return;
+            }
+            const piece = { index: k, fns: this._compileExprs(map, pc.expr, where) };
+            if (pc.on !== undefined) {
+                if (dIn === 2) {
+                    this.warn(`map '${map.id}'${where}: "on" takes an interval of numbers; in the plane use "if"`);
+                } else {
+                    const parsed = typeof pc.on === 'string' ? parseInterval(pc.on) : null;
+                    piece.on = parsed || { lo: String(pc.on), hi: String(pc.on), loClosed: true, hiClosed: true };
+                }
+            }
+            if (pc.if !== undefined) {
+                try {
+                    piece.cond = this.compile(String(pc.if), vars);
+                } catch (e) {
+                    this.warn(`map '${map.id}'${where}: ${e.message}`);
+                    piece.cond = () => false;
+                }
+            }
+            map.pieces.push(piece);
+        });
+        map.outDim = map.pieces.length ? map.pieces[0].fns.length : 1;
+    }
+
+    /**
+     * "inverse": "f" — the inverse of f, from its codomain to its domain: each
+     * value goes to the points where f takes it (none, one or several, so the
+     * inverse of a map that is not bijective is a relation, and the engine
+     * says so). For maps between finite sets and intervals.
+     */
+    _readInverse(map, def) {
+        const base = this.mapById.get(String(def.inverse));
+        if (!base) {
+            this.warn(`map '${map.id}': "inverse" needs a map defined before it (unknown: '${def.inverse}')`);
+            return false;
+        }
+        if (this.dim(base.from) === 2 || this.dim(base.to) === 2) {
+            this.warn(`map '${map.id}': the inverse of a map from or into the plane is not supported yet`);
+            return false;
+        }
+        map.kind = 'inverse';
+        map.base = base;
+        map.from = base.to;
+        map.to = base.from;
+        if ((def.from !== undefined && String(def.from) !== map.from.id) || (def.to !== undefined && String(def.to) !== map.to.id)) {
+            this.warn(`map '${map.id}': the inverse of '${base.id}' goes from ${map.from.id} to ${map.to.id}; "from"/"to" are ignored`);
+        }
+        if (def.label === undefined) {
+            const l = String(base.label);
+            map.label = /^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?$/.test(l) ? `${l}^{-1}` : `\left(${l}\right)^{-1}`;
+        }
+        return true;
     }
 
     // =====================================================================
     // EVALUATION
     // =====================================================================
 
-    /** Value of an expression map at a point (number or [x, y]). */
-    _evalExpr(map, p) {
+    /**
+     * Value of an expression map at a point (number or [x, y]); for a
+     * piecewise map, of the piece that applies there, or null where none does.
+     */
+    _evalExpr(map, p, piece = null) {
+        let fns = map.fns;
+        if (map.kind === 'piecewise') {
+            const k = piece !== null ? piece : this._pieceAt(map, p);
+            if (k < 0) return null;
+            fns = map.pieces[k].fns;
+        }
         const args = Array.isArray(p) ? p : [p];
-        const vals = map.fns.map(fn => {
+        const vals = fns.map(fn => {
             try {
                 const v = fn(...args);
                 return typeof v === 'number' ? v : NaN;
@@ -299,6 +415,26 @@ export class SetsModel {
             }
         });
         return vals.length === 1 ? vals[0] : vals;
+    }
+
+    /** Index of the piece of a piecewise map that applies at p, or -1. */
+    _pieceAt(map, p) {
+        const args = Array.isArray(p) ? p : [p];
+        for (let k = 0; k < map.pieces.length; k++) {
+            const pc = map.pieces[k];
+            if (pc.I && !(typeof p === 'number' && contains(pc.I, p, 1e-12 * Math.max(1, Math.abs(p))))) continue;
+            if (pc.cond) {
+                let ok;
+                try {
+                    ok = pc.cond(...args);
+                } catch (e) {
+                    ok = false;
+                }
+                if (!ok || (typeof ok === 'number' && isNaN(ok))) continue;
+            }
+            return k;
+        }
+        return -1;
     }
 
     /** Number of an element (its "value", or its id read as a number), or null. */
@@ -321,6 +457,7 @@ export class SetsModel {
      * Values that fall outside a finite codomain come back as { outside: v }.
      */
     apply(map, x) {
+        if (map.kind === 'inverse') return this._applyInverse(map, x);
         if (map.kind === 'compose') {
             let current = [x];
             for (const part of map.parts) {
@@ -344,11 +481,29 @@ export class SetsModel {
             if (p === null) return [];
         }
         const v = this._evalExpr(map, p);
+        if (v === null) return [];
         if (map.to.kind === 'finite') {
             const id = this._elementWithNumber(map.to, v);
             return [id !== null ? id : { outside: v }];
         }
         return [v];
+    }
+
+    /** Points where the base map of an inverse takes the value y. */
+    _applyInverse(map, y) {
+        const base = map.base;
+        if (base.from.kind === 'finite') {
+            return base.from.elements.map(e => e.id).filter(a => this.apply(base, a).some(v => sameValue(v, y)));
+        }
+        let yv = y;
+        if (base.to.kind === 'finite') {
+            yv = this.elementNumber(base.to, String(y));
+            if (yv === null) return [];
+        }
+        if (typeof yv !== 'number' || !isFinite(yv)) return [];
+        // A value taken on a whole interval (a constant piece): its middle stands for it
+        return this._preimage1D(base, interval(yv, yv)).map(P => (isPoint(P) ? P.lo
+            : isFinite(P.lo) && isFinite(P.hi) ? (P.lo + P.hi) / 2 : isFinite(P.lo) ? P.lo + 1 : isFinite(P.hi) ? P.hi - 1 : 0));
     }
 
     /** A point given in a config ("1/2", [0, "a"]) as numbers. */
@@ -453,16 +608,109 @@ export class SetsModel {
     /** Value of a 1D map at an open endpoint, as a limit (±Infinity when it blows up). */
     _limitAt(map, t, inward) {
         const scale = Math.max(1, Math.abs(t));
-        const v1 = this._evalExpr1(map, t + inward * 1e-7 * scale);
-        const v2 = this._evalExpr1(map, t + inward * 1e-9 * scale);
+        const v1 = this._raw1(map, t + inward * 1e-7 * scale);
+        const v2 = this._raw1(map, t + inward * 1e-9 * scale);
         if (!isFinite(v2) || (Math.abs(v2) > 1e6 && Math.abs(v2) > 10 * Math.abs(v1))) return v2 > 0 || v1 > 0 ? Infinity : -Infinity;
-        const exact = this._evalExpr1(map, t);
+        // The formula used just inside, evaluated at t (for a piecewise map, the
+        // piece at t itself may be another one)
+        let exact;
+        if (map.kind === 'piecewise') {
+            const k = this._pieceAt(map, t + inward * 1e-9 * scale);
+            const v = k < 0 ? NaN : this._evalExpr(map, t, k);
+            exact = typeof v === 'number' ? v : NaN;
+        } else {
+            exact = this._raw1(map, t);
+        }
         return isFinite(exact) && Math.abs(exact - v2) < 1e-5 * Math.max(1, Math.abs(exact)) ? exact : v2;
     }
 
-    _evalExpr1(map, p) {
+    /**
+     * Value of a map at a point as a number (NaN where it is not defined).
+     * Into a finite set this is the value of the expression, before it is
+     * matched with an element.
+     */
+    _raw1(map, p) {
+        if (map.kind === 'expr' || map.kind === 'piecewise') {
+            const v = this._evalExpr(map, p);
+            return typeof v === 'number' ? v : NaN;
+        }
         const v = this.apply(map, p)[0];
-        return typeof v === 'number' ? v : NaN;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') {
+            const n = this.elementNumber(map.to, v);
+            return n === null ? NaN : n;
+        }
+        if (v && typeof v === 'object' && !Array.isArray(v) && 'outside' in v) return v.outside;
+        return NaN;
+    }
+
+    /**
+     * Parts of an interval of the domain where a map is given by one formula:
+     * the whole interval, or for a piecewise map its pieces (where no piece
+     * applies, there is no part). Each part is an interval with `piece`.
+     */
+    _segments(map, I) {
+        if (map.kind !== 'piecewise' || map.from.kind !== 'interval') return isEmpty(I) ? [] : [I];
+        const key = `seg|${map.id}|${I.lo}|${I.hi}|${I.loClosed}|${I.hiClosed}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const at = (t) => this._pieceAt(map, t);
+        const inside = (t) => t > I.lo && t < I.hi;
+        const cuts = [];
+        map.pieces.forEach(pc => {
+            if (pc.I) [pc.I.lo, pc.I.hi].forEach(b => { if (isFinite(b) && inside(b)) cuts.push(b); });
+        });
+        // Where an "if" condition changes, found by sampling and bisection
+        if (map.pieces.some(pc => pc.cond)) {
+            const ts = samplePositions(I, SAMPLES_1D, map.from.window).map(s => s.t);
+            let prev = at(ts[0]);
+            for (let i = 1; i < ts.length; i++) {
+                const k = at(ts[i]);
+                if (k === prev) continue;
+                let a = ts[i - 1], b = ts[i];
+                for (let it = 0; it < 60; it++) {
+                    const m = (a + b) / 2;
+                    if (at(m) === prev) a = m; else b = m;
+                }
+                if (inside(b)) cuts.push(b);
+                prev = k;
+            }
+        }
+        cuts.sort((a, b) => a - b);
+        const bounds = [I.lo];
+        cuts.forEach(b => { if (Math.abs(b - bounds[bounds.length - 1]) > 1e-12 * Math.max(1, Math.abs(b))) bounds.push(b); });
+        bounds.push(I.hi);
+        const segs = [];
+        for (let j = 0; j + 1 < bounds.length; j++) {
+            const a = bounds[j], b = bounds[j + 1];
+            const mid = isFinite(a) && isFinite(b) ? (a + b) / 2 : isFinite(a) ? a + 1 : isFinite(b) ? b - 1 : 0;
+            const k = at(mid);
+            if (k < 0) continue;
+            const loIn = isFinite(a) && (j > 0 || I.loClosed) && at(a) === k;
+            const hiIn = isFinite(b) && (j + 2 < bounds.length || I.hiClosed) && at(b) === k;
+            segs.push({ ...interval(a, b, loIn, hiIn), piece: k });
+        }
+        // Points that belong to another piece than the parts on both sides
+        const ends = [...bounds.slice(1, -1)];
+        if (I.loClosed && isFinite(I.lo)) ends.push(I.lo);
+        if (I.hiClosed && isFinite(I.hi)) ends.push(I.hi);
+        ends.forEach(b => {
+            const k = at(b);
+            if (k >= 0 && !segs.some(S => contains(S, b))) segs.push({ ...interval(b, b), piece: k });
+        });
+        segs.sort((a, b) => a.lo - b.lo || (isPoint(a) ? -1 : 1));
+        // Join neighbours given by the same piece
+        const out = [];
+        segs.forEach(S => {
+            const last = out[out.length - 1];
+            if (last && last.piece === S.piece && last.hi === S.lo && (last.hiClosed || S.loClosed)) {
+                last.hi = S.hi;
+                last.hiClosed = S.hiClosed;
+            } else {
+                out.push({ ...S });
+            }
+        });
+        this._cache.set(key, out);
+        return out;
     }
 
     // =====================================================================
@@ -489,6 +737,13 @@ export class SetsModel {
 
     _image(map, arg) {
         const { from, to } = map;
+        if (map.kind === 'inverse') {
+            // The image of an inverse is a preimage under its base map
+            const whole = from.kind === 'finite' ? { kind: 'elements', ids: from.elements.map(e => e.id) } : { kind: 'interval', I: from.I };
+            const res = this.preimage(map.base, arg || whole);
+            if (res && res.kind === 'intervals' && res.parts.length === 1 && !isPoint(res.parts[0])) return { kind: 'interval', set: res.set, I: res.parts[0] };
+            return res;
+        }
         if (from.kind === 'finite') {
             let ids = from.elements.map(e => e.id);
             if (arg && arg.kind === 'elements') ids = arg.ids.filter(id => from.elementById.has(id));
@@ -512,38 +767,67 @@ export class SetsModel {
             if (parsed) return { kind: 'interval', set: to, I: evalInterval(parsed, (s) => this.evaluate(s)), given: true };
             this.warn(`map '${map.id}': "image" '${map.def.image}' is not an interval`);
         }
-        let sub = null;
-        if (arg && arg.kind === 'interval' && from.kind === 'interval') {
-            const p = parseInterval(arg.src);
-            if (p) sub = intersect(from.I, evalInterval(p, (s) => this.evaluate(s)));
-        }
         const dIn = this.dim(from), dOut = this.dim(to);
-        if (dOut === 1) {
-            const samples = this._denseSamples(from, sub);
-            const values = samples.map(s => ({ v: this._value1(map, s.p), nearOpen: s.nearOpen }));
-            const limits = [];
-            const I = sub || from.I;
-            if (dIn === 1) {
-                if (!I.loClosed && isFinite(I.lo)) limits.push({ v: this._limitAt(map, I.lo, 1) });
-                if (!I.hiClosed && isFinite(I.hi)) limits.push({ v: this._limitAt(map, I.hi, -1) });
+        let D = from.kind === 'interval' ? from.I : null;
+        if (arg && arg.kind === 'interval' && from.kind === 'interval') {
+            const J = this._argInterval(arg);
+            if (J) D = intersect(from.I, J);
+        }
+        if (dIn === 1) {
+            if (dOut === 1) {
+                const parts = this._image1(map, D);
+                if (!parts.length) return null;
+                return parts.length === 1 ? { kind: 'interval', set: to, I: parts[0] } : { kind: 'intervals', set: to, parts };
             }
-            const img = imageFromSamples(values, limits);
+            if (dOut === 0) {
+                const ids = to.elements.filter(el => el.num !== null && this._preimage1D(map, interval(el.num, el.num), D).length).map(el => el.id);
+                return { kind: 'elements', set: to, ids, outside: [] };
+            }
+            // Into the plane: a curve, one line per piece
+            const lines = this._segments(map, D).map(S => samplePositions(S, 160, from.window)
+                .map(s => this.apply(map, s.t)[0]).filter(v => SetsModel.validPoint(v)));
+            return { kind: 'curve', set: to, points: [].concat(...lines), lines };
+        }
+        // From the plane
+        if (dOut === 1) {
+            const values = this._denseSamples(from).map(s => ({ v: this._raw1(map, s.p), nearOpen: s.nearOpen }));
+            const img = imageFromSamples(values, []);
             return img ? { kind: 'interval', set: to, I: img } : null;
         }
-        if (dOut === 2 && dIn === 1) {
-            const pts = samplePositions(sub || from.I, 160, from.window).map(s => this.apply(map, s.t)[0]).filter(v => SetsModel.validPoint(v));
-            return { kind: 'curve', set: to, points: pts };
-        }
-        if (dOut === 2 && dIn === 2) {
+        if (dOut === 2) {
+            if (map.kind === 'piecewise') {
+                this.warn(`map '${map.id}': the image of a piecewise map in the plane is not computed yet`);
+                return null;
+            }
             const pts = this.boundary(from).map(p => this.apply(map, p)[0]).filter(v => SetsModel.validPoint(v));
             return { kind: 'region', set: to, polygon: pts };
         }
         return null;
     }
 
-    _value1(map, p) {
-        const v = this.apply(map, p)[0];
-        return typeof v === 'number' ? v : NaN;
+    /** Image of a part D of an interval domain, into an interval: a union of intervals (one per piece). */
+    _image1(map, D) {
+        return unionIntervals(this._segments(map, D).map(S => this._imageOfSegment(map, S)).filter(Boolean));
+    }
+
+    /** Image of a part of the domain where the map is given by one (continuous) formula. */
+    _imageOfSegment(map, S) {
+        if (isPoint(S)) {
+            const v = this._raw1(map, S.lo);
+            return isFinite(v) ? interval(v, v) : null;
+        }
+        const values = samplePositions(S, SAMPLES_1D, map.from.window).map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
+        const limits = [];
+        if (!S.loClosed && isFinite(S.lo)) limits.push({ v: this._limitAt(map, S.lo, 1) });
+        if (!S.hiClosed && isFinite(S.hi)) limits.push({ v: this._limitAt(map, S.hi, -1) });
+        return imageFromSamples(values, limits);
+    }
+
+    /** Interval of a selector argument ("[0, 1/2]"), or one already computed. */
+    _argInterval(arg) {
+        if (arg.I) return arg.I;
+        const p = parseInterval(arg.src);
+        return p ? evalInterval(p, (s) => this.evaluate(s)) : null;
     }
 
     /**
@@ -563,6 +847,8 @@ export class SetsModel {
     _preimage(map, arg) {
         const { from, to } = map;
         if (!arg) return null;
+        // The preimage under an inverse is an image under its base map
+        if (map.kind === 'inverse') return this.image(map.base, arg);
         if (from.kind === 'finite') {
             let targets;
             if (to.kind === 'finite') {
@@ -575,67 +861,190 @@ export class SetsModel {
             if (!test) return null;
             return { kind: 'elements', set: from, ids: from.elements.map(e => e.id).filter(id => this.apply(map, id).some(v => test(v))) };
         }
-        if (from.kind !== 'interval' || this.dim(to) !== 1) {
-            this.warn(`preimage(${map.id}, …): only for maps from a finite set or between intervals, for now`);
-            return null;
-        }
-        const ts = samplePositions(from.I, SAMPLES_1D * 2, from.window).map(s => s.t);
-        const f = (t) => this._value1(map, t);
-        if (arg.kind === 'interval') {
-            const p = parseInterval(arg.src);
-            if (!p) return null;
-            const J = evalInterval(p, (s) => this.evaluate(s));
-            const inJ = (t) => contains(J, f(t), 1e-12);
-            const ok = ts.map(inJ);
-            // Boundary between a and b, where inJ changes
-            const refine = (a, b) => {
-                const sa = inJ(a);
-                for (let i = 0; i < 50; i++) {
-                    const m = (a + b) / 2;
-                    if (inJ(m) === sa) a = m; else b = m;
-                }
-                return (a + b) / 2;
-            };
-            const parts = [];
-            let start = null;
-            for (let i = 0; i < ts.length; i++) {
-                if (ok[i] && start === null) start = i === 0 ? ts[0] : refine(ts[i - 1], ts[i]);
-                if (!ok[i] && start !== null) { parts.push([start, refine(ts[i - 1], ts[i])]); start = null; }
+        const dOut = this.dim(to);
+        // Values asked for, as intervals (a single value is [y, y])
+        const values = () => {
+            if (arg.kind === 'interval') {
+                const J = this._argInterval(arg);
+                return J ? [J] : [];
             }
-            if (start !== null) parts.push([start, ts[ts.length - 1]]);
+            const ids = arg.kind === 'elements' ? arg.ids : [arg.id];
+            const out = [];
+            ids.forEach(t => {
+                let y;
+                if (dOut === 0) {
+                    if (!to.elementById.has(t)) {
+                        this.warn(`preimage(${map.id}, …): '${t}' is not an element of ${to.id}`);
+                        return;
+                    }
+                    y = this.elementNumber(to, t);
+                } else {
+                    y = this.evaluate(t);
+                }
+                if (typeof y === 'number' && isFinite(y)) out.push(interval(y, y));
+                else this.warn(`preimage(${map.id}, …): '${t}' is not a number`);
+            });
+            return out;
+        };
+        if (from.kind === 'interval' && dOut < 2) {
+            const parts = unionIntervals([].concat(...values().map(J => this._preimage1D(map, J))));
+            if (parts.every(isPoint)) return { kind: 'points', set: from, points: parts.map(P => P.lo) };
             return { kind: 'intervals', set: from, parts };
         }
-        // A single value: roots of f(t) - y
-        const y = this.evaluate(arg.id);
-        if (typeof y !== 'number' || !isFinite(y)) return null;
-        const g = (t) => f(t) - y;
-        const pts = [];
-        const tol = 1e-9 * Math.max(1, Math.abs(y));
-        for (let i = 0; i < ts.length; i++) {
-            const gi = g(ts[i]);
-            if (Math.abs(gi) <= tol) { pts.push(ts[i]); continue; }
-            if (i > 0) {
-                const gp = g(ts[i - 1]);
-                if (Math.abs(gp) > tol && isFinite(gp) && isFinite(gi) && gp * gi < 0) {
-                    let a = ts[i - 1], b = ts[i];
-                    for (let k = 0; k < 60; k++) {
-                        const m = (a + b) / 2;
-                        if (g(a) * g(m) <= 0) b = m; else a = m;
+        if (this.dim(from) === 2 && dOut === 1) {
+            const Js = values();
+            if (Js.length !== 1) {
+                if (Js.length > 1) this.warn(`preimage(${map.id}, …): in the plane, one value or one interval at a time`);
+                return null;
+            }
+            return this._preimage2D(map, Js[0]);
+        }
+        this.warn(`preimage(${map.id}, …): not available for maps ${dOut === 2 ? 'into the plane' : 'from the plane into a finite set'}, for now`);
+        return null;
+    }
+
+    /**
+     * Points of a part D of an interval domain where the map takes values in
+     * J: a union of intervals (single points are [t, t]). Each piece of the
+     * map is assumed continuous.
+     */
+    _preimage1D(map, J, D = map.from.I) {
+        const out = [];
+        const f = (t) => this._raw1(map, t);
+        const scale = Math.max(1, isFinite(J.lo) ? Math.abs(J.lo) : 0, isFinite(J.hi) ? Math.abs(J.hi) : 0);
+        const tol = 1e-12 * scale;
+        const inJ = (t) => contains(J, f(t), tol);
+        const single = isPoint(J);
+        // Where "in J" changes between a and b: the point, and whether it belongs
+        const edge = (a, b) => {
+            const sa = inJ(a);
+            for (let it = 0; it < 60; it++) {
+                const m = (a + b) / 2;
+                if (inJ(m) === sa) a = m; else b = m;
+            }
+            const t = (a + b) / 2, v = f(t);
+            const closed = single || (Math.abs(v - J.lo) <= Math.abs(v - J.hi) ? J.loClosed : J.hiClosed);
+            return { t, closed };
+        };
+        // Where f = y between a and b, if f - y changes sign there (not across a jump)
+        const root = (a, b, y) => {
+            let ga = f(a) - y;
+            for (let it = 0; it < 60; it++) {
+                const m = (a + b) / 2, gm = f(m) - y;
+                if (Math.sign(gm) === Math.sign(ga)) {
+                    a = m;
+                    ga = gm;
+                } else {
+                    b = m;
+                }
+            }
+            const t = (a + b) / 2;
+            return Math.abs(f(t) - y) <= 1e-6 * Math.max(1, Math.abs(y)) ? t : null;
+        };
+        this._segments(map, D).forEach(S => {
+            if (isPoint(S)) {
+                if (inJ(S.lo)) out.push(interval(S.lo, S.lo));
+                return;
+            }
+            const ts = samplePositions(S, SAMPLES_1D * 2, map.from.window).map(s => s.t);
+            const vs = ts.map(f);
+            const ok = vs.map(v => contains(J, v, tol));
+            let start = null;
+            for (let i = 0; i < ts.length; i++) {
+                if (ok[i] && start === null) start = i === 0 ? { t: S.lo, closed: S.loClosed } : edge(ts[i], ts[i - 1]);
+                if (!ok[i] && start !== null) {
+                    const e = edge(ts[i - 1], ts[i]);
+                    out.push(interval(start.t, e.t, start.closed, e.closed));
+                    start = null;
+                }
+                // J crossed between two samples that are both outside it
+                if (i > 0 && !ok[i] && !ok[i - 1] && isFinite(vs[i]) && isFinite(vs[i - 1])) {
+                    const lo = Math.min(vs[i - 1], vs[i]), hi = Math.max(vs[i - 1], vs[i]);
+                    if (lo < J.lo && hi > J.hi) {
+                        const r1 = root(ts[i - 1], ts[i], J.lo), r2 = single ? r1 : root(ts[i - 1], ts[i], J.hi);
+                        if (r1 !== null && r2 !== null) {
+                            out.push(r1 <= r2 ? interval(r1, r2, J.loClosed, J.hiClosed) : interval(r2, r1, J.hiClosed, J.loClosed));
+                        }
                     }
-                    pts.push((a + b) / 2);
+                }
+            }
+            if (start !== null) out.push(interval(start.t, S.hi, start.closed, S.hiClosed));
+        });
+        // Tiny parts are single points (a value taken at one point, seen through the tolerance)
+        const tiny = (P) => isFinite(P.lo) && P.hi - P.lo <= (single ? 1e-6 : 1e-12) * Math.max(1, Math.abs(P.lo));
+        return unionIntervals(out.map(P => (tiny(P) ? interval((P.lo + P.hi) / 2, (P.lo + P.hi) / 2) : P)));
+    }
+
+    /**
+     * Preimage of J under a map from the plane to the line: the cells of a
+     * grid where the value is in J (`cells`, as horizontal runs
+     * [x0, y0, x1, y1]); for a single value, also the level curve (`segments`,
+     * by marching squares).
+     */
+    _preimage2D(map, J) {
+        const set = map.from;
+        const K = 80;
+        const [wx, wy] = set.kind === 'rect' ? set.windows
+            : [[set.disk.cx - set.disk.r, set.disk.cx + set.disk.r], [set.disk.cy - set.disk.r, set.disk.cy + set.disk.r]];
+        const xs = Array.from({ length: K + 1 }, (_, i) => wx[0] + (wx[1] - wx[0]) * i / K);
+        const ys = Array.from({ length: K + 1 }, (_, j) => wy[0] + (wy[1] - wy[0]) * j / K);
+        const f = (x, y) => this._raw1(map, [x, y]);
+        const tol = 1e-9 * Math.max(1, isFinite(J.lo) ? Math.abs(J.lo) : 0, isFinite(J.hi) ? Math.abs(J.hi) : 0);
+        const inSet = (x, y) => this.containsPoint(set, [x, y], 1e-9);
+        const cells = [];
+        for (let j = 0; j < K; j++) {
+            let run = null;
+            for (let i = 0; i < K; i++) {
+                const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2;
+                if (inSet(cx, cy) && contains(J, f(cx, cy), tol)) {
+                    if (run) run[2] = xs[i + 1];
+                    else run = [xs[i], ys[j], xs[i + 1], ys[j + 1]];
+                } else if (run) {
+                    cells.push(run);
+                    run = null;
+                }
+            }
+            if (run) cells.push(run);
+        }
+        if (!isPoint(J)) return { kind: 'cells', set, cells };
+        const y0 = J.lo;
+        const g = ys.map(y => xs.map(x => f(x, y) - y0));
+        const lerp = (p, q, gp, gq) => {
+            const t = gp / (gp - gq);
+            return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+        };
+        const segments = [];
+        for (let j = 0; j < K; j++) {
+            for (let i = 0; i < K; i++) {
+                const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2;
+                if (!inSet(cx, cy)) continue;
+                // Corners counterclockwise from bottom-left; edge k joins corner k and k + 1
+                const c = [[xs[i], ys[j]], [xs[i + 1], ys[j]], [xs[i + 1], ys[j + 1]], [xs[i], ys[j + 1]]];
+                const v = [g[j][i], g[j][i + 1], g[j + 1][i + 1], g[j + 1][i]];
+                if (!v.every(isFinite)) continue;
+                const pos = v.map(x => x >= 0);
+                const cross = [];
+                for (let k = 0; k < 4; k++) {
+                    const k2 = (k + 1) % 4;
+                    if (pos[k] !== pos[k2]) cross.push(lerp(c[k], c[k2], v[k], v[k2]));
+                }
+                if (cross.length === 2) {
+                    segments.push([cross[0], cross[1]]);
+                } else if (cross.length === 4) {
+                    // Saddle: the centre decides which corners are cut off
+                    if ((f(cx, cy) - y0 >= 0) === pos[0]) segments.push([cross[0], cross[1]], [cross[2], cross[3]]);
+                    else segments.push([cross[3], cross[0]], [cross[1], cross[2]]);
                 }
             }
         }
-        const uniq = pts.filter((t, i) => i === 0 || Math.abs(t - pts[i - 1]) > 1e-6 * Math.max(1, Math.abs(t)));
-        return { kind: 'points', set: from, points: uniq.filter(t => contains(from.I, t, 1e-12)) };
+        return { kind: 'level', set, segments, cells };
     }
 
     /** Test for a value of a continuous codomain: a number or an interval. */
     _valueTest(arg) {
         if (arg.kind === 'interval') {
-            const p = parseInterval(arg.src);
-            if (!p) return null;
-            const J = evalInterval(p, (s) => this.evaluate(s));
+            const J = this._argInterval(arg);
+            if (!J) return null;
             return (v) => typeof v === 'number' && contains(J, v, 1e-12);
         }
         const y = this.evaluate(arg.id);
@@ -678,8 +1087,10 @@ export class SetsModel {
             ['injective', 'surjective'].forEach(k => { if (typeof claims[k] === 'boolean') res[k] = claims[k]; });
             res.claimed = true;
         }
-        res.bijective = res.injective === true && res.surjective === true ? true
-            : res.injective === false || res.surjective === false ? false : null;
+        // A relation that is not a function is not a bijection
+        res.bijective = res.isFunction === false ? false
+            : res.injective === true && res.surjective === true ? true
+                : res.injective === false || res.surjective === false ? false : null;
         this._cache.set(key, res);
         return res;
     }
@@ -688,6 +1099,7 @@ export class SetsModel {
         const { from, to } = map;
         const problems = [];
         const res = { isFunction: true, into: true, injective: null, surjective: null, exact: from.kind === 'finite', problems };
+        if (map.kind === 'inverse' && !(from.kind === 'finite' && map.base.from.kind === 'finite')) return this._inverseProperties(map, res);
 
         if (from.kind === 'finite') {
             const images = new Map();
@@ -723,23 +1135,196 @@ export class SetsModel {
             return res;
         }
 
-        const img = this.image(map);
         const dIn = this.dim(from), dOut = this.dim(to);
-        if (dOut === 1 && img && img.kind === 'interval') {
-            res.into = isSubset(img.I, to.I, 1e-7);
-            if (!res.into) problems.push(`l'immagine non è contenuta in ${to.label || to.id}`);
-            res.surjective = res.into && sameInterval(img.I, to.I, 1e-7);
-            if (dIn === 1) {
-                const vs = this._denseSamples(from).map(s => this._value1(map, s.p));
-                res.injective = strictlyMonotone(vs);
+        const fromL = from.label || from.id, toL = to.label || to.id;
+        if (dIn === 1) {
+            // Defined at every point of the domain: no gaps between pieces, no NaN
+            const segs = this._segments(map, from.I);
+            const cover = unionIntervals(segs);
+            let undefinedSomewhere = !(cover.length === 1 && sameInterval(cover[0], from.I, 1e-9));
+            if (!undefinedSomewhere) {
+                undefinedSomewhere = segs.some(S => samplePositions(S, SAMPLES_1D, from.window).some(s => !s.nearOpen
+                    && !SetsModel.validPoint(dOut === 2 ? this.apply(map, s.t)[0] : this._raw1(map, s.t))));
             }
-        } else if (dOut === 2 && img) {
-            const pts = img.kind === 'region' ? img.polygon : img.points;
-            res.into = pts.every(p => this.containsPoint(to, p, 1e-7));
-            if (!res.into) problems.push(`l'immagine non è contenuta in ${to.label || to.id}`);
+            if (undefinedSomewhere) {
+                res.isFunction = false;
+                problems.push(`${map.label} non è definita in tutto ${fromL}`);
+            }
+        }
+        if (dOut === 1) {
+            const img = this.image(map);
+            const parts = !img ? [] : img.kind === 'interval' ? [img.I] : img.kind === 'intervals' ? img.parts : [];
+            if (parts.length) {
+                res.into = parts.every(P => isSubset(P, to.I, 1e-7));
+                if (!res.into) problems.push(`l'immagine non è contenuta in ${toL}`);
+                const merged = unionIntervals(parts);
+                res.surjective = res.into && merged.length === 1 && sameInterval(merged[0], to.I, 1e-7);
+            }
+            // From the plane to the line a continuous map is never injective
+            res.injective = dIn === 1 ? this._injective1(map) : false;
+        } else if (dOut === 0) {
+            // From an interval into a finite set
+            const img = this.image(map);
+            const nums = to.elements.map(e => e.num).filter(v => v !== null);
+            const outside = this._segments(map, from.I).some(S => samplePositions(S, SAMPLES_1D, from.window).some(s => {
+                const v = this._raw1(map, s.t);
+                return isFinite(v) && !nums.some(n => Math.abs(n - v) <= 1e-9 * Math.max(1, Math.abs(v)));
+            }));
+            res.into = !outside;
+            if (outside) problems.push(`${map.label} assume valori che non stanno in ${toL}`);
+            res.surjective = !!img && img.ids.length === to.elements.length;
+            // Infinitely many points, finitely many values
+            res.injective = isPoint(from.I);
+        } else if (dOut === 2) {
+            if (dIn === 1) {
+                const img = this.image(map);
+                res.into = (img ? img.points : []).every(p => this.containsPoint(to, p, 1e-7));
+                res.injective = map.kind === 'piecewise' ? null : this._simpleCurve(map);
+                // A curve does not fill a region
+                res.surjective = false;
+            } else {
+                const pts = this._denseSamples(from).map(s => this.apply(map, s.p)[0]).filter(v => SetsModel.validPoint(v));
+                res.into = pts.every(p => this.containsPoint(to, p, 1e-7));
+                if (map.kind !== 'piecewise') {
+                    res.injective = this._injective2(map);
+                    res.surjective = this._surjective2(map, pts, res.injective);
+                }
+            }
+            if (!res.into) problems.push(`l'immagine non è contenuta in ${toL}`);
         }
         return res;
     }
+
+    /**
+     * Properties of an inverse from those of its base map f: it is a function
+     * when f is bijective; it is injective because f is a function, and
+     * surjective when f is defined everywhere and lands in its codomain.
+     */
+    _inverseProperties(map, res) {
+        const base = map.base;
+        const bp = this.properties(base);
+        const fromL = map.from.label || map.from.id;
+        res.exact = bp.exact;
+        res.into = true;
+        res.isFunction = !(bp.injective === false || bp.surjective === false);
+        if (bp.surjective === false) res.problems.push(`alcuni elementi di ${fromL} non hanno immagine: ${base.label} non è suriettiva`);
+        if (bp.injective === false) res.problems.push(`alcuni elementi di ${fromL} hanno più immagini: ${base.label} non è iniettiva`);
+        res.injective = bp.isFunction ? true : null;
+        res.surjective = bp.into === false ? false : bp.isFunction ? true : null;
+        return res;
+    }
+
+    /** Injective on an interval: each piece strictly monotone, and the images of the pieces disjoint. */
+    _injective1(map) {
+        const segs = this._segments(map, map.from.I);
+        for (const S of segs) {
+            if (isPoint(S)) continue;
+            if (!strictlyMonotone(samplePositions(S, SAMPLES_1D, map.from.window).map(s => this._raw1(map, s.t)))) return false;
+        }
+        const imgs = segs.map(S => this._imageOfSegment(map, S)).filter(Boolean);
+        for (let i = 0; i < imgs.length; i++) {
+            for (let j = i + 1; j < imgs.length; j++) if (overlaps(imgs[i], imgs[j])) return false;
+        }
+        return true;
+    }
+
+    /** A curve (interval -> plane) is injective when it never meets itself. */
+    _simpleCurve(map) {
+        const pts = samplePositions(map.from.I, 300, map.from.window).map(s => this.apply(map, s.t)[0]).filter(v => SetsModel.validPoint(v));
+        if (pts.length < 2) return true;
+        return isSimplePolyline(pts, { tol: 1e-9 * bboxDiagonal(pts) });
+    }
+
+    /**
+     * Plane -> plane: injective when the Jacobian keeps its sign (a change of
+     * sign is a fold) and the boundary goes to a curve that does not meet
+     * itself (for a continuous map of a disk or a rectangle these two together
+     * give injectivity).
+     */
+    _injective2(map) {
+        const set = map.from;
+        const F = (p) => this.apply(map, p)[0];
+        const h = 1e-5 * Math.max(1e-9, bboxDiagonal(this.boundary(set, 16)));
+        const dets = [];
+        this._grid(set, 24).forEach(([x, y]) => {
+            const ex = [F([x + h, y]), F([x - h, y])], ey = [F([x, y + h]), F([x, y - h])];
+            if (![...ex, ...ey].every(v => SetsModel.validPoint(v))) return;
+            const a = (ex[0][0] - ex[1][0]) / (2 * h), c = (ex[0][1] - ex[1][1]) / (2 * h);
+            const b = (ey[0][0] - ey[1][0]) / (2 * h), d = (ey[0][1] - ey[1][1]) / (2 * h);
+            dets.push(a * d - b * c);
+        });
+        const maxAbs = dets.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        if (!(maxAbs > 0)) return false;
+        const tiny = 1e-6 * maxAbs;
+        if (dets.some(v => v > tiny) && dets.some(v => v < -tiny)) return false;
+        const bd = this.boundary(set, 240).map(F).filter(v => SetsModel.validPoint(v));
+        return isSimplePolyline(bd, { closed: true, tol: 1e-9 * bboxDiagonal(bd) });
+    }
+
+    /**
+     * Plane -> plane, surjective: for an injective map the image is the
+     * inside of the mapped boundary, which must contain a grid of points of
+     * the codomain. Otherwise the values at dense samples must come close to
+     * every point of that grid.
+     */
+    _surjective2(map, pts, injective) {
+        const to = map.to;
+        const target = this._grid(to, 12);
+        const box = bbox(this.boundary(to, 64));
+        const diag = Math.hypot(box[2] - box[0], box[3] - box[1]);
+        const imgBox = bbox(pts);
+        const tol = 1e-3 * diag;
+        if (imgBox[0] > box[0] + tol || imgBox[1] > box[1] + tol || imgBox[2] < box[2] - tol || imgBox[3] < box[3] - tol) return false;
+        if (injective === true) {
+            const img = this.image(map);
+            if (!img || img.kind !== 'region') return null;
+            return target.every(q => insidePolygon(img.polygon, q));
+        }
+        // Distance from each point of the grid to the nearest value: a clear gap
+        // says no, values close to every grid point say yes
+        const gaps = target.map(q => pts.reduce((m, p) => Math.min(m, Math.hypot(p[0] - q[0], p[1] - q[1])), Infinity));
+        const worst = Math.max(...gaps);
+        if (worst > 0.05 * diag) return false;
+        if (worst <= 0.02 * diag) return true;
+        return null;
+    }
+
+    /** Centres of a k × k grid over a plane set, those inside it. */
+    _grid(set, k) {
+        const [wx, wy] = set.kind === 'rect' ? set.windows
+            : [[set.disk.cx - set.disk.r, set.disk.cx + set.disk.r], [set.disk.cy - set.disk.r, set.disk.cy + set.disk.r]];
+        const out = [];
+        for (let j = 0; j < k; j++) {
+            for (let i = 0; i < k; i++) {
+                const p = [wx[0] + (wx[1] - wx[0]) * (i + 0.5) / k, wy[0] + (wy[1] - wy[0]) * (j + 0.5) / k];
+                if (this.containsPoint(set, p)) out.push(p);
+            }
+        }
+        return out;
+    }
+}
+
+/** Bounding box [x0, y0, x1, y1] of points. */
+function bbox(pts) {
+    const b = [Infinity, Infinity, -Infinity, -Infinity];
+    pts.forEach(p => {
+        b[0] = Math.min(b[0], p[0]); b[1] = Math.min(b[1], p[1]);
+        b[2] = Math.max(b[2], p[0]); b[3] = Math.max(b[3], p[1]);
+    });
+    return b;
+}
+
+function bboxDiagonal(pts) {
+    const b = bbox(pts);
+    return pts.length ? Math.hypot(b[2] - b[0], b[3] - b[1]) : 0;
+}
+
+/** Same value of a map: same element id, or (nearly) the same number or point. */
+function sameValue(v, y) {
+    if (typeof v === 'string' || typeof y === 'string') return String(v) === String(y);
+    const close = (a, b) => typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+    if (Array.isArray(v) && Array.isArray(y)) return v.length === y.length && v.every((c, i) => close(c, y[i]));
+    return close(v, y);
 }
 
 /** Intersection of two intervals. */

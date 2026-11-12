@@ -227,8 +227,8 @@ describe('Insiemi continui', () => {
         expect(pts[1]).toBeCloseTo(0.5, 6);
         const parts = m.preimage(map('h'), parseArgument('[0, 1/4]')).parts;
         expect(parts.length).toBe(1);
-        expect(parts[0][0]).toBeCloseTo(-0.5, 6);
-        expect(parts[0][1]).toBeCloseTo(0.5, 6);
+        expect(parts[0].lo).toBeCloseTo(-0.5, 6);
+        expect(parts[0].hi).toBeCloseTo(0.5, 6);
     });
 
     it('immagine di un sotto-intervallo', () => {
@@ -271,5 +271,186 @@ describe('Insiemi continui', () => {
         });
         expect(m.image(map('h')).given).toBe(true);
         expect(m.properties(map('h')).claimed).toBe(true);
+    });
+});
+
+describe('Funzioni a tratti', () => {
+    const props = (m, f) => {
+        const p = m.properties(f);
+        return { isFunction: p.isFunction, into: p.into, injective: p.injective, surjective: p.surjective };
+    };
+
+    it('la funzione segno: tratti, immagine e controimmagini in un insieme finito', () => {
+        const { m, map, warnings } = model({
+            sets: [{ id: 'R', interval: 'R', window: [-3, 3] }, { id: 'S', elements: ['-1', '0', '1'] }],
+            maps: [{ id: 'sgn', from: 'R', to: 'S', piecewise: [
+                { on: '(-inf, 0)', expr: '-1' }, { on: 0, expr: '0' }, { on: '(0, +inf)', expr: '1' },
+            ] }],
+        });
+        expect(warnings).toEqual([]);
+        expect(m.apply(map('sgn'), -2)).toEqual(['-1']);
+        expect(m.apply(map('sgn'), 0)).toEqual(['0']);
+        expect(m.image(map('sgn')).ids).toEqual(['-1', '0', '1']);
+        expect(props(m, map('sgn'))).toEqual({ isFunction: true, into: true, injective: false, surjective: true });
+        expect(m.preimage(map('sgn'), parseArgument('0'))).toMatchObject({ kind: 'points', points: [0] });
+        const pos = m.preimage(map('sgn'), parseArgument('1'));
+        expect(pos.kind).toBe('intervals');
+        expect(pos.parts).toEqual([{ lo: 0, hi: Infinity, loClosed: false, hiClosed: false }]);
+    });
+
+    const onTwo = (pieces, extra = {}) => model({
+        sets: [{ id: 'I', interval: '[0,2]' }, { id: 'J', interval: '[0,2]' }],
+        maps: [{ id: 'f', from: 'I', to: 'J', piecewise: pieces, ...extra }],
+    });
+
+    it('una biiezione non continua: i tratti si uniscono in [0, 2]', () => {
+        const { m, map } = onTwo([{ on: '[0,1)', expr: 'x' }, { on: '[1,2]', expr: '3 - x' }]);
+        const img = m.image(map('f'));
+        expect(img.kind).toBe('interval');
+        expect(img.I).toMatchObject({ lo: 0, hi: 2, loClosed: true, hiClosed: true });
+        expect(props(m, map('f'))).toEqual({ isFunction: true, into: true, injective: true, surjective: true });
+    });
+
+    it('i limiti a un salto usano il tratto da cui si arriva', () => {
+        // x + 1 su [0, 1) arriva a 2 senza toccarlo; g(0) = g(2) = 1
+        const { m, map } = onTwo([{ on: '[0,1)', expr: 'x + 1' }, { on: '[1,2]', expr: 'x - 1' }]);
+        expect(m.image(map('f')).I).toMatchObject({ lo: 0, hi: 2, loClosed: true, hiClosed: false });
+        expect(props(m, map('f'))).toMatchObject({ injective: false, surjective: false });
+    });
+
+    it('immagine come unione di intervalli', () => {
+        const { m, map } = onTwo([{ on: '[0,1)', expr: 'x' }, { on: '[1,2]', expr: 'x/4 + 3/2' }]);
+        const img = m.image(map('f'));
+        expect(img.kind).toBe('intervals');
+        expect(img.parts.map(P => [P.lo, P.hi, P.loClosed, P.hiClosed])).toEqual([[0, 1, true, false], [1.75, 2, true, true]]);
+        expect(props(m, map('f'))).toMatchObject({ injective: true, surjective: false });
+    });
+
+    it('tratti che si sovrappongono nell\'immagine non danno una funzione iniettiva', () => {
+        const { m, map } = onTwo([{ on: '[0,1]', expr: 'x' }, { on: '(1,2]', expr: 'x - 1/2' }]);
+        expect(props(m, map('f')).injective).toBe(false);
+    });
+
+    it('un buco tra i tratti: la funzione non è definita ovunque', () => {
+        const { m, map } = onTwo([{ on: '[0,1)', expr: 'x' }, { on: '(1,2]', expr: 'x' }]);
+        const p = m.properties(map('f'));
+        expect(p.isFunction).toBe(false);
+        expect(p.bijective).toBe(false);
+        expect(p.problems[0]).toMatch(/non è definita/);
+        expect(m.apply(map('f'), 1)).toEqual([]);
+    });
+
+    it('anche un\'espressione può non essere definita ovunque', () => {
+        const { m, map } = onTwo(undefined, { piecewise: undefined, expr: 'sqrt(x - 1)' });
+        expect(m.properties(map('f')).isFunction).toBe(false);
+    });
+
+    it('tratti dati da una condizione', () => {
+        const { m, map } = onTwo([{ if: 'x < 1', expr: '2 - x' }, { expr: 'x - 1' }]);
+        expect(m.image(map('f')).I).toMatchObject({ lo: 0, hi: 2, loClosed: true, hiClosed: true });
+        expect(props(m, map('f'))).toEqual({ isFunction: true, into: true, injective: true, surjective: true });
+    });
+
+    it('avvisa di tratti sovrapposti e di opzioni sconosciute', () => {
+        const { warnings } = onTwo([{ on: '[0,1]', expr: 'x' }, { on: '[1,2]', expr: 'x', when: 1 }]);
+        expect(warnings.some(w => /overlap/.test(w))).toBe(true);
+        expect(warnings.some(w => /unknown option 'when'/.test(w))).toBe(true);
+    });
+});
+
+describe('Inverse', () => {
+    it('l\'inversa di una funzione tra insiemi finiti è una relazione', () => {
+        const { m, map } = model({
+            sets: [{ id: 'A', elements: ['a', 'b', 'c'] }, { id: 'B', elements: ['1', '2', '3'] }],
+            maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: '1', b: '1', c: '2' } }, { id: 'g', inverse: 'f' }],
+        });
+        const g = map('g');
+        expect(g.label).toBe('f^{-1}');
+        expect([g.from.id, g.to.id]).toEqual(['B', 'A']);
+        expect(['1', '2', '3'].map(y => m.apply(g, y))).toEqual([['a', 'b'], ['c'], []]);
+        const p = m.properties(g);
+        expect(p.isFunction).toBe(false);
+        expect(p.bijective).toBe(false);
+        expect(p.problems).toEqual(['1 ha 2 immagini', '3 non ha immagine']);
+        // Image of the inverse = preimage under f, and the other way round
+        expect(m.image(g, parseArgument('{1}')).ids).toEqual(['a', 'b']);
+        expect(m.preimage(g, parseArgument('{c}')).ids).toEqual(['2']);
+    });
+
+    it('l\'inversa di x^2 su [-1, 1]: due controimmagini', () => {
+        const { m, map } = model({
+            sets: [{ id: 'I', interval: '[-1,1]' }, { id: 'J', interval: '[0,1]' }],
+            maps: [{ id: 's', from: 'I', to: 'J', expr: 'x^2' }, { id: 'r', inverse: 's' }],
+        });
+        expect(m.apply(map('r'), 0.25)).toEqual([-0.5, 0.5]);
+        const p = m.properties(map('r'));
+        expect(p).toMatchObject({ isFunction: false, injective: true, surjective: true, bijective: false });
+        expect(m.image(map('r')).I).toMatchObject({ lo: -1, hi: 1 });
+    });
+
+    it('l\'inversa di una biiezione è una biiezione, e la composizione è l\'identità', () => {
+        const { m, map } = model({
+            sets: [{ id: 'I', interval: '[0,1]' }, { id: 'J', interval: '[0,2]' }],
+            maps: [{ id: 's', from: 'I', to: 'J', expr: '2x' }, { id: 'r', inverse: 's' }, { id: 'id', compose: ['s', 'r'] }],
+        });
+        expect(m.apply(map('r'), 0.5)).toEqual([0.25]);
+        expect(m.properties(map('r'))).toMatchObject({ isFunction: true, bijective: true });
+        expect(m.apply(map('id'), 0.3)[0]).toBeCloseTo(0.3, 9);
+        expect(m.properties(map('id'))).toMatchObject({ injective: true, surjective: true });
+        expect(map('id').label).toBe('s^{-1} \\circ s');
+    });
+
+    it('avvisa se la funzione di base manca o è nel piano', () => {
+        const { warnings } = model({
+            sets: [{ id: 'Q', rect: ['[0,1]', '[0,1]'] }],
+            maps: [{ id: 'c', from: 'Q', to: 'Q', expr: ['x', 'y'] }, { id: 'a', inverse: 'c' }, { id: 'b', inverse: 'zz' }],
+        });
+        expect(warnings.some(w => /inverse of a map from or into the plane/.test(w))).toBe(true);
+        expect(warnings.some(w => /unknown: 'zz'/.test(w))).toBe(true);
+    });
+});
+
+describe('Verifiche nel piano', () => {
+    const { m, map } = model({
+        sets: [
+            { id: 'Q', rect: ['[0,1]', '[0,1]'] }, { id: 'R', rect: ['[0,1]', '[0,1]'] },
+            { id: 'D', disk: { center: [0, 0], radius: 1 } },
+            { id: 'T', interval: '[0, 2*pi]' }, { id: 'U', interval: '[0, 2*pi)' }, { id: 'L', interval: '[0,2]' },
+        ],
+        maps: [
+            { id: 'c', from: 'Q', to: 'R', expr: ['x/2 + 1/4', 'y/2 + 1/4'] },
+            { id: 'sw', from: 'Q', to: 'R', expr: ['y', 'x'] },
+            { id: 'fold', from: 'Q', to: 'R', expr: ['4x(1-x)', 'y'] },
+            { id: 'sq', from: 'D', to: 'D', expr: ['x^2 - y^2', '2x*y'] },
+            { id: 'closed', from: 'T', to: 'D', expr: ['cos(x)', 'sin(x)'] },
+            { id: 'open', from: 'U', to: 'D', expr: ['cos(x)', 'sin(x)'] },
+            { id: 'F', from: 'Q', to: 'L', expr: 'x^2 + y^2' },
+        ],
+    });
+    const p = (id) => { const r = m.properties(map(id)); return [r.injective, r.surjective]; };
+
+    it('dal piano nel piano: jacobiano e bordo', () => {
+        expect(p('c')).toEqual([true, false]);
+        expect(p('sw')).toEqual([true, true]);
+        expect(p('fold')).toEqual([false, true]);
+        expect(p('sq')).toEqual([false, true]);
+    });
+
+    it('una curva chiusa non è iniettiva, una aperta sì', () => {
+        expect(p('closed')).toEqual([false, false]);
+        expect(p('open')).toEqual([true, false]);
+    });
+
+    it('dal piano in un intervallo: mai iniettiva; curve e regioni di livello', () => {
+        expect(p('F')).toEqual([false, true]);
+        const level = m.preimage(map('F'), parseArgument('1'));
+        expect(level.kind).toBe('level');
+        expect(level.segments.length).toBeGreaterThan(20);
+        // Every point of the level curve is at distance 1 from the origin
+        level.segments.forEach(([a]) => expect(Math.hypot(a[0], a[1])).toBeCloseTo(1, 2));
+        const region = m.preimage(map('F'), parseArgument('[0, 1/4]'));
+        expect(region.kind).toBe('cells');
+        const area = region.cells.reduce((s, [x0, y0, x1, y1]) => s + (x1 - x0) * (y1 - y0), 0);
+        expect(area).toBeCloseTo(Math.PI / 16, 1);
     });
 });

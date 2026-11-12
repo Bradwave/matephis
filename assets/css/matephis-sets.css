@@ -135,6 +135,18 @@
   stroke-width: 3px;
 }
 
+.matephis-sets-svg .mps-cells-highlight {
+  fill-opacity: 0.22;
+  stroke: none;
+  shape-rendering: crispEdges;
+}
+
+.matephis-sets-svg .mps-level-highlight {
+  fill: none;
+  stroke-width: 2.4px;
+  stroke-linecap: round;
+}
+
 .matephis-sets-svg .mps-probe-handle {
   stroke: var(--bg, #fff);
   stroke-width: 2px;
