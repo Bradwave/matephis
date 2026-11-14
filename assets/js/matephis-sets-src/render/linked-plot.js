@@ -447,7 +447,8 @@ export class LinkedPlot {
         if (def.probe !== false) data.push(...this.probeItems(construction));
         // Orbits: the cobweb between the graph and y = x
         const cobwebs = this.cobwebItems();
-        if (cobwebs.length && def.identity !== false && !data.some(d => d.fn === 'x')) {
+        const fixedShown = this.mirrorLayers().some(l => l.sel.op === 'fixed');
+        if ((cobwebs.length || fixedShown) && def.identity !== false && !data.some(d => d.fn === 'x')) {
             data.unshift({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
         }
         cobwebs.forEach(c => data.push(...c.items));

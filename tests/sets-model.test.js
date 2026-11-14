@@ -777,3 +777,36 @@ describe('Dominio naturale', () => {
         expect(m.domainOf(map('h'))).toEqual([{ lo: -2, hi: 2, loClosed: false, hiClosed: false }]);
     });
 });
+
+describe('Punti fissi', () => {
+    it('le soluzioni di f(x) = x', () => {
+        const params = { a: 2, c: 0.5 };
+        const { m, map } = model({
+            sets: [{ id: 'X', interval: '[-3, 3]' }, { id: 'Y', interval: '[-3, 3]' }],
+            maps: [
+                { id: 'h', from: 'X', to: 'Y', expr: 'c + a*(x - c)' },
+                { id: 'q', from: 'X', to: 'Y', expr: 'x^2' },
+                { id: 't', from: 'X', to: 'Y', expr: 'x^2 + 1/4' },
+                { id: 'id', from: 'X', to: 'Y', expr: 'x' },
+                { id: 's', from: 'X', to: 'Y', expr: 'x + 1' },
+            ],
+        }, params);
+        expect(m.fixedPoints(map('h')).points).toEqual([0.5]);
+        expect(m.fixedPoints(map('q')).points).toEqual([0, 1]);
+        // x^2 + 1/4 touches y = x at 1/2
+        expect(m.fixedPoints(map('t')).points.map(v => +v.toFixed(6))).toEqual([0.5]);
+        expect(m.fixedPoints(map('id')).all).toBe(true);
+        expect(m.fixedPoints(map('s')).points).toEqual([]);
+        params.c = -1;
+        m.refresh();
+        expect(m.fixedPoints(map('h')).points).toEqual([-1]);
+    });
+
+    it('su un insieme finito: gli elementi con f(a) = a', () => {
+        const { m, map } = model({
+            sets: [{ id: 'A', elements: ['1', '2', '3'] }],
+            maps: [{ id: 'f', from: 'A', to: 'A', pairs: { 1: '2', 2: '2', 3: '3' } }],
+        });
+        expect(m.fixedPoints(map('f')).ids).toEqual(['2', '3']);
+    });
+});

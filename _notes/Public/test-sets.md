@@ -89,6 +89,7 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
 | `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
 | `domain(f)` | Dove $f$ ha un valore: il dominio naturale dell'espressione dentro l'insieme di partenza ($\sqrt{x - 1}$: $[1, +\infty)$), o $\mathrm{dom}(g \circ f)$ per una composizione. Una banda sulla retta, una riga sotto il diagramma, una banda sull'asse $x$ del grafico. Gli estremi sono cercati numericamente; un estremo che arriva al bordo della finestra di un insieme illimitato è $\pm\infty$. |
+| `fixed(f)` | I punti fissi, dove $f(x) = x$: tra due rette (con la stessa scala) una freccia verticale evidenziata, su una sola retta un cappio, sul grafico un punto sulla retta $y = x$ (disegnata da sola). La riga sotto il diagramma: $x^* = \tfrac{1}{2}$, oppure «nessun punto fisso». Su un insieme finito, gli elementi con $f(a) = a$. Etichetta: `label` in un'evidenziazione (default $x^*$). |
 | `collisions(f)` | Elementi con la stessa immagine: frecce e immagine comune in rosso. |
 | `properties(f)` | Riquadro sotto il diagramma: $f\colon A \to B$ (in TeX, come le etichette) e iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Una relazione che non è una funzione mostra solo «funzione ✗» e «biiettiva ✗»: iniettiva e suriettiva si dicono delle funzioni. Le ragioni sono nel tooltip. |
 | `arrows(f)` | Le frecce di `f` (per mostrarle con un pulsante). |
@@ -928,5 +929,23 @@ $f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: sul grafico il salto in $x 
   "probe": { "map": "f", "at": "p" },
   "show": ["properties(f)"],
   "plot": { "maps": ["f"] }
+}
+```
+
+### Il punto fisso di una dilatazione
+
+$h(x) = c + a(x - c)$ allarga ($\lvert a \rvert > 1$) o restringe ($\lvert a \rvert < 1$) le distanze da $c$; $c$ resta dov'è: è il punto fisso, la freccia verticale. Con $a = 1$ ogni punto è fisso.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [{ "id": "X", "interval": "[-3, 3]" }, { "id": "Y", "interval": "[-3, 3]" }],
+  "maps": [{ "id": "h", "from": "X", "to": "Y", "expr": "c + a*(x - c)" }],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.1, "val": 2 },
+    "c": { "min": -2, "max": 2, "step": 0.1, "val": 0.5 }
+  },
+  "show": ["fixed(h)"],
+  "plot": { "maps": ["h"] }
 }
 ```

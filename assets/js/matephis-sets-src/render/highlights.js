@@ -8,6 +8,7 @@ import { pointPx, setLabelText } from '../core/layout.js';
 import { parseInterval, evalInterval, intervalTeX, niceNumber } from '../core/interval.js';
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
+import { arrow, linkArrow } from './arrows.js';
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -43,6 +44,20 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             drawResult(scene, res, color, label, layer.key);
             if (!readout) return null;
             return { tex: readoutTeX(scene, op, map, arg, res, def), color };
+        } else if (op === 'fixed') {
+            // x* with f(x*) = x*: a loop on one line, a vertical arrow between two lines
+            const fx = model.fixedPoints(map);
+            const color = scene.color(def.color, 'highlight');
+            const name = def.label !== undefined ? def.label : 'x^*';
+            drawFixed(scene, map, fx, color, name);
+            if (def.readout === false) return null;
+            let tex;
+            if (fx.all) tex = `${map.label}(x) = x\\ \\text{per ogni } x`;
+            else if (map.from.kind === 'finite') tex = fx.ids.length ? `\\left\\{${fx.ids.map(id => map.from.elementById.get(id).label).join(',\\,')}\\right\\}` : '\\emptyset';
+            else tex = fx.points.length === 0 ? '\\text{nessun punto fisso}'
+                : fx.points.length === 1 ? `${name} = ${niceNumber(fx.points[0])}` : `${name} \\in \\left\\{${fx.points.map(niceNumber).join(';\\ ')}\\right\\}`;
+            if (map.from.kind === 'finite') tex = `${map.label}(a) = a:\\ a \\in ${tex}`;
+            return { tex, color };
         } else if (op === 'domain') {
             // dom f: where the map has a value; its readout says it with ±∞
             const parts = model.domainOf(map);
@@ -134,6 +149,40 @@ export function resultTeX(res) {
     if (res.kind === 'interval') return intervalTeX(res.I);
     if (res.kind === 'intervals') return res.parts.map(intervalTeX).join(' \\cup ');
     return '\\ldots';
+}
+
+/** Fixed points on the diagram (see SetsModel.fixedPoints). */
+function drawFixed(scene, map, fx, color, name) {
+    const { layout, groups } = scene;
+    if (map.from.kind === 'finite') {
+        drawResult(scene, { kind: 'elements', set: map.from, ids: fx.ids }, color, null, `fixed(${map.id})`);
+        return;
+    }
+    const g = scene.svgEl('g', { class: 'mps-layer mps-fixed' }, groups.over);
+    const shown = (set, v) => set.kind !== 'interval' || (v >= set.window[0] - 1e-9 && v <= set.window[1] + 1e-9);
+    fx.points.forEach((x, k) => {
+        if (!shown(map.from, x)) return;
+        const a = pointPx(layout, map.from, x);
+        if (!a) return;
+        const ring = (p) => {
+            const c = scene.svgEl('circle', { cx: f2(p[0]), cy: f2(p[1]), r: 7, class: 'mps-ring' }, g);
+            c.style.stroke = color;
+        };
+        ring(a);
+        if (map.from === map.to) {
+            linkArrow(scene, g, map.from, map.to, { from: a, to: a, color, width: 2.2, head: 9 });
+        } else if (map.to.kind === 'interval' && shown(map.to, x)) {
+            const b = pointPx(layout, map.to, x);
+            if (b) {
+                arrow(scene, g, { from: a, to: b, color, width: 2.6, head: 10, trimStart: 7, trimEnd: 7 });
+                ring(b);
+            }
+        }
+        if (k === 0 && fx.points.length === 1) {
+            const row = layout.orient === 'row';
+            scene.text(a[0] + (row ? -14 : 0), a[1] + (row ? 0 : -16), name, { parent: g, color, size: scene.fontSize * 0.9, anchor: row ? 'end' : 'middle' });
+        }
+    });
 }
 
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */

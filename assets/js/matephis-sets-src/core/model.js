@@ -266,6 +266,78 @@ export class SetsModel {
         return out;
     }
 
+    /**
+     * Fixed points of a map: where f(x) = x. On numbers (intervals, or sets
+     * of numbers) the solutions of f(x) - x = 0, by sign changes and
+     * bisection (a touching zero is found where |f(x) - x| is tiny); on a
+     * finite set of a map into itself, the elements with f(a) = a.
+     * @returns {{ points: number[], ids: string[], all: boolean }}
+     *   all: f(x) = x on the whole set (the identity)
+     */
+    fixedPoints(map) {
+        const key = `fix|${map.id}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const out = { points: [], ids: [], all: false };
+        const { from } = map;
+        if (from.kind === 'finite') {
+            from.elements.forEach(e => {
+                const ys = this.apply(map, e.id);
+                const same = ys.some(y => (typeof y === 'string' ? y === e.id && (map.to === from || this.elementNumber(map.to, y) === e.num)
+                    : typeof y === 'number' && e.num !== null && Math.abs(y - e.num) < 1e-9));
+                if (same) out.ids.push(e.id);
+            });
+        } else if (from.kind === 'interval' && this.dim(map.to) === 1) {
+            const g = (t) => this._raw1(map, t) - t;
+            const I = from.I, w = from.window;
+            const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
+            const n = SAMPLES_1D;
+            const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
+            const gs = ts.map(g);
+            const scale = Math.max(1, Math.abs(lo), Math.abs(hi));
+            const tiny = 1e-9 * scale;
+            if (gs.every(v => isFinite(v) && Math.abs(v) < tiny)) out.all = true;
+            else {
+                const add = (t) => {
+                    if (!contains(I, t, 1e-12)) return;
+                    const r = Math.abs(t - Math.round(t)) < 1e-9 ? Math.round(t) : t;
+                    if (!out.points.some(p => Math.abs(p - r) < 1e-7 * scale)) out.points.push(r);
+                };
+                for (let i = 0; i <= n; i++) {
+                    if (!isFinite(gs[i])) continue;
+                    if (Math.abs(gs[i]) < tiny) {
+                        add(ts[i]);
+                        continue;
+                    }
+                    if (i > 0 && isFinite(gs[i - 1]) && Math.abs(gs[i - 1]) >= tiny && gs[i - 1] * gs[i] < 0) {
+                        // A sign change; a jump of a piecewise map changes sign too: keep it only if g is small there
+                        let a = ts[i - 1], b = ts[i], ga = gs[i - 1];
+                        for (let it = 0; it < 80; it++) {
+                            const m = (a + b) / 2, gm = g(m);
+                            if (!isFinite(gm)) break;
+                            if (ga * gm <= 0) b = m; else { a = m; ga = gm; }
+                        }
+                        const t = (a + b) / 2;
+                        if (Math.abs(g(t)) < 1e-6 * scale) add(t);
+                    } else if (i > 0 && i < n && isFinite(gs[i - 1]) && isFinite(gs[i + 1])
+                        && Math.abs(gs[i]) < Math.abs(gs[i - 1]) && Math.abs(gs[i]) <= Math.abs(gs[i + 1]) && gs[i - 1] * gs[i + 1] > 0) {
+                        // A touching zero (no sign change): refine the minimum of |g|
+                        let a = ts[i - 1], b = ts[i + 1];
+                        const r = (Math.sqrt(5) - 1) / 2;
+                        for (let it = 0; it < 80; it++) {
+                            const c = b - r * (b - a), d = a + r * (b - a);
+                            if (Math.abs(g(c)) < Math.abs(g(d))) b = d; else a = c;
+                        }
+                        const t = (a + b) / 2;
+                        if (Math.abs(g(t)) < 1e-9 * scale) add(t);
+                    }
+                }
+                out.points.sort((a, b) => a - b);
+            }
+        }
+        this._cache.set(key, out);
+        return out;
+    }
+
     /** Is the set infinite (integers without one of the bounds)? Its checks are made in the window. */
     isInfinite(set) {
         return !!(set && set.intRule && !(isFinite(set.intRule.lo) && isFinite(set.intRule.hi)));
