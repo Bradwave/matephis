@@ -411,7 +411,7 @@ export class LinkedPlot {
             data.push({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
         }
         this.maps.forEach(m => {
-            const label = `$${m.label}$`;
+            const label = `$${m.name}$`;
             if (m.from.kind === 'finite') {
                 const pts = [];
                 m.from.elements.forEach(e => {

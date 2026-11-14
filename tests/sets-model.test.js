@@ -810,3 +810,24 @@ describe('Punti fissi', () => {
         expect(m.fixedPoints(map('f')).ids).toEqual(['2', '3']);
     });
 });
+
+describe('Nome e etichetta', () => {
+    it('"name" nelle formule, "label" sulla freccia', () => {
+        const { m, map } = model({
+            sets: [{ id: 'N', integers: 'N' }, { id: 'P', integers: '2N', window: [0, 20] }, { id: 'Q', integers: 'N', window: [0, 40] }],
+            maps: [
+                { id: 'd', label: 'n \\mapsto 2n', name: 'd', from: 'N', to: 'P', expr: '2x' },
+                { id: 'e', from: 'P', to: 'Q', expr: 'x' },
+                { id: 'ed', compose: ['d', 'e'] },
+                { id: 'dinv', inverse: 'd' },
+                { id: 'w', label: '\\lvert \\cdot \\rvert', from: 'N', to: 'Q', expr: 'x' },
+            ],
+        });
+        expect(map('d').label).toBe('n \\mapsto 2n');
+        expect(map('d').name).toBe('d');
+        expect(map('ed').label).toBe('e \\circ d');
+        expect(map('dinv').label).toBe('d^{-1}');
+        // Without "name" the label is the name, as before
+        expect(map('w').name).toBe('\\lvert \\cdot \\rvert');
+    });
+});

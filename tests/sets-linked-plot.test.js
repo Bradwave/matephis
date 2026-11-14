@@ -63,7 +63,7 @@ describe('Grafico collegato', () => {
 import { compareReadout } from '../assets/js/matephis-sets-src/render/arrows.js';
 
 describe('Confronto tra due punti', () => {
-    const f = { label: 'f' };
+    const f = { label: 'f', name: 'f' };
     const sc = (compare, a, b) => ({
         config: { compare },
         color: (c) => c,

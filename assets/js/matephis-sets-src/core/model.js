@@ -385,6 +385,12 @@ export class SetsModel {
             return;
         }
         const map = { id, def, index: i, label: def.label !== undefined ? def.label : id, color: def.color };
+        // "name" is the function's name in formulas and readouts (f(3) = 6); "label"
+        // is the caption of its arrow. The name defaults to the label, as before
+        Object.defineProperty(map, 'name', {
+            get() { return def.name !== undefined ? String(def.name) : String(this.label); },
+            enumerable: true,
+        });
 
         if (def.inverse !== undefined) {
             if (this._readInverse(map, def)) {
@@ -422,7 +428,7 @@ export class SetsModel {
             map.parts = parts;
             map.from = parts[0].from;
             map.to = parts[parts.length - 1].to;
-            if (def.label === undefined) map.label = parts.slice().reverse().map(p => p.label).join(' \\circ ');
+            if (def.label === undefined) map.label = parts.slice().reverse().map(p => p.name).join(' \\circ ');
             this.maps.push(map);
             this.mapById.set(id, map);
             return;
@@ -486,7 +492,7 @@ export class SetsModel {
                 if (to.kind === 'finite') {
                     const tId = String(t);
                     if (!to.elementById.has(tId)) {
-                        this.warn(`map '${map.id}': ${map.label}(${aId}) = ${tId}, but '${tId}' is not an element of ${to.id}`);
+                        this.warn(`map '${map.id}': ${map.name}(${aId}) = ${tId}, but '${tId}' is not an element of ${to.id}`);
                         return;
                     }
                     list.push(tId);
@@ -617,7 +623,7 @@ export class SetsModel {
         map.iterate.n = n;
         map.parts = Array.from({ length: n }, () => base);
         if (map.def.label === undefined) {
-            const b = String(base.label);
+            const b = String(base.name);
             const wrapped = /^[A-Za-z]$|^\\?[A-Za-z]+(_\{?\w+\}?)?$/.test(b) ? b : `\\left(${b}\\right)`;
             map.label = n === 0 ? `\\mathrm{id}_{${this._setLabel(map.from)}}` : `${wrapped}^{${n}}`;
         }
@@ -681,7 +687,7 @@ export class SetsModel {
             this.warn(`map '${map.id}': the inverse of '${base.id}' goes from ${map.from.id} to ${map.to.id}; "from"/"to" are ignored`);
         }
         if (def.label === undefined) {
-            const l = String(base.label);
+            const l = String(base.name);
             map.label = /^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?$/.test(l) ? `${l}^{-1}` : `\left(${l}\right)^{-1}`;
         }
         return true;
@@ -1547,12 +1553,12 @@ export class SetsModel {
                 const outside = vs.filter(v => v && typeof v === 'object' && !Array.isArray(v) && 'outside' in v);
                 if (outside.length) {
                     res.into = false;
-                    problems.push(`${map.label}(${e.label}) non appartiene a ${to.label || to.id}`);
+                    problems.push(`${map.name}(${e.label}) non appartiene a ${to.label || to.id}`);
                 }
                 if (to.kind !== 'finite') {
                     vs.filter(v => SetsModel.validPoint(v) && !this.containsPoint(to, v)).forEach(() => {
                         res.into = false;
-                        problems.push(`${map.label}(${e.label}) non appartiene a ${to.label || to.id}`);
+                        problems.push(`${map.name}(${e.label}) non appartiene a ${to.label || to.id}`);
                     });
                 }
                 // A value outside the codomain is still a value: f is a function, not "into"
@@ -1595,7 +1601,7 @@ export class SetsModel {
             }
             if (undefinedSomewhere) {
                 res.isFunction = false;
-                problems.push(`${map.label} non è definita in tutto ${fromL}`);
+                problems.push(`${map.name} non è definita in tutto ${fromL}`);
             }
         }
         if (dOut === 1) {
@@ -1618,7 +1624,7 @@ export class SetsModel {
                 return isFinite(v) && !nums.some(n => Math.abs(n - v) <= 1e-9 * Math.max(1, Math.abs(v)));
             }));
             res.into = !outside;
-            if (outside) problems.push(`${map.label} assume valori che non stanno in ${toL}`);
+            if (outside) problems.push(`${map.name} assume valori che non stanno in ${toL}`);
             res.surjective = !!img && img.ids.length === to.elements.length;
             // Infinitely many points, finitely many values
             res.injective = isPoint(from.I);
@@ -1654,8 +1660,8 @@ export class SetsModel {
         res.exact = bp.exact;
         res.into = true;
         res.isFunction = !(bp.injective === false || bp.surjective === false);
-        if (bp.surjective === false) res.problems.push(`alcuni elementi di ${fromL} non hanno immagine: ${base.label} non è suriettiva`);
-        if (bp.injective === false) res.problems.push(`alcuni elementi di ${fromL} hanno più immagini: ${base.label} non è iniettiva`);
+        if (bp.surjective === false) res.problems.push(`alcuni elementi di ${fromL} non hanno immagine: ${base.name} non è suriettiva`);
+        if (bp.injective === false) res.problems.push(`alcuni elementi di ${fromL} hanno più immagini: ${base.name} non è iniettiva`);
         res.injective = bp.isFunction ? true : null;
         res.surjective = bp.into === false ? false : bp.isFunction ? true : null;
         return res;

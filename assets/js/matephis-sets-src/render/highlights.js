@@ -39,8 +39,8 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             const live = !!arg && scene.mentionsParam(argSource(arg));
             const readout = def.readout !== undefined ? def.readout === true : live || isEmpty(res);
             const label = def.label !== undefined ? def.label
-                : op === 'image' ? (readout ? `${map.label}\\left(${arg ? argTeX(arg, model) : setLabelText(model, map.from)}\\right)` : imageLabel(scene, map, arg, res))
-                    : `${fnTeX(map.label)}^{-1}\\left(${argTeX(arg, model)}\\right)`;
+                : op === 'image' ? (readout ? `${map.name}\\left(${arg ? argTeX(arg, model) : setLabelText(model, map.from)}\\right)` : imageLabel(scene, map, arg, res))
+                    : `${fnTeX(map.name)}^{-1}\\left(${argTeX(arg, model)}\\right)`;
             drawResult(scene, res, color, label, layer.key);
             if (!readout) return null;
             return { tex: readoutTeX(scene, op, map, arg, res, def), color };
@@ -52,18 +52,18 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             drawFixed(scene, map, fx, color, name);
             if (def.readout === false) return null;
             let tex;
-            if (fx.all) tex = `${map.label}(x) = x\\ \\text{per ogni } x`;
+            if (fx.all) tex = `${map.name}(x) = x\\ \\text{per ogni } x`;
             else if (map.from.kind === 'finite') tex = fx.ids.length ? `\\left\\{${fx.ids.map(id => map.from.elementById.get(id).label).join(',\\,')}\\right\\}` : '\\emptyset';
             else tex = fx.points.length === 0 ? '\\text{nessun punto fisso}'
                 : fx.points.length === 1 ? `${name} = ${niceNumber(fx.points[0])}` : `${name} \\in \\left\\{${fx.points.map(niceNumber).join(';\\ ')}\\right\\}`;
-            if (map.from.kind === 'finite') tex = `${map.label}(a) = a:\\ a \\in ${tex}`;
+            if (map.from.kind === 'finite') tex = `${map.name}(a) = a:\\ a \\in ${tex}`;
             return { tex, color };
         } else if (op === 'domain') {
             // dom f: where the map has a value; its readout says it with ±∞
             const parts = model.domainOf(map);
             const color = scene.color(def.color, 'highlight');
             const res = { kind: 'intervals', set: map.from, parts };
-            const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.label)}`;
+            const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.name)}`;
             drawResult(scene, res, color, name, layer.key);
             if (def.readout === false) return null;
             return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}`, color };
@@ -136,8 +136,8 @@ function argValueTeX(scene, arg) {
 function readoutTeX(scene, op, map, arg, res, def) {
     const { model } = scene;
     const name = def.label !== undefined ? def.label
-        : op === 'image' ? `${map.label}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
-            : `${fnTeX(map.label)}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
+        : op === 'image' ? `${map.name}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
+            : `${fnTeX(map.name)}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
     return `${name} = ${resultTeX(res)}`;
 }
 
@@ -188,7 +188,7 @@ function drawFixed(scene, map, fx, color, name) {
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */
 function imageLabel(scene, map, arg, res) {
     const of = arg ? argTeX(arg, scene.model) : setLabelText(scene.model, map.from);
-    let s = `${map.label}\\left(${of}\\right)`;
+    let s = `${map.name}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
     if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
     return s;
@@ -202,7 +202,7 @@ function argTeX(arg, model) {
         const m = sel && model.mapById.get(sel.map);
         if (!m) return arg.src;
         const inner = sel.arg ? argTeX(sel.arg, model) : setLabelText(model, m.from);
-        return sel.op === 'image' ? `${m.label}\\left(${inner}\\right)` : `${m.label}^{-1}\\left(${inner}\\right)`;
+        return sel.op === 'image' ? `${m.name}\\left(${inner}\\right)` : `${m.name}^{-1}\\left(${inner}\\right)`;
     }
     if (arg.kind === 'elements') return `\\{${arg.ids.join(',\\,')}\\}`;
     if (arg.kind === 'interval') return arg.src.replace(/inf(inity)?/gi, '\\infty');
@@ -388,7 +388,7 @@ function drawCollisions(scene, map, color, label) {
         loop.style.fill = color;
         const from = map.from.elementById ? map.from : null;
         const names = c.sources.map(s => (from ? from.elementById.get(s).label : s));
-        const text = label !== undefined ? label : names.map(n => `${map.label}(${n})`).join(' = ');
+        const text = label !== undefined ? label : names.map(n => `${map.name}(${n})`).join(' = ');
         // Under the codomain's oval, one line per shared image: there is room
         // there, also on a phone (in a column, it is the codomain's last row)
         const size = scene.fontSize * 0.85;
@@ -439,11 +439,11 @@ export function renderProperties(scene, layers) {
         let typeset = false;
         if (mj) {
             try {
-                name.appendChild(window.MathJax.tex2svg(`${map.label}\\colon ${from} \\to ${to}`, { display: false }));
+                name.appendChild(window.MathJax.tex2svg(`${map.name}\\colon ${from} \\to ${to}`, { display: false }));
                 typeset = true;
             } catch (e) { /* plain text below */ }
         }
-        if (!typeset) name.textContent = `${plain(map.label)}: ${plain(from)} → ${plain(to)}`;
+        if (!typeset) name.textContent = `${plain(map.name)}: ${plain(from)} → ${plain(to)}`;
         // Two blocks that wrap as wholes: the name (with the note), the chips
         const head = document.createElement('span');
         head.className = 'matephis-sets-props-head';

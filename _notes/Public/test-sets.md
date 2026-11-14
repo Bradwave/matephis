@@ -60,7 +60,7 @@ Un insieme di interi si comporta come un insieme finito: i suoi elementi sono gl
 
 | Opzione | Descrizione |
 | :--- | :--- |
-| `id`, `label` | Nome; l'etichetta di default è l'id. |
+| `id`, `label`, `name` | `label` è la didascalia della freccia ($n \mapsto 2n$); `name` è il nome della funzione nelle formule e nelle righe sotto il diagramma ($d(3) = 6$, $d^{-1}$, $e \circ d$). Di default `label` è l'id e `name` è `label`. |
 | `from`, `to` | Dominio e codominio (id di insiemi). |
 | `pairs` | Coppie `{ "a_1": "b_1" }`; un array (`{ "a_1": ["b_1", "b_2"] }`) dà una relazione che non è una funzione, e il motore lo segnala. |
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
@@ -773,7 +773,7 @@ $x < y$ su $A = \lbrace 1, 2, 3, 4\rbrace $: ogni colonna ha i punti sopra la di
 
 ### Da ℕ in 2ℕ
 
-$n \mapsto 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali.
+$d(n) = 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali. La freccia ha l'etichetta $n \mapsto 2n$ (`label`), le formule usano il nome $d$ (`name`).
 
 ```sets
 {
@@ -782,7 +782,7 @@ $n \mapsto 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una 
     { "id": "N", "integers": "N", "window": [0, 10] },
     { "id": "P", "integers": "2N", "window": [0, 20] }
   ],
-  "maps": [{ "id": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "maps": [{ "id": "d", "label": "n \\mapsto 2n", "name": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
   "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3 } },
   "probe": { "map": "d", "at": "n" },
   "show": ["properties(d)"]

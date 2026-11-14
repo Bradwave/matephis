@@ -201,14 +201,14 @@ export class Orbits {
         } else {
             const v = o.values[k];
             const rel = o.stop === 'outside' && k === o.avail ? `= ${niceNumber(v)} \\notin ${setLabelText(scene.model, set)}` : `= ${term(v)}`;
-            tex = `${x}_{${k}} = ${map.label}\\left(${x}_{${k - 1}}\\right) ${rel}`;
+            tex = `${x}_{${k}} = ${map.name}\\left(${x}_{${k - 1}}\\right) ${rel}`;
         }
         // At the end: what happened
         if (k === o.avail) {
             if (o.cycle) {
                 tex += o.cycle.period === 1 ? '\\quad\\text{punto fisso}' : `\\quad\\text{ciclo di periodo } ${o.cycle.period}`;
             } else if (o.stop === 'undefined') {
-                tex += `\\quad ${map.label}\\left(${term(o.values[k])}\\right)\\ \\text{non definita}`;
+                tex += `\\quad ${map.name}\\left(${term(o.values[k])}\\right)\\ \\text{non definita}`;
             }
         }
         return tex;

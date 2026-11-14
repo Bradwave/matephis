@@ -158,7 +158,7 @@ export class Table {
         const out = ['x'];
         let inner = 'x';
         this.maps.forEach(m => {
-            inner = `${m.label}\\left(${inner}\\right)`;
+            inner = `${m.name}\\left(${inner}\\right)`;
             out.push(inner);
         });
         return out;
