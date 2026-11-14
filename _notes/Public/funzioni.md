@@ -343,3 +343,225 @@ def sgn(x):
 ```
 
 Le funzioni definite a tratti torneranno più avanti, quando studieremo come si trasforma un grafico: $\lvert f(x) \rvert$ e $f(\lvert x \rvert)$ sono a loro volta funzioni definite a tratti.
+
+## Il grafico di una funzione
+
+All'inizio abbiamo descritto una relazione elencando le coppie di elementi collegati. Una funzione è una relazione particolare, quindi anche lei è un insieme di coppie: le coppie (IN, OUT).
+
+> **Definizione.** Il ***grafico*** di una funzione $f \colon A \to B$ è l'insieme
+> $$G_f \triangleq \lbrace (x, f(x)) : x \in A \rbrace = \lbrace (x, y) \in A \times B : y = f(x) \rbrace \subseteq A \times B \, .$$
+
+Possiamo disegnare il prodotto cartesiano $A \times B$ come una griglia: gli elementi di $A$ in orizzontale, quelli di $B$ in verticale, un puntino per ogni coppia. Il grafico è l'insieme dei punti evidenziati. I due diagrammi descrivono la stessa funzione: passa con il mouse sugli elementi di $A$, nell'uno o nell'altro.
+
+```sets
+{
+  "sync": "grafico",
+  "sets": [
+    { "id": "A", "elements": ["1", "2", "3", "4"], "order": "given" },
+    { "id": "B", "elements": ["a", "b", "c"], "order": "given" }
+  ],
+  "maps": [{ "id": "f", "from": "A", "to": "B", "pairs": { "1": "b", "2": "a", "3": "b", "4": "c" } }]
+}
+```
+
+```sets
+{
+  "sync": "grafico",
+  "layout": "product",
+  "sets": [
+    { "id": "A", "elements": ["1", "2", "3", "4"], "order": "given" },
+    { "id": "B", "elements": ["a", "b", "c"], "order": "given" }
+  ],
+  "maps": [{ "id": "f", "from": "A", "to": "B", "pairs": { "1": "b", "2": "a", "3": "b", "4": "c" } }],
+  "product": { "map": "f" }
+}
+```
+
+La condizione «a ogni elemento di $A$ uno e un solo elemento di $B$» diventa una condizione sulle **colonne** della griglia: **in ogni colonna c'è esattamente un punto**. Ecco invece una relazione che non è una funzione. *Prima di passare sulle colonne: quali colonne non vanno bene, e perché?*
+
+```sets
+{
+  "layout": "product",
+  "sets": [
+    { "id": "A", "elements": ["1", "2", "3", "4"], "order": "given" },
+    { "id": "B", "elements": ["a", "b", "c"], "order": "given" }
+  ],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "pairs": { "1": "b", "2": ["a", "c"], "4": "c" } }],
+  "product": { "map": "r" },
+  "show": ["properties(r)"]
+}
+```
+
+La colonna di $2$ ha due punti (due OUT per lo stesso IN), quella di $3$ nessuno (un IN senza OUT).
+
+### Il grafico di una funzione reale
+
+Per una funzione reale di variabile reale il prodotto cartesiano è $\mathbb{R} \times \mathbb{R} = \mathbb{R}^2$, il piano cartesiano, e il grafico è l'insieme dei punti $(x, f(x))$: il ***grafico cartesiano*** che conosciamo. Le colonne della griglia diventano le rette verticali.
+
+**Test della retta verticale.** Un sottoinsieme del piano è il grafico di una funzione (definita sull'insieme delle ascisse dei suoi punti) se e solo se **ogni retta verticale lo interseca al più in un punto**.
+
+La parabola "coricata" $x = y^2$ non è il grafico di una funzione: a ogni $x > 0$ corrispondono due valori, $y = \sqrt{x}$ e $y = -\sqrt{x}$. *Prima di trascinare: in quanti punti la retta $x = p$ taglia la curva per $p > 0$? E per $p = 0$?*
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "label": "x", "interval": "[0, 4]" },
+    { "id": "Y", "label": "y", "interval": "[-2, 2]" }
+  ],
+  "maps": [
+    { "id": "s", "from": "Y", "to": "X", "expr": "x^2", "hidden": true },
+    { "id": "r", "label": "r", "inverse": "s", "samples": 5 }
+  ],
+  "params": { "p": { "min": 0, "max": 4, "step": 0.05, "val": 1, "label": "p" } },
+  "probe": { "map": "r", "at": "p" },
+  "show": ["properties(r)"],
+  "plot": { "maps": ["r"], "lines": [{ "x": "p" }] }
+}
+```
+
+Nel dynagraph si vede la stessa cosa da un altro punto di vista: da ogni $x > 0$ partono **due** frecce.
+
+## Rappresentare una funzione
+
+Una stessa funzione si può rappresentare in molti modi diversi, che si chiamano anche *registri*. Prendiamo $f(x) = x^2 - 2x$.
+
+- **A parole**: la funzione che associa a ogni numero reale la differenza tra il suo quadrato e il suo doppio.
+- **Con una formula**: $f \colon \mathbb{R} \to \mathbb{R}$, $f(x) = x^2 - 2x = x(x - 2)$.
+- **Con una tabella IN/OUT**, che elenca alcune coppie (IN, OUT).
+- **Con un diagramma a frecce** o con un ***dynagraph***: due rette parallele, la retta degli IN e la retta degli OUT, con una freccia da ogni IN al suo OUT.
+- **Con il grafico cartesiano**: gli stessi IN e OUT, ma su due rette perpendicolari, con un punto $(x, f(x))$ per ogni coppia.
+- **Con il codice**: `def f(x): return x**2 - 2*x`.
+
+Nel diagramma trovi la tabella, il dynagraph e il grafico insieme. Passa con il mouse su una riga della tabella: si accendono la sua freccia e il suo punto. L'ultima riga segue il punto arancione.
+
+*Prima di trascinare: due IN diversi possono avere lo stesso OUT? Quali? Dove "si ripiegano" le frecce?*
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "label": "\\text{IN}", "interval": "R", "window": [-2, 4] },
+    { "id": "Y", "label": "\\text{OUT}", "interval": "R", "window": [-2, 4] }
+  ],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2 - 2x", "samples": [] }],
+  "params": { "p": { "min": -1.5, "max": 3.5, "step": 0.05, "val": 2.5, "label": "x" } },
+  "probe": { "map": "f", "at": "p", "trace": true },
+  "table": { "maps": ["f"], "in": [-1, 0, 1, 2, 3], "probe": true, "headers": ["\\text{IN}", "\\text{OUT}"], "position": "below" },
+  "plot": { "maps": ["f"], "position": "right", "xlim": [-2, 4], "ylim": [-2, 4] }
+}
+```
+
+Le frecce di $-1$ e di $3$ arrivano nello stesso punto, $3$; lo stesso fanno quelle di $0$ e di $2$, che arrivano in $0$. Il dynagraph "si ripiega" attorno a $x = 1$: è il punto medio tra gli zeri $0$ e $2$, l'ascissa del vertice della parabola, e il suo OUT, $f(1) = -1$, è il più piccolo.
+
+Nessun registro dice tutto. Ognuno mette in evidenza alcune proprietà e ne nasconde altre, e capire una funzione vuol dire soprattutto **saper passare da un registro all'altro**.
+
+| registro | che cosa si vede bene | che cosa si vede male (o non si vede) |
+| :--- | :--- | :--- |
+| parole | il significato, il contesto | i valori precisi |
+| formula | come calcolare qualunque OUT; il dominio naturale; gli zeri, se si sa scomporre | l'andamento complessivo |
+| tabella IN/OUT | i valori esatti di alcuni IN | che cosa succede tra un IN e l'altro: una tabella non dice nulla sugli IN che non elenca |
+| frecce, dynagraph | IN e OUT separati; come si muove l'OUT quando si muove l'IN; due IN con lo stesso OUT; dove le frecce si ripiegano o si allargano | la forma complessiva, quando le frecce sono tante |
+| grafico cartesiano | l'andamento complessivo: zeri, segno, minimi e massimi, crescenza | i valori esatti; che cosa succede fuori dalla finestra disegnata |
+| codice | calcolare molti valori, automaticamente | le proprietà generali |
+
+Attenzione al passaggio dalla tabella al grafico: unendo i punti della tabella con una linea si fa un'**ipotesi** su che cosa succede tra un IN e l'altro. Con i valori della tabella qui sopra, una spezzata e la parabola passano per gli stessi punti.
+
+## Funzioni iniettive, suriettive, biiettive
+
+Una funzione associa a ogni IN un solo OUT, ma non dice nulla su quante volte un OUT viene raggiunto. Contare le **controimmagini** degli elementi del codominio porta a tre definizioni.
+
+### Iniettività
+
+> **Definizione.** Una funzione $f \colon A \to B$ è ***iniettiva*** (o è un'***iniezione***) se a IN diversi corrispondono OUT diversi:
+> $$\forall a_1, a_2 \in A : \; a_1 \neq a_2 \implies f(a_1) \neq f(a_2) \, .$$
+
+In modo equivalente (con la *contronominale*: $p \implies q$ equivale a $\lnot q \implies \lnot p$):
+
+$$\forall a_1, a_2 \in A : \; f(a_1) = f(a_2) \implies a_1 = a_2 \, ,$$
+
+cioè: se due IN hanno lo stesso OUT, allora sono lo stesso IN. Ogni elemento del codominio ha **al più una** controimmagine. La seconda forma è quella che si usa per dimostrare che una funzione è iniettiva.
+
+**Esempio.** $f \colon \mathbb{R} \to \mathbb{R}$, $f(x) = 2x + 5$, è iniettiva. Infatti, se $f(x_1) = f(x_2)$, allora $2x_1 + 5 = 2x_2 + 5$, quindi $2x_1 = 2x_2$ e $x_1 = x_2$.
+
+Per dimostrare che una funzione **non** è iniettiva basta la negazione della definizione: esistono due IN diversi con lo stesso OUT,
+
+$$\exists\, a_1, a_2 \in A : \; a_1 \neq a_2 \land f(a_1) = f(a_2) \, .$$
+
+Basta quindi un controesempio: $g(x) = x^2$ non è iniettiva su $\mathbb{R}$, perché $g(-1) = g(1)$.
+
+### Suriettività
+
+> **Definizione.** Una funzione $f \colon A \to B$ è ***suriettiva*** (o è una ***suriezione***) se ogni elemento del codominio è un OUT:
+> $$\forall b \in B \;\; \exists\, a \in A : f(a) = b \, ,$$
+> cioè se $f(A) = B$.
+
+Ogni elemento del codominio ha **almeno una** controimmagine. Detto con le equazioni: $f$ è suriettiva se l'equazione $f(x) = k$, nell'incognita $x$, ha almeno una soluzione **per ogni** $k \in B$.
+
+**Esempio.** $f \colon \mathbb{R} \to \mathbb{R}$, $f(x) = 2x + 5$, è suriettiva: per ogni $k \in \mathbb{R}$ l'equazione $2x + 5 = k$ ha la soluzione $x = \frac{k - 5}{2}$. Invece $g \colon \mathbb{R} \to \mathbb{R}$, $g(x) = x^2$, non è suriettiva: $x^2 = -1$ non ha soluzioni reali, cioè $-1$ non ha controimmagini.
+
+### Biiettività
+
+> **Definizione.** Una funzione è ***biiettiva*** (o è una ***biiezione***, o una *corrispondenza biunivoca*) se è sia iniettiva sia suriettiva:
+> $$\forall b \in B \;\; \exists!\, a \in A : f(a) = b \, .$$
+
+Ogni elemento del codominio ha **esattamente una** controimmagine. Riassumendo:
+
+| $f$ è… | ogni $b \in B$ ha… | la retta $y = k$, per ogni $k \in B$, taglia il grafico… |
+| :--- | :--- | :--- |
+| iniettiva | al più una controimmagine | al più una volta |
+| suriettiva | almeno una controimmagine | almeno una volta |
+| biiettiva | esattamente una controimmagine | esattamente una volta |
+
+L'ultima colonna è il ***test della retta orizzontale***: le controimmagini di $k$ sono le ascisse dei punti in cui la retta $y = k$ taglia il grafico. È il "gemello" del test della retta verticale: quello controlla gli IN (è una funzione?), questo controlla gli OUT.
+
+Nel diagramma, $f$ è iniettiva ma non suriettiva, $g$ è suriettiva ma non iniettiva. *Prima di guardare il riquadro delle proprietà: si potrebbe costruire una funzione suriettiva da $A$ (tre elementi) in $B$ (quattro elementi)? E una iniettiva da $B$ in $C$?*
+
+```sets
+{
+  "sets": [
+    { "id": "A", "elements": ["1", "2", "3"], "order": "given" },
+    { "id": "B", "elements": ["a", "b", "c", "d"], "order": "given" },
+    { "id": "C", "elements": ["x", "y", "z"], "order": "given" }
+  ],
+  "maps": [
+    { "id": "f", "from": "A", "to": "B", "pairs": { "1": "a", "2": "b", "3": "d" } },
+    { "id": "g", "from": "B", "to": "C", "pairs": { "a": "x", "b": "y", "c": "y", "d": "z" }, "color": "blue" }
+  ],
+  "show": ["properties(f)", "properties(g)", "collisions(g)"]
+}
+```
+
+### Dipende dal dominio e dal codominio
+
+La stessa legge $x \mapsto x^2$ può dare funzioni iniettive o no, suriettive o no: dipende da dove prendiamo gli IN e da quali OUT ammettiamo. Con gli slider scegli il dominio $[a, 2]$ e il codominio $[c, 4]$; con $k$ muovi la retta orizzontale.
+
+*Prima di muovere gli slider: come devi scegliere $a$ perché $f$ sia iniettiva? E $c$, perché sia suriettiva?*
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "D", "interval": "[a, 2]" }, { "id": "C", "interval": "[c, 4]" }],
+  "maps": [{ "id": "f", "from": "D", "to": "C", "expr": "x^2" }],
+  "params": {
+    "a": { "min": -2, "max": 1.5, "step": 0.1, "val": -1 },
+    "c": { "min": -1, "max": 3, "step": 0.1, "val": -1 },
+    "k": { "min": -1, "max": 4, "step": 0.05, "val": 0.5 }
+  },
+  "show": ["image(f)", "properties(f)", "preimage(f, k)"],
+  "plot": { "maps": ["f"], "lines": [{ "y": "k" }, { "y": "c", "dash": false, "color": "gray" }], "xlim": [-2.2, 2.2], "ylim": [-1.2, 4.4] }
+}
+```
+
+Si nota che:
+- $f$ è iniettiva quando il dominio non contiene numeri opposti, cioè per $a \geq 0$;
+- $f$ è suriettiva quando il codominio coincide con l'immagine: per $a \leq 0$ l'immagine è $[0, 4]$, e serve $c = 0$;
+- con $a = 0$ e $c = 0$, cioè $f \colon [0, 2] \to [0, 4]$, la funzione è biiettiva.
+
+L'iniettività dipende dalla legge e dal dominio. La suriettività dipende **anche dal codominio**: ogni funzione diventa suriettiva se restringiamo il codominio alla sua immagine, cioè se la consideriamo come $f \colon A \to f(A)$.
+
+> [!DETAILS] Ma allora perché non si sceglie sempre l'immagine come codominio?
+>
+> Per due ragioni. La prima è che spesso l'immagine non si conosce, o è molto difficile da determinare. Pensiamo alla funzione che associa a ogni istante la posizione di una particella di gas in un contenitore: il codominio naturale è l'insieme dei punti del contenitore, mentre l'immagine, cioè l'insieme dei punti in cui la particella è effettivamente passata, è praticamente impossibile da calcolare.
+>
+> La seconda ragione è che la domanda «$f \colon A \to B$ è suriettiva?» è interessante proprio perché il codominio è fissato: vuol dire «l'equazione $f(x) = k$ ha sempre soluzione, qualunque sia $k \in B$?». Ad esempio, chiedersi se $x \mapsto x^3 + x$ è suriettiva da $\mathbb{R}$ in $\mathbb{R}$ vuol dire chiedersi se ogni equazione di terzo grado della forma $x^3 + x = k$ ha una soluzione reale.
