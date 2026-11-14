@@ -87,6 +87,8 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 
 I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
 
+Gli argomenti possono contenere parametri: `preimage(f, k)`, `image(f, [a, b])`, `preimage(f, [0, k])` si aggiornano con gli slider. Un nome è un elemento se il codominio è finito e lo contiene, altrimenti è un'espressione (un parametro). Con un parametro, o quando il risultato è vuoto, il valore va in una riga sotto il diagramma: $f^{-1}(\{1\}) = \{-1;\ 1\}$, oppure $= \emptyset$. In un'evidenziazione `"readout": true` o `false` la mostra o la toglie sempre.
+
 ### Evidenziazioni
 
 `{ "of": "preimage(f, b_1)", "label": "f^{-1}(b_1)", "color": "blue", "hidden": true, "id": "pre" }`, oppure `{ "set": "A", "elements": ["a_1", "a_2"], "label": "S" }` o `{ "set": "I", "interval": "[0, 1/2]" }`. Colori: `green`, `blue`, `orange`, `red`, `yellow`, `purple`, `gray`, le voci delle palette (`summer3`) o un colore CSS.
@@ -596,5 +598,24 @@ La stessa funzione in riga e in colonna. Passa sopra un elemento: si evidenzia a
   "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }],
   "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "4", "3": "3", "4": "1" } }],
   "iterate": { "map": "f", "start": "1", "steps": 5, "showValue": false }
+}
+```
+
+### Parametri nei selettori
+
+$f(x) = x^2$ su $[-2, 2]$. Con lo slider $k$ la retta $y = k$ incontra il grafico in due punti, in uno o in nessuno: è la controimmagine di $k$. Con $a$ e $b$ cambia l'intervallo di cui si prende l'immagine.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[-1, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": {
+    "k": { "min": -1, "max": 4, "step": 0.05, "val": 1 },
+    "a": { "min": -2, "max": 2, "step": 0.1, "val": -0.5 },
+    "b": { "min": -2, "max": 2, "step": 0.1, "val": 1.5 }
+  },
+  "show": ["preimage(f, k)"],
+  "highlights": [{ "of": "image(f, [a, b])", "color": "purple" }]
 }
 ```

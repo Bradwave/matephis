@@ -617,3 +617,37 @@ describe('Iterazione', () => {
         expect(c.values[c.values.length - 1]).toBeCloseTo(0.739085, 5);
     });
 });
+
+describe('Parametri nei selettori', () => {
+    it('preimage(f, k) segue il parametro', () => {
+        const params = { k: 1 };
+        const { m, map } = model({
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-1, 4]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }],
+        }, params);
+        const pts = () => m.preimage(map('f'), parseArgument('k')).points;
+        expect(pts().map(v => +v.toFixed(6))).toEqual([-1, 1]);
+        params.k = -0.5;
+        m.refresh();
+        expect(pts()).toEqual([]);
+        params.k = 0.25;
+        m.refresh();
+        expect(m.image(map('f'), parseArgument('[k, 1]')).I).toMatchObject({ lo: 0.0625, hi: 1 });
+    });
+
+    it('un elemento del codominio finito vince su un parametro con lo stesso nome', () => {
+        const params = { a: 1, k: -1 };
+        const { m, map, warnings } = model({
+            sets: [{ id: 'R', interval: '[-2, 2]' }, { id: 'S', elements: [{ id: 'a', value: 0 }, '1', '-1'] }],
+            maps: [{ id: 's', from: 'R', to: 'S', piecewise: [{ on: '[-2, 0)', expr: '-1' }, { on: 0, expr: '0' }, { on: '(0, 2]', expr: '1' }] }],
+        }, params);
+        const scene = { isExpression: (src) => { try { return isFinite(new ExpressionCompiler({ getParams: () => params, getPoints: () => ({}), paramNames: Object.keys(params) }).eval(src)); } catch (e) { return false; } } };
+        m.isExpression = scene.isExpression;
+        // "a" is an element (value 0): the preimage is {0}
+        expect(m.preimage(map('s'), parseArgument('a')).points).toEqual([0]);
+        // "k" is not an element: it is the param, -1
+        const r = m.preimage(map('s'), parseArgument('k'));
+        expect(r.parts[0]).toMatchObject({ lo: -2, hi: 0, loClosed: true, hiClosed: false });
+        expect(warnings).toEqual([]);
+    });
+});

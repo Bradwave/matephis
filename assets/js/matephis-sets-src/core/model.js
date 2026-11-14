@@ -49,8 +49,9 @@ export class SetsModel {
      * @param {(src: string, vars: string[]) => Function} env.compile - expression -> function of vars
      * @param {(msg: string) => void} [env.warn]
      */
-    constructor(cfg, { evaluate, compile, warn = () => {} }) {
+    constructor(cfg, { evaluate, compile, warn = () => {}, isExpression = null }) {
         this.evaluate = evaluate;
+        this.isExpression = isExpression;
         this.compile = compile;
         this.warn = warn;
         this.sets = [];
@@ -1090,11 +1091,13 @@ export class SetsModel {
                 if (typeof t === 'number' || Array.isArray(t)) {
                     y = t;
                 } else if (dOut === 0) {
-                    if (!to.elementById.has(t)) {
+                    // An element of the codomain wins; otherwise an expression (a param)
+                    if (to.elementById.has(t)) y = this.elementNumber(to, t);
+                    else if (this._isExpression(t)) y = this.evaluate(t);
+                    else {
                         this.warn(`preimage(${map.id}, …): '${t}' is not an element of ${to.id}`);
                         return;
                     }
-                    y = this.elementNumber(to, t);
                 } else {
                     y = this.evaluate(t);
                 }
@@ -1258,6 +1261,12 @@ export class SetsModel {
     }
 
     /** Test for a value of a continuous codomain: a number or an interval. */
+    /** Can a string be read as a number (a param, "2*k")? Asked without warnings. */
+    _isExpression(src) {
+        if (!this.isExpression) return false;
+        return this.isExpression(String(src));
+    }
+
     _valueTest(arg) {
         if (arg.kind === 'interval') {
             const J = this._argInterval(arg);

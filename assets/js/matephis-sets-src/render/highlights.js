@@ -5,7 +5,7 @@
  */
 import { roundedHullPath, convexHull, insideHull } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
-import { parseInterval, evalInterval, intervalTeX } from '../core/interval.js';
+import { parseInterval, evalInterval, intervalTeX, niceNumber } from '../core/interval.js';
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
 
@@ -18,14 +18,19 @@ export function drawLayer(scene, layer) {
         const map = model.mapById.get(layer.sel.map);
         const def = layer.def || {};
         const { op, arg } = layer.sel;
-        if (op === 'image') {
-            const res = model.image(map, arg);
-            const label = def.label !== undefined ? def.label : imageLabel(scene, map, arg, res);
-            drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'image'), label, layer.key);
-        } else if (op === 'preimage') {
-            const res = model.preimage(map, arg);
-            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
-            drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'preimage'), label, layer.key);
+        if (op === 'image' || op === 'preimage') {
+            const res = op === 'image' ? model.image(map, arg) : model.preimage(map, arg);
+            const color = scene.color(def.color, def.of ? 'highlight' : op);
+            // With a param in the argument the value goes in a line under the
+            // diagram (with numbers, or ∅); the drawing keeps a short label
+            const live = !!arg && scene.mentionsParam(argSource(arg));
+            const readout = def.readout !== undefined ? def.readout === true : live || isEmpty(res);
+            const label = def.label !== undefined ? def.label
+                : op === 'image' ? (readout ? `${map.label}\\left(${arg ? argTeX(arg, model) : setLabelText(model, map.from)}\\right)` : imageLabel(scene, map, arg, res))
+                    : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
+            drawResult(scene, res, color, label, layer.key);
+            if (!readout) return null;
+            return { tex: readoutTeX(scene, op, map, arg, res, def), color };
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
         }
@@ -52,6 +57,56 @@ export function drawLayer(scene, layer) {
     } else {
         scene._addWarning(`highlight '${layer.key}': needs "elements" (finite set) or "interval"`);
     }
+}
+
+/** The text of a selector argument (to look for params in it). */
+function argSource(arg) {
+    if (arg.kind === 'elements') return arg.ids.join(',');
+    if (arg.kind === 'interval' || arg.kind === 'selector') return arg.src;
+    return String(arg.id !== undefined ? arg.id : arg.value);
+}
+
+function isEmpty(res) {
+    if (!res) return false;
+    if (res.kind === 'elements') return res.ids.length === 0;
+    if (res.kind === 'points') return res.points.length === 0;
+    if (res.kind === 'intervals') return res.parts.length === 0;
+    return false;
+}
+
+/** An argument with its params replaced by their values: "k" -> "\{0{,}5\}", "[0, k]" -> "[0, 0{,}5]". */
+function argValueTeX(scene, arg) {
+    const val = (src) => {
+        const v = scene._num(src);
+        return typeof v === 'number' && isFinite(v) ? niceNumber(v) : String(src);
+    };
+    if (arg.kind === 'interval') {
+        const p = parseInterval(arg.src);
+        return p ? intervalTeX(evalInterval(p, (x) => scene._num(x))) : arg.src;
+    }
+    if (arg.kind === 'elements') return `\\{${arg.ids.map(id => (scene.mentionsParam(id) ? val(id) : id)).join(',\\,')}\\}`;
+    if (arg.kind === 'selector') return argTeX(arg, scene.model);
+    const id = arg.id !== undefined ? arg.id : arg.value;
+    return `\\{${scene.mentionsParam(id) ? val(id) : id}\\}`;
+}
+
+/** "f^{-1}(\{0{,}5\}) = \{-0{,}71;\ 0{,}71\}", "f([0, 1]) = [0, 1]", or "= ∅". */
+function readoutTeX(scene, op, map, arg, res, def) {
+    const { model } = scene;
+    const name = def.label !== undefined ? def.label
+        : op === 'image' ? `${map.label}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
+            : `${map.label}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
+    return `${name} = ${resultTeX(res)}`;
+}
+
+/** A computed result as TeX: a set of elements or numbers, intervals, ∅. */
+export function resultTeX(res) {
+    if (!res || isEmpty(res)) return '\\emptyset';
+    if (res.kind === 'elements') return `\\left\\{${res.ids.map(id => (res.set.elementById.get(id) || { label: id }).label).join(',\\,')}\\right\\}`;
+    if (res.kind === 'points') return `\\left\\{${res.points.map(p => (Array.isArray(p) ? `(${p.map(niceNumber).join(';\\,')})` : niceNumber(p))).join(';\\ ')}\\right\\}`;
+    if (res.kind === 'interval') return intervalTeX(res.I);
+    if (res.kind === 'intervals') return res.parts.map(intervalTeX).join(' \\cup ');
+    return '\\ldots';
 }
 
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */

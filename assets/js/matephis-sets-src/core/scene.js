@@ -93,6 +93,14 @@ export class MatephisSets {
             evaluate: (v) => this._num(v, 'value'),
             compile: (src, vars) => this.compiler.fn(src, vars),
             warn: (m) => this._addWarning(m),
+            isExpression: (src) => {
+                try {
+                    const v = this.compiler.eval(src);
+                    return typeof v === 'number' && isFinite(v);
+                } catch (e) {
+                    return false;
+                }
+            },
         });
 
         this.palettes = createPalettes(this._isDark());
@@ -372,6 +380,12 @@ export class MatephisSets {
         return typeof r === 'number' ? r : NaN;
     }
 
+    /** Does a string (a selector argument) name one of the params? */
+    mentionsParam(str) {
+        const names = Object.keys(this.config.params || {});
+        return names.some(n => new RegExp(`(^|[^A-Za-z0-9_])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^A-Za-z0-9_])`).test(String(str)));
+    }
+
     setParam(key, value, redraw = true) {
         if (this.sliders && this.sliders.paramUIs[key]) this.sliders.setValue(key, value, false);
         else {
@@ -501,15 +515,18 @@ export class MatephisSets {
         drawElements(this);
         drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
         const props = [];
+        const layerReadouts = [];
         this.layers.forEach(l => {
             if (l.arrows || !this.isVisible(l)) return;
             if (l.sel && l.sel.op === 'properties') {
                 props.push(l);
                 drawPropertyMarks(this, this.model.mapById.get(l.sel.map));
+            } else {
+                const r = drawLayer(this, l);
+                if (r) layerReadouts.push(r);
             }
-            else drawLayer(this, l);
         });
-        const readouts = [...drawProbes(this), ...(this.orbits ? this.orbits.draw() : [])];
+        const readouts = [...drawProbes(this), ...(this.orbits ? this.orbits.draw() : []), ...layerReadouts];
         if (readouts.length || this.readoutEl) renderReadouts(this, readouts);
         renderProperties(this, props);
         if (this.controls) this.controls.update();
