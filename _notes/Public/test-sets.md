@@ -88,6 +88,7 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | `preimage(f, b_1)`, `preimage(f, {b_1, b_2})` | Controimmagine di un elemento o di un sottoinsieme. |
 | `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
 | `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
+| `domain(f)` | Dove $f$ ha un valore: il dominio naturale dell'espressione dentro l'insieme di partenza ($\sqrt{x - 1}$: $[1, +\infty)$), o $\mathrm{dom}(g \circ f)$ per una composizione. Una banda sulla retta, una riga sotto il diagramma, una banda sull'asse $x$ del grafico. Gli estremi sono cercati numericamente; un estremo che arriva al bordo della finestra di un insieme illimitato è $\pm\infty$. |
 | `collisions(f)` | Elementi con la stessa immagine: frecce e immagine comune in rosso. |
 | `properties(f)` | Riquadro sotto il diagramma: $f\colon A \to B$ (in TeX, come le etichette) e iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Una relazione che non è una funzione mostra solo «funzione ✗» e «biiettiva ✗»: iniettiva e suriettiva si dicono delle funzioni. Le ragioni sono nel tooltip. |
 | `arrows(f)` | Le frecce di `f` (per mostrarle con un pulsante). |
@@ -896,5 +897,19 @@ $f(x) = x - 1$ va da $[-2, 4]$ in $[-3, 3]$, ma $g(y) = \sqrt{y}$ è definita so
   "params": { "p": { "min": -2, "max": 4, "step": 0.1, "val": 0.4, "label": "x" } },
   "probe": { "map": "gf", "at": "p" },
   "show": ["domain(gf)"]
+}
+```
+
+### Il dominio naturale
+
+$f(x) = \ln(4 - x^2)$ è definita dove $4 - x^2 > 0$: su $(-2, 2)$. Lo stesso intervallo sulla retta, sotto il diagramma e sull'asse $x$ del grafico.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "R", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }, { "id": "S", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 2] }],
+  "maps": [{ "id": "f", "from": "R", "to": "S", "expr": "log(4 - x^2)", "samples": [-1.5, -1, 0, 1, 1.5] }],
+  "show": ["domain(f)"],
+  "plot": { "maps": ["f"], "xlim": [-3, 3], "ylim": [-3, 2] }
 }
 ```

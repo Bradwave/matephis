@@ -766,3 +766,14 @@ describe('Composizione quando im f non sta in dom g', () => {
         expect(warnings.some(w => /cannot compose/.test(w))).toBe(true);
     });
 });
+
+describe('Dominio naturale', () => {
+    it('domain(f) su ℝ: gli estremi oltre la finestra sono ±∞', () => {
+        const { m, map } = model({
+            sets: [{ id: 'R', interval: 'R', window: [-3, 5] }, { id: 'S', interval: 'R', window: [-3, 5] }],
+            maps: [{ id: 'f', from: 'R', to: 'S', expr: 'sqrt(x - 1)' }, { id: 'h', from: 'R', to: 'S', expr: 'log(4 - x^2)' }],
+        });
+        expect(m.domainOf(map('f'))).toEqual([{ lo: 1, hi: Infinity, loClosed: true, hiClosed: false }]);
+        expect(m.domainOf(map('h'))).toEqual([{ lo: -2, hi: 2, loClosed: false, hiClosed: false }]);
+    });
+});
