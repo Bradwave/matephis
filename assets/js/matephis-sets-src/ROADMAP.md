@@ -114,6 +114,31 @@ same group on the page. A small event bus in the shared slider manager
 together. This touches the plot and physics bundles: coordinate with their
 branches before building them.
 
+## Batch 3 (for the functions theory page) — done
+
+Documented in `test-sets.md`; one commit each:
+
+- 6a params inside selectors (`preimage(f, k)`), with a readout line (∅ too);
+- 6b `"plot"`: `lines` driven by params, highlights mirrored on the graph
+  (hidden params of the plot: the plot bundle is unchanged);
+- 6c probes at expressions of params (`"-p"`, draggable), several probes,
+  `"compare"` (order kept or reversed, parity);
+- 5 IN/OUT `"table"` (rows ↔ arrows ↔ plot points on hover);
+- 2 `"layout": "product"`: A × B as a grid of pairs, column check on hover,
+  `where` relations;
+- 1 `"integers"`: ℕ, ℤ, 2ℕ, ranges as number lines (checks in the window);
+- 6d compositions of 3+ maps, readout step by step;
+- 6e `compose` between different intervals: dom(g ∘ f) = f⁻¹(dom g);
+- 6f `domain(f)`: natural domain on the line and on the plot;
+- 6g piecewise maps on the plot piece by piece, filled and hollow ends;
+- 3 `fixed(f)`.
+
+Partial: hovering a point on the plot does not light the table row (the
+plot bundle would need a hook); clicking cells of the product grid to
+toggle pairs is not done. Later (NICE): Venn diagrams, a sign chart on the
+plot's x axis, automatic tables for pairs maps, attracting or repelling
+fixed points.
+
 ## 3. Venn and Euler diagrams
 
 `venn`, `subsets`, `shape`; selectors for set operations (`A ∩ B`, `A ∪ B`,
