@@ -19,6 +19,8 @@ function scene(cfg, params) {
         params, model, layers, warnings,
         isVisible: (l) => l.always,
         color: (c) => c || 'black',
+        _isDark: () => false,
+        mentionsParam: () => false,
         _addWarning: (m) => warnings.push(m),
     };
     return sc;
@@ -101,5 +103,21 @@ describe('Tabella IN/OUT', () => {
     it('l\'id di una composizione dà i suoi passi', () => {
         const t = new Table(scene(cfg, {}), { maps: ['fg'], in: [3] });
         expect(t.maps.map(m => m.id)).toEqual(['g', 'f']);
+    });
+});
+
+describe('Funzioni a tratti sul grafico', () => {
+    it('un grafico per tratto, punti pieni e vuoti agli estremi', () => {
+        const sc = scene({
+            sets: [{ id: 'X', interval: '[0, 2]' }, { id: 'Y', interval: '[0, 2]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', piecewise: [{ on: '[0, 1)', expr: 'x' }, { on: '[1, 2]', expr: '3 - x' }] }],
+            plot: {},
+        }, {});
+        const lp = new LinkedPlot(sc, null);
+        const { lines, dots } = lp.pieceItems(sc.model.mapById.get('f'), 'blue', '$f$');
+        expect(lines.map(l => l.domain)).toEqual([[0, 1], [1, 2]]);
+        expect(lines[1].label).toBeUndefined();
+        // [0, 1): 0 filled, 1 hollow; [1, 2]: both filled
+        expect(dots.map(d => [d.points[0][0], d.fillColor === 'blue'])).toEqual([[0, true], [1, false], [1, true], [2, true]]);
     });
 });

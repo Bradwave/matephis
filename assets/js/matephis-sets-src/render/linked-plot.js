@@ -134,6 +134,38 @@ export class LinkedPlot {
     }
 
     /**
+     * Graph of a piecewise map, piece by piece: a curve over each part of the
+     * domain where one piece applies, and a dot at each end inside the window,
+     * filled when the end belongs to that piece, hollow when it does not. The
+     * values are expressions, so they follow the params. Null when a piece is
+     * not a single expression.
+     */
+    pieceItems(m, color, label) {
+        const { model } = this.scene;
+        const w = m.from.window;
+        const bg = this.scene._isDark() ? '#181818' : '#ffffff';
+        const segs = model._segments(m, m.from.I);
+        const lines = [], dots = [];
+        for (const S of segs) {
+            const pc = m.pieces[S.piece];
+            if (!pc || typeof pc.src.expr !== 'string' && typeof pc.src.expr !== 'number') return null;
+            const e = `(${pc.src.expr})`;
+            const at = (t) => substituteX(e, `(${t})`);
+            const dot = (t, closed) => dots.push({ points: [[t, at(t)]], radius: 4.5, fillColor: closed ? color : bg, strokeColor: color, strokeWidth: 2, color });
+            if (S.lo === S.hi) {
+                dot(S.lo, true);
+                continue;
+            }
+            const lo = Math.max(S.lo, w[0]), hi = Math.min(S.hi, w[1]);
+            if (!(hi > lo)) continue;
+            lines.push({ fn: e, domain: [lo, hi], color, width: 2.2, label: lines.length ? undefined : label });
+            if (isFinite(S.lo) && S.lo >= w[0]) dot(S.lo, S.loClosed);
+            if (isFinite(S.hi) && S.hi <= w[1]) dot(S.hi, S.hiClosed);
+        }
+        return { lines, dots };
+    }
+
+    /**
      * The table's rows on the graphs: for each plotted map of the table, the
      * points (input, value) of the rows, and a ring that marks the row under
      * the pointer (hidden params _r<k>x, _r<k>y).
@@ -374,6 +406,7 @@ export class LinkedPlot {
         const color = (m) => scene.color(m.color);
         const data = [];
         const construction = def.construction === true;
+        const ends = [];
         if (def.identity === true || (construction && def.identity !== false)) {
             data.push({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
         }
@@ -398,8 +431,19 @@ export class LinkedPlot {
                 data.push({ parametric: [substituteX(e, 't'), 't'], domain: m.base.from.window.slice(), color: color(m), width: 2.2, label });
                 return;
             }
+            // A piecewise map: one graph per piece (jumps are not joined), with
+            // filled or hollow dots at the ends of the pieces
+            if (m.kind === 'piecewise' && def.ends !== false) {
+                const pieces = this.pieceItems(m, color(m), label);
+                if (pieces) {
+                    data.push(...pieces.lines);
+                    ends.push(...pieces.dots);
+                    return;
+                }
+            }
             data.push({ fn: model.exprString(m), domain: w.slice(), color: color(m), width: 2.2, label });
         });
+        data.push(...ends);
         if (def.probe !== false) data.push(...this.probeItems(construction));
         // Orbits: the cobweb between the graph and y = x
         const cobwebs = this.cobwebItems();

@@ -144,6 +144,7 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
 | `identity` | con `construction` | Disegna la retta $y = x$. |
 | `lines` | | Rette guidate dai parametri: `[{ "y": "k" }, { "x": "p", "color": "blue", "dash": false }]` ($y = k$, $x = p$). Opzioni: `color`, `dash` (default tratteggiata), `label`. |
+| `ends` | `true` | Funzioni a tratti: un grafico per ogni tratto (i salti non vengono uniti) e, agli estremi dei tratti, un punto pieno se l'estremo appartiene al tratto, vuoto se no. `false` disegna la funzione come una sola curva. |
 | `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
 Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
@@ -911,5 +912,21 @@ $f(x) = \ln(4 - x^2)$ è definita dove $4 - x^2 > 0$: su $(-2, 2)$. Lo stesso in
   "maps": [{ "id": "f", "from": "R", "to": "S", "expr": "log(4 - x^2)", "samples": [-1.5, -1, 0, 1, 1.5] }],
   "show": ["domain(f)"],
   "plot": { "maps": ["f"], "xlim": [-3, 3], "ylim": [-3, 2] }
+}
+```
+
+### Una funzione a tratti sul grafico
+
+$f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: sul grafico il salto in $x = 1$ ha un punto vuoto (il valore $1$ non è preso dal primo tratto) e uno pieno ($f(1) = 2$).
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[0, 2]" }, { "id": "Y", "interval": "[0, 2]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "piecewise": [{ "on": "[0, 1)", "expr": "x" }, { "on": "[1, 2]", "expr": "3 - x" }] }],
+  "params": { "p": { "min": 0, "max": 2, "step": 0.05, "val": 0.6, "label": "x" } },
+  "probe": { "map": "f", "at": "p" },
+  "show": ["properties(f)"],
+  "plot": { "maps": ["f"] }
 }
 ```
