@@ -434,7 +434,7 @@ export function renderProperties(scene, layers) {
         row.className = 'matephis-sets-props-row';
         const name = document.createElement('span');
         name.className = 'matephis-sets-props-name';
-        const from = setLabelText(scene.model, map.from), to = setLabelText(scene.model, map.to);
+        const from = setValueText(scene, map.from), to = setValueText(scene, map.to);
         const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
         let typeset = false;
         if (mj) {
@@ -460,7 +460,7 @@ export function renderProperties(scene, layers) {
             chips.appendChild(c);
         };
         if (!p.isFunction) chip('funzione', false, p.problems.join('; '));
-        if (!p.into) chip(`a valori in ${plain(setLabelText(scene.model, map.to))}`, false, p.problems.join('; '));
+        if (!p.into) chip(`a valori in ${plain(to)}`, false, p.problems.join('; '));
         // Injective and surjective are said of functions only
         if (p.isFunction || p.claimed) {
             chip('iniettiva', p.injective);
@@ -475,6 +475,17 @@ export function renderProperties(scene, layers) {
         }
         el.appendChild(row);
     });
+}
+
+/**
+ * A set's name in the properties row: its label, or for an interval
+ * written with params ("[a, 2]") its current value ("[-1, 2]"), so the row
+ * follows the sliders.
+ */
+function setValueText(scene, set) {
+    const text = setLabelText(scene.model, set);
+    if (set.label === undefined && set.kind === 'interval' && set.I && scene.mentionsParam(String(set.def.interval))) return intervalTeX(set.I);
+    return text;
 }
 
 /** A TeX label as plain text: "g \\circ f" -> "g ∘ f", "a_1" -> "a1". */
