@@ -477,6 +477,11 @@ export class LinkedPlot {
 
         const own = {};
         for (const key in def) if (!PLOT_KEYS.includes(key)) own[key] = def[key];
+        // "cssWidth" (or "width") sizes the plot as in a plot block: then it is not
+        // stretched to the full width, and it is centred unless "align" says otherwise
+        const sized = own.cssWidth !== undefined || own.width !== undefined;
+        if (sized && own.fullWidth === undefined) own.fullWidth = false;
+        if (sized && own.align === undefined) own.align = 'center';
         const xr = [Infinity, -Infinity], yr = [Infinity, -Infinity];
         this.maps.forEach(m => {
             const a = rangeOf(m.from), b = rangeOf(m.to);
