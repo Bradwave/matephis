@@ -10,7 +10,7 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare", "table",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare", "table", "product",
 ];
 
 /** Root keys of later phases. */
@@ -22,7 +22,7 @@ export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", 
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
 export const MAP_KEYS = [
     "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
-    "claims", "hidden", "route", "dash", "bend", "arrows", "iterate",
+    "claims", "hidden", "route", "dash", "bend", "arrows", "iterate", "where",
 ];
 export const PLANNED_MAP_KEYS = ["preset", "sequence"];
 export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color", "label", "hidden", "fill"];
@@ -59,9 +59,10 @@ export function validateConfig(config) {
         if (PLANNED_ROOT_KEYS.includes(key)) warnings.push(`Option '${key}' is not implemented yet and is ignored`);
         else warnings.push(`Unknown global option: '${key}'${didYouMean(key, [...ROOT_KEYS, ...PLANNED_ROOT_KEYS])}`);
     }
-    if (config.layout !== undefined && !['row', 'column'].includes(config.layout)) {
-        warnings.push(`layout: expected "row" or "column", got '${config.layout}'`);
+    if (config.layout !== undefined && !['row', 'column', 'product'].includes(config.layout)) {
+        warnings.push(`layout: expected "row", "column" or "product", got '${config.layout}'`);
     }
+    if (config.product !== undefined && config.layout !== 'product') warnings.push('"product" is used with "layout": "product"');
     if (config.sets !== undefined && !Array.isArray(config.sets)) warnings.push('"sets" must be an array');
     if (config.maps !== undefined && !Array.isArray(config.maps)) warnings.push('"maps" must be an array');
     (Array.isArray(config.sets) ? config.sets : []).forEach((s, i) => {

@@ -11,9 +11,21 @@ import { parseSelector } from '../core/selectors.js';
 
 const f2 = (v) => +v.toFixed(2);
 
-/** Draws one layer (it is visible). */
-export function drawLayer(scene, layer) {
+/** Draws one layer (it is visible). On a grid of pairs ("product"), results shade columns and rows. */
+export function drawLayer(scene, layer, { product = null } = {}) {
     const { model } = scene;
+    if (product) {
+        const def = layer.def || {};
+        const color = scene.color(def.color, 'highlight');
+        if (layer.sel && (layer.sel.op === 'image' || layer.sel.op === 'preimage')) {
+            const map = model.mapById.get(layer.sel.map);
+            const res = layer.sel.op === 'image' ? model.image(map, layer.sel.arg) : model.preimage(map, layer.sel.arg);
+            product.drawResult(res, scene.color(def.color, layer.sel.op), def.label);
+        } else if (layer.set && Array.isArray(def.elements)) {
+            product.drawResult({ kind: 'elements', set: layer.set, ids: def.elements.map(String) }, color, def.label);
+        }
+        return null;
+    }
     if (layer.sel) {
         const map = model.mapById.get(layer.sel.map);
         const def = layer.def || {};

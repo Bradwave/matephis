@@ -651,3 +651,18 @@ describe('Parametri nei selettori', () => {
         expect(warnings).toEqual([]);
     });
 });
+
+describe('Relazioni date da una condizione', () => {
+    it('"where" sceglie le coppie che soddisfano la condizione', () => {
+        const { m, map, warnings } = model({
+            sets: [{ id: 'A', elements: ['1', '2', '3', '4'] }, { id: 'B', elements: ['1', '2', '3', '4'] }],
+            maps: [{ id: 'r', from: 'A', to: 'B', where: 'x < y' }, { id: 's', from: 'A', to: 'B', where: 'x + y == 5' }],
+        });
+        expect(warnings).toEqual([]);
+        expect(m.apply(map('r'), '2')).toEqual(['3', '4']);
+        expect(m.apply(map('r'), '4')).toEqual([]);
+        expect(m.properties(map('r')).isFunction).toBe(false);
+        expect(['1', '2', '3', '4'].map(a => m.apply(map('s'), a))).toEqual([['4'], ['3'], ['2'], ['1']]);
+        expect(m.properties(map('s'))).toMatchObject({ isFunction: true, bijective: true });
+    });
+});

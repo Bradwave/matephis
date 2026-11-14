@@ -255,7 +255,20 @@ export class SetsModel {
             this.warn(`map '${id}': unknown set in "from"/"to" ('${def.from}', '${def.to}')`);
             return;
         }
-        if (def.pairs !== undefined) {
+        if (def.where !== undefined) {
+            // A relation given by a condition on (x, y): the pairs that satisfy it
+            map.kind = 'where';
+            try {
+                map.cond = this.compile(String(def.where), ['x', 'y']);
+            } catch (e) {
+                this.warn(`map '${id}': "where" ${e.message}`);
+                return;
+            }
+            if (!['finite', 'integers'].includes(map.to.kind)) {
+                this.warn(`map '${id}': "where" needs a codomain whose elements can be listed (a finite set, or integers)`);
+                return;
+            }
+        } else if (def.pairs !== undefined) {
             map.kind = 'pairs';
             this._readPairs(map, def.pairs);
         } else if (def.piecewise !== undefined) {
@@ -266,7 +279,7 @@ export class SetsModel {
             map.kind = 'expr';
             this._readExpr(map, def.expr);
         } else {
-            this.warn(`map '${id}': needs "pairs", "expr", "piecewise", "compose" or "inverse"`);
+            this.warn(`map '${id}': needs "pairs", "expr", "piecewise", "where", "compose" or "inverse"`);
             return;
         }
         this.maps.push(map);
@@ -574,6 +587,15 @@ export class SetsModel {
                 current = next;
             }
             return current;
+        }
+        if (map.kind === 'where') {
+            const xv = map.from.kind === 'finite' ? this.elementNumber(map.from, String(x)) : x;
+            if (xv === null) return [];
+            const ys = map.to.kind === 'finite' ? map.to.elements.filter(e => e.num !== null).map(e => [e.id, e.num]) : (map.to.points || []).map(n => [n, n]);
+            return ys.filter(([, yv]) => {
+                const r = map.cond(xv, yv);
+                return r === true || (typeof r === 'number' && r !== 0 && !isNaN(r));
+            }).map(([id]) => id);
         }
         if (map.kind === 'pairs') {
             const list = map.pairs.get(String(x)) || [];

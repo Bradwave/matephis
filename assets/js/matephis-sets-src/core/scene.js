@@ -26,6 +26,7 @@ import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts, compareReado
 import { Orbits } from '../render/orbits.js';
 import { SyncGroup } from './sync.js';
 import { Table } from '../render/table.js';
+import { Product } from '../render/product.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
 import { LinkedPlot } from '../render/linked-plot.js';
 
@@ -120,6 +121,11 @@ export class MatephisSets {
 
         // The IN/OUT table: its inputs become arrow samples, so it exists before the first draw
         if (cfg.table !== undefined) this.table = new Table(this, cfg.table);
+        // A × B as a grid of pairs
+        if (cfg.layout === 'product') {
+            this.product = new Product(this, cfg.product);
+            if (!this.product.ok) this.product = null;
+        }
         this._initLayers();
         this._initSVG();
         if (this.table) {
@@ -500,7 +506,7 @@ export class MatephisSets {
         // Room under the sets: curves of compositions, labels of collisions
         const footer = this.layers.some(l => (l.arrows && this._routed(l.map) && this._curveShown(l))
             || (l.sel && l.sel.op === 'collisions' && this.isVisible(l)));
-        this.layout = computeLayout(this.model, {
+        this.layout = this.product ? this.product.layout() : computeLayout(this.model, {
             width: this.width, orient: this.orient, fontSize: this.fontSize,
             measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: this.orient }),
             footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined, selfSets: this._selfSets(),
@@ -526,18 +532,24 @@ export class MatephisSets {
         });
 
         const arrowLayers = this.layers.filter(l => l.arrows);
-        drawSets(this);
-        arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
-        drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
-        drawElements(this);
-        drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
+        if (this.product) {
+            this.product.draw();
+        } else {
+            drawSets(this);
+            arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
+            drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
+            drawElements(this);
+            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
+        }
         const props = [];
         const layerReadouts = [];
         this.layers.forEach(l => {
             if (l.arrows || !this.isVisible(l)) return;
             if (l.sel && l.sel.op === 'properties') {
                 props.push(l);
-                drawPropertyMarks(this, this.model.mapById.get(l.sel.map));
+                if (!this.product) drawPropertyMarks(this, this.model.mapById.get(l.sel.map));
+            } else if (this.product) {
+                drawLayer(this, l, { product: this.product });
             } else {
                 const r = drawLayer(this, l);
                 if (r) layerReadouts.push(r);

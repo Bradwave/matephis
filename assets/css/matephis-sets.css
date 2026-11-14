@@ -412,3 +412,48 @@
 [data-theme="dark"] .matephis-sets-table tbody tr.mps-lit {
   background: rgba(255, 107, 107, 0.12);
 }
+
+/* ==========================================================================
+   A × B as a grid of pairs ("layout": "product")
+   ========================================================================== */
+
+.matephis-sets-svg .mps-cell {
+  fill: var(--sets-soft);
+  opacity: 0.55;
+}
+
+.matephis-sets-svg .mps-pair {
+  stroke: var(--bg, #fff);
+  stroke-width: 1.5px;
+}
+
+.matephis-sets-svg .mps-col,
+.matephis-sets-svg .mps-row {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  outline: none;
+}
+
+/* A column lit by hover: the map's colour with one mark, red with none or several */
+.matephis-sets-svg .mps-col.mps-lit,
+.matephis-sets-svg .mps-row.mps-lit {
+  fill: var(--mps-col);
+  fill-opacity: 0.1;
+  stroke: var(--mps-col);
+  stroke-width: 1.6px;
+}
+
+.matephis-sets-svg .mps-col.is-bad.mps-lit {
+  fill-opacity: 0.14;
+  stroke-width: 2.2px;
+}
+
+.matephis-sets-svg .mps-axis-label {
+  pointer-events: all;
+}
+
+.matephis-sets-svg .mps-band-rect {
+  fill-opacity: 0.16;
+  stroke-width: 1.4px;
+}

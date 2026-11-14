@@ -23,7 +23,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `controls` | Array | | Pulsanti, come nelle scene di fisica: `reveal` mostra selettori o evidenziazioni nascosti, `toggle` cambia un parametro. |
 | `probe` | Object/Array | | Punto su un dominio continuo, con la freccia verso la sua immagine (vedi «Domini continui»). |
 | `params`, `animate` | | | Slider, come nei grafici. Usabili negli estremi degli intervalli e nelle espressioni. |
-| `layout` | `"row"`/`"column"` | `"row"` | Insiemi affiancati (elementi in colonna) o uno sotto l'altro (elementi in riga). |
+| `layout` | `"row"`/`"column"`/`"product"` | `"row"` | Insiemi affiancati (elementi in colonna), uno sotto l'altro (elementi in riga), o il prodotto cartesiano $A \times B$ come griglia di coppie (vedi «Prodotto cartesiano»). |
+| `product` | Object | | Con `"layout": "product"`: `{ "map": "r", "x": "A", "y": "B" }`. |
 | `dynagraph` | Boolean/Object | | Dynagraph: gli intervalli diventano rette parallele una sotto l'altra, con la stessa scala, tacche e numeri (vedi «Dynagraph e grafici»). |
 | `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
 | `iterate` | Object/Array | | Orbita di un punto, un passo alla volta: $x_0, f(x_0), f(f(x_0)), \dots$ (vedi «Iterazione e blocchi collegati»). |
@@ -61,6 +62,7 @@ Un elemento con un valore numerico (`"2"`, oppure `{ "id": "a", "value": 2 }`) p
 | `pairs` | Coppie `{ "a_1": "b_1" }`; un array (`{ "a_1": ["b_1", "b_2"] }`) dà una relazione che non è una funzione, e il motore lo segnala. |
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
 | `piecewise` | Funzione a tratti: `[{ "on": "(-inf, 0)", "expr": "-x" }, { "on": 0, "expr": "0" }, { "on": "(0, +inf)", "expr": "1" }]`. Ogni tratto vale su un intervallo (`on`, oppure un numero per un solo punto) o dove vale una condizione (`if`: `"x^2 + y^2 < 1"`, anche nel piano); un tratto senza `on` e `if` vale ovunque altrove. Si usa il primo tratto che vale; dove non ne vale nessuno la funzione non è definita (e il motore lo segnala). Immagine, controimmagine e iniettività tengono conto dei salti tra un tratto e l'altro. |
+| `where` | Relazione data da una condizione su $(x, y)$: `"x + y == 3"`, `"x < y"`. Tra insiemi di numeri di cui si possono elencare gli elementi (finiti, interi). |
 | `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g`. Il motore controlla che il codominio di `f` sia il dominio di `g`. |
 | `iterate` | `["f", 3]` è $f^3 = f \circ f \circ f$; il numero può essere un parametro (`["f", "n"]`, intero da 0 a 50) e allora cambia con lo slider. `f` deve andare da un insieme in sé; $f^0$ è l'identità. Etichetta di default $f^{3}$ (con il valore attuale di $n$). Le sue frecce si vedono come quelle di una funzione qualsiasi. |
 | `inverse` | `"f"`: l'inversa di `f`, dal codominio al dominio di `f` (non servono `from` e `to`; etichetta di default $f^{-1}$). Ogni valore va nei punti dove `f` lo assume: se `f` non è biiettiva l'inversa è una relazione e il riquadro delle proprietà lo spiega. Le sue frecce si curvano per non coprire quelle di `f`. Per funzioni tra insiemi finiti e intervalli. |
@@ -89,7 +91,7 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 
 I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
 
-Gli argomenti possono contenere parametri: `preimage(f, k)`, `image(f, [a, b])`, `preimage(f, [0, k])` si aggiornano con gli slider. Un nome è un elemento se il codominio è finito e lo contiene, altrimenti è un'espressione (un parametro). Con un parametro, o quando il risultato è vuoto, il valore va in una riga sotto il diagramma: $f^{-1}(\{1\}) = \{-1;\ 1\}$, oppure $= \emptyset$. In un'evidenziazione `"readout": true` o `false` la mostra o la toglie sempre.
+Gli argomenti possono contenere parametri: `preimage(f, k)`, `image(f, [a, b])`, `preimage(f, [0, k])` si aggiornano con gli slider. Un nome è un elemento se il codominio è finito e lo contiene, altrimenti è un'espressione (un parametro). Con un parametro, o quando il risultato è vuoto, il valore va in una riga sotto il diagramma: $f^{-1}(\lbrace 1\rbrace ) = \lbrace -1;\ 1\rbrace $, oppure $= \emptyset$. In un'evidenziazione `"readout": true` o `false` la mostra o la toglie sempre.
 
 ### Evidenziazioni
 
@@ -141,6 +143,12 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
 Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
+
+### Prodotto cartesiano
+
+Con `"layout": "product"` una funzione (o una relazione) è l'insieme delle sue coppie: $A$ lungo l'asse $x$, $B$ lungo l'asse $y$, un puntino chiaro per ogni coppia $(a, b) \in A \times B$ e un punto pieno per le coppie della funzione. `"product": { "map": "r", "x": "A", "y": "B" }` sceglie la funzione e gli assi (di default dominio e codominio).
+
+Passando su una colonna (o sulla sua etichetta) la colonna si evidenzia: nel colore della funzione se ha esattamente un punto, in rosso se non ne ha o ne ha più di uno. È la stessa verifica del riquadro delle proprietà («funzione ✗»). Colonne e righe hanno le chiavi degli elementi: con `sync` un diagramma a frecce degli stessi insiemi si accende insieme. Le evidenziazioni di elementi (anche `image`, `preimage`) colorano colonne o righe.
 
 ### Tabella IN/OUT
 
@@ -648,7 +656,7 @@ $f(x) = x^2$ su $[-2, 2]$. Con lo slider $k$ la retta $y = k$ incontra il grafic
 
 ### Rette e controimmagini sul grafico
 
-La stessa controimmagine sul diagramma e sul grafico: la retta $y = k$ taglia il grafico nei punti di $f^{-1}(\{k\})$. Se per ogni $k$ del codominio c'è almeno un punto, $f$ è suriettiva; se non ce n'è mai più di uno, è iniettiva.
+La stessa controimmagine sul diagramma e sul grafico: la retta $y = k$ taglia il grafico nei punti di $f^{-1}(\lbrace k\rbrace )$. Se per ogni $k$ del codominio c'è almeno un punto, $f$ è suriettiva; se non ce n'è mai più di uno, è iniettiva.
 
 ```sets
 {
@@ -716,5 +724,43 @@ Prima $g(x) = x + 1$, poi $f(x) = x^2$. Passa su una riga: si accendono le sue f
   "probe": { "map": "fg", "at": "p" },
   "table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1], "probe": true, "headers": ["\\text{IN}", "\\text{OUT}", "\\text{OUT}_2"] },
   "plot": { "maps": ["g", "f"], "position": "below" }
+}
+```
+
+### Le coppie di una relazione
+
+Le stesse coppie come frecce e come punti della griglia (i due blocchi hanno `"sync": "pairs"`). Passa su $2$: due punti nella colonna, in rosso; su $3$: nessuno. Passando su un elemento nel diagramma a frecce si accende la sua colonna.
+
+```sets
+{
+  "sync": "pairs",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3"] }, { "id": "B", "elements": ["a", "b", "c"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "pairs": { "1": "a", "2": ["a", "c"] } }],
+  "show": ["properties(r)"]
+}
+```
+
+```sets
+{
+  "sync": "pairs",
+  "layout": "product",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3"] }, { "id": "B", "elements": ["a", "b", "c"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "pairs": { "1": "a", "2": ["a", "c"] } }],
+  "product": { "map": "r" }
+}
+```
+
+### Una relazione data da una condizione
+
+$x < y$ su $A = \lbrace 1, 2, 3, 4\rbrace $: ogni colonna ha i punti sopra la diagonale; $4$ non ne ha nessuno.
+
+```sets
+{
+  "layout": "product",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }, { "id": "B", "label": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "where": "x < y" }],
+  "product": { "map": "r" },
+  "highlights": [{ "set": "A", "elements": ["4"], "color": "red", "label": "4" }],
+  "show": ["properties(r)"]
 }
 ```
