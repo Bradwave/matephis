@@ -2,7 +2,8 @@
 
 Phase 1 (sets and maps, images, preimages, collisions, properties, probes)
 is done: see `_notes/Public/test-sets.md`. Options of later phases are
-already reserved in `core/config.js` and only warn.
+already reserved in `core/config.js` and only warn. Iteration and `"sync"`
+are done too (see 2d and 5).
 
 Syntax below is a proposal until it lands in `test-sets.md`. Any change to
 the ```` ```sets ```` syntax must update that page: the function exercises
@@ -23,7 +24,7 @@ the ```` ```sets ```` syntax must update that page: the function exercises
 - Not covered yet: inverses of maps from or into the plane, images of
   piecewise maps in the plane, preimages into the plane.
 
-## 2. Dynagraphs, linked plots and composition — 2a–2c done, 2d open
+## 2. Dynagraphs, linked plots and composition — done
 
 Done (documented in `test-sets.md`): `"dynagraph"` (shared scale, ticks,
 thin sample arrows), probe `"trace"`, probes that step through a
@@ -33,8 +34,11 @@ own formulas, params kept in sync both ways, `"construction"`). The site
 loads the plot engine on pages whose sets blocks have a `"plot"`
 (`_plugins/asset_injector.rb`). Inverses are drawn as reflected graphs.
 
-Still open: 2d (`"sync"` between separate blocks; reserved, warns), which
-needs a change in the plot engine's slider manager.
+2d is done for sets blocks: `"sync": "name"` links the blocks of a group on
+the page (same-named params, hover, orbit steps), in `core/sync.js`, inside
+the sets bundle. Linking a hand-written ```` ```matephis ```` plot would
+still need the event bus in the plot engine's slider manager (and rebuilding
+the plot and physics bundles); a sets block's own `"plot"` covers graphs.
 
 The original plan follows.
 
@@ -110,6 +114,31 @@ same group on the page. A small event bus in the shared slider manager
 together. This touches the plot and physics bundles: coordinate with their
 branches before building them.
 
+## Batch 3 (for the functions theory page) — done
+
+Documented in `test-sets.md`; one commit each:
+
+- 6a params inside selectors (`preimage(f, k)`), with a readout line (∅ too);
+- 6b `"plot"`: `lines` driven by params, highlights mirrored on the graph
+  (hidden params of the plot: the plot bundle is unchanged);
+- 6c probes at expressions of params (`"-p"`, draggable), several probes,
+  `"compare"` (order kept or reversed, parity);
+- 5 IN/OUT `"table"` (rows ↔ arrows ↔ plot points on hover);
+- 2 `"layout": "product"`: A × B as a grid of pairs, column check on hover,
+  `where` relations;
+- 1 `"integers"`: ℕ, ℤ, 2ℕ, ranges as number lines (checks in the window);
+- 6d compositions of 3+ maps, readout step by step;
+- 6e `compose` between different intervals: dom(g ∘ f) = f⁻¹(dom g);
+- 6f `domain(f)`: natural domain on the line and on the plot;
+- 6g piecewise maps on the plot piece by piece, filled and hollow ends;
+- 3 `fixed(f)`.
+
+Partial: hovering a point on the plot does not light the table row (the
+plot bundle would need a hook); clicking cells of the product grid to
+toggle pairs is not done. Later (NICE): Venn diagrams, a sign chart on the
+plot's x axis, automatic tables for pairs maps, attracting or repelling
+fixed points.
+
 ## 3. Venn and Euler diagrams
 
 `venn`, `subsets`, `shape`; selectors for set operations (`A ∩ B`, `A ∪ B`,
@@ -120,11 +149,22 @@ branches before building them.
 Equivalence classes and quotients, order relations (Hasse diagrams),
 `relations`, `partition`, `order`.
 
-## 5. Iteration and commutative diagrams
+## 5. Iteration — done; commutative diagrams — open
 
-- `iterate`: x₀, f(x₀), f(f(x₀)), … step by step with buttons (no tweening),
-  on a dynagraph (arrows on one line) and on the plot (cobweb).
-- `cd`: commutative diagrams, with a check that both paths give the same map.
+Done (documented in `test-sets.md`, «Iterazione e blocchi collegati»):
+
+- maps of a set into itself drawn on one set: arcs before it, loops for
+  fixed points, the map's name beside them;
+- map key `"iterate": ["f", n]`: f^n as a composition of n copies, n a
+  number or an integer param (the label follows it), f^0 the identity;
+- root `"iterate"`: orbits step by step with «Indietro», «Passo successivo»,
+  «Da capo»; numbered arrows; readout with the orbit (finite) or the last
+  step (interval); cycles, fixed points, values outside the set or where f is
+  not defined stop the orbit; with `"plot"`, the cobweb (hidden params of
+  the plot, so the plot is built once).
+
+Open: orbits in the plane; `cd`, commutative diagrams, with a check that
+both paths give the same map.
 
 ## Groundwork (any time)
 

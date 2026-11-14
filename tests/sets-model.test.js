@@ -129,6 +129,29 @@ describe('Insiemi finiti', () => {
         expect(p.isFunction).toBe(false);
         expect(p.problems).toContain('a_1 ha 2 immagini');
         expect(p.problems).toContain('a_3 non ha immagine');
+        // Injective and surjective are not claimed for a relation
+        expect(p.injective).toBe(null);
+        expect(p.surjective).toBe(null);
+        expect(p.bijective).toBe(false);
+    });
+
+    it('un minimo all\'interno del dominio: x^2 da [-1, 2] su [0, 4] è suriettiva', () => {
+        const { m, map } = model({
+            sets: [{ id: 'D', interval: '[-1, 2]' }, { id: 'C', interval: '[0, 4]' }],
+            maps: [{ id: 'f', from: 'D', to: 'C', expr: 'x^2' }],
+        });
+        const img = m.image(map('f'));
+        expect(img.I.lo).toBeCloseTo(0, 12);
+        expect(img.I.loClosed).toBe(true);
+        expect(m.properties(map('f'))).toMatchObject({ into: true, injective: false, surjective: true, bijective: false });
+    });
+
+    it('un massimo all\'interno: sin su [0, 3] su [0, 1]', () => {
+        const { m, map } = model({
+            sets: [{ id: 'D', interval: '[0, 3]' }, { id: 'C', interval: '[0, 1]' }],
+            maps: [{ id: 'f', from: 'D', to: 'C', expr: 'sin(x)' }],
+        });
+        expect(m.properties(map('f')).surjective).toBe(true);
     });
 
     it('avvisa per elementi sconosciuti', () => {
@@ -384,7 +407,7 @@ describe('Inverse', () => {
         });
         expect(m.apply(map('r'), 0.25)).toEqual([-0.5, 0.5]);
         const p = m.properties(map('r'));
-        expect(p).toMatchObject({ isFunction: false, injective: true, surjective: true, bijective: false });
+        expect(p).toMatchObject({ isFunction: false, injective: null, surjective: null, bijective: false });
         expect(m.image(map('r')).I).toMatchObject({ lo: -1, hi: 1 });
     });
 
@@ -536,5 +559,275 @@ describe('Dynagraph', () => {
         expect(shared.setById.get('Y').window).toEqual([-2, 3]);
         const own = model({ dynagraph: { scale: 'own' }, sets }).m;
         expect(own.setById.get('X').window).toEqual([0, 1]);
+    });
+});
+
+describe('Iterazione', () => {
+    const CICLO = {
+        sets: [{ id: 'A', elements: ['1', '2', '3', '4', '5'] }],
+        maps: [{ id: 'f', from: 'A', to: 'A', pairs: { 1: '2', 2: '3', 3: '1', 4: '4', 5: '1' } }],
+    };
+
+    it('f^n come composizione di n copie di f', () => {
+        const { m, map } = model({ ...CICLO, maps: [...CICLO.maps, { id: 'f2', iterate: ['f', 2] }, { id: 'f3', iterate: ['f', 3] }, { id: 'f0', iterate: ['f', 0] }] });
+        expect(map('f2').label).toBe('f^{2}');
+        expect(m.apply(map('f2'), '1')).toEqual(['3']);
+        expect(m.apply(map('f3'), '1')).toEqual(['1']);
+        expect(m.apply(map('f0'), '5')).toEqual(['5']);
+        expect(map('f0').label).toBe('\\mathrm{id}_{A}');
+        expect(m.properties(map('f3'))).toMatchObject({ injective: false, surjective: false });
+    });
+
+    it('il numero di volte può essere un parametro', () => {
+        const params = { n: 2 };
+        const { m, map } = model({
+            sets: [{ id: 'R', interval: 'R' }],
+            maps: [{ id: 'g', from: 'R', to: 'R', expr: '2x' }, { id: 'gn', iterate: ['g', 'n'] }],
+        }, params);
+        expect(m.apply(map('gn'), 1)).toEqual([4]);
+        expect(m.exprString(map('gn'))).toMatch(/2/);
+        params.n = 5;
+        m.refresh();
+        expect(m.apply(map('gn'), 1)).toEqual([32]);
+        expect(map('gn').label).toBe('g^{5}');
+    });
+
+    it('avvisa se la funzione non va da un insieme in sé', () => {
+        const { warnings } = model({
+            sets: [{ id: 'A', elements: ['a'] }, { id: 'B', elements: ['b'] }],
+            maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: 'b' } }, { id: 'f2', iterate: ['f', 2] }],
+        });
+        expect(warnings.some(w => /does not map a set into itself/.test(w))).toBe(true);
+    });
+
+    it('orbite: cicli, punti fissi, valori fuori dall\'insieme', () => {
+        const { m, map } = model(CICLO);
+        expect(m.orbit(map('f'), '5', 10)).toEqual({ values: ['5', '1', '2', '3', '1'], cycle: { start: 1, period: 3 }, stop: null });
+        expect(m.orbit(map('f'), '4', 10).cycle).toEqual({ start: 0, period: 1 });
+        expect(m.orbit(map('f'), '1', 2)).toEqual({ values: ['1', '2', '3'], cycle: null, stop: null });
+        const r = model({
+            sets: [{ id: 'I', interval: '[0, 1]' }],
+            maps: [{ id: 'q', from: 'I', to: 'I', expr: 'x + 0.4' }, { id: 'c', from: 'I', to: 'I', expr: 'cos(x)' }],
+        });
+        const o = r.m.orbit(r.map('q'), 0.1, 10);
+        expect(o.stop).toBe('outside');
+        expect(o.values.length).toBe(4);
+        const c = r.m.orbit(r.map('c'), 1, 200);
+        expect(c.cycle && c.cycle.period).toBe(1);
+        expect(c.values[c.values.length - 1]).toBeCloseTo(0.739085, 5);
+    });
+});
+
+describe('Parametri nei selettori', () => {
+    it('preimage(f, k) segue il parametro', () => {
+        const params = { k: 1 };
+        const { m, map } = model({
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-1, 4]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }],
+        }, params);
+        const pts = () => m.preimage(map('f'), parseArgument('k')).points;
+        expect(pts().map(v => +v.toFixed(6))).toEqual([-1, 1]);
+        params.k = -0.5;
+        m.refresh();
+        expect(pts()).toEqual([]);
+        params.k = 0.25;
+        m.refresh();
+        expect(m.image(map('f'), parseArgument('[k, 1]')).I).toMatchObject({ lo: 0.0625, hi: 1 });
+    });
+
+    it('un elemento del codominio finito vince su un parametro con lo stesso nome', () => {
+        const params = { a: 1, k: -1 };
+        const { m, map, warnings } = model({
+            sets: [{ id: 'R', interval: '[-2, 2]' }, { id: 'S', elements: [{ id: 'a', value: 0 }, '1', '-1'] }],
+            maps: [{ id: 's', from: 'R', to: 'S', piecewise: [{ on: '[-2, 0)', expr: '-1' }, { on: 0, expr: '0' }, { on: '(0, 2]', expr: '1' }] }],
+        }, params);
+        const scene = { isExpression: (src) => { try { return isFinite(new ExpressionCompiler({ getParams: () => params, getPoints: () => ({}), paramNames: Object.keys(params) }).eval(src)); } catch (e) { return false; } } };
+        m.isExpression = scene.isExpression;
+        // "a" is an element (value 0): the preimage is {0}
+        expect(m.preimage(map('s'), parseArgument('a')).points).toEqual([0]);
+        // "k" is not an element: it is the param, -1
+        const r = m.preimage(map('s'), parseArgument('k'));
+        expect(r.parts[0]).toMatchObject({ lo: -2, hi: 0, loClosed: true, hiClosed: false });
+        expect(warnings).toEqual([]);
+    });
+});
+
+describe('Relazioni date da una condizione', () => {
+    it('"where" sceglie le coppie che soddisfano la condizione', () => {
+        const { m, map, warnings } = model({
+            sets: [{ id: 'A', elements: ['1', '2', '3', '4'] }, { id: 'B', elements: ['1', '2', '3', '4'] }],
+            maps: [{ id: 'r', from: 'A', to: 'B', where: 'x < y' }, { id: 's', from: 'A', to: 'B', where: 'x + y == 5' }],
+        });
+        expect(warnings).toEqual([]);
+        expect(m.apply(map('r'), '2')).toEqual(['3', '4']);
+        expect(m.apply(map('r'), '4')).toEqual([]);
+        expect(m.properties(map('r')).isFunction).toBe(false);
+        expect(['1', '2', '3', '4'].map(a => m.apply(map('s'), a))).toEqual([['4'], ['3'], ['2'], ['1']]);
+        expect(m.properties(map('s'))).toMatchObject({ isFunction: true, bijective: true });
+    });
+});
+
+import { parseIntegers, intMember } from '../assets/js/matephis-sets-src/core/model.js';
+
+describe('Interi: ℕ, ℤ, 2ℕ', () => {
+    it('legge gli insiemi di interi', () => {
+        expect(parseIntegers('N')).toMatchObject({ step: 1, offset: 0, lo: 0, hi: Infinity, tex: '\\mathbb{N}' });
+        expect(parseIntegers('N*')).toMatchObject({ lo: 1, tex: '\\mathbb{N}^*' });
+        expect(parseIntegers('2N+1')).toMatchObject({ step: 2, offset: 1, lo: 1, tex: '2\\mathbb{N}+1' });
+        expect(parseIntegers('3Z')).toMatchObject({ step: 3, lo: -Infinity });
+        expect(parseIntegers('[-3, 5]')).toMatchObject({ lo: -3, hi: 5 });
+        expect(parseIntegers('Q')).toBeNull();
+        const even = parseIntegers('2N');
+        expect([0, 1, 2, 7, 8, -2].map(n => intMember(even, n))).toEqual([true, false, true, false, true, false]);
+    });
+
+    it('n ↦ 2n da ℕ in 2ℕ: una biiezione, verificata nella finestra', () => {
+        const { m, map, warnings } = model({
+            sets: [{ id: 'N', integers: 'N', window: [0, 10] }, { id: 'P', integers: '2N', window: [0, 20] }],
+            maps: [{ id: 'd', from: 'N', to: 'P', expr: '2x' }],
+        });
+        expect(warnings).toEqual([]);
+        expect(m.setById.get('N').elements.length).toBe(11);
+        expect(m.setById.get('P').elements.map(e => e.num)).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]);
+        expect(m.apply(map('d'), '3')).toEqual(['6']);
+        const p = m.properties(map('d'));
+        expect(p).toMatchObject({ isFunction: true, into: true, injective: true, surjective: null, window: true, exact: false });
+    });
+
+    it('valori oltre la finestra appartengono ancora all\'insieme; valori fuori no', () => {
+        const { m, map } = model({
+            sets: [{ id: 'N', integers: 'N', window: [0, 10] }, { id: 'M', integers: 'N', window: [0, 10] }, { id: 'P', integers: '2N', window: [0, 10] }],
+            maps: [{ id: 's', from: 'N', to: 'M', expr: 'x + 1' }, { id: 'h', from: 'N', to: 'P', expr: 'x / 2' }, { id: 'q', from: 'N', to: 'M', expr: 'floor(x/2)' }],
+        });
+        expect(m.apply(map('s'), '10')).toEqual(['11']);
+        expect(m.properties(map('s')).into).toBe(true);
+        expect(m.apply(map('h'), '3')).toEqual([{ outside: 1.5 }]);
+        expect(m.properties(map('h')).into).toBe(false);
+        expect(m.properties(map('q')).injective).toBe(false);
+    });
+
+    it('lo zig-zag da ℤ in ℕ con una funzione a tratti', () => {
+        const { m, map } = model({
+            sets: [{ id: 'Z', integers: 'Z', window: [-4, 4] }, { id: 'N', integers: 'N', window: [0, 8] }],
+            maps: [{ id: 'z', from: 'Z', to: 'N', piecewise: [{ if: 'x >= 0', expr: '2x' }, { expr: '-2x - 1' }] }],
+        });
+        expect(['-2', '-1', '0', '1', '2'].map(n => m.apply(map('z'), n)[0])).toEqual(['3', '1', '0', '2', '4']);
+        expect(m.properties(map('z'))).toMatchObject({ isFunction: true, into: true, injective: true });
+    });
+});
+
+describe('Composizioni lunghe', () => {
+    it('h ∘ t ∘ s ∘ f su quattro rette', () => {
+        const params = { a: 2, k: 1 };
+        const { m, map, warnings } = model({
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-4, 4]' }, { id: 'Z', interval: '[-8, 8]' }, { id: 'W', interval: '[-9, 9]' }],
+            maps: [
+                { id: 'f', from: 'X', to: 'Y', expr: 'x^2' },
+                { id: 's', from: 'Y', to: 'Z', expr: 'a*x' },
+                { id: 't', from: 'Z', to: 'W', expr: 'x + k' },
+                { id: 'T', compose: ['f', 's', 't'] },
+            ],
+        }, params);
+        expect(warnings).toEqual([]);
+        const T = map('T');
+        expect(T.parts.map(p => p.id)).toEqual(['f', 's', 't']);
+        expect(T.label).toBe('t \\circ s \\circ f');
+        expect(m.apply(T, 1.5)).toEqual([5.5]);
+        expect(m.exprString(T)).not.toBeNull();
+    });
+});
+
+describe('Composizione quando im f non sta in dom g', () => {
+    const cfg = (gFrom) => ({
+        sets: [{ id: 'X', interval: '[-2, 4]' }, { id: 'Y', interval: '[-3, 3]' }, { id: 'Y2', interval: '[0, 3]' }, { id: 'Z', interval: '[0, 2]' }],
+        maps: [
+            { id: 'f', from: 'X', to: 'Y', expr: 'x - 1' },
+            { id: 'g', from: gFrom, to: 'Z', expr: 'sqrt(x)' },
+            { id: 'gf', compose: ['f', 'g'] },
+        ],
+    });
+    it('insiemi diversi: dom(g ∘ f) = f^{-1}(dom g)', () => {
+        const { m, map, warnings } = model(cfg('Y2'));
+        expect(warnings).toEqual([]);
+        expect(m.apply(map('gf'), 0)).toEqual([]);
+        expect(m.apply(map('gf'), 2)).toEqual([1]);
+        expect(m.domainOf(map('gf'))).toEqual([{ lo: 1, hi: 4, loClosed: true, hiClosed: true }]);
+    });
+    it('stesso insieme, dominio naturale di g', () => {
+        const { m, map } = model(cfg('Y'));
+        expect(m.domainOf(map('gf'))).toEqual([{ lo: 1, hi: 4, loClosed: true, hiClosed: true }]);
+        expect(m.domainOf(map('g'))).toEqual([{ lo: 0, hi: 3, loClosed: true, hiClosed: true }]);
+    });
+    it('insiemi finiti diversi restano un errore', () => {
+        const { warnings } = model({
+            sets: [{ id: 'A', elements: ['a'] }, { id: 'B', elements: ['b'] }, { id: 'C', elements: ['c'] }],
+            maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: 'b' } }, { id: 'g', from: 'C', to: 'A', pairs: { c: 'a' } }, { id: 'gf', compose: ['f', 'g'] }],
+        });
+        expect(warnings.some(w => /cannot compose/.test(w))).toBe(true);
+    });
+});
+
+describe('Dominio naturale', () => {
+    it('domain(f) su ℝ: gli estremi oltre la finestra sono ±∞', () => {
+        const { m, map } = model({
+            sets: [{ id: 'R', interval: 'R', window: [-3, 5] }, { id: 'S', interval: 'R', window: [-3, 5] }],
+            maps: [{ id: 'f', from: 'R', to: 'S', expr: 'sqrt(x - 1)' }, { id: 'h', from: 'R', to: 'S', expr: 'log(4 - x^2)' }],
+        });
+        expect(m.domainOf(map('f'))).toEqual([{ lo: 1, hi: Infinity, loClosed: true, hiClosed: false }]);
+        expect(m.domainOf(map('h'))).toEqual([{ lo: -2, hi: 2, loClosed: false, hiClosed: false }]);
+    });
+});
+
+describe('Punti fissi', () => {
+    it('le soluzioni di f(x) = x', () => {
+        const params = { a: 2, c: 0.5 };
+        const { m, map } = model({
+            sets: [{ id: 'X', interval: '[-3, 3]' }, { id: 'Y', interval: '[-3, 3]' }],
+            maps: [
+                { id: 'h', from: 'X', to: 'Y', expr: 'c + a*(x - c)' },
+                { id: 'q', from: 'X', to: 'Y', expr: 'x^2' },
+                { id: 't', from: 'X', to: 'Y', expr: 'x^2 + 1/4' },
+                { id: 'id', from: 'X', to: 'Y', expr: 'x' },
+                { id: 's', from: 'X', to: 'Y', expr: 'x + 1' },
+            ],
+        }, params);
+        expect(m.fixedPoints(map('h')).points).toEqual([0.5]);
+        expect(m.fixedPoints(map('q')).points).toEqual([0, 1]);
+        // x^2 + 1/4 touches y = x at 1/2
+        expect(m.fixedPoints(map('t')).points.map(v => +v.toFixed(6))).toEqual([0.5]);
+        expect(m.fixedPoints(map('id')).all).toBe(true);
+        expect(m.fixedPoints(map('s')).points).toEqual([]);
+        params.c = -1;
+        m.refresh();
+        expect(m.fixedPoints(map('h')).points).toEqual([-1]);
+    });
+
+    it('su un insieme finito: gli elementi con f(a) = a', () => {
+        const { m, map } = model({
+            sets: [{ id: 'A', elements: ['1', '2', '3'] }],
+            maps: [{ id: 'f', from: 'A', to: 'A', pairs: { 1: '2', 2: '2', 3: '3' } }],
+        });
+        expect(m.fixedPoints(map('f')).ids).toEqual(['2', '3']);
+    });
+});
+
+describe('Nome e etichetta', () => {
+    it('"name" nelle formule, "label" sulla freccia', () => {
+        const { m, map } = model({
+            sets: [{ id: 'N', integers: 'N' }, { id: 'P', integers: '2N', window: [0, 20] }, { id: 'Q', integers: 'N', window: [0, 40] }],
+            maps: [
+                { id: 'd', label: 'n \\mapsto 2n', name: 'd', from: 'N', to: 'P', expr: '2x' },
+                { id: 'e', from: 'P', to: 'Q', expr: 'x' },
+                { id: 'ed', compose: ['d', 'e'] },
+                { id: 'dinv', inverse: 'd' },
+                { id: 'w', label: '\\lvert \\cdot \\rvert', from: 'N', to: 'Q', expr: 'x' },
+            ],
+        });
+        expect(map('d').label).toBe('n \\mapsto 2n');
+        expect(map('d').name).toBe('d');
+        expect(map('ed').label).toBe('e \\circ d');
+        expect(map('dinv').label).toBe('d^{-1}');
+        // Without "name" the label is the name, as before
+        expect(map('w').name).toBe('\\lvert \\cdot \\rvert');
     });
 });

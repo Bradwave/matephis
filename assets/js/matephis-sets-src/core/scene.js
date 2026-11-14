@@ -17,12 +17,16 @@ import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-man
 import { toTeX, estimateTextSize } from '../../matephis-physics-src/core/labels.js';
 import { validateConfig } from './config.js';
 import { SetsModel } from './model.js';
-import { computeLayout, elementOrder } from './layout.js';
+import { computeLayout, elementOrder, setLabelText } from './layout.js';
 import { parseSelector } from './selectors.js';
 import { Controls } from '../ui/controls.js';
 import { Interaction } from '../ui/interaction.js';
 import { drawSets, drawElements, drawHeader } from '../render/sets.js';
-import { drawMapArrows, drawRoutedMaps, drawProbes } from '../render/arrows.js';
+import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts, compareReadout } from '../render/arrows.js';
+import { Orbits } from '../render/orbits.js';
+import { SyncGroup } from './sync.js';
+import { Table } from '../render/table.js';
+import { Product } from '../render/product.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
 import { LinkedPlot } from '../render/linked-plot.js';
 
@@ -91,6 +95,14 @@ export class MatephisSets {
             evaluate: (v) => this._num(v, 'value'),
             compile: (src, vars) => this.compiler.fn(src, vars),
             warn: (m) => this._addWarning(m),
+            isExpression: (src) => {
+                try {
+                    const v = this.compiler.eval(src);
+                    return typeof v === 'number' && isFinite(v);
+                } catch (e) {
+                    return false;
+                }
+            },
         });
 
         this.palettes = createPalettes(this._isDark());
@@ -107,8 +119,26 @@ export class MatephisSets {
             this.linked = new LinkedPlot(this, this.plotHost);
         }
 
+        // The IN/OUT table: its inputs become arrow samples, so it exists before the first draw
+        if (cfg.table !== undefined) this.table = new Table(this, cfg.table);
+        // A × B as a grid of pairs
+        if (cfg.layout === 'product') {
+            this.product = new Product(this, cfg.product);
+            if (!this.product.ok) this.product = null;
+        }
         this._initLayers();
         this._initSVG();
+        if (this.table) {
+            if (this.table.position === 'right' && !this.split) {
+                const row = document.createElement('div');
+                row.className = 'matephis-sets-split is-right';
+                this.plotStage.before(row);
+                row.appendChild(this.plotStage);
+                row.appendChild(this.table.el);
+            } else {
+                (this.split || this.plotStage).after(this.table.el);
+            }
+        }
 
         this.propsEl = document.createElement('div');
         this.propsEl.className = 'matephis-sets-properties';
@@ -125,11 +155,24 @@ export class MatephisSets {
             this.controls = new Controls(this, cfg.controls);
             this.wrapper.appendChild(this.controls.el);
         }
+        // Orbits, step by step: their buttons go with the other buttons
+        if (cfg.iterate !== undefined) {
+            this.orbits = new Orbits(this, cfg.iterate);
+            if (this.orbits.items.length) {
+                if (this.controls) [...this.orbits.el.children].forEach(b => this.controls.el.appendChild(b));
+                else this.wrapper.appendChild(this.orbits.el);
+            }
+        }
         if (cfg.params && cfg.showSliders !== false) {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
-        if (this.linked) this.linked.mount();
+        if (this.linked) {
+            this.linked.mount();
+            this.onFocus = (key) => this.linked.focusRow(key);
+        }
+        // Blocks with the same "sync" share params, hover and orbit steps
+        if (typeof cfg.sync === 'string' && cfg.sync) this.syncGroup = SyncGroup.join(cfg.sync, this);
 
         this.interaction = new Interaction(this);
         this.draw();
@@ -205,8 +248,34 @@ export class MatephisSets {
 
     /** Width of the diagram out of the width there is: half of it when the plot is beside it. */
     _setsWidth(total) {
-        if (this.plotPosition === 'right' && total >= 2 * SIDE_MIN) return Math.floor((total - SIDE_GAP) / 2);
+        if (this.plotPosition === 'right') {
+            const half = Math.floor((total - SIDE_GAP) / 2);
+            // Beside the plot only when the diagram still has room there; else under it
+            const side = total >= 2 * SIDE_MIN && this._roomyAt(half);
+            this._wantPlot = side ? 'right' : 'below';
+            this._placePlot(this._wantPlot);
+            if (side) return half;
+        }
         return total;
+    }
+
+    /** Would the diagram be readable at width w? Lines of a column at least ~140 px (180 on a dynagraph), slots of a row ~110 px. */
+    _roomyAt(w) {
+        const n = Math.max(1, this.model.sets.length);
+        if (this.orient !== 'column') return (w - 32) / n >= 110;
+        const headerW = Math.max(20, ...this.model.sets.map(set => this.measure(setLabelText(this.model, set)).w)) + 34;
+        // Dynagraphs need room for their ticks and numbers
+        return w - 32 - headerW - 8 >= (this.dynagraph ? 180 : 140);
+    }
+
+    /** The plot beside the diagram or under it (on narrow pages, or when the diagram needs the width). */
+    _placePlot(where) {
+        if (!this.split || this._plotAt === where) return;
+        this._plotAt = where;
+        this.split.classList.toggle('is-right', where === 'right');
+        this.split.classList.toggle('is-below', where === 'below');
+        this.plotHost.classList.toggle('is-right', where === 'right');
+        this.plotHost.classList.toggle('is-below', where === 'below');
     }
 
     _initSVG() {
@@ -228,6 +297,7 @@ export class MatephisSets {
             this.split.appendChild(this.plotStage);
             this.split.appendChild(this.plotHost);
             this.wrapper.appendChild(this.split);
+            if (this._wantPlot) this._placePlot(this._wantPlot);
         } else {
             this.wrapper.appendChild(this.plotStage);
         }
@@ -269,14 +339,15 @@ export class MatephisSets {
         // The arrows of each map, element by element. A composition is drawn
         // as one curve; its element arrows only with "arrows": true or a button
         this.model.maps.forEach(m => {
-            const always = m.kind === 'compose' ? m.def.arrows === true : m.def.hidden !== true;
+            // f^n ("iterate") has no curve of its own: its arrows are shown as a map's
+            const always = m.kind === 'compose' && !m.iterate ? m.def.arrows === true : m.def.hidden !== true;
             add({ key: `arrows(${m.id})`, map: m, arrows: true, always });
         });
         const fromSelector = (str, always, where, extra = {}) => {
             const sel = parseSelector(str);
             if (!sel) return false;
             if (sel.unknown) {
-                this._addWarning(`${where}: unknown operation in '${str}' (use image, preimage, collisions, properties or arrows)`);
+                this._addWarning(`${where}: unknown operation in '${str}' (use image, preimage, domain, fixed, collisions, properties or arrows)`);
                 return true;
             }
             if (!this.model.mapById.has(sel.map)) {
@@ -357,6 +428,12 @@ export class MatephisSets {
     _num(val, context) {
         const r = this._eval(val, context);
         return typeof r === 'number' ? r : NaN;
+    }
+
+    /** Does a string (a selector argument) name one of the params? */
+    mentionsParam(str) {
+        const names = Object.keys(this.config.params || {});
+        return names.some(n => new RegExp(`(^|[^A-Za-z0-9_])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^A-Za-z0-9_])`).test(String(str)));
     }
 
     setParam(key, value, redraw = true) {
@@ -443,10 +520,15 @@ export class MatephisSets {
     requestDraw() {
         if (this._drawQueued) return;
         this._drawQueued = true;
-        requestAnimationFrame(() => {
+        const run = () => {
+            if (!this._drawQueued) return;
             this._drawQueued = false;
             if (!this._destroyed) this.draw();
-        });
+        };
+        requestAnimationFrame(run);
+        // A page in the background gets no animation frames (scripted tests, hidden
+        // panes): a timer draws anyway, so params set from JS show up
+        setTimeout(run, 120);
     }
 
     draw() {
@@ -456,10 +538,10 @@ export class MatephisSets {
         // Room under the sets: curves of compositions, labels of collisions
         const footer = this.layers.some(l => (l.arrows && this._routed(l.map) && this._curveShown(l))
             || (l.sel && l.sel.op === 'collisions' && this.isVisible(l)));
-        this.layout = computeLayout(this.model, {
+        this.layout = this.product ? this.product.layout() : computeLayout(this.model, {
             width: this.width, orient: this.orient, fontSize: this.fontSize,
             measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: this.orient }),
-            footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined,
+            footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined, selfSets: this._selfSets(),
             height: typeof cfg.height === 'number' ? cfg.height : undefined,
         });
         this.height = Math.ceil(this.layout.height);
@@ -482,26 +564,53 @@ export class MatephisSets {
         });
 
         const arrowLayers = this.layers.filter(l => l.arrows);
-        drawSets(this);
-        arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
-        drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
-        drawElements(this);
-        drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
+        if (this.product) {
+            this.product.draw();
+        } else {
+            drawSets(this);
+            arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
+            drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
+            drawElements(this);
+            // The arrow A -f-> B between the names: for the maps drawn (a hidden map
+            // is not named until a button shows it), or followed by a probe
+            const probed = new Set((Array.isArray(cfg.probe) ? cfg.probe : cfg.probe ? [cfg.probe] : []).map(p => p && String(p.map)));
+            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map) && (this.isVisible(l) || probed.has(l.map.id) || l.map.from === l.map.to)).map(l => l.map));
+        }
         const props = [];
+        const layerReadouts = [];
         this.layers.forEach(l => {
             if (l.arrows || !this.isVisible(l)) return;
             if (l.sel && l.sel.op === 'properties') {
                 props.push(l);
-                drawPropertyMarks(this, this.model.mapById.get(l.sel.map));
+                if (!this.product) drawPropertyMarks(this, this.model.mapById.get(l.sel.map));
+            } else if (this.product) {
+                drawLayer(this, l, { product: this.product });
+            } else {
+                const r = drawLayer(this, l);
+                if (r) layerReadouts.push(r);
             }
-            else drawLayer(this, l);
         });
-        drawProbes(this);
+        this.probeValues = [];
+        const readouts = [...drawProbes(this)];
+        const cmp = compareReadout(this);
+        if (cmp) readouts.push(cmp);
+        readouts.push(...(this.orbits ? this.orbits.draw() : []), ...layerReadouts);
+        if (readouts.length || this.readoutEl) renderReadouts(this, readouts);
+        if (this.table) this.table.draw();
         renderProperties(this, props);
         if (this.controls) this.controls.update();
         if (this.linked) this.linked.sync();
         this.interaction.bind();
+        if (this.syncGroup) this.syncGroup.publish(this);
         if (this._warningsDirty) this._renderWarnings();
+    }
+
+    /** Ids of sets with a map into themselves (drawn as arcs before the set) or an orbit. */
+    _selfSets() {
+        const ids = new Set();
+        this.model.maps.forEach(m => { if (m.from === m.to) ids.add(m.from.id); });
+        if (this.orbits) this.orbits.items.forEach(it => ids.add(it.map.from.id));
+        return ids;
     }
 
     /** The curve of a routed map: shown unless the map is hidden (and not revealed). */
@@ -513,7 +622,7 @@ export class MatephisSets {
     _routed(map) {
         if (!map) return false;
         if (map.def.route === 'below' || map.def.route === 'side') return true;
-        if (map.def.route === 'direct') return false;
+        if (map.def.route === 'direct' || map.from === map.to) return false;
         return map.kind === 'compose' || Math.abs(map.from.index - map.to.index) > 1;
     }
 
@@ -527,6 +636,7 @@ export class MatephisSets {
         if (this.sliders) this.sliders.destroy();
         if (this.interaction) this.interaction.destroy();
         if (this.linked) this.linked.destroy();
+        if (this.syncGroup) this.syncGroup.leave(this);
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = '';

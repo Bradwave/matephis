@@ -5,27 +5,70 @@
  */
 import { roundedHullPath, convexHull, insideHull } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
-import { parseInterval, evalInterval, intervalTeX } from '../core/interval.js';
+import { parseInterval, evalInterval, intervalTeX, niceNumber } from '../core/interval.js';
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
+import { arrow, linkArrow, fnTeX } from './arrows.js';
+
+export { fnTeX };
 
 const f2 = (v) => +v.toFixed(2);
 
-/** Draws one layer (it is visible). */
-export function drawLayer(scene, layer) {
+/** Draws one layer (it is visible). On a grid of pairs ("product"), results shade columns and rows. */
+export function drawLayer(scene, layer, { product = null } = {}) {
     const { model } = scene;
+    if (product) {
+        const def = layer.def || {};
+        const color = scene.color(def.color, 'highlight');
+        if (layer.sel && (layer.sel.op === 'image' || layer.sel.op === 'preimage')) {
+            const map = model.mapById.get(layer.sel.map);
+            const res = layer.sel.op === 'image' ? model.image(map, layer.sel.arg) : model.preimage(map, layer.sel.arg);
+            product.drawResult(res, scene.color(def.color, layer.sel.op), def.label);
+        } else if (layer.set && Array.isArray(def.elements)) {
+            product.drawResult({ kind: 'elements', set: layer.set, ids: def.elements.map(String) }, color, def.label);
+        }
+        return null;
+    }
     if (layer.sel) {
         const map = model.mapById.get(layer.sel.map);
         const def = layer.def || {};
         const { op, arg } = layer.sel;
-        if (op === 'image') {
-            const res = model.image(map, arg);
-            const label = def.label !== undefined ? def.label : imageLabel(scene, map, arg, res);
-            drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'image'), label, layer.key);
-        } else if (op === 'preimage') {
-            const res = model.preimage(map, arg);
-            const label = def.label !== undefined ? def.label : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
-            drawResult(scene, res, scene.color(def.color, def.of ? 'highlight' : 'preimage'), label, layer.key);
+        if (op === 'image' || op === 'preimage') {
+            const res = op === 'image' ? model.image(map, arg) : model.preimage(map, arg);
+            const color = scene.color(def.color, def.of ? 'highlight' : op);
+            // With a param in the argument the value goes in a line under the
+            // diagram (with numbers, or ∅); the drawing keeps a short label
+            const live = !!arg && scene.mentionsParam(argSource(arg));
+            const readout = def.readout !== undefined ? def.readout === true : live || isEmpty(res);
+            const label = def.label !== undefined ? def.label
+                : op === 'image' ? (readout ? `${map.name}\\left(${arg ? argTeX(arg, model) : setLabelText(model, map.from)}\\right)` : imageLabel(scene, map, arg, res))
+                    : `${fnTeX(map.name)}^{-1}\\left(${argTeX(arg, model)}\\right)`;
+            drawResult(scene, res, color, label, layer.key);
+            if (!readout) return null;
+            return { tex: readoutTeX(scene, op, map, arg, res, def), color };
+        } else if (op === 'fixed') {
+            // x* with f(x*) = x*: a loop on one line, a vertical arrow between two lines
+            const fx = model.fixedPoints(map);
+            const color = scene.color(def.color, 'highlight');
+            const name = def.label !== undefined ? def.label : 'x^*';
+            drawFixed(scene, map, fx, color, name);
+            if (def.readout === false) return null;
+            let tex;
+            if (fx.all) tex = `${map.name}(x) = x\\ \\text{per ogni } x`;
+            else if (map.from.kind === 'finite') tex = fx.ids.length ? `\\left\\{${fx.ids.map(id => map.from.elementById.get(id).label).join(',\\,')}\\right\\}` : '\\emptyset';
+            else tex = fx.points.length === 0 ? '\\text{nessun punto fisso}'
+                : fx.points.length === 1 ? `${name} = ${niceNumber(fx.points[0])}` : `${name} \\in \\left\\{${fx.points.map(niceNumber).join(';\\ ')}\\right\\}`;
+            if (map.from.kind === 'finite') tex = `${map.name}(a) = a:\\ a \\in ${tex}`;
+            return { tex, color };
+        } else if (op === 'domain') {
+            // dom f: where the map has a value; its readout says it with ±∞
+            const parts = model.domainOf(map);
+            const color = scene.color(def.color, 'highlight');
+            const res = { kind: 'intervals', set: map.from, parts };
+            const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.name)}`;
+            drawResult(scene, res, color, name, layer.key);
+            if (def.readout === false) return null;
+            return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}`, color };
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
         }
@@ -54,10 +97,95 @@ export function drawLayer(scene, layer) {
     }
 }
 
+
+/** The text of a selector argument (to look for params in it). */
+function argSource(arg) {
+    if (arg.kind === 'elements') return arg.ids.join(',');
+    if (arg.kind === 'interval' || arg.kind === 'selector') return arg.src;
+    return String(arg.id !== undefined ? arg.id : arg.value);
+}
+
+function isEmpty(res) {
+    if (!res) return false;
+    if (res.kind === 'elements') return res.ids.length === 0;
+    if (res.kind === 'points') return res.points.length === 0;
+    if (res.kind === 'intervals') return res.parts.length === 0;
+    return false;
+}
+
+/** An argument with its params replaced by their values: "k" -> "\{0{,}5\}", "[0, k]" -> "[0, 0{,}5]". */
+function argValueTeX(scene, arg) {
+    const val = (src) => {
+        const v = scene._num(src);
+        return typeof v === 'number' && isFinite(v) ? niceNumber(v) : String(src);
+    };
+    if (arg.kind === 'interval') {
+        const p = parseInterval(arg.src);
+        return p ? intervalTeX(evalInterval(p, (x) => scene._num(x))) : arg.src;
+    }
+    if (arg.kind === 'elements') return `\\{${arg.ids.map(id => (scene.mentionsParam(id) ? val(id) : id)).join(',\\,')}\\}`;
+    if (arg.kind === 'selector') return argTeX(arg, scene.model);
+    const id = arg.id !== undefined ? arg.id : arg.value;
+    return `\\{${scene.mentionsParam(id) ? val(id) : id}\\}`;
+}
+
+/** "f^{-1}(\{0{,}5\}) = \{-0{,}71;\ 0{,}71\}", "f([0, 1]) = [0, 1]", or "= ∅". */
+function readoutTeX(scene, op, map, arg, res, def) {
+    const { model } = scene;
+    const name = def.label !== undefined ? def.label
+        : op === 'image' ? `${map.name}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
+            : `${fnTeX(map.name)}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
+    return `${name} = ${resultTeX(res)}`;
+}
+
+/** A computed result as TeX: a set of elements or numbers, intervals, ∅. */
+export function resultTeX(res) {
+    if (!res || isEmpty(res)) return '\\emptyset';
+    if (res.kind === 'elements') return `\\left\\{${res.ids.map(id => (res.set.elementById.get(id) || { label: id }).label).join(',\\,')}\\right\\}`;
+    if (res.kind === 'points') return `\\left\\{${res.points.map(p => (Array.isArray(p) ? `(${p.map(niceNumber).join(';\\,')})` : niceNumber(p))).join(';\\ ')}\\right\\}`;
+    if (res.kind === 'interval') return intervalTeX(res.I);
+    if (res.kind === 'intervals') return res.parts.map(intervalTeX).join(' \\cup ');
+    return '\\ldots';
+}
+
+/** Fixed points on the diagram (see SetsModel.fixedPoints). */
+function drawFixed(scene, map, fx, color, name) {
+    const { layout, groups } = scene;
+    if (map.from.kind === 'finite') {
+        drawResult(scene, { kind: 'elements', set: map.from, ids: fx.ids }, color, null, `fixed(${map.id})`);
+        return;
+    }
+    const g = scene.svgEl('g', { class: 'mps-layer mps-fixed' }, groups.over);
+    const shown = (set, v) => set.kind !== 'interval' || (v >= set.window[0] - 1e-9 && v <= set.window[1] + 1e-9);
+    fx.points.forEach((x, k) => {
+        if (!shown(map.from, x)) return;
+        const a = pointPx(layout, map.from, x);
+        if (!a) return;
+        const ring = (p) => {
+            const c = scene.svgEl('circle', { cx: f2(p[0]), cy: f2(p[1]), r: 7, class: 'mps-ring' }, g);
+            c.style.stroke = color;
+        };
+        ring(a);
+        if (map.from === map.to) {
+            linkArrow(scene, g, map.from, map.to, { from: a, to: a, color, width: 2.2, head: 9 });
+        } else if (map.to.kind === 'interval' && shown(map.to, x)) {
+            const b = pointPx(layout, map.to, x);
+            if (b) {
+                arrow(scene, g, { from: a, to: b, color, width: 2.6, head: 10, trimStart: 7, trimEnd: 7 });
+                ring(b);
+            }
+        }
+        if (k === 0 && fx.points.length === 1) {
+            const row = layout.orient === 'row';
+            scene.text(a[0] + (row ? -14 : 0), a[1] + (row ? 0 : -16), name, { parent: g, color, size: scene.fontSize * 0.9, anchor: row ? 'end' : 'middle' });
+        }
+    });
+}
+
 /** "f(A)", "f(\{a_1\})", "f([0, 1/2])" for the label of an image. */
 function imageLabel(scene, map, arg, res) {
     const of = arg ? argTeX(arg, scene.model) : setLabelText(scene.model, map.from);
-    let s = `${map.label}\\left(${of}\\right)`;
+    let s = `${map.name}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
     if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
     return s;
@@ -71,7 +199,7 @@ function argTeX(arg, model) {
         const m = sel && model.mapById.get(sel.map);
         if (!m) return arg.src;
         const inner = sel.arg ? argTeX(sel.arg, model) : setLabelText(model, m.from);
-        return sel.op === 'image' ? `${m.label}\\left(${inner}\\right)` : `${m.label}^{-1}\\left(${inner}\\right)`;
+        return sel.op === 'image' ? `${m.name}\\left(${inner}\\right)` : `${m.name}^{-1}\\left(${inner}\\right)`;
     }
     if (arg.kind === 'elements') return `\\{${arg.ids.join(',\\,')}\\}`;
     if (arg.kind === 'interval') return arg.src.replace(/inf(inity)?/gi, '\\infty');
@@ -257,7 +385,7 @@ function drawCollisions(scene, map, color, label) {
         loop.style.fill = color;
         const from = map.from.elementById ? map.from : null;
         const names = c.sources.map(s => (from ? from.elementById.get(s).label : s));
-        const text = label !== undefined ? label : names.map(n => `${map.label}(${n})`).join(' = ');
+        const text = label !== undefined ? label : names.map(n => `${map.name}(${n})`).join(' = ');
         // Under the codomain's oval, one line per shared image: there is room
         // there, also on a phone (in a column, it is the codomain's last row)
         const size = scene.fontSize * 0.85;
@@ -303,28 +431,58 @@ export function renderProperties(scene, layers) {
         row.className = 'matephis-sets-props-row';
         const name = document.createElement('span');
         name.className = 'matephis-sets-props-name';
-        name.textContent = `${plain(map.label)}: ${plain(setLabelText(scene.model, map.from))} → ${plain(setLabelText(scene.model, map.to))}`;
-        row.appendChild(name);
+        const from = setValueText(scene, map.from), to = setValueText(scene, map.to);
+        const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
+        let typeset = false;
+        if (mj) {
+            try {
+                name.appendChild(window.MathJax.tex2svg(`${map.name}\\colon ${from} \\to ${to}`, { display: false }));
+                typeset = true;
+            } catch (e) { /* plain text below */ }
+        }
+        if (!typeset) name.textContent = `${plain(map.name)}: ${plain(from)} → ${plain(to)}`;
+        // Two blocks that wrap as wholes: the name (with the note), the chips
+        const head = document.createElement('span');
+        head.className = 'matephis-sets-props-head';
+        head.appendChild(name);
+        row.appendChild(head);
+        const chips = document.createElement('span');
+        chips.className = 'matephis-sets-props-chips';
+        row.appendChild(chips);
         const chip = (text, ok, title) => {
             const c = document.createElement('span');
             c.className = `matephis-sets-chip ${ok === true ? 'is-yes' : ok === false ? 'is-no' : 'is-unknown'}`;
             c.textContent = `${text} ${ok === true ? '✓' : ok === false ? '✗' : '?'}`;
             if (title) c.title = title;
-            row.appendChild(c);
+            chips.appendChild(c);
         };
         if (!p.isFunction) chip('funzione', false, p.problems.join('; '));
-        if (!p.into) chip(`a valori in ${plain(setLabelText(scene.model, map.to))}`, false, p.problems.join('; '));
-        chip('iniettiva', p.injective);
-        chip('suriettiva', p.surjective);
+        if (!p.into) chip(`a valori in ${plain(to)}`, false, p.problems.join('; '));
+        // Injective and surjective are said of functions only
+        if (p.isFunction || p.claimed) {
+            chip('iniettiva', p.injective);
+            chip('suriettiva', p.surjective);
+        }
         chip('biiettiva', p.bijective);
         if (!p.exact && !p.claimed) {
             const note = document.createElement('span');
             note.className = 'matephis-sets-props-note';
-            note.textContent = 'verifica numerica';
-            row.appendChild(note);
+            note.textContent = p.window ? 'nella finestra' : 'verifica numerica';
+            head.appendChild(note);
         }
         el.appendChild(row);
     });
+}
+
+/**
+ * A set's name in the properties row: its label, or for an interval
+ * written with params ("[a, 2]") its current value ("[-1, 2]"), so the row
+ * follows the sliders.
+ */
+function setValueText(scene, set) {
+    const text = setLabelText(scene.model, set);
+    if (set.label === undefined && set.kind === 'interval' && set.I && scene.mentionsParam(String(set.def.interval))) return intervalTeX(set.I);
+    return text;
 }
 
 /** A TeX label as plain text: "g \\circ f" -> "g ∘ f", "a_1" -> "a1". */

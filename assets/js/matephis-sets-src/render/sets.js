@@ -16,7 +16,9 @@ export function drawSets(scene) {
         if (!P) return;
         const color = set.color ? scene.color(set.color) : null;
         const g = scene.svgEl('g', { class: `mps-set mps-set-${set.kind}`, 'data-set': set.id }, groups.sets);
-        if (set.kind === 'finite') {
+        if (set.intLine) {
+            drawIntLine(scene, set, P, g, color);
+        } else if (set.kind === 'finite') {
             const el = scene.svgEl('ellipse', { cx: f2(P.cx), cy: f2(P.cy), rx: f2(P.rx), ry: f2(P.ry), class: 'mps-outline' }, g);
             if (color) el.style.stroke = color;
         } else if (set.kind === 'interval') {
@@ -82,6 +84,32 @@ function drawInterval(scene, set, P, g, color) {
     });
 }
 
+/**
+ * A number line of integers: the axis over the window (with an arrow where
+ * the set goes on), a small tick at every integer; the dots of the set's
+ * integers are its elements (drawn by drawElements).
+ */
+function drawIntLine(scene, set, P, g, color) {
+    const ink = color || scene.ink;
+    const axis = scene.svgEl('line', { x1: f2(P.start[0]), y1: f2(P.start[1]), x2: f2(P.end[0]), y2: f2(P.end[1]), class: 'mps-axis' }, g);
+    if (color) axis.style.stroke = color;
+    const w = set.window, r = set.intRule;
+    const ang = Math.atan2(P.end[1] - P.start[1], P.end[0] - P.start[0]);
+    [[P.end, ang, r.hi > (set.ownWindow || w)[1]], [P.start, ang + Math.PI, r.lo < (set.ownWindow || w)[0]]].forEach(([p, dir, more]) => {
+        if (!more) return;
+        const head = scene.svgEl('polygon', { points: arrowHeadPoints(p[0] + 6 * Math.cos(dir), p[1] + 6 * Math.sin(dir), dir, 8) }, g);
+        head.style.fill = ink;
+    });
+    const per = P.length / (w[1] - w[0]);
+    if (per < 5) return;
+    for (let n = Math.ceil(w[0]); n <= w[1]; n++) {
+        const [x, y] = P.toPx(n);
+        const row = P.orient === 'row';
+        scene.svgEl('line', row ? { x1: f2(x - 3), y1: f2(y), x2: f2(x + 3), y2: f2(y) } : { x1: f2(x), y1: f2(y - 3), x2: f2(x), y2: f2(y + 3) }, g)
+            .setAttribute('class', 'mps-tick');
+    }
+}
+
 /** A step of 1, 2 or 5 times a power of ten, giving about `n` ticks over a span. */
 export function niceStep(span, n = 8) {
     const raw = span / n;
@@ -96,7 +124,9 @@ function drawTicks(scene, set, P, g) {
     const given = scene.dynagraph.ticks;
     // About one number every 48 px, so fractions fit side by side
     const room = Math.max(2, Math.floor(P.length / 48));
-    const step = typeof given === 'number' && given > 0 && (w[1] - w[0]) / given <= 60 ? given : niceStep(w[1] - w[0], Math.min(8, room));
+    let step = typeof given === 'number' && given > 0 && (w[1] - w[0]) / given <= 60 ? given : niceStep(w[1] - w[0], Math.min(8, room));
+    // A given step on a short line: every other number (or fewer), so they never overlap
+    while (P.length * step / (w[1] - w[0]) < 24) step *= 2;
     const size = scene.fontSize * 0.8;
     const before = P.tickSide === 'before';
     for (let k = Math.ceil(w[0] / step - 1e-9); k * step <= w[1] + 1e-9; k++) {
@@ -140,7 +170,16 @@ export function drawElements(scene) {
     model.sets.forEach(set => {
         if (set.kind !== 'finite') return;
         const P = layout.sets.get(set.id);
+        // On a number line of integers, a number every so often when the dots are close
+        let every = 1;
+        if (P.intLine) {
+            const gap = P.length / Math.max(1, set.window[1] - set.window[0]) * set.intRule.step;
+            every = Math.max(1, Math.ceil(26 / gap));
+        }
+        let index = 0;
         P.elements.forEach((pos, id) => {
+            const showLabel = !P.intLine || (Math.round((set.elementById.get(id).num - set.intRule.offset) / set.intRule.step) % every === 0);
+            index++;
             const el = set.elementById.get(id);
             const color = el.color ? scene.color(el.color) : null;
             const g = scene.svgEl('g', {
@@ -151,8 +190,10 @@ export function drawElements(scene) {
             scene.svgEl('circle', { cx: f2(pos.x), cy: f2(pos.y), r: 12, class: 'mps-hit' }, g);
             const dot = scene.svgEl('circle', { cx: f2(pos.x), cy: f2(pos.y), r: 3.6, class: 'mps-dot' }, g);
             if (color) dot.style.fill = color;
-            const opts = { parent: g, color: color || scene.ink };
-            if (pos.side === 'across') {
+            const opts = { parent: g, color: color || scene.ink, size: P.intLine ? fs * 0.8 : undefined };
+            if (!showLabel) {
+                // no number here: the dot only
+            } else if (pos.side === 'across') {
                 if (P.orient === 'row') scene.text(pos.x, pos.y - fs * 0.8, el.label, opts);
                 else scene.text(pos.x + 8, pos.y - fs * 0.55, el.label, { ...opts, anchor: 'start' });
             } else if (P.orient === 'row') {
@@ -194,7 +235,24 @@ export function drawHeader(scene, maps) {
     });
     pairs.forEach((list, key) => {
         const { from, to } = list[0];
-        if (from === to) return;
+        if (from === to) {
+            // A map into itself: its name beside the arcs (left of the set in a
+            // row, over the set's name in a column)
+            const P = layout.sets.get(from.id);
+            // Only the maps drawn (or iterated): a hidden f under f^2 is not named
+            const named = list.filter(m => scene.layers.some(l => l.arrows && l.map === m && scene.isVisible(l))
+                || (scene.orbits && scene.orbits.items.some(it => it.map === m)));
+            if (!named.length) return;
+            const label = named.map(m => m.label).join(',\\ ');
+            const color = named.length === 1 && named[0].color ? scene.color(named[0].color) : scene.ink;
+            if (row) {
+                const reach = from.kind === 'finite' ? P.rx : Math.min(P.selfRoom || 40, 60);
+                scene.text(P.cx - reach - 10, P.cy, label, { parent: groups.header, color, anchor: 'end' });
+            } else {
+                scene.text(hv, P.u - scene.fontSize * 1.5, label, { parent: groups.header, color, anchor: 'end' });
+            }
+            return;
+        }
         // Maps both ways (f and its inverse): two parallel arrows, the way back
         // under (row) or left of (column) the way there, each with its label
         const back = pairs.has(`${to.id}>${from.id}`) ? (from.index < to.index ? 0 : 1) : -1;

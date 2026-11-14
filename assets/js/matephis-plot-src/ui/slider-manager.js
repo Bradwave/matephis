@@ -381,7 +381,12 @@ export class SliderManager {
         const run = () => {
             const mj = window.MathJax;
             if (!mj || !mj.typesetPromise) return;
-            mj.typesetPromise(els).then(() => {
+            // One typeset at a time, after the page's own (as MathJax advises):
+            // two typesets of the same nodes at once leave math raw
+            const queued = (mj.startup && mj.startup.promise ? mj.startup.promise : Promise.resolve())
+                .then(() => mj.typesetPromise(els));
+            if (mj.startup) mj.startup.promise = queued.catch(() => {});
+            queued.then(() => {
                 const align = () => els.forEach(alignTexBaseline);
                 align();
                 // Font metrics change once the webfont arrives
@@ -390,8 +395,7 @@ export class SliderManager {
                 this.updateLayout();
             }).catch(() => {});
         };
-        if (window.MathJax && window.MathJax.typesetPromise) run();
-        else whenMathJaxReady(run);
+        whenMathJaxReady(run);
     }
 
     _watchLayout() {

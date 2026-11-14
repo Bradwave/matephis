@@ -49,8 +49,9 @@ export class SetsModel {
      * @param {(src: string, vars: string[]) => Function} env.compile - expression -> function of vars
      * @param {(msg: string) => void} [env.warn]
      */
-    constructor(cfg, { evaluate, compile, warn = () => {} }) {
+    constructor(cfg, { evaluate, compile, warn = () => {}, isExpression = null }) {
         this.evaluate = evaluate;
+        this.isExpression = isExpression;
         this.compile = compile;
         this.warn = warn;
         this.sets = [];
@@ -81,6 +82,23 @@ export class SetsModel {
         }
         const kind = setKind(def);
         const set = { id, kind, def, label: def.label, color: def.color, index: i };
+        if (def.integers !== undefined) {
+            // Integers (ℕ, ℤ, 2ℕ, a range): a finite set of the integers in the
+            // window, drawn as a number line; values beyond the window still belong to it
+            const rule = parseIntegers(def.integers);
+            if (!rule) {
+                this.warn(`set '${id}': "integers" must be "N", "N*", "Z", "2N", "2N+1", "3Z" or a range like "[-3, 5]" (got '${def.integers}')`);
+                return;
+            }
+            set.intRule = rule;
+            set.intLine = true;
+            set.elements = [];
+            set.elementById = new Map();
+            if (set.label === undefined) set.label = rule.tex;
+            this.sets.push(set);
+            this.setById.set(id, set);
+            return;
+        }
         if (kind === 'finite') {
             const raw = Array.isArray(def.elements) ? def.elements : [];
             if (!Array.isArray(def.elements)) this.warn(`set '${id}': needs "elements" (or "interval", "rect", "disk")`);
@@ -142,6 +160,8 @@ export class SetsModel {
             } else if (set.kind === 'disk') {
                 const c = set.diskDef.center.map(v => this.evaluate(v));
                 set.disk = { cx: c[0], cy: c[1], r: this.evaluate(set.diskDef.radius), open: set.diskDef.open };
+            } else if (set.intRule) {
+                this._fillIntegers(set);
             } else if (set.kind === 'finite') {
                 set.elements.forEach(el => {
                     const v = el.value !== undefined ? this.evaluate(el.value) : Number(el.id);
@@ -150,13 +170,15 @@ export class SetsModel {
             }
         });
         if (this.sharedWindow) {
-            const lines = this.sets.filter(st => st.kind === 'interval');
+            // Number lines of integers share the scale too (their dots stay in their own window)
+            const lines = this.sets.filter(st => st.kind === 'interval' || st.intLine);
             if (lines.length > 1) {
                 const w = [Math.min(...lines.map(st => st.window[0])), Math.max(...lines.map(st => st.window[1]))];
                 lines.forEach(st => { st.window = w.slice(); });
             }
         }
         this.maps.forEach(map => {
+            if (map.iterate) this._setIterateCount(map);
             if (map.kind !== 'piecewise') return;
             map.pieces.forEach(pc => { pc.I = pc.on ? evalInterval(pc.on, ev) : null; });
             const withI = map.pieces.filter(pc => pc.I);
@@ -165,6 +187,160 @@ export class SetsModel {
             }));
         });
         this._cache = new Map();
+    }
+
+    /** The integers of a set in its window become its elements. */
+    _fillIntegers(set) {
+        const r = set.intRule;
+        let w = Array.isArray(set.def.window) && set.def.window.length === 2 ? set.def.window.map(v => this.evaluate(v)) : null;
+        if (!w || !(w[0] < w[1])) {
+            if (w) this.warn(`"window" must be [min, max] with min < max`);
+            const lo = isFinite(r.lo) ? r.lo : isFinite(r.hi) ? r.hi - 10 * r.step : -5 * r.step;
+            const hi = isFinite(r.hi) ? r.hi : lo + 10 * r.step;
+            w = isFinite(r.lo) || isFinite(r.hi) ? [lo, hi] : [-5 * r.step, 5 * r.step];
+        }
+        set.window = w.slice();
+        set.ownWindow = w.slice();
+        set.elements = [];
+        set.elementById = new Map();
+        const start = Math.ceil(w[0] - 1e-9) || 0, end = Math.floor(w[1] + 1e-9);
+        for (let n = start; n <= end && set.elements.length < 400; n++) {
+            if (!intMember(r, n)) continue;
+            const el = { id: String(n), label: String(n), num: n };
+            set.elements.push(el);
+            set.elementById.set(el.id, el);
+        }
+    }
+
+    /**
+     * Where a map of an interval has a value: a union of intervals (for an
+     * expression, its natural domain inside the set; for a composition,
+     * dom(g ∘ f) = {x : f(x) ∈ dom g}). Found by sampling and bisection; an
+     * end that reaches the edge of the window of an unbounded set is ±∞.
+     */
+    domainOf(map) {
+        const set = map.from;
+        if (set.kind !== 'interval') return [];
+        const key = `dom|${map.id}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const ok = (t) => {
+            const ys = this.apply(map, t);
+            const y = ys[0];
+            return ys.length > 0 && (typeof y === 'string' || SetsModel.validPoint(y) || (!!y && typeof y === 'object' && 'outside' in y));
+        };
+        const I = set.I, w = set.window;
+        const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
+        const n = SAMPLES_1D;
+        const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
+        const inside = (t) => !!(contains(I, t, 0) && ok(t));
+        const edge = (a, b, inA) => {
+            for (let it = 0; it < 60; it++) {
+                const m = (a + b) / 2;
+                if (inside(m) === inA) a = m; else b = m;
+            }
+            return inA ? a : b;
+        };
+        const parts = [];
+        let start = null;
+        for (let i = 0; i <= n; i++) {
+            const t = ts[i];
+            const inT = (i === 0 && !I.loClosed && isFinite(I.lo)) || (i === n && !I.hiClosed && isFinite(I.hi)) ? ok(t + (i === 0 ? 1 : -1) * 1e-9 * Math.max(1, Math.abs(t))) : inside(t);
+            if (inT && start === null) start = i === 0 ? lo : edge(ts[i - 1], t, false);
+            if (!inT && start !== null) {
+                parts.push([start, edge(ts[i - 1], t, true)]);
+                start = null;
+            }
+        }
+        if (start !== null) parts.push([start, hi]);
+        const snap = (v) => (Math.abs(v - Math.round(v)) < 1e-7 ? Math.round(v) : v);
+        const out = parts.map(([a, b]) => {
+            a = snap(a);
+            b = snap(b);
+            const loInf = a <= lo && !isFinite(I.lo), hiInf = b >= hi && !isFinite(I.hi);
+            return {
+                lo: loInf ? -Infinity : a, hi: hiInf ? Infinity : b,
+                loClosed: !loInf && contains(I, a, 0) && ok(a), hiClosed: !hiInf && contains(I, b, 0) && ok(b),
+            };
+        });
+        this._cache.set(key, out);
+        return out;
+    }
+
+    /**
+     * Fixed points of a map: where f(x) = x. On numbers (intervals, or sets
+     * of numbers) the solutions of f(x) - x = 0, by sign changes and
+     * bisection (a touching zero is found where |f(x) - x| is tiny); on a
+     * finite set of a map into itself, the elements with f(a) = a.
+     * @returns {{ points: number[], ids: string[], all: boolean }}
+     *   all: f(x) = x on the whole set (the identity)
+     */
+    fixedPoints(map) {
+        const key = `fix|${map.id}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const out = { points: [], ids: [], all: false };
+        const { from } = map;
+        if (from.kind === 'finite') {
+            from.elements.forEach(e => {
+                const ys = this.apply(map, e.id);
+                const same = ys.some(y => (typeof y === 'string' ? y === e.id && (map.to === from || this.elementNumber(map.to, y) === e.num)
+                    : typeof y === 'number' && e.num !== null && Math.abs(y - e.num) < 1e-9));
+                if (same) out.ids.push(e.id);
+            });
+        } else if (from.kind === 'interval' && this.dim(map.to) === 1) {
+            const g = (t) => this._raw1(map, t) - t;
+            const I = from.I, w = from.window;
+            const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
+            const n = SAMPLES_1D;
+            const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
+            const gs = ts.map(g);
+            const scale = Math.max(1, Math.abs(lo), Math.abs(hi));
+            const tiny = 1e-9 * scale;
+            if (gs.every(v => isFinite(v) && Math.abs(v) < tiny)) out.all = true;
+            else {
+                const add = (t) => {
+                    if (!contains(I, t, 1e-12)) return;
+                    const r = Math.abs(t - Math.round(t)) < 1e-9 ? Math.round(t) : t;
+                    if (!out.points.some(p => Math.abs(p - r) < 1e-7 * scale)) out.points.push(r);
+                };
+                for (let i = 0; i <= n; i++) {
+                    if (!isFinite(gs[i])) continue;
+                    if (Math.abs(gs[i]) < tiny) {
+                        add(ts[i]);
+                        continue;
+                    }
+                    if (i > 0 && isFinite(gs[i - 1]) && Math.abs(gs[i - 1]) >= tiny && gs[i - 1] * gs[i] < 0) {
+                        // A sign change; a jump of a piecewise map changes sign too: keep it only if g is small there
+                        let a = ts[i - 1], b = ts[i], ga = gs[i - 1];
+                        for (let it = 0; it < 80; it++) {
+                            const m = (a + b) / 2, gm = g(m);
+                            if (!isFinite(gm)) break;
+                            if (ga * gm <= 0) b = m; else { a = m; ga = gm; }
+                        }
+                        const t = (a + b) / 2;
+                        if (Math.abs(g(t)) < 1e-6 * scale) add(t);
+                    } else if (i > 0 && i < n && isFinite(gs[i - 1]) && isFinite(gs[i + 1])
+                        && Math.abs(gs[i]) < Math.abs(gs[i - 1]) && Math.abs(gs[i]) <= Math.abs(gs[i + 1]) && gs[i - 1] * gs[i + 1] > 0) {
+                        // A touching zero (no sign change): refine the minimum of |g|
+                        let a = ts[i - 1], b = ts[i + 1];
+                        const r = (Math.sqrt(5) - 1) / 2;
+                        for (let it = 0; it < 80; it++) {
+                            const c = b - r * (b - a), d = a + r * (b - a);
+                            if (Math.abs(g(c)) < Math.abs(g(d))) b = d; else a = c;
+                        }
+                        const t = (a + b) / 2;
+                        if (Math.abs(g(t)) < 1e-9 * scale) add(t);
+                    }
+                }
+                out.points.sort((a, b) => a - b);
+            }
+        }
+        this._cache.set(key, out);
+        return out;
+    }
+
+    /** Is the set infinite (integers without one of the bounds)? Its checks are made in the window. */
+    isInfinite(set) {
+        return !!(set && set.intRule && !(isFinite(set.intRule.lo) && isFinite(set.intRule.hi)));
     }
 
     /** The part of the line drawn for an interval: its endpoints, or a cut where it is unbounded. */
@@ -183,6 +359,7 @@ export class SetsModel {
 
     /** Is a point inside a continuous set? */
     containsPoint(set, p, eps = 1e-9) {
+        if (set.intRule) return typeof p === 'number' && intMember(set.intRule, p);
         if (set.kind === 'interval') return contains(set.I, p, eps);
         if (set.kind === 'rect') return Array.isArray(p) && contains(set.sides[0], p[0], eps) && contains(set.sides[1], p[1], eps);
         if (set.kind === 'disk') {
@@ -208,9 +385,23 @@ export class SetsModel {
             return;
         }
         const map = { id, def, index: i, label: def.label !== undefined ? def.label : id, color: def.color };
+        // "name" is the function's name in formulas and readouts (f(3) = 6); "label"
+        // is the caption of its arrow. The name defaults to the label, as before
+        Object.defineProperty(map, 'name', {
+            get() { return def.name !== undefined ? String(def.name) : String(this.label); },
+            enumerable: true,
+        });
 
         if (def.inverse !== undefined) {
             if (this._readInverse(map, def)) {
+                this.maps.push(map);
+                this.mapById.set(id, map);
+            }
+            return;
+        }
+
+        if (def.iterate !== undefined) {
+            if (this._readIterate(map, def)) {
                 this.maps.push(map);
                 this.mapById.set(id, map);
             }
@@ -224,8 +415,12 @@ export class SetsModel {
                 return;
             }
             for (let k = 1; k < parts.length; k++) {
-                if (parts[k - 1].to !== parts[k].from) {
-                    this.warn(`map '${id}': cannot compose, the codomain of '${parts[k - 1].id}' (${parts[k - 1].to.id}) is not the domain of '${parts[k].id}' (${parts[k].from.id})`);
+                // Between lines the sets may differ: the composition is then
+                // defined where each value lands in the next domain (dom(g ∘ f) = f^{-1}(dom g))
+                const a = parts[k - 1].to, b = parts[k].from;
+                const lines = (s) => s.kind === 'interval';
+                if (a !== b && !(lines(a) && lines(b))) {
+                    this.warn(`map '${id}': cannot compose, the codomain of '${parts[k - 1].id}' (${a.id}) is not the domain of '${parts[k].id}' (${b.id})`);
                     return;
                 }
             }
@@ -233,7 +428,7 @@ export class SetsModel {
             map.parts = parts;
             map.from = parts[0].from;
             map.to = parts[parts.length - 1].to;
-            if (def.label === undefined) map.label = parts.slice().reverse().map(p => p.label).join(' \\circ ');
+            if (def.label === undefined) map.label = parts.slice().reverse().map(p => p.name).join(' \\circ ');
             this.maps.push(map);
             this.mapById.set(id, map);
             return;
@@ -245,7 +440,20 @@ export class SetsModel {
             this.warn(`map '${id}': unknown set in "from"/"to" ('${def.from}', '${def.to}')`);
             return;
         }
-        if (def.pairs !== undefined) {
+        if (def.where !== undefined) {
+            // A relation given by a condition on (x, y): the pairs that satisfy it
+            map.kind = 'where';
+            try {
+                map.cond = this.compile(String(def.where), ['x', 'y']);
+            } catch (e) {
+                this.warn(`map '${id}': "where" ${e.message}`);
+                return;
+            }
+            if (!['finite', 'integers'].includes(map.to.kind)) {
+                this.warn(`map '${id}': "where" needs a codomain whose elements can be listed (a finite set, or integers)`);
+                return;
+            }
+        } else if (def.pairs !== undefined) {
             map.kind = 'pairs';
             this._readPairs(map, def.pairs);
         } else if (def.piecewise !== undefined) {
@@ -256,7 +464,7 @@ export class SetsModel {
             map.kind = 'expr';
             this._readExpr(map, def.expr);
         } else {
-            this.warn(`map '${id}': needs "pairs", "expr", "piecewise", "compose" or "inverse"`);
+            this.warn(`map '${id}': needs "pairs", "expr", "piecewise", "where", "compose" or "inverse"`);
             return;
         }
         this.maps.push(map);
@@ -284,7 +492,7 @@ export class SetsModel {
                 if (to.kind === 'finite') {
                     const tId = String(t);
                     if (!to.elementById.has(tId)) {
-                        this.warn(`map '${map.id}': ${map.label}(${aId}) = ${tId}, but '${tId}' is not an element of ${to.id}`);
+                        this.warn(`map '${map.id}': ${map.name}(${aId}) = ${tId}, but '${tId}' is not an element of ${to.id}`);
                         return;
                     }
                     list.push(tId);
@@ -376,6 +584,91 @@ export class SetsModel {
      * inverse of a map that is not bijective is a relation, and the engine
      * says so). For maps between finite sets and intervals.
      */
+    /**
+     * f^n, from "iterate": ["f", 3] (or a param, ["f", "n"]): a composition of
+     * n copies of f, which must map a set into itself. f^0 is the identity.
+     * The number is read again on every refresh, so a slider can change it.
+     */
+    _readIterate(map, def) {
+        const it = def.iterate;
+        const [baseId, nSrc] = Array.isArray(it) ? it : [it, 2];
+        const base = this.mapById.get(String(baseId));
+        if (!base) {
+            this.warn(`map '${map.id}': "iterate" needs a map defined before it, like ["f", 3] (unknown: '${baseId}')`);
+            return false;
+        }
+        if (base.from !== base.to) {
+            this.warn(`map '${map.id}': cannot iterate '${base.id}', it does not map a set into itself (${base.from.id} → ${base.to.id})`);
+            return false;
+        }
+        map.kind = 'compose';
+        map.iterate = { base, src: nSrc === undefined ? 2 : nSrc };
+        map.from = base.from;
+        map.to = base.to;
+        this._setIterateCount(map);
+        return true;
+    }
+
+    /** Number of copies of f in f^n (0 to 50), from its source; the label follows it. */
+    _setIterateCount(map) {
+        const { base, src } = map.iterate;
+        let n = Math.round(this.evaluate(src));
+        if (!isFinite(n) || n < 0) {
+            if (!map.iterate.warned) this.warn(`map '${map.id}': the number of times in "iterate" must be 0, 1, 2, … (got '${src}')`);
+            map.iterate.warned = true;
+            n = 0;
+        }
+        n = Math.min(n, 50);
+        if (map.iterate.n === n && map.parts) return;
+        map.iterate.n = n;
+        map.parts = Array.from({ length: n }, () => base);
+        if (map.def.label === undefined) {
+            const b = String(base.name);
+            const wrapped = /^[A-Za-z]$|^\\?[A-Za-z]+(_\{?\w+\}?)?$/.test(b) ? b : `\\left(${b}\\right)`;
+            map.label = n === 0 ? `\\mathrm{id}_{${this._setLabel(map.from)}}` : `${wrapped}^{${n}}`;
+        }
+    }
+
+    _setLabel(set) {
+        return set.label !== undefined ? String(set.label) : set.id;
+    }
+
+    /**
+     * The orbit of a point under a map of a set into itself: x0, f(x0),
+     * f(f(x0)), … up to `steps` steps. Stops where f has no value (or a value
+     * outside the set), and when a value comes back: then `cycle` says where
+     * the cycle starts and its period (1: a fixed point).
+     * @returns {{ values: any[], cycle: {start: number, period: number}|null, stop: string|null }}
+     */
+    orbit(map, x0, steps) {
+        const values = [x0];
+        let cycle = null, stop = null;
+        const same = (a, b) => (typeof a === 'number' && typeof b === 'number'
+            ? Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)) : sameValue(a, b));
+        for (let k = 0; k < steps; k++) {
+            const next = this.apply(map, values[k]);
+            const v = next[0];
+            const valid = typeof v === 'string' || SetsModel.validPoint(v);
+            if (next.length !== 1 || !valid || (map.to.kind !== 'finite' && !this.containsPoint(map.to, v, 1e-9))) {
+                stop = next.length > 1 ? 'many' : (v && typeof v === 'object' && 'outside' in v) || (valid && map.to.kind !== 'finite') ? 'outside' : 'undefined';
+                if (stop === 'outside') values.push(v && typeof v === 'object' && 'outside' in v ? v.outside : v);
+                break;
+            }
+            values.push(v);
+            let j = -1;
+            for (let i = values.length - 2; i >= 0 && j < 0; i--) if (same(values[i], v)) j = i;
+            // Numbers converging to a fixed point come close to an earlier value
+            // before the last one: a cycle of numbers needs points well apart
+            const apart = (a, b) => Math.abs(a - b) > 1e-6 * Math.max(1, Math.abs(a));
+            const real = j < 0 || typeof v !== 'number' || values.slice(j, -1).every((u, i, arr) => i === 0 || apart(u, arr[i - 1]));
+            if (j >= 0 && real) {
+                cycle = { start: j, period: values.length - 1 - j };
+                break;
+            }
+        }
+        return { values, cycle, stop };
+    }
+
     _readInverse(map, def) {
         const base = this.mapById.get(String(def.inverse));
         if (!base) {
@@ -394,7 +687,7 @@ export class SetsModel {
             this.warn(`map '${map.id}': the inverse of '${base.id}' goes from ${map.from.id} to ${map.to.id}; "from"/"to" are ignored`);
         }
         if (def.label === undefined) {
-            const l = String(base.label);
+            const l = String(base.name);
             map.label = /^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?$/.test(l) ? `${l}^{-1}` : `\left(${l}\right)^{-1}`;
         }
         return true;
@@ -450,12 +743,19 @@ export class SetsModel {
     /** Number of an element (its "value", or its id read as a number), or null. */
     elementNumber(set, id) {
         const el = set.elementById && set.elementById.get(id);
-        return el ? el.num : null;
+        if (el) return el.num;
+        // An integer beyond the window still belongs to its set
+        if (set.intRule) {
+            const n = Number(id);
+            return intMember(set.intRule, n) ? n : null;
+        }
+        return null;
     }
 
     /** Element of a finite set whose number is v, or null. */
     _elementWithNumber(set, v) {
         if (typeof v !== 'number' || !isFinite(v)) return null;
+        if (set.intRule) return intMember(set.intRule, v) ? String(Math.round(v) || 0) : null;
         const el = set.elements.find(e => e.num !== null && Math.abs(e.num - v) <= 1e-9 * Math.max(1, Math.abs(v)));
         return el ? el.id : null;
     }
@@ -470,15 +770,27 @@ export class SetsModel {
         if (map.kind === 'inverse') return this._applyInverse(map, x);
         if (map.kind === 'compose') {
             let current = [x];
-            for (const part of map.parts) {
+            map.parts.forEach((part, k) => {
                 const next = [];
+                // A value that is not in the next map's domain (when the sets differ) stops the chain
+                const check = k > 0 && map.parts[k - 1].to !== part.from;
                 current.forEach(c => {
                     if (c && typeof c === 'object' && !Array.isArray(c) && 'outside' in c) next.push(c);
+                    else if (check && !this.containsPoint(part.from, c, 1e-12)) return;
                     else this.apply(part, c).forEach(v => next.push(v));
                 });
                 current = next;
-            }
+            });
             return current;
+        }
+        if (map.kind === 'where') {
+            const xv = map.from.kind === 'finite' ? this.elementNumber(map.from, String(x)) : x;
+            if (xv === null) return [];
+            const ys = map.to.kind === 'finite' ? map.to.elements.filter(e => e.num !== null).map(e => [e.id, e.num]) : (map.to.points || []).map(n => [n, n]);
+            return ys.filter(([, yv]) => {
+                const r = map.cond(xv, yv);
+                return r === true || (typeof r === 'number' && r !== 0 && !isNaN(r));
+            }).map(([id]) => id);
         }
         if (map.kind === 'pairs') {
             const list = map.pairs.get(String(x)) || [];
@@ -905,11 +1217,43 @@ export class SetsModel {
             const v = this._raw1(map, S.lo);
             return isFinite(v) ? interval(v, v) : null;
         }
-        const values = samplePositions(S, SAMPLES_1D, map.from.window).map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
+        const samples = samplePositions(S, SAMPLES_1D, map.from.window);
+        const values = samples.map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
+        // A minimum or maximum inside the segment usually falls between two
+        // samples: find it, so that x^2 on [-1, 2] reaches 0 exactly
+        values.push(...this._refineExtrema(map, samples, values));
         const limits = [];
         if (!S.loClosed && isFinite(S.lo)) limits.push({ v: this._limitAt(map, S.lo, 1) });
         if (!S.hiClosed && isFinite(S.hi)) limits.push({ v: this._limitAt(map, S.hi, -1) });
         return imageFromSamples(values, limits);
+    }
+
+    /**
+     * The smallest and largest sampled values, when they are at an inner
+     * sample, refined by golden-section search between its neighbours.
+     */
+    _refineExtrema(map, samples, values) {
+        const out = [];
+        const n = values.length;
+        [1, -1].forEach(sign => {
+            let best = -1;
+            for (let i = 0; i < n; i++) {
+                const v = values[i].v;
+                if (typeof v === 'number' && isFinite(v) && (best < 0 || sign * v < sign * values[best].v)) best = i;
+            }
+            if (best <= 0 || best >= n - 1 || values[best].nearOpen) return;
+            const g = (t) => sign * this._raw1(map, t);
+            let a = samples[best - 1].t, b = samples[best + 1].t;
+            const r = (Math.sqrt(5) - 1) / 2;
+            let c = b - r * (b - a), d = a + r * (b - a), gc = g(c), gd = g(d);
+            for (let k = 0; k < 80 && b - a > 1e-15 * Math.max(1, Math.abs(a)); k++) {
+                if (gc < gd) { b = d; d = c; gd = gc; c = b - r * (b - a); gc = g(c); }
+                else { a = c; c = d; gc = gd; d = a + r * (b - a); gd = g(d); }
+            }
+            const t = (a + b) / 2, v = this._raw1(map, t);
+            if (isFinite(v) && sign * v < sign * values[best].v) out.push({ v, nearOpen: false });
+        });
+        return out;
     }
 
     /** Interval of a selector argument ("[0, 1/2]"), or one already computed. */
@@ -964,11 +1308,13 @@ export class SetsModel {
                 if (typeof t === 'number' || Array.isArray(t)) {
                     y = t;
                 } else if (dOut === 0) {
-                    if (!to.elementById.has(t)) {
+                    // An element of the codomain wins; otherwise an expression (a param)
+                    if (to.elementById.has(t)) y = this.elementNumber(to, t);
+                    else if (this._isExpression(t)) y = this.evaluate(t);
+                    else {
                         this.warn(`preimage(${map.id}, …): '${t}' is not an element of ${to.id}`);
                         return;
                     }
-                    y = this.elementNumber(to, t);
                 } else {
                     y = this.evaluate(t);
                 }
@@ -1132,6 +1478,12 @@ export class SetsModel {
     }
 
     /** Test for a value of a continuous codomain: a number or an interval. */
+    /** Can a string be read as a number (a param, "2*k")? Asked without warnings. */
+    _isExpression(src) {
+        if (!this.isExpression) return false;
+        return this.isExpression(String(src));
+    }
+
     _valueTest(arg) {
         if (arg.kind === 'interval') {
             const J = this._argInterval(arg);
@@ -1178,7 +1530,9 @@ export class SetsModel {
             ['injective', 'surjective'].forEach(k => { if (typeof claims[k] === 'boolean') res[k] = claims[k]; });
             res.claimed = true;
         }
-        // A relation that is not a function is not a bijection
+        // A relation that is not a function is neither injective nor
+        // surjective (those words are about functions), nor a bijection
+        if (res.isFunction === false && !res.claimed) res.injective = res.surjective = null;
         res.bijective = res.isFunction === false ? false
             : res.injective === true && res.surjective === true ? true
                 : res.injective === false || res.surjective === false ? false : null;
@@ -1199,12 +1553,12 @@ export class SetsModel {
                 const outside = vs.filter(v => v && typeof v === 'object' && !Array.isArray(v) && 'outside' in v);
                 if (outside.length) {
                     res.into = false;
-                    problems.push(`${map.label}(${e.label}) non appartiene a ${to.label || to.id}`);
+                    problems.push(`${map.name}(${e.label}) non appartiene a ${to.label || to.id}`);
                 }
                 if (to.kind !== 'finite') {
                     vs.filter(v => SetsModel.validPoint(v) && !this.containsPoint(to, v)).forEach(() => {
                         res.into = false;
-                        problems.push(`${map.label}(${e.label}) non appartiene a ${to.label || to.id}`);
+                        problems.push(`${map.name}(${e.label}) non appartiene a ${to.label || to.id}`);
                     });
                 }
                 // A value outside the codomain is still a value: f is a function, not "into"
@@ -1216,7 +1570,15 @@ export class SetsModel {
                 images.set(e.id, valid);
             });
             res.injective = this.collisions(map).length === 0;
-            if (to.kind === 'finite') {
+            // ℕ, ℤ: the checks are made in the window (a collision found there is real)
+            if (this.isInfinite(from) || this.isInfinite(to)) {
+                res.exact = false;
+                res.window = true;
+            }
+            if (this.isInfinite(to)) {
+                // Onto an infinite set a window cannot tell (unless "claims" says)
+                res.surjective = null;
+            } else if (to.kind === 'finite') {
                 const hit = new Set([].concat(...images.values()));
                 res.surjective = to.elements.every(b => hit.has(b.id));
             } else {
@@ -1239,7 +1601,7 @@ export class SetsModel {
             }
             if (undefinedSomewhere) {
                 res.isFunction = false;
-                problems.push(`${map.label} non è definita in tutto ${fromL}`);
+                problems.push(`${map.name} non è definita in tutto ${fromL}`);
             }
         }
         if (dOut === 1) {
@@ -1262,7 +1624,7 @@ export class SetsModel {
                 return isFinite(v) && !nums.some(n => Math.abs(n - v) <= 1e-9 * Math.max(1, Math.abs(v)));
             }));
             res.into = !outside;
-            if (outside) problems.push(`${map.label} assume valori che non stanno in ${toL}`);
+            if (outside) problems.push(`${map.name} assume valori che non stanno in ${toL}`);
             res.surjective = !!img && img.ids.length === to.elements.length;
             // Infinitely many points, finitely many values
             res.injective = isPoint(from.I);
@@ -1298,8 +1660,8 @@ export class SetsModel {
         res.exact = bp.exact;
         res.into = true;
         res.isFunction = !(bp.injective === false || bp.surjective === false);
-        if (bp.surjective === false) res.problems.push(`alcuni elementi di ${fromL} non hanno immagine: ${base.label} non è suriettiva`);
-        if (bp.injective === false) res.problems.push(`alcuni elementi di ${fromL} hanno più immagini: ${base.label} non è iniettiva`);
+        if (bp.surjective === false) res.problems.push(`alcuni elementi di ${fromL} non hanno immagine: ${base.name} non è suriettiva`);
+        if (bp.injective === false) res.problems.push(`alcuni elementi di ${fromL} hanno più immagini: ${base.name} non è iniettiva`);
         res.injective = bp.isFunction ? true : null;
         res.surjective = bp.into === false ? false : bp.isFunction ? true : null;
         return res;
@@ -1467,4 +1829,38 @@ function roundPoint(v) {
 /** Resolves a selector argument (string from a config) for a map. */
 export function argumentOf(raw) {
     return raw === undefined || raw === null ? null : parseArgument(raw);
+}
+
+/**
+ * "N", "N*", "Z", "2N", "2N+1", "3Z", "[-3, 5]" -> { step, offset, lo, hi, tex }:
+ * the integers n = step·k + offset between lo and hi.
+ */
+export function parseIntegers(src) {
+    const s = String(src).replace(/\s+/g, '').replace(/ℕ/g, 'N').replace(/ℤ/g, 'Z');
+    const m = /^(\d*)([NZ])(\*|\+(?![\d]))?(?:([+-])(\d+))?$/.exec(s);
+    if (m) {
+        const step = m[1] ? Number(m[1]) : 1;
+        const offset = m[5] ? (m[4] === '-' ? -1 : 1) * Number(m[5]) : 0;
+        if (!(step >= 1)) return null;
+        const nat = m[2] === 'N';
+        const lo = nat ? (m[3] ? step + offset : offset) : -Infinity;
+        const base = nat ? '\\mathbb{N}' : '\\mathbb{Z}';
+        const tex = `${step > 1 ? step : ''}${base}${m[3] && nat ? '^*' : ''}${offset ? `${offset > 0 ? '+' : '-'}${Math.abs(offset)}` : ''}`;
+        return { step, offset, lo, hi: Infinity, tex };
+    }
+    const r = /^([[(])(-?\d+),(-?\d+)([\])])$/.exec(s);
+    if (r) {
+        const lo = Number(r[2]) + (r[1] === '(' ? 1 : 0), hi = Number(r[3]) - (r[4] === ')' ? 1 : 0);
+        if (!(lo <= hi)) return null;
+        return { step: 1, offset: 0, lo, hi, tex: `\\{${lo},\\dots,${hi}\\}` };
+    }
+    return null;
+}
+
+/** Does an integer rule contain n? */
+export function intMember(r, n) {
+    if (typeof n !== 'number' || !isFinite(n) || Math.abs(n - Math.round(n)) > 1e-9) return false;
+    const k = Math.round(n);
+    if (k < r.lo - 1e-9 || k > r.hi + 1e-9) return false;
+    return ((k - r.offset) % r.step + r.step) % r.step === 0;
 }

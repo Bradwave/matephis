@@ -10,26 +10,30 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare", "table", "product",
 ];
 
 /** Root keys of later phases. */
 export const PLANNED_ROOT_KEYS = [
-    "venn", "relations", "partition", "iterate", "cd", "steps", "enumerate", "diagonal", "order", "sync",
+    "venn", "relations", "partition", "cd", "steps", "enumerate", "diagonal", "order",
 ];
 
-export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "color", "window", "order", "labelSide", "endpoints"];
+export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "integers", "color", "window", "order", "labelSide", "endpoints"];
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
 export const MAP_KEYS = [
-    "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
-    "claims", "hidden", "route", "dash", "bend", "arrows",
+    "id", "label", "name", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
+    "claims", "hidden", "route", "dash", "bend", "arrows", "iterate", "where",
 ];
-export const PLANNED_MAP_KEYS = ["preset", "sequence", "iterate"];
+export const PLANNED_MAP_KEYS = ["preset", "sequence"];
 export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color", "label", "hidden", "fill"];
 export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue", "trace"];
+/** An orbit, step by step ("iterate" at the root). */
+export const ITERATE_KEYS = ["map", "start", "steps", "step", "color", "label", "showValue"];
+/** The IN/OUT table. */
+export const TABLE_KEYS = ["maps", "map", "in", "probe", "headers", "rows", "position"];
 export const DYNAGRAPH_KEYS = ["scale", "ticks", "arrows"];
 /** Keys of "plot" read by the sets engine; any other key goes to the plot itself. */
-export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity"];
+export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity", "lines", "highlights", "ends"];
 
 const didYouMean = (word, candidates) => {
     const s = suggest(word, candidates);
@@ -55,9 +59,10 @@ export function validateConfig(config) {
         if (PLANNED_ROOT_KEYS.includes(key)) warnings.push(`Option '${key}' is not implemented yet and is ignored`);
         else warnings.push(`Unknown global option: '${key}'${didYouMean(key, [...ROOT_KEYS, ...PLANNED_ROOT_KEYS])}`);
     }
-    if (config.layout !== undefined && !['row', 'column'].includes(config.layout)) {
-        warnings.push(`layout: expected "row" or "column", got '${config.layout}'`);
+    if (config.layout !== undefined && !['row', 'column', 'product'].includes(config.layout)) {
+        warnings.push(`layout: expected "row", "column" or "product", got '${config.layout}'`);
     }
+    if (config.product !== undefined && config.layout !== 'product') warnings.push('"product" is used with "layout": "product"');
     if (config.sets !== undefined && !Array.isArray(config.sets)) warnings.push('"sets" must be an array');
     if (config.maps !== undefined && !Array.isArray(config.maps)) warnings.push('"maps" must be an array');
     (Array.isArray(config.sets) ? config.sets : []).forEach((s, i) => {
@@ -77,6 +82,20 @@ export function validateConfig(config) {
     if (config.plot !== undefined && (!config.plot || typeof config.plot !== 'object')) warnings.push('"plot" must be an object like { "maps": ["f"] }');
     if (config.plot && config.plot.position !== undefined && !['right', 'below'].includes(config.plot.position)) {
         warnings.push(`plot: "position" must be "right" or "below", got '${config.plot.position}'`);
+    }
+    if (config.iterate !== undefined) {
+        const its = Array.isArray(config.iterate) ? config.iterate : [config.iterate];
+        its.forEach((it, i) => {
+            if (it && typeof it === 'object') checkKeys(it, ITERATE_KEYS, [], `iterate[${i}]`, warnings);
+            else warnings.push(`iterate[${i}]: expected an object like { "map": "f", "start": "a", "steps": 5 }`);
+        });
+    }
+    if (config.table !== undefined) {
+        if (config.table && typeof config.table === 'object' && !Array.isArray(config.table)) checkKeys(config.table, TABLE_KEYS, [], 'table', warnings);
+        else warnings.push('"table" must be an object like { "maps": ["f"], "in": [0, 1, 2] }');
+    }
+    if (config.sync !== undefined && (typeof config.sync !== 'string' || !config.sync)) {
+        warnings.push('"sync" must be a name, the same on every block to link, like "es1"');
     }
     if (config.probe !== undefined) {
         const probes = Array.isArray(config.probe) ? config.probe : [config.probe];

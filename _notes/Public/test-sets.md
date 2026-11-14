@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di insiemi e funzioni generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-sets.js` a partire da un blocco ```` ```sets ````. Per provare una configurazione mentre la scrivi usa il [playground](/playground/) (motore «sets»).
 
-**Stato: fasi 1 e 2 (insiemi, funzioni, dynagraph e grafici).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione o come inversa; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui; dynagraph (rette parallele) e, accanto al diagramma, il grafico delle funzioni collegato al punto. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fasi 1 e 2, iterazione e blocchi collegati, interi, prodotto cartesiano, tabelle IN/OUT, domini e punti fissi.** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione, come inversa o come potenza $f^n$; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui; dynagraph (rette parallele) e, accanto al diagramma, il grafico delle funzioni collegato al punto; orbite passo per passo (con la ragnatela sul grafico); blocchi collegati da `sync`. Diagrammi di Venn ed Eulero, relazioni e partizioni e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -23,15 +23,22 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `controls` | Array | | Pulsanti, come nelle scene di fisica: `reveal` mostra selettori o evidenziazioni nascosti, `toggle` cambia un parametro. |
 | `probe` | Object/Array | | Punto su un dominio continuo, con la freccia verso la sua immagine (vedi «Domini continui»). |
 | `params`, `animate` | | | Slider, come nei grafici. Usabili negli estremi degli intervalli e nelle espressioni. |
-| `layout` | `"row"`/`"column"` | `"row"` | Insiemi affiancati (elementi in colonna) o uno sotto l'altro (elementi in riga). |
+| `layout` | `"row"`/`"column"`/`"product"` | `"row"` | Insiemi affiancati (elementi in colonna), uno sotto l'altro (elementi in riga), o il prodotto cartesiano $A \times B$ come griglia di coppie (vedi «Prodotto cartesiano»). |
+| `product` | Object | | Con `"layout": "product"`: `{ "map": "r", "x": "A", "y": "B" }`. |
 | `dynagraph` | Boolean/Object | | Dynagraph: gli intervalli diventano rette parallele una sotto l'altra, con la stessa scala, tacche e numeri (vedi «Dynagraph e grafici»). |
 | `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
+| `iterate` | Object/Array | | Orbita di un punto, un passo alla volta: $x_0, f(x_0), f(f(x_0)), \dots$ (vedi «Iterazione e blocchi collegati»). |
+| `compare` | Array/Object | | Confronta due punti (`probe`): ordine o parità (vedi «Domini continui»). |
+| `table` | Object | | Tabella IN/OUT: gli ingressi e i loro valori, una colonna per funzione (vedi «Tabella IN/OUT»). |
+| `sync` | String | | Nome di un gruppo: i blocchi con lo stesso nome nella pagina condividono parametri, evidenziazione al passaggio e passi delle orbite (vedi «Iterazione e blocchi collegati»). |
 | `hover` | Boolean | `true` | Passando sopra un elemento (o con Tab) si evidenziano le sue frecce, immagini e controimmagini. |
 | `reorder` | Boolean | `true` | Riordina gli elementi del codominio per ridurre gli incroci e tenere l'immagine in un unico blocco. Un insieme con `"order": "given"` mantiene il suo ordine. |
 | `mapLabels` | Boolean | `true` | Freccia $A \xrightarrow{f} B$ tra i nomi degli insiemi. |
 | `spacing` | Number | | Distanza in px tra due elementi consecutivi. |
 | `height` | Number | | Altezza fissa in px (solo `row`). |
 | `width`, `fullWidth`, `cssWidth`, `align`, `border`, `caption`, `fontSize`, `labelHalo`, `title`, `ariaLabel` | | | Come nei grafici. |
+
+Per i test automatici i parametri si cambiano da JavaScript: con lo slider (`input.value = "2"` e poi un evento `input`), oppure con `contenitore.matephisSets.setParam("k", 2)` sul `div.matephis-sets-container` del diagramma. Il diagramma si ridisegna anche quando la pagina non è in primo piano.
 
 Le etichette sono formule: `"a_1"` diventa $a_1$, `"\\mathbb{N}"` diventa $\mathbb{N}$. Per mescolare testo e formule si usa `$…$`.
 
@@ -43,21 +50,26 @@ Le etichette sono formule: `"a_1"` diventa $a_1$, `"\\mathbb{N}"` diventa $\math
 | intervallo | `interval`: `"[0,1]"`, `"(0,1]"`, `"[0,+inf)"`, `"R"`; gli estremi possono essere espressioni (`"[0, a]"`); `window` per la parte disegnata di un intervallo illimitato | Segmento, con pallino pieno (estremo incluso) o vuoto (escluso). |
 | rettangolo | `rect`: `["[0,1]", "[0,1]"]` (lati aperti tratteggiati) | Riquadro con la stessa scala sui due assi. |
 | disco | `disk`: `{ "center": [0,0], "radius": 1, "open": false }` | Cerchio (tratteggiato se aperto). |
+| interi | `integers`: `"N"`, `"N*"`, `"Z"`, `"2N"`, `"2N+1"`, `"3Z"` o un intervallo di interi `"[-3, 5]"`; `window` per la parte disegnata (default $[0, 10]$ per $\mathbb{N}$, $[-5, 5]$ per $\mathbb{Z}$) | Retta con una tacca a ogni intero e un punto a ogni intero dell'insieme; una freccia dove l'insieme continua. Etichetta di default $\mathbb{N}$, $2\mathbb{N}$, … |
 
 Opzioni comuni: `id`, `label` (default: l'id, o l'intervallo), `color`, `labelSide` (`"before"`/`"after"`: lato delle etichette degli elementi), `endpoints: false` (niente numeri agli estremi), `order: "given"`.
 
 Un elemento con un valore numerico (`"2"`, oppure `{ "id": "a", "value": 2 }`) può essere usato da una funzione data con `expr`.
 
+Un insieme di interi si comporta come un insieme finito: i suoi elementi sono gli interi nella finestra (con id `"0"`, `"1"`, …), ognuno con le sue frecce, ed evidenziazioni, collisioni, tabelle, griglie e `sync` funzionano come per gli insiemi finiti. Un valore oltre la finestra appartiene ancora all'insieme ($n \mapsto n + 1$ manda $10$ in $11 \in \mathbb{N}$, senza freccia); un valore che non è nell'insieme esce, come per gli insiemi finiti ($\tfrac{3}{2} \notin \mathbb{N}$). Il punto (`probe`) si ferma sugli interi. Le proprietà sono verificate nella finestra (il riquadro lo dice); la suriettività su un insieme infinito resta «?», a meno di dichiararla con `claims`.
+
 ### Funzioni
 
 | Opzione | Descrizione |
 | :--- | :--- |
-| `id`, `label` | Nome; l'etichetta di default è l'id. |
+| `id`, `label`, `name` | `label` è la didascalia della freccia ($n \mapsto 2n$); `name` è il nome della funzione nelle formule e nelle righe sotto il diagramma ($d(3) = 6$, $d^{-1}$, $e \circ d$). Di default `label` è l'id e `name` è `label`. |
 | `from`, `to` | Dominio e codominio (id di insiemi). |
 | `pairs` | Coppie `{ "a_1": "b_1" }`; un array (`{ "a_1": ["b_1", "b_2"] }`) dà una relazione che non è una funzione, e il motore lo segnala. |
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
 | `piecewise` | Funzione a tratti: `[{ "on": "(-inf, 0)", "expr": "-x" }, { "on": 0, "expr": "0" }, { "on": "(0, +inf)", "expr": "1" }]`. Ogni tratto vale su un intervallo (`on`, oppure un numero per un solo punto) o dove vale una condizione (`if`: `"x^2 + y^2 < 1"`, anche nel piano); un tratto senza `on` e `if` vale ovunque altrove. Si usa il primo tratto che vale; dove non ne vale nessuno la funzione non è definita (e il motore lo segnala). Immagine, controimmagine e iniettività tengono conto dei salti tra un tratto e l'altro. |
-| `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g`. Il motore controlla che il codominio di `f` sia il dominio di `g`. |
+| `where` | Relazione data da una condizione su $(x, y)$: `"x + y == 3"`, `"x < y"`. Tra insiemi di numeri di cui si possono elencare gli elementi (finiti, interi). |
+| `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g` (nell'ordine in cui si applicano; anche più di due: `["d", "f", "h"]` è $h \circ f \circ d$). Il codominio di `f` dev'essere il dominio di `g`, oppure tutti e due intervalli: allora $g \circ f$ è definita dove $f(x)$ sta nel dominio di `g`, $\mathrm{dom}(g \circ f) = f^{-1}(\mathrm{dom}\, g)$, e `domain(gf)` lo mostra. Dove la catena si interrompe il punto lo segna con una croce. |
+| `iterate` | `["f", 3]` è $f^3 = f \circ f \circ f$; il numero può essere un parametro (`["f", "n"]`, intero da 0 a 50) e allora cambia con lo slider. `f` deve andare da un insieme in sé; $f^0$ è l'identità. Etichetta di default $f^{3}$ (con il valore attuale di $n$). Le sue frecce si vedono come quelle di una funzione qualsiasi. |
 | `inverse` | `"f"`: l'inversa di `f`, dal codominio al dominio di `f` (non servono `from` e `to`; etichetta di default $f^{-1}$). Ogni valore va nei punti dove `f` lo assume: se `f` non è biiettiva l'inversa è una relazione e il riquadro delle proprietà lo spiega. Le sue frecce si curvano per non coprire quelle di `f`. Per funzioni tra insiemi finiti e intervalli. |
 | `samples` | Frecce da un dominio continuo: quanti punti (default 5 su un intervallo, 9 nel piano) oppure la lista dei punti. |
 | `image` | Immagine data a mano (`"[1/4, 3/4]"`) invece di quella calcolata. |
@@ -78,11 +90,15 @@ Si usano in `show`, in `highlights` (`of`) e come bersagli dei pulsanti `reveal`
 | `preimage(f, b_1)`, `preimage(f, {b_1, b_2})` | Controimmagine di un elemento o di un sottoinsieme. |
 | `preimage(h, 1/2)`, `preimage(h, [0, 1/4])` | Punti dove $h = 1/2$; parti del dominio dove $h \in [0, 1/4]$. Anche da un intervallo in un insieme finito (`preimage(sgn, 1)`). |
 | `preimage(F, 1)`, `preimage(F, [0, 1/4])` | Da un rettangolo o un disco in un intervallo: la curva di livello $F = 1$; la regione dove $F \in [0, 1/4]$. |
+| `domain(f)` | Dove $f$ ha un valore: il dominio naturale dell'espressione dentro l'insieme di partenza ($\sqrt{x - 1}$: $[1, +\infty)$), o $\mathrm{dom}(g \circ f)$ per una composizione. Una banda sulla retta, una riga sotto il diagramma, una banda sull'asse $x$ del grafico. Gli estremi sono cercati numericamente; un estremo che arriva al bordo della finestra di un insieme illimitato è $\pm\infty$. |
+| `fixed(f)` | I punti fissi, dove $f(x) = x$: tra due rette (con la stessa scala) una freccia verticale evidenziata, su una sola retta un cappio, sul grafico un punto sulla retta $y = x$ (disegnata da sola). La riga sotto il diagramma: $x^* = \tfrac{1}{2}$, oppure «nessun punto fisso». Su un insieme finito, gli elementi con $f(a) = a$. Etichetta: `label` in un'evidenziazione (default $x^*$). |
 | `collisions(f)` | Elementi con la stessa immagine: frecce e immagine comune in rosso. |
-| `properties(f)` | Riquadro sotto il diagramma: iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Le ragioni sono nel tooltip. |
+| `properties(f)` | Riquadro sotto il diagramma: $f\colon A \to B$ (in TeX, come le etichette) e iniettiva, suriettiva, biiettiva; e, solo quando non va, «funzione ✗» (un elemento senza immagine o con più immagini, un punto dove non è definita) e «a valori in B ✗». Una relazione che non è una funzione mostra solo «funzione ✗» e «biiettiva ✗»: iniettiva e suriettiva si dicono delle funzioni. Le ragioni sono nel tooltip. |
 | `arrows(f)` | Le frecce di `f` (per mostrarle con un pulsante). |
 
 I bersagli dei pulsanti accettano `*`: `"*(f)"` è tutto ciò che riguarda `f`.
+
+Gli argomenti possono contenere parametri: `preimage(f, k)`, `image(f, [a, b])`, `preimage(f, [0, k])` si aggiornano con gli slider. Un nome è un elemento se il codominio è finito e lo contiene, altrimenti è un'espressione (un parametro). Con un parametro, o quando il risultato è vuoto, il valore va in una riga sotto il diagramma: $f^{-1}(\lbrace 1\rbrace ) = \lbrace -1;\ 1\rbrace $, oppure $= \emptyset$. In un'evidenziazione `"readout": true` o `false` la mostra o la toglie sempre.
 
 ### Evidenziazioni
 
@@ -102,7 +118,14 @@ Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni contin
 
 `probe`: `{ "map": "h", "at": "p" }` mette un punto in $x = p$ con la freccia verso $h(p)$ e il valore. Se `at` è un parametro il punto si trascina e muove lo slider; nel piano `at` è una coppia (`["p", "q"]`). Su una composizione il punto segue i passaggi, $x \to f(x) \to g(f(x))$, attraverso gli insiemi intermedi. Opzioni: `label`, `color`, `showValue`, `drag`, `trace` (lascia le frecce dei punti già visitati, sbiadite: mostra dove la funzione allunga, ripiega o non arriva).
 
-Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
+`at` può essere un'espressione di un parametro (`"-p"`, `"p + 1"`, `"2*p"`): trascinando il punto si muove il parametro. Con più punti (un array) si confrontano due valori con `"compare"`:
+
+| `compare` | Riga sotto il diagramma |
+| :--- | :--- |
+| `[0, 1]` | Ordine: $p < q \Rightarrow f(p) < f(q)$ (ordine conservato) o $f(p) > f(q)$ (ordine invertito). |
+| `{ "probes": [0, 1], "mode": "parity" }` | Parità, con il punto 1 in $-p$: $f(-p) = f(p)$, $f(-p) = -f(p)$, oppure $f(-p) \ne \pm f(p)$. |
+
+Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni, con più punti, sui dynagraph e sui diagrammi stretti). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
 
 ### Dynagraph e grafici
 
@@ -119,12 +142,62 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | Opzione | Default | Descrizione |
 | :--- | :--- | :--- |
 | `maps` | tutte quelle disegnabili | Le funzioni da disegnare: da numeri a numeri, date da un'espressione, a tratti, da coppie di numeri, composizioni e inverse (come grafico riflesso). |
-| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti) o `"below"`. |
+| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti, e quando accanto il diagramma diventerebbe troppo stretto, per esempio un dynagraph con etichette lunghe) o `"below"`. |
 | `probe` | `true` | I punti $(x, f(x))$ del punto del diagramma, con la linea tratteggiata fino all'asse $x$. Per $g \circ f$ anche $(f(x), g(f(x)))$ sul grafico di $g$ e $(x, g(f(x)))$ su quello di $g \circ f$. |
 | `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
 | `identity` | con `construction` | Disegna la retta $y = x$. |
+| `lines` | | Rette guidate dai parametri: `[{ "y": "k" }, { "x": "p", "color": "blue", "dash": false }]` ($y = k$, $x = p$). Opzioni: `color`, `dash` (default tratteggiata), `label`. |
+| `ends` | `true` | Funzioni a tratti: un grafico per ogni tratto (i salti non vengono uniti) e, agli estremi dei tratti, un punto pieno se l'estremo appartiene al tratto, vuoto se no. `false` disegna la funzione come una sola curva. |
+| `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
-Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
+Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot). Di default il grafico occupa tutta la larghezza che ha; con `cssWidth` (`"60%"`, `"420px"`) o `width` prende quella misura, come in un blocco di grafici, ed è centrato (`"align": "left"` lo mette a sinistra). Utile per un grafico quadrato sotto il diagramma, che altrimenti diventa molto alto.
+
+### Prodotto cartesiano
+
+Con `"layout": "product"` una funzione (o una relazione) è l'insieme delle sue coppie: $A$ lungo l'asse $x$, $B$ lungo l'asse $y$, un puntino chiaro per ogni coppia $(a, b) \in A \times B$ e un punto pieno per le coppie della funzione. `"product": { "map": "r", "x": "A", "y": "B" }` sceglie la funzione e gli assi (di default dominio e codominio).
+
+Passando su una colonna (o sulla sua etichetta) la colonna si evidenzia: nel colore della funzione se ha esattamente un punto, in rosso se non ne ha o ne ha più di uno. È la stessa verifica del riquadro delle proprietà («funzione ✗»). Colonne e righe hanno le chiavi degli elementi: con `sync` un diagramma a frecce degli stessi insiemi si accende insieme. Le evidenziazioni di elementi (anche `image`, `preimage`) colorano colonne o righe.
+
+### Tabella IN/OUT
+
+`"table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1, 2], "probe": true }`: una riga per ingresso, una colonna per funzione, nell'ordine in cui si applicano: $x \mid g(x) \mid f(g(x))$. Dove un valore non c'è (fuori dal dominio, o senza immagine) c'è «—».
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `maps` | | Le funzioni, nell'ordine in cui si applicano; anche l'id di una composizione (i suoi passi diventano le colonne). |
+| `in` | | Gli ingressi: numeri (o espressioni) oppure elementi. Le loro frecce sono sempre disegnate. |
+| `probe` | `false` | Una riga in più, colorata, che segue il punto sulla prima funzione (o sulla loro composizione). |
+| `headers` | $x$, $g(x)$, $f(g(x))$ | Titoli delle colonne (formule): per esempio `["IN", "OUT", "OUT_2"]`. |
+| `rows` | tutti | Quante righe al massimo. |
+| `position` | `"below"` | `"below"` (sotto il diagramma) o `"right"` (accanto, se c'è spazio). |
+
+Passando su una riga si evidenziano le sue frecce e i suoi punti sul grafico; passando su un elemento (o su una freccia di un ingresso) si evidenzia la sua riga.
+
+### Iterazione e blocchi collegati
+
+Una funzione da un insieme in sé ($f\colon A \to A$) si disegna su un solo insieme: le frecce sono archi prima dell'insieme (sopra in colonna, a sinistra in riga) e un punto fisso ha un piccolo cappio. Il nome della funzione sta accanto agli archi. Su un dynagraph con una sola retta gli archi vanno da un punto all'altro della stessa retta.
+
+`"iterate"` mostra un'orbita un passo alla volta, con i pulsanti «Indietro», «Passo successivo» e «Da capo» (senza animazioni). Ogni passo aggiunge una freccia numerata $x_k \to x_{k+1}$; i punti già visitati restano. Più orbite: un array; avanzano insieme.
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `map` | | La funzione, da un insieme in sé (finito o intervallo). |
+| `start` | | Il punto di partenza: un elemento, un numero, o un parametro (allora l'orbita segue lo slider). |
+| `steps` | `10` | Il numero massimo di passi (al più 100). |
+| `step` | `0` | I passi già fatti all'inizio. |
+| `label` | `"x"` | Nome dei termini nella riga sotto il diagramma: $x_0, x_1, \dots$ |
+| `color` | arancione | Colore dell'orbita. |
+| `showValue` | `true` | `false`: niente riga sotto il diagramma. |
+
+La riga sotto il diagramma dice dove si è arrivati: su un insieme finito tutta l'orbita ($5 \mapsto 1 \mapsto 2$), su un intervallo l'ultimo passo ($x_3 = f(x_2) = 0{,}62$). Quando un valore torna l'orbita si ferma e la riga dice «ciclo di periodo $k$» (o «punto fisso»); si ferma anche quando la funzione non è definita o esce dall'insieme. Con `"plot"` l'orbita è anche la ragnatela sul grafico: da $(x_0, 0)$ su fino al grafico, di lato fino alla retta $y = x$, di nuovo al grafico, un passo per volta (la retta $y = x$ si disegna da sola; `"identity": false` la toglie).
+
+`"sync": "es1"` collega i blocchi con lo stesso nome nella pagina:
+
+- un parametro con lo stesso nome ha lo stesso valore in tutti: lo slider (o il punto trascinato) di uno muove gli altri. Per un solo gruppo di slider si mette `"showSliders": false` negli altri blocchi;
+- passando su un elemento si evidenzia l'elemento con lo stesso insieme e lo stesso id negli altri blocchi;
+- le orbite della stessa funzione (stesso id) avanzano insieme.
+
+Collega i blocchi ```` ```sets ```` tra loro; il grafico di un blocco si collega con `"plot"`.
 
 ## Esempi
 
@@ -286,6 +359,19 @@ $f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: l'immagine è $[0, 1) \cup 
   ] }],
   "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
   "probe": { "map": "f", "at": "p" },
+  "show": ["image(f)", "properties(f)"]
+}
+```
+
+### Un minimo all'interno del dominio
+
+$f_1(x) = x^2$ da $[-1, 2]$ in $[0, 4]$: il minimo $0$ è preso in $x = 0$, dentro il dominio, e $f_1$ è suriettiva (ma non iniettiva).
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "D", "interval": "[-1, 2]" }, { "id": "C", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "label": "f_1", "from": "D", "to": "C", "expr": "x^2" }],
   "show": ["image(f)", "properties(f)"]
 }
 ```
@@ -461,5 +547,407 @@ $f(x) = \frac{x + 1}{2}$ e $g(x) = \frac{x^2}{2}$ su $[0, 2]$. Sul grafico il pu
   "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
   "probe": { "map": "gf", "at": "p" },
   "plot": { "maps": ["f", "g", "gf"], "construction": true }
+}
+```
+
+### Un'orbita in un insieme finito
+
+$f$ manda $A$ in sé. Premi «Passo successivo»: da $5$ si arriva in $1$, poi si gira per sempre tra $1$, $2$ e $3$.
+
+```sets
+{
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4", "5"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "3", "3": "1", "4": "4", "5": "1" } }],
+  "iterate": { "map": "f", "start": "5", "steps": 8 }
+}
+```
+
+### Le potenze di una funzione
+
+$f^n = f \circ f \circ \dots \circ f$ ($n$ volte). Con lo slider cambia $n$: le frecce mostrano dove va ogni elemento dopo $n$ passi.
+
+```sets
+{
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4", "5"] }],
+  "maps": [
+    { "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "3", "3": "1", "4": "4", "5": "1" }, "hidden": true },
+    { "id": "fn", "iterate": ["f", "n"], "color": "blue" }
+  ],
+  "params": { "n": { "min": 0, "max": 6, "step": 1, "val": 2 } },
+  "show": ["properties(fn)"]
+}
+```
+
+### Iterare il coseno
+
+Su una sola retta: ogni passo va da $x_k$ a $x_{k+1} = \cos x_k$. Sul grafico la stessa orbita è la ragnatela tra $y = \cos x$ e $y = x$; i punti si avvicinano al punto fisso $\cos x = x$.
+
+```sets
+{
+  "dynagraph": { "ticks": 0.5 },
+  "sets": [{ "id": "I", "label": "I", "interval": "[0, 1.5]" }],
+  "maps": [{ "id": "c", "label": "\\cos", "from": "I", "to": "I", "expr": "cos(x)", "hidden": true }],
+  "params": { "p": { "min": 0, "max": 1.5, "step": 0.01, "val": 0.2, "label": "$x_0$" } },
+  "iterate": { "map": "c", "start": "p", "steps": 40 },
+  "plot": { "maps": ["c"] }
+}
+```
+
+### Due diagrammi, uno slider
+
+I due blocchi hanno `"sync": "sq"`: lo slider del primo muove il punto in entrambi, e si può trascinare il punto in tutti e due.
+
+```sets
+{
+  "sync": "sq",
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1.5, "label": "x" } },
+  "probe": { "map": "f", "at": "p" }
+}
+```
+
+```sets
+{
+  "sync": "sq",
+  "dynagraph": { "ticks": 1 },
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1.5 } },
+  "showSliders": false,
+  "probe": { "map": "f", "at": "p", "trace": true }
+}
+```
+
+### Evidenziazione e orbite collegate
+
+La stessa funzione in riga e in colonna. Passa sopra un elemento: si evidenzia anche nell'altro diagramma. «Passo successivo» fa avanzare insieme l'orbita di $f$ in tutti e due.
+
+```sets
+{
+  "sync": "orb",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "4", "3": "3", "4": "1" } }],
+  "iterate": { "map": "f", "start": "1", "steps": 5 }
+}
+```
+
+```sets
+{
+  "sync": "orb",
+  "layout": "column",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "4", "3": "3", "4": "1" } }],
+  "iterate": { "map": "f", "start": "1", "steps": 5, "showValue": false }
+}
+```
+
+### Parametri nei selettori
+
+$f(x) = x^2$ su $[-2, 2]$. Con lo slider $k$ la retta $y = k$ incontra il grafico in due punti, in uno o in nessuno: è la controimmagine di $k$. Con $a$ e $b$ cambia l'intervallo di cui si prende l'immagine.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[-1, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": {
+    "k": { "min": -1, "max": 4, "step": 0.05, "val": 1 },
+    "a": { "min": -2, "max": 2, "step": 0.1, "val": -0.5 },
+    "b": { "min": -2, "max": 2, "step": 0.1, "val": 1.5 }
+  },
+  "show": ["preimage(f, k)"],
+  "highlights": [{ "of": "image(f, [a, b])", "color": "purple" }]
+}
+```
+
+### Rette e controimmagini sul grafico
+
+La stessa controimmagine sul diagramma e sul grafico: la retta $y = k$ taglia il grafico nei punti di $f^{-1}(\lbrace k\rbrace )$. Se per ogni $k$ del codominio c'è almeno un punto, $f$ è suriettiva; se non ce n'è mai più di uno, è iniettiva.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[-1, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "k": { "min": -1, "max": 4, "step": 0.05, "val": 1 } },
+  "show": ["preimage(f, k)"],
+  "plot": { "lines": [{ "y": "k" }] }
+}
+```
+
+### Parità con due punti
+
+Il punto blu sta in $-p$ e si muove con $p$ (si può trascinare anche lui). Con $f(x) = x^3 - x$ la riga sotto dice sempre $f(-p) = -f(p)$: la funzione è dispari.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-1.5, 1.5]" }, { "id": "Y", "interval": "[-2, 2]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^3 - x" }],
+  "params": { "p": { "min": -1.5, "max": 1.5, "step": 0.05, "val": 0.6 } },
+  "probe": [{ "map": "f", "at": "p" }, { "map": "f", "at": "-p", "color": "blue" }],
+  "compare": { "probes": [0, 1], "mode": "parity" },
+  "plot": { "maps": ["f"] }
+}
+```
+
+### Monotonia: l'ordine conservato o invertito
+
+Con $p < q$ entrambi in $[0, 2]$ l'ordine si conserva; se uno dei due passa sotto lo $0$ può invertirsi: $x^2$ non è monotona su $[-2, 2]$.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": {
+    "p": { "min": -2, "max": 2, "step": 0.05, "val": 0.5 },
+    "q": { "min": -2, "max": 2, "step": 0.05, "val": 1.5 }
+  },
+  "probe": [{ "map": "f", "at": "p" }, { "map": "f", "at": "q", "color": "blue" }],
+  "compare": [0, 1]
+}
+```
+
+### Tabella IN/OUT di una composizione
+
+Prima $g(x) = x + 1$, poi $f(x) = x^2$. Passa su una riga: si accendono le sue frecce e i suoi punti sui grafici. L'ultima riga segue il punto.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 1]" },
+    { "id": "Y", "interval": "[-1, 2]" },
+    { "id": "Z", "interval": "[0, 4]" }
+  ],
+  "maps": [
+    { "id": "g", "from": "X", "to": "Y", "expr": "x + 1", "samples": [] },
+    { "id": "f", "from": "Y", "to": "Z", "expr": "x^2", "samples": [] },
+    { "id": "fg", "compose": ["g", "f"] }
+  ],
+  "params": { "p": { "min": -2, "max": 1, "step": 0.1, "val": 0.5, "label": "x" } },
+  "probe": { "map": "fg", "at": "p" },
+  "table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1], "probe": true, "headers": ["\\text{IN}", "\\text{OUT}", "\\text{OUT}_2"] },
+  "plot": { "maps": ["g", "f"], "position": "below" }
+}
+```
+
+### Le coppie di una relazione
+
+Le stesse coppie come frecce e come punti della griglia (i due blocchi hanno `"sync": "pairs"`). Passa su $2$: due punti nella colonna, in rosso; su $3$: nessuno. Passando su un elemento nel diagramma a frecce si accende la sua colonna.
+
+```sets
+{
+  "sync": "pairs",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3"] }, { "id": "B", "elements": ["a", "b", "c"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "pairs": { "1": "a", "2": ["a", "c"] } }],
+  "show": ["properties(r)"]
+}
+```
+
+```sets
+{
+  "sync": "pairs",
+  "layout": "product",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3"] }, { "id": "B", "elements": ["a", "b", "c"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "pairs": { "1": "a", "2": ["a", "c"] } }],
+  "product": { "map": "r" }
+}
+```
+
+### Una relazione data da una condizione
+
+$x < y$ su $A = \lbrace 1, 2, 3, 4\rbrace $: ogni colonna ha i punti sopra la diagonale; $4$ non ne ha nessuno.
+
+```sets
+{
+  "layout": "product",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }, { "id": "B", "label": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "r", "from": "A", "to": "B", "where": "x < y" }],
+  "product": { "map": "r" },
+  "highlights": [{ "set": "A", "elements": ["4"], "color": "red", "label": "4" }],
+  "show": ["properties(r)"]
+}
+```
+
+### Da ℕ in 2ℕ
+
+$d(n) = 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali. La freccia ha l'etichetta $n \mapsto 2n$ (`label`), le formule usano il nome $d$ (`name`).
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "N", "integers": "N", "window": [0, 10] },
+    { "id": "P", "integers": "2N", "window": [0, 20] }
+  ],
+  "maps": [{ "id": "d", "label": "n \\mapsto 2n", "name": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3 } },
+  "probe": { "map": "d", "at": "n" },
+  "show": ["properties(d)"]
+}
+```
+
+### Successivo e metà
+
+$n \mapsto n + 1$ è iniettiva ma non suriettiva su $\mathbb{N}$ (nessuno va in $0$); $n \mapsto \lfloor n/2 \rfloor$ è suriettiva ma non iniettiva (due naturali in ogni valore).
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "A", "integers": "N", "window": [0, 10] },
+    { "id": "B", "integers": "N", "window": [0, 10] },
+    { "id": "C", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [
+    { "id": "s", "label": "n + 1", "from": "A", "to": "B", "expr": "x + 1", "claims": { "surjective": false } },
+    { "id": "h", "label": "\\lfloor n/2 \\rfloor", "from": "B", "to": "C", "expr": "floor(x/2)", "color": "orange", "claims": { "surjective": true } }
+  ],
+  "show": ["properties(s)", "properties(h)", "preimage(s, 0)"]
+}
+```
+
+### Lo zig-zag da ℤ in ℕ
+
+$0 \mapsto 0$, $-1 \mapsto 1$, $1 \mapsto 2$, $-2 \mapsto 3$, …: i non negativi vanno nei pari, i negativi nei dispari. Ogni naturale è raggiunto una volta sola.
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "Z", "integers": "Z", "window": [-5, 5] },
+    { "id": "N", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [{ "id": "z", "from": "Z", "to": "N", "piecewise": [{ "if": "x >= 0", "expr": "2x" }, { "expr": "-2x - 1" }], "claims": { "surjective": true } }],
+  "params": { "n": { "min": -5, "max": 5, "step": 1, "val": -2 } },
+  "probe": { "map": "z", "at": "n" },
+  "show": ["properties(z)"]
+}
+```
+
+### Trasformazioni come composizioni
+
+$a \cdot f(x) + k$ e $a \cdot (f(x) + k)$ sono due composizioni delle stesse funzioni in ordine diverso, con $s(y) = a y$ e $t(z) = z + k$: $T_1 = t \circ s \circ f$ (prima si moltiplica per $a$, poi si somma $k$) e $T_2 = s \circ t \circ f$ (il contrario). I due blocchi hanno `"sync": "tr"`: gli slider del primo muovono anche il secondo. La riga sotto ogni diagramma segue il punto passo per passo.
+
+```sets
+{
+  "sync": "tr",
+  "dynagraph": { "ticks": 2 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" },
+    { "id": "Z", "interval": "[-8, 8]" }, { "id": "W", "interval": "[-10, 10]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x^2" },
+    { "id": "s", "from": "Y", "to": "Z", "expr": "a*x", "color": "blue" },
+    { "id": "t", "from": "Z", "to": "W", "expr": "x + k", "color": "green" },
+    { "id": "T", "label": "T_1", "compose": ["f", "s", "t"] }
+  ],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.5, "val": 2 },
+    "k": { "min": -2, "max": 2, "step": 0.5, "val": 1 },
+    "p": { "min": -2, "max": 2, "step": 0.1, "val": 1.5, "label": "x" }
+  },
+  "probe": { "map": "T", "at": "p" }
+}
+```
+
+```sets
+{
+  "sync": "tr",
+  "dynagraph": { "ticks": 2 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" },
+    { "id": "Z", "interval": "[-2, 6]" }, { "id": "W", "interval": "[-12, 12]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x^2" },
+    { "id": "t", "from": "Y", "to": "Z", "expr": "x + k", "color": "green" },
+    { "id": "s", "from": "Z", "to": "W", "expr": "a*x", "color": "blue" },
+    { "id": "T", "label": "T_2", "compose": ["f", "t", "s"] }
+  ],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.5, "val": 2 },
+    "k": { "min": -2, "max": 2, "step": 0.5, "val": 1 },
+    "p": { "min": -2, "max": 2, "step": 0.1, "val": 1.5 }
+  },
+  "showSliders": false,
+  "probe": { "map": "T", "at": "p" }
+}
+```
+
+### Composizione: dove è definita
+
+$f(x) = x - 1$ va da $[-2, 4]$ in $[-3, 3]$, ma $g(y) = \sqrt{y}$ è definita solo su $[0, 3]$: $g \circ f$ è definita dove $x - 1 \ge 0$. Sul dynagraph le rette hanno la stessa scala: $f(x)$ su $[-3, 3]$ e lo stesso numero su $[0, 3]$ stanno uno sopra l'altro. Trascina il punto a sinistra di $1$: $f(x) < 0$ non sta nel dominio di $g$ e la catena si ferma con una croce.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 4]" },
+    { "id": "Y", "interval": "[-3, 3]" },
+    { "id": "D", "label": "[0, 3]", "interval": "[0, 3]" },
+    { "id": "Z", "interval": "[0, 2]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x - 1" },
+    { "id": "g", "from": "D", "to": "Z", "expr": "sqrt(x)" },
+    { "id": "gf", "compose": ["f", "g"] }
+  ],
+  "params": { "p": { "min": -2, "max": 4, "step": 0.1, "val": 0.4, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "show": ["domain(gf)"]
+}
+```
+
+### Il dominio naturale
+
+$f(x) = \ln(4 - x^2)$ è definita dove $4 - x^2 > 0$: su $(-2, 2)$. Lo stesso intervallo sulla retta, sotto il diagramma e sull'asse $x$ del grafico.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "R", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }, { "id": "S", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 2] }],
+  "maps": [{ "id": "f", "from": "R", "to": "S", "expr": "log(4 - x^2)", "samples": [-1.5, -1, 0, 1, 1.5] }],
+  "show": ["domain(f)"],
+  "plot": { "maps": ["f"], "xlim": [-3, 3], "ylim": [-3, 2], "position": "below", "cssWidth": "60%" }
+}
+```
+
+### Una funzione a tratti sul grafico
+
+$f(x) = x$ su $[0, 1)$ e $f(x) = 3 - x$ su $[1, 2]$: sul grafico il salto in $x = 1$ ha un punto vuoto (il valore $1$ non è preso dal primo tratto) e uno pieno ($f(1) = 2$).
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[0, 2]" }, { "id": "Y", "interval": "[0, 2]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "piecewise": [{ "on": "[0, 1)", "expr": "x" }, { "on": "[1, 2]", "expr": "3 - x" }] }],
+  "params": { "p": { "min": 0, "max": 2, "step": 0.05, "val": 0.6, "label": "x" } },
+  "probe": { "map": "f", "at": "p" },
+  "show": ["properties(f)"],
+  "plot": { "maps": ["f"] }
+}
+```
+
+### Il punto fisso di una dilatazione
+
+$h(x) = c + a(x - c)$ allarga ($\lvert a \rvert > 1$) o restringe ($\lvert a \rvert < 1$) le distanze da $c$; $c$ resta dov'è: è il punto fisso, la freccia verticale. Con $a = 1$ ogni punto è fisso.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [{ "id": "X", "interval": "[-3, 3]" }, { "id": "Y", "interval": "[-3, 3]" }],
+  "maps": [{ "id": "h", "from": "X", "to": "Y", "expr": "c + a*(x - c)" }],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.1, "val": 2 },
+    "c": { "min": -2, "max": 2, "step": 0.1, "val": 0.5 }
+  },
+  "show": ["fixed(h)"],
+  "plot": { "maps": ["h"] }
 }
 ```

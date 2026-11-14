@@ -13,9 +13,11 @@
  *   "properties(f)"            injective / surjective / bijective badge
  *   "arrows(f)"                the arrows of a map (to hide or reveal them)
  *   "image(g, image(f))"       an image or preimage as the argument of another
+ *   "domain(f)"                where f has a value (natural domain, dom(g ∘ f))
+ *   "fixed(f)"                 the solutions of f(x) = x
  */
 
-export const OPS = ['image', 'preimage', 'collisions', 'properties', 'arrows'];
+export const OPS = ['image', 'preimage', 'collisions', 'properties', 'arrows', 'domain', 'fixed'];
 
 const CALL_RE = /^\s*([A-Za-z]+)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*([\s\S]+?))?\s*\)\s*$/;
 

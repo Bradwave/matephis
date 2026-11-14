@@ -3,6 +3,18 @@
 </div>
 
 <script>
+/** Runs cb once MathJax has typeset the page (right away on pages without MathJax). */
+function afterMath(cb) {
+    const started = Date.now();
+    (function check() {
+        const mj = window.MathJax;
+        if (!document.getElementById('MathJax-script')) return cb();
+        if (mj && mj.startup && mj.startup.promise) return mj.startup.promise.then(cb, cb);
+        if (Date.now() - started > 10000) return cb();
+        setTimeout(check, 50);
+    })();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const contentDiv = document.querySelector('.content');
     if (!contentDiv) return;
@@ -108,7 +120,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         fragments.push(document.createTextNode(text.slice(lastIndex)));
                     }
 
-                    if (fragments.length > 0) {
+                    // Only a text node with a [[link]] is replaced: replacing the others
+                    // would detach math that MathJax is typesetting
+                    if (lastIndex > 0) {
                         const p = node.parentNode;
                         fragments.forEach(function(f) { p.insertBefore(f, node); });
                         p.removeChild(node);
@@ -118,7 +132,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            processWikiLinks(contentDiv);
+            // After MathJax's first typeset of the page (it reads the same text nodes)
+            afterMath(function() { processWikiLinks(contentDiv); });
 
             // 2. Render Backlinks if container exists
             const backlinksContainer = document.getElementById('jekyll-seamless-backlinks-list');
