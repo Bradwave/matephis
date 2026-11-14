@@ -123,7 +123,7 @@ Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni contin
 | `[0, 1]` | Ordine: $p < q \Rightarrow f(p) < f(q)$ (ordine conservato) o $f(p) > f(q)$ (ordine invertito). |
 | `{ "probes": [0, 1], "mode": "parity" }` | Parità, con il punto 1 in $-p$: $f(-p) = f(p)$, $f(-p) = -f(p)$, oppure $f(-p) \ne \pm f(p)$. |
 
-Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
+Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni, con più punti, sui dynagraph e sui diagrammi stretti). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
 
 ### Dynagraph e grafici
 

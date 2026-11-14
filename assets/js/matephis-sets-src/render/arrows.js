@@ -355,7 +355,10 @@ export function drawProbes(scene) {
         // so it never jumps between the drawing and the line under it
         const multi = map.kind === 'inverse' || (isCompose && map.parts.some(m => m.kind === 'inverse'));
         // With several probes their values would overlap in the drawing: lines under it
-        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to || probes.length > 1;
+        // On a dynagraph (and on narrow diagrams) the sample arrows fill the space
+        // between the lines: the value goes under the diagram too
+        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to || probes.length > 1
+            || !!scene.dynagraph || scene.width < 480;
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
