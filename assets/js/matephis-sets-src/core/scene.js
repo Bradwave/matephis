@@ -539,7 +539,10 @@ export class MatephisSets {
             arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
             drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
             drawElements(this);
-            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
+            // The arrow A -f-> B between the names: for the maps drawn (a hidden map
+            // is not named until a button shows it), or followed by a probe
+            const probed = new Set((Array.isArray(cfg.probe) ? cfg.probe : cfg.probe ? [cfg.probe] : []).map(p => p && String(p.map)));
+            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map) && (this.isVisible(l) || probed.has(l.map.id) || l.map.from === l.map.to)).map(l => l.map));
         }
         const props = [];
         const layerReadouts = [];
