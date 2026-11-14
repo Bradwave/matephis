@@ -292,7 +292,7 @@ Nel diagramma la chiamiamo $v$, cioè $v(x) = \lvert x \rvert$. Un'unica funzion
     { "id": "X", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] },
     { "id": "Y", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }
   ],
-  "maps": [{ "id": "v", "from": "X", "to": "Y", "piecewise": [
+  "maps": [{ "id": "v", "label": "\\lvert x \\rvert", "name": "v", "from": "X", "to": "Y", "piecewise": [
     { "on": "[0, +inf)", "expr": "x" },
     { "on": "(-inf, 0)", "expr": "-x" }
   ] }],
@@ -594,7 +594,7 @@ Le conseguenze sono sorprendenti. Già Galileo, nel 1638, aveva notato che i qua
     { "id": "N", "integers": "N", "window": [0, 10] },
     { "id": "P", "integers": "2N", "window": [0, 20] }
   ],
-  "maps": [{ "id": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "maps": [{ "id": "d", "label": "n \\mapsto 2n", "name": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
   "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3, "label": "n" } },
   "probe": { "map": "d", "at": "n" },
   "show": ["properties(d)"]
@@ -614,8 +614,8 @@ Il cosiddetto ***albergo di Hilbert*** ha infinite stanze, numerate $0, 1, 2, \l
     { "id": "C", "integers": "N", "window": [0, 10] }
   ],
   "maps": [
-    { "id": "s", "from": "A", "to": "B", "expr": "x + 1", "claims": { "surjective": false } },
-    { "id": "h", "from": "B", "to": "C", "expr": "floor(x/2)", "color": "orange", "claims": { "surjective": true } }
+    { "id": "s", "label": "n \\mapsto n + 1", "name": "s", "from": "A", "to": "B", "expr": "x + 1", "claims": { "surjective": false } },
+    { "id": "h", "label": "n \\mapsto \\lfloor n/2 \\rfloor", "name": "h", "from": "B", "to": "C", "expr": "floor(x/2)", "color": "orange", "claims": { "surjective": true } }
   ],
   "show": ["properties(s)", "properties(h)", "preimage(s, 0)"]
 }
@@ -755,7 +755,7 @@ Il grafico dell'inversa si ottiene **scambiando le coordinate** di ogni punto, c
     { "id": "finv", "label": "f^{-1}", "inverse": "f", "hidden": true }
   ],
   "params": { "p": { "min": 2, "max": 8, "step": 0.05, "val": 6, "label": "x" } },
-  "probe": [{ "map": "f", "at": "p" }, { "map": "finv", "at": "sqrt(p - 2) + 2", "color": "blue" }],
+  "probe": [{ "map": "f", "at": "p", "color": "blue" }, { "map": "finv", "at": "sqrt(p - 2) + 2", "color": "orange" }],
   "plot": { "maps": ["f", "finv"], "identity": true, "xlim": [0, 9], "ylim": [0, 9] }
 }
 ```
@@ -787,14 +787,14 @@ $$(g \circ f)(x) = g(f(x)) = g(\lvert x \rvert) = \lvert x \rvert - 1$$
     { "id": "Z", "interval": "[-3, 3]" }
   ],
   "maps": [
-    { "id": "f", "from": "X", "to": "Y", "expr": "abs(x)", "samples": [] },
-    { "id": "g", "from": "Y", "to": "Z", "expr": "x - 1", "color": "blue", "samples": [] },
+    { "id": "f", "label": "\\lvert x \\rvert", "name": "f", "from": "X", "to": "Y", "expr": "abs(x)", "samples": [] },
+    { "id": "g", "label": "x - 1", "name": "g", "from": "Y", "to": "Z", "expr": "x - 1", "color": "blue", "samples": [] },
     { "id": "gf", "label": "g \\circ f", "compose": ["f", "g"] }
   ],
   "params": { "p": { "min": -2, "max": 2, "step": 0.1, "val": -1.5, "label": "x" } },
   "probe": { "map": "gf", "at": "p" },
   "table": { "maps": ["f", "g"], "in": [-2, -1, 0, 1, 2], "probe": true, "headers": ["\\text{IN}", "\\text{OUT} = f(\\text{IN})", "g(\\text{OUT})"] },
-  "plot": { "maps": ["gf"], "position": "below", "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "2:1" }
+  "plot": { "maps": ["gf"], "xlim": [-3, 3], "ylim": [-3, 3] }
 }
 ```
 
@@ -810,15 +810,15 @@ $$(f \circ g)(x) = f(g(x)) = f(x - 1) = \lvert x - 1 \rvert$$
     { "id": "Z", "interval": "[-3, 3]" }
   ],
   "maps": [
-    { "id": "g", "from": "X", "to": "Y", "expr": "x - 1", "color": "blue", "samples": [] },
-    { "id": "f", "from": "Y", "to": "Z", "expr": "abs(x)", "samples": [] },
+    { "id": "g", "label": "x - 1", "name": "g", "from": "X", "to": "Y", "expr": "x - 1", "color": "blue", "samples": [] },
+    { "id": "f", "label": "\\lvert x \\rvert", "name": "f", "from": "Y", "to": "Z", "expr": "abs(x)", "samples": [] },
     { "id": "fg", "label": "f \\circ g", "compose": ["g", "f"] }
   ],
   "params": { "p": { "min": -2, "max": 2, "step": 0.1, "val": -1.5 } },
   "showSliders": false,
   "probe": { "map": "fg", "at": "p" },
   "table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1, 2], "probe": true, "headers": ["\\text{IN}", "\\text{OUT} = g(\\text{IN})", "f(\\text{OUT})"] },
-  "plot": { "maps": ["fg"], "position": "below", "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "2:1" }
+  "plot": { "maps": ["fg"], "xlim": [-3, 3], "ylim": [-3, 3] }
 }
 ```
 
@@ -846,8 +846,8 @@ In questo caso $x - 1 \geq 0$, cioè $\textrm{dom}\,(g \circ f) = [1, +\infty)$.
     { "id": "Z", "label": "\\mathbb{R}", "interval": "R", "window": [-2, 4] }
   ],
   "maps": [
-    { "id": "f", "from": "X", "to": "Y", "expr": "x - 1" },
-    { "id": "g", "from": "Y", "to": "Z", "expr": "sqrt(x)", "color": "blue" },
+    { "id": "f", "label": "x - 1", "name": "f", "from": "X", "to": "Y", "expr": "x - 1" },
+    { "id": "g", "label": "\\sqrt{x}", "name": "g", "from": "Y", "to": "Z", "expr": "sqrt(x)", "color": "blue" },
     { "id": "gf", "label": "g \\circ f", "compose": ["f", "g"] }
   ],
   "params": { "p": { "min": -2, "max": 4, "step": 0.1, "val": 0, "label": "x" } },
