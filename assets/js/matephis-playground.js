@@ -1,7 +1,7 @@
 /**
  * Matephis Playground
  *
- * JSON editor with a live preview for ```physics and ```matephis blocks.
+ * JSON editor with a live preview for ```physics, ```sets and ```matephis blocks.
  * Re-renders shortly after each edit, shows JSON errors with their line, and
  * copies the finished block (with its fence) for a note. Drafts are kept per
  * engine in localStorage when the browser allows it.
@@ -141,6 +141,52 @@
                 params: { phi: { min: 0, max: 360, step: 5, val: 0, unit: 'deg' } },
                 data: [{ fn: 'sin(x° + phi)', label: 'sin(x° + φ)' }]
             }
+        },
+        sets: {
+            'Funzione non iniettiva': {
+                sets: [
+                    { id: 'A', elements: ['a_1', 'a_2', 'a_3'] },
+                    { id: 'B', elements: ['b_1', 'b_2', 'b_3'] }
+                ],
+                maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a_1: 'b_1', a_2: 'b_3', a_3: 'b_1' } }],
+                show: ['collisions(f)', 'properties(f)'],
+                controls: [{ type: 'reveal', label: 'Mostra immagine', targets: ['image(f)'] }]
+            },
+            'Immagine e controimmagine': {
+                sets: [
+                    { id: 'A', elements: ['a', 'c', 'e', 'o'] },
+                    { id: 'B', elements: ['b', 'd', 'g'] }
+                ],
+                maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: 'b', c: 'b', e: 'd', o: 'd' } }],
+                show: ['image(f)'],
+                highlights: [{ of: 'preimage(f, b)', label: 'f^{-1}(b)', hidden: true }],
+                controls: [{ type: 'reveal', label: 'Mostra controimmagine di b', targets: ['preimage(f, b)'] }]
+            },
+            'Composizione': {
+                sets: [
+                    { id: 'A', elements: ['1', '2', '3'] },
+                    { id: 'B', elements: ['x', 'y', 'z'] },
+                    { id: 'C', elements: ['p', 'q'] }
+                ],
+                maps: [
+                    { id: 'f', from: 'A', to: 'B', pairs: { 1: 'x', 2: 'y', 3: 'z' } },
+                    { id: 'g', from: 'B', to: 'C', pairs: { x: 'p', y: 'q', z: 'q' } },
+                    { id: 'gf', compose: ['f', 'g'] }
+                ],
+                show: ['properties(f)', 'properties(g)', 'properties(gf)']
+            },
+            '[0,1] → (0,1)': {
+                sets: [{ id: 'I', interval: '[0,1]' }, { id: 'J', interval: '(0,1)' }],
+                maps: [{ id: 'h', from: 'I', to: 'J', expr: 'x/2 + 1/4', samples: 5 }],
+                params: { p: { min: 0, max: 1, step: 0.01, val: 0.3, label: 'x' } },
+                probe: { map: 'h', at: 'p' },
+                show: ['image(h)', 'properties(h)']
+            },
+            'Contrazione del quadrato': {
+                sets: [{ id: 'Q', label: '[0,1]^2', rect: ['[0,1]', '[0,1]'] }, { id: 'R', label: '[0,1]^2', rect: ['[0,1]', '[0,1]'] }],
+                maps: [{ id: 'c', from: 'Q', to: 'R', expr: ['x/2 + 1/4', 'y/2 + 1/4'], samples: 4 }],
+                show: ['image(c)']
+            }
         }
     };
 
@@ -195,6 +241,7 @@
         preview.appendChild(host);
         try {
             if (engine === 'physics') instance = window.MatephisPhysics.render(host, cfg, { noLightbox: true });
+            else if (engine === 'sets') instance = window.MatephisSets.render(host, cfg);
             else instance = window.MatephisPlot.render(host, cfg, { noLightbox: true });
             var n = instance && instance.warnings ? instance.warnings.length : 0;
             setStatus(n ? n + (n === 1 ? ' avviso' : ' avvisi') + ' (sotto il diagramma)' : 'OK', false);
