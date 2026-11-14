@@ -140,7 +140,7 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | Opzione | Default | Descrizione |
 | :--- | :--- | :--- |
 | `maps` | tutte quelle disegnabili | Le funzioni da disegnare: da numeri a numeri, date da un'espressione, a tratti, da coppie di numeri, composizioni e inverse (come grafico riflesso). |
-| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti) o `"below"`. |
+| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti, e quando accanto il diagramma diventerebbe troppo stretto, per esempio un dynagraph con etichette lunghe) o `"below"`. |
 | `probe` | `true` | I punti $(x, f(x))$ del punto del diagramma, con la linea tratteggiata fino all'asse $x$. Per $g \circ f$ anche $(f(x), g(f(x)))$ sul grafico di $g$ e $(x, g(f(x)))$ su quello di $g \circ f$. |
 | `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
 | `identity` | con `construction` | Disegna la retta $y = x$. |
