@@ -121,3 +121,20 @@ describe('Funzioni a tratti sul grafico', () => {
         expect(dots.map(d => [d.points[0][0], d.fillColor === 'blue'])).toEqual([[0, true], [1, false], [1, true], [2, true]]);
     });
 });
+
+import { fnTeX } from '../assets/js/matephis-sets-src/render/arrows.js';
+
+describe('Nomi nelle righe sotto il diagramma', () => {
+    it('le parentesi solo per i nomi composti', () => {
+        expect(fnTeX('f')).toBe('f');
+        expect(fnTeX('T_1')).toBe('T_1');
+        expect(fnTeX('\\cos')).toBe('\\cos');
+        expect(fnTeX('g \\circ f')).toBe('\\left(g \\circ f\\right)');
+        expect(fnTeX('f^{-1}')).toBe('\\left(f^{-1}\\right)');
+    });
+    it('il confronto mette tra parentesi una composizione', () => {
+        const gf = { label: 'g \\circ f', name: 'g \\circ f' };
+        const sc = { config: { compare: [0, 1] }, color: (c) => c, probeValues: [{ x: 1, ys: [4], map: gf, at: 'p' }, { x: 2, ys: [1], map: gf, at: 'q' }] };
+        expect(compareReadout(sc).tex).toMatch(/^p < q \\Rightarrow \\left\(g \\circ f\\right\)\\left\(p\\right\) > \\left\(g \\circ f\\right\)\\left\(q\\right\)/);
+    });
+});

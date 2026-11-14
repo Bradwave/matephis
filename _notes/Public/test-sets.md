@@ -150,7 +150,7 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `ends` | `true` | Funzioni a tratti: un grafico per ogni tratto (i salti non vengono uniti) e, agli estremi dei tratti, un punto pieno se l'estremo appartiene al tratto, vuoto se no. `false` disegna la funzione come una sola curva. |
 | `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
-Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
+Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot). Di default il grafico occupa tutta la larghezza che ha; con `cssWidth` (`"60%"`, `"420px"`) o `width` prende quella misura, come in un blocco di grafici, ed è centrato (`"align": "left"` lo mette a sinistra). Utile per un grafico quadrato sotto il diagramma, che altrimenti diventa molto alto.
 
 ### Prodotto cartesiano
 
@@ -914,7 +914,7 @@ $f(x) = \ln(4 - x^2)$ è definita dove $4 - x^2 > 0$: su $(-2, 2)$. Lo stesso in
   "sets": [{ "id": "R", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }, { "id": "S", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 2] }],
   "maps": [{ "id": "f", "from": "R", "to": "S", "expr": "log(4 - x^2)", "samples": [-1.5, -1, 0, 1, 1.5] }],
   "show": ["domain(f)"],
-  "plot": { "maps": ["f"], "xlim": [-3, 3], "ylim": [-3, 2] }
+  "plot": { "maps": ["f"], "xlim": [-3, 3], "ylim": [-3, 2], "position": "below", "cssWidth": "60%" }
 }
 ```
 

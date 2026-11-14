@@ -10,6 +10,13 @@ import { SetsModel } from '../core/model.js';
 
 const f2 = (v) => +v.toFixed(2);
 
+/** A map's name before an argument or an exponent: "f", "T_1" stay, "g \circ f", "n + 1" get brackets. */
+export function fnTeX(label) {
+    const s = String(label);
+    return /^\\?[A-Za-z]+('*)(_\{?[A-Za-z0-9]+\}?)?(\^\{?[^{}]*\}?)?$/.test(s) && !/\^/.test(s) ? s : `\\left(${s}\\right)`;
+}
+
+
 /** Key of an arrow target, as collisions store it. */
 const targetKey = (t) => (typeof t === 'string' ? t : JSON.stringify(t));
 
@@ -379,7 +386,7 @@ export function drawProbes(scene) {
                     const inner = k === 0 ? fmt(x) : val(vals[k], map.parts[k - 1].to);
                     terms.push(map.parts.slice(k).reduce((acc, part) => `${part.name}\\left(${acc}\\right)`, inner));
                 }
-                tex = `\\left(${map.name}\\right)\\left(${fmt(x)}\\right) = ${terms.join(' = ')} ${rhs}`;
+                tex = `${fnTeX(map.name)}\\left(${fmt(x)}\\right) = ${terms.join(' = ')} ${rhs}`;
             }
             if (below) {
                 // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it
@@ -516,7 +523,7 @@ export function compareReadout(scene) {
     const ya = num(A), yb = num(B);
     if (!A || !B || ya === null || yb === null || typeof A.x !== 'number' || typeof B.x !== 'number') return { tex: null, color };
     const name = (o) => (typeof o.at === 'string' ? o.at.replace(/\*/g, '') : niceNumber(o.x));
-    const fx = (o) => `${o.map.name}\\left(${name(o)}\\right)`;
+    const fx = (o) => `${fnTeX(o.map.name)}\\left(${name(o)}\\right)`;
     const close = (u, v) => Math.abs(u - v) <= 1e-9 * Math.max(1, Math.abs(u), Math.abs(v));
     if (spec && spec.mode === 'parity') {
         // Probe 0 at p, probe 1 at -p
