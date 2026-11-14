@@ -10,7 +10,7 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare",
 ];
 
 /** Root keys of later phases. */

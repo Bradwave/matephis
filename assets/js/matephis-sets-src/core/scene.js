@@ -22,7 +22,7 @@ import { parseSelector } from './selectors.js';
 import { Controls } from '../ui/controls.js';
 import { Interaction } from '../ui/interaction.js';
 import { drawSets, drawElements, drawHeader } from '../render/sets.js';
-import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts } from '../render/arrows.js';
+import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts, compareReadout } from '../render/arrows.js';
 import { Orbits } from '../render/orbits.js';
 import { SyncGroup } from './sync.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
@@ -526,7 +526,11 @@ export class MatephisSets {
                 if (r) layerReadouts.push(r);
             }
         });
-        const readouts = [...drawProbes(this), ...(this.orbits ? this.orbits.draw() : []), ...layerReadouts];
+        this.probeValues = [];
+        const readouts = [...drawProbes(this)];
+        const cmp = compareReadout(this);
+        if (cmp) readouts.push(cmp);
+        readouts.push(...(this.orbits ? this.orbits.draw() : []), ...layerReadouts);
         if (readouts.length || this.readoutEl) renderReadouts(this, readouts);
         renderProperties(this, props);
         if (this.controls) this.controls.update();

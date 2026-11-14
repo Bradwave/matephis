@@ -235,6 +235,12 @@ export function drawProbes(scene) {
         const atList = two ? (Array.isArray(p.at) ? p.at : [p.at, p.at]) : [Array.isArray(p.at) ? p.at[0] : p.at];
         const params = atList.map(a => (typeof a === 'string' && cfg.params && cfg.params[a] ? a : null));
         const values = atList.map((a, k) => (params[k] ? scene.params[params[k]] / paramScaleOf(cfg, params[k]) : scene._num(a, `probe[${i}].at`)));
+        // "at": "-p" (an expression of one param): dragging moves that param
+        const exprParams = atList.map((a, k) => {
+            if (params[k] || typeof a !== 'string') return null;
+            const names = Object.keys(cfg.params || {}).filter(n => scene.mentionsParam(a) && new RegExp(`(^|[^A-Za-z0-9_])${n}($|[^A-Za-z0-9_])`).test(a));
+            return names.length === 1 ? names[0] : null;
+        });
         if (values.some(v => typeof v !== 'number' || isNaN(v))) return;
         const x = two ? values : values[0];
         const srcPx = pointPx(scene.layout, map.from, x);
@@ -309,7 +315,8 @@ export function drawProbes(scene) {
         // Where the value goes is decided by the kind of map, not by the value,
         // so it never jumps between the drawing and the line under it
         const multi = map.kind === 'inverse' || (isCompose && map.parts.some(m => m.kind === 'inverse'));
-        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to;
+        // With several probes their values would overlap in the drawing: lines under it
+        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to || probes.length > 1;
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
@@ -343,7 +350,9 @@ export function drawProbes(scene) {
         }
         const handle = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 6.5, class: 'mps-probe-handle' }, g);
         handle.style.fill = color;
-        const draggable = p.drag !== false && params.some(Boolean);
+        if (!scene.probeValues) scene.probeValues = [];
+        scene.probeValues[i] = { x, ys: inside ? ys : [], map, at: p.at, label: p.label };
+        const draggable = p.drag !== false && (params.some(Boolean) || exprParams.some(Boolean));
         if (!draggable) return;
         handle.classList.add('mps-draggable');
         handle.setAttribute('tabindex', '0');
@@ -354,10 +363,12 @@ export function drawProbes(scene) {
             let q = P.fromPx(px, py);
             q = clampToSet(map.from, q);
             const qs = two ? q : [q];
-            params.forEach((name, k) => {
+            atList.forEach((src, k) => {
+                const name = params[k] || exprParams[k];
                 if (!name) return;
                 const def = cfg.params[name];
-                let v = qs[k];
+                let v = params[k] ? qs[k] : solveParam(scene, src, name, qs[k]);
+                if (!isFinite(v)) return;
                 const lo = scene._num(def.min !== undefined ? def.min : -Infinity), hi = scene._num(def.max !== undefined ? def.max : Infinity);
                 if (isFinite(lo)) v = Math.max(lo, v);
                 if (isFinite(hi)) v = Math.min(hi, v);
@@ -416,6 +427,62 @@ export function renderReadouts(scene, items) {
         el.appendChild(line);
         keep();
     });
+}
+
+/**
+ * The value of a param that makes an expression of it equal to a target
+ * (for "at": "-p", "2*p + 1"): secant steps from the current value. Exact
+ * for linear expressions; NaN when it does not converge.
+ */
+function solveParam(scene, src, name, target) {
+    const k = paramScaleOf(scene.config, name);
+    const saved = scene.params[name];
+    const f = (v) => {
+        scene.params[name] = v * k;
+        return scene._num(src) - target;
+    };
+    let a = saved / k, b = a + 1;
+    let fa = f(a), fb = f(b);
+    for (let it = 0; it < 30 && Math.abs(fb) > 1e-12; it++) {
+        if (fb === fa) break;
+        const c = b - fb * (b - a) / (fb - fa);
+        a = b; fa = fb;
+        b = c; fb = f(b);
+    }
+    scene.params[name] = saved;
+    return Math.abs(fb) < 1e-9 ? b : NaN;
+}
+
+/**
+ * "compare": [0, 1] (or { "probes": [0, 1], "mode": "parity" }): a line on
+ * two probes. Order: "p < q ⇒ f(p) < f(q)", order kept or reversed. Parity:
+ * f(-p) = f(p), f(-p) = -f(p), or neither.
+ */
+export function compareReadout(scene) {
+    const c = scene.config.compare;
+    if (c === undefined) return null;
+    const spec = Array.isArray(c) ? { probes: c } : c && typeof c === 'object' ? c : null;
+    const ids = spec && Array.isArray(spec.probes) ? spec.probes : [0, 1];
+    const color = scene.color(spec && spec.color ? spec.color : 'gray');
+    const pv = scene.probeValues || [];
+    const A = pv[ids[0]], B = pv[ids[1]];
+    const num = (o) => (o && o.ys.length === 1 && typeof o.ys[0] === 'number' ? o.ys[0] : null);
+    const ya = num(A), yb = num(B);
+    if (!A || !B || ya === null || yb === null || typeof A.x !== 'number' || typeof B.x !== 'number') return { tex: null, color };
+    const name = (o) => (typeof o.at === 'string' ? o.at.replace(/\*/g, '') : niceNumber(o.x));
+    const fx = (o) => `${o.map.label}\\left(${name(o)}\\right)`;
+    const close = (u, v) => Math.abs(u - v) <= 1e-9 * Math.max(1, Math.abs(u), Math.abs(v));
+    if (spec && spec.mode === 'parity') {
+        // Probe 0 at p, probe 1 at -p
+        if (close(yb, ya)) return { tex: `${fx(B)} = ${fx(A)}`, color };
+        if (close(yb, -ya)) return { tex: `${fx(B)} = -${fx(A)}`, color };
+        return { tex: `${fx(B)} \\ne \\pm ${fx(A)}`, color };
+    }
+    if (close(A.x, B.x)) return { tex: `${name(A)} = ${name(B)}`, color };
+    const [L, R, yl, yr] = A.x < B.x ? [A, B, ya, yb] : [B, A, yb, ya];
+    const rel = close(yl, yr) ? '=' : yl < yr ? '<' : '>';
+    const note = rel === '<' ? '\\text{ordine conservato}' : rel === '>' ? '\\text{ordine invertito}' : '';
+    return { tex: `${name(L)} < ${name(R)} \\Rightarrow ${fx(L)} ${rel} ${fx(R)}${note ? `\\quad ${note}` : ''}`, color };
 }
 
 function paramScaleOf(cfg, name) {

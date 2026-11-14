@@ -57,3 +57,24 @@ describe('Grafico collegato', () => {
         expect(v._m0p0x).toBe(1e9);
     });
 });
+
+import { compareReadout } from '../assets/js/matephis-sets-src/render/arrows.js';
+
+describe('Confronto tra due punti', () => {
+    const f = { label: 'f' };
+    const sc = (compare, a, b) => ({
+        config: { compare },
+        color: (c) => c,
+        probeValues: [{ x: a[0], ys: [a[1]], map: f, at: a[2] }, { x: b[0], ys: [b[1]], map: f, at: b[2] }],
+    });
+    it('ordine conservato e invertito', () => {
+        expect(compareReadout(sc([0, 1], [0.5, 0.25, 'p'], [1.5, 2.25, 'q'])).tex).toMatch(/^p < q \\Rightarrow f\\left\(p\\right\) < f\\left\(q\\right\).*conservato/);
+        expect(compareReadout(sc([0, 1], [1.5, 2.25, 'p'], [-1.6, 2.56, 'q'])).tex).toMatch(/^q < p .* > .*invertito/);
+    });
+    it('parità', () => {
+        const par = { probes: [0, 1], mode: 'parity' };
+        expect(compareReadout(sc(par, [0.6, -0.384, 'p'], [-0.6, 0.384, '-p'])).tex).toBe('f\\left(-p\\right) = -f\\left(p\\right)');
+        expect(compareReadout(sc(par, [0.6, 0.36, 'p'], [-0.6, 0.36, '-p'])).tex).toBe('f\\left(-p\\right) = f\\left(p\\right)');
+        expect(compareReadout(sc(par, [0.6, 1, 'p'], [-0.6, 2, '-p'])).tex).toMatch(/\\ne \\pm/);
+    });
+});

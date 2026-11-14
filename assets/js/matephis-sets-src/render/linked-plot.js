@@ -398,11 +398,12 @@ export class LinkedPlot {
             if (!p || typeof p !== 'object') return;
             const m = model.mapById.get(String(p.map));
             const at = Array.isArray(p.at) ? p.at[0] : p.at;
-            if (!m || m.from.kind !== 'interval' || typeof at !== 'string' || !(cfg.params && cfg.params[at])) return;
+            // "at" is a param, or an expression of params ("-p")
+            if (!m || m.from.kind !== 'interval' || typeof at !== 'string' || !(cfg.params && (cfg.params[at] || scene.mentionsParam(at)))) return;
             const chain = m.kind === 'compose' ? m.parts : [m];
             if (chain.some(part => model.exprString(part) === null)) return;
             // v[k]: the value after k steps, as an expression in the param
-            const v = [at];
+            const v = [cfg.params[at] ? at : `(${at})`];
             chain.forEach(part => v.push(substituteX(model.exprString(part), v[v.length - 1])));
             const n = chain.length;
             const color = p.color ? scene.color(p.color) : pc;

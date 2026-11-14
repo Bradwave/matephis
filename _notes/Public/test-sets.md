@@ -27,6 +27,7 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `dynagraph` | Boolean/Object | | Dynagraph: gli intervalli diventano rette parallele una sotto l'altra, con la stessa scala, tacche e numeri (vedi «Dynagraph e grafici»). |
 | `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
 | `iterate` | Object/Array | | Orbita di un punto, un passo alla volta: $x_0, f(x_0), f(f(x_0)), \dots$ (vedi «Iterazione e blocchi collegati»). |
+| `compare` | Array/Object | | Confronta due punti (`probe`): ordine o parità (vedi «Domini continui»). |
 | `sync` | String | | Nome di un gruppo: i blocchi con lo stesso nome nella pagina condividono parametri, evidenziazione al passaggio e passi delle orbite (vedi «Iterazione e blocchi collegati»). |
 | `hover` | Boolean | `true` | Passando sopra un elemento (o con Tab) si evidenziano le sue frecce, immagini e controimmagini. |
 | `reorder` | Boolean | `true` | Riordina gli elementi del codominio per ridurre gli incroci e tenere l'immagine in un unico blocco. Un insieme con `"order": "given"` mantiene il suo ordine. |
@@ -106,6 +107,13 @@ L'immagine di un intervallo è calcolata campionando la funzione, che si suppone
 Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni continue e iniettive.
 
 `probe`: `{ "map": "h", "at": "p" }` mette un punto in $x = p$ con la freccia verso $h(p)$ e il valore. Se `at` è un parametro il punto si trascina e muove lo slider; nel piano `at` è una coppia (`["p", "q"]`). Su una composizione il punto segue i passaggi, $x \to f(x) \to g(f(x))$, attraverso gli insiemi intermedi. Opzioni: `label`, `color`, `showValue`, `drag`, `trace` (lascia le frecce dei punti già visitati, sbiadite: mostra dove la funzione allunga, ripiega o non arriva).
+
+`at` può essere un'espressione di un parametro (`"-p"`, `"p + 1"`, `"2*p"`): trascinando il punto si muove il parametro. Con più punti (un array) si confrontano due valori con `"compare"`:
+
+| `compare` | Riga sotto il diagramma |
+| :--- | :--- |
+| `[0, 1]` | Ordine: $p < q \Rightarrow f(p) < f(q)$ (ordine conservato) o $f(p) > f(q)$ (ordine invertito). |
+| `{ "probes": [0, 1], "mode": "parity" }` | Parità, con il punto 1 in $-p$: $f(-p) = f(p)$, $f(-p) = -f(p)$, oppure $f(-p) \ne \pm f(p)$. |
 
 Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
 
@@ -634,5 +642,39 @@ La stessa controimmagine sul diagramma e sul grafico: la retta $y = k$ taglia il
   "params": { "k": { "min": -1, "max": 4, "step": 0.05, "val": 1 } },
   "show": ["preimage(f, k)"],
   "plot": { "lines": [{ "y": "k" }] }
+}
+```
+
+### Parità con due punti
+
+Il punto blu sta in $-p$ e si muove con $p$ (si può trascinare anche lui). Con $f(x) = x^3 - x$ la riga sotto dice sempre $f(-p) = -f(p)$: la funzione è dispari.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-1.5, 1.5]" }, { "id": "Y", "interval": "[-2, 2]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^3 - x" }],
+  "params": { "p": { "min": -1.5, "max": 1.5, "step": 0.05, "val": 0.6 } },
+  "probe": [{ "map": "f", "at": "p" }, { "map": "f", "at": "-p", "color": "blue" }],
+  "compare": { "probes": [0, 1], "mode": "parity" },
+  "plot": { "maps": ["f"] }
+}
+```
+
+### Monotonia: l'ordine conservato o invertito
+
+Con $p < q$ entrambi in $[0, 2]$ l'ordine si conserva; se uno dei due passa sotto lo $0$ può invertirsi: $x^2$ non è monotona su $[-2, 2]$.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": {
+    "p": { "min": -2, "max": 2, "step": 0.05, "val": 0.5 },
+    "q": { "min": -2, "max": 2, "step": 0.05, "val": 1.5 }
+  },
+  "probe": [{ "map": "f", "at": "p" }, { "map": "f", "at": "q", "color": "blue" }],
+  "compare": [0, 1]
 }
 ```
