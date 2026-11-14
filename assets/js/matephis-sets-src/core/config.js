@@ -31,7 +31,7 @@ export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue", "
 export const ITERATE_KEYS = ["map", "start", "steps", "step", "color", "label", "showValue"];
 export const DYNAGRAPH_KEYS = ["scale", "ticks", "arrows"];
 /** Keys of "plot" read by the sets engine; any other key goes to the plot itself. */
-export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity"];
+export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity", "lines", "highlights", "ends"];
 
 const didYouMean = (word, candidates) => {
     const s = suggest(word, candidates);

@@ -22,6 +22,13 @@ import { PLOT_KEYS } from '../core/config.js';
 import { substituteX } from '../core/model.js';
 import { paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 
+/** Highlights drawn on the graph too, and how many points and bands each may have. */
+const MIRROR_OPS = ['image', 'preimage', 'domain', 'fixed'];
+const POINT_SLOTS = 12;
+const BAND_SLOTS = 6;
+/** Where unused slots go: far outside the plot (the plot skips points out of view). */
+const OFF = 1e9;
+
 /** Colours given to maps without one, when they are plotted (arrows and graph match). */
 export const PLOT_COLORS = ['blue', 'orange', 'green', 'purple', 'red', 'navy'];
 
@@ -114,8 +121,139 @@ export class LinkedPlot {
                 changed = true;
             }
         }));
+        // Highlights mirrored on the graph (they follow params and reveal buttons)
+        const mv = this.mirrorValues();
+        for (const key in mv) {
+            if (this.plot.params[key] !== mv[key] && !(isNaN(this.plot.params[key]) && isNaN(mv[key]))) {
+                sl.setValue(key, mv[key], false);
+                changed = true;
+            }
+        }
         this._syncing = false;
         if (changed) this.plot.requestDraw();
+    }
+
+    /** "lines": [{ "y": "k" }, { "x": "p", "dash": true, "color": "blue" }]: lines driven by params. */
+    lineItems() {
+        const { scene } = this;
+        const lines = Array.isArray(this.def.lines) ? this.def.lines : [];
+        const out = [];
+        lines.forEach((l, i) => {
+            if (!l || typeof l !== 'object' || (l.y === undefined && l.x === undefined)) {
+                scene._addWarning(`plot.lines[${i}]: expected { "y": "k" } or { "x": "p" }`);
+                return;
+            }
+            const color = scene.color(l.color || 'gray');
+            const dash = l.dash === false ? undefined : l.dash === true || l.dash === undefined ? '6,4' : l.dash;
+            if (l.y !== undefined) out.push({ fn: String(l.y), color, dash, width: 1.6, label: l.label });
+            else out.push({ x: String(l.x), color, dash, width: 1.6, label: l.label });
+        });
+        return out;
+    }
+
+    /**
+     * The diagram's highlights that live on a line (preimages, images, and
+     * later domain and fixed points), drawn on the graph: points (x, f(x))
+     * with a dashed line to the x axis, bands on the x axis (where) or on the
+     * y axis (values). The plot is built once with a fixed number of slots,
+     * whose corners are hidden params; unused slots are put out of sight.
+     */
+    mirrorLayers() {
+        if (this.def.highlights === false) return [];
+        const { scene } = this;
+        return scene.layers.filter(l => l.sel && MIRROR_OPS.includes(l.sel.op)
+            && this.maps.some(m => m.id === l.sel.map) && scene.model.mapById.get(l.sel.map).from.kind === 'interval');
+    }
+
+    mirrorItems() {
+        const { scene } = this;
+        return this.mirrorLayers().map((l, j) => {
+            const def = l.def || {};
+            const op = l.sel.op;
+            const color = scene.color(def.color, op === 'image' ? 'image' : op === 'preimage' ? (def.of ? 'highlight' : 'preimage') : 'highlight');
+            const items = [];
+            for (let i = 0; i < POINT_SLOTS; i++) {
+                const x = `_m${j}p${i}x`, y = `_m${j}p${i}y`;
+                items.push({ vector: [[x, 0], [x, y]], arrow: false, dash: '3,3', color, width: 1.2 });
+                items.push({ points: [[x, y]], radius: 5, fillColor: color, color });
+            }
+            for (let i = 0; i < BAND_SLOTS; i++) {
+                const a = `_m${j}b${i}a`, b = `_m${j}b${i}b`, c = `_m${j}b${i}c`, d = `_m${j}b${i}d`;
+                items.push({ vector: [[a, b], [c, d]], arrow: false, color, width: 6, opacity: 0.55 });
+            }
+            return { items };
+        });
+    }
+
+    /** Values of the slots of the mirrored highlights (see mirrorItems). */
+    mirrorValues() {
+        const { scene } = this;
+        const { model } = scene;
+        const out = {};
+        this.mirrorLayers().forEach((l, j) => {
+            const map = model.mapById.get(l.sel.map);
+            const shown = scene.isVisible(l);
+            const pts = [], bands = [];
+            if (shown) {
+                const res = this.mirrorResult(l, map);
+                if (res) {
+                    (res.points || []).forEach(x => {
+                        const y = model._raw1(map, x);
+                        if (isFinite(y)) pts.push([x, res.onDiagonal ? x : y]);
+                    });
+                    (res.xBands || []).forEach(I => bands.push([I.lo, 0, I.hi, 0]));
+                    (res.yBands || []).forEach(I => {
+                        const x0 = this._yAxisX();
+                        bands.push([x0, I.lo, x0, I.hi]);
+                    });
+                }
+            }
+            for (let i = 0; i < POINT_SLOTS; i++) {
+                const p = pts[i];
+                out[`_m${j}p${i}x`] = p ? p[0] : OFF;
+                out[`_m${j}p${i}y`] = p ? p[1] : OFF;
+            }
+            for (let i = 0; i < BAND_SLOTS; i++) {
+                const b = bands[i];
+                const clip = (v, w) => (isFinite(v) ? v : v > 0 ? w[1] : w[0]);
+                const xw = this._xlim, yw = this._ylim;
+                out[`_m${j}b${i}a`] = b ? clip(b[0], xw) : OFF;
+                out[`_m${j}b${i}b`] = b ? clip(b[1], yw) : OFF;
+                out[`_m${j}b${i}c`] = b ? clip(b[2], xw) : OFF;
+                out[`_m${j}b${i}d`] = b ? clip(b[3], yw) : OFF;
+            }
+        });
+        return out;
+    }
+
+    /** Where the y axis is drawn: x = 0 when it is in view, else the left edge. */
+    _yAxisX() {
+        const w = this._xlim || [0, 1];
+        return w[0] <= 0 && w[1] >= 0 ? 0 : w[0];
+    }
+
+    /** What a highlight puts on the graph: { points, xBands, yBands, onDiagonal }. */
+    mirrorResult(layer, map) {
+        const { model } = this.scene;
+        const { op, arg } = layer.sel;
+        const parts = (res) => (!res ? [] : res.kind === 'interval' ? [res.I] : res.kind === 'intervals' ? res.parts : []);
+        if (op === 'preimage') {
+            const res = model.preimage(map, arg);
+            if (!res) return null;
+            if (res.kind === 'points') return { points: res.points };
+            const ps = parts(res);
+            return { xBands: ps.filter(I => I.lo !== I.hi), points: ps.filter(I => I.lo === I.hi).map(I => I.lo) };
+        }
+        if (op === 'image') {
+            const res = model.image(map, arg);
+            return { yBands: parts(res).filter(I => I.lo !== I.hi) };
+        }
+        if (op === 'domain' && model.domainOf) return { xBands: model.domainOf(map) };
+        if (op === 'fixed' && model.fixedPoints) {
+            const fx = model.fixedPoints(map);
+            return { points: fx.points || [], onDiagonal: true };
+        }
+        return null;
     }
 
     /**
@@ -201,6 +339,10 @@ export class LinkedPlot {
             data.unshift({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
         }
         cobwebs.forEach(c => data.push(...c.items));
+        // Lines driven by params, and the diagram's highlights on the graph
+        data.push(...this.lineItems());
+        const mirrors = this.mirrorItems();
+        mirrors.forEach(m => data.push(...m.items));
 
         const own = {};
         for (const key in def) if (!PLOT_KEYS.includes(key)) own[key] = def[key];
@@ -218,9 +360,15 @@ export class LinkedPlot {
         for (const key in defs) params[key] = { ...defs[key], val: scene.params[key] / paramScale(defs[key]) };
         // The cobweb's corners are hidden params, set by sync() at every step
         cobwebs.forEach(c => c.keys.forEach((key, i) => { params[key] = { min: -1e9, max: 1e9, slider: false, val: c.values[i] }; }));
+        const xlim = Array.isArray(def.xlim) ? def.xlim.map(Number) : pad(square ? both : xr);
+        const ylim = Array.isArray(def.ylim) ? def.ylim.map(Number) : pad(square ? both : yr);
+        this._xlim = xlim;
+        this._ylim = ylim;
+        const mv = this.mirrorValues();
+        for (const key in mv) params[key] = { min: -1e10, max: 1e10, slider: false, val: mv[key] };
         return {
-            xlim: pad(square ? both : xr),
-            ylim: pad(square ? both : yr),
+            xlim,
+            ylim,
             aspectRatio: '1:1',
             cssWidth: '100%',
             fullWidth: true,

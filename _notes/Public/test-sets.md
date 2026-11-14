@@ -128,6 +128,8 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `probe` | `true` | I punti $(x, f(x))$ del punto del diagramma, con la linea tratteggiata fino all'asse $x$. Per $g \circ f$ anche $(f(x), g(f(x)))$ sul grafico di $g$ e $(x, g(f(x)))$ su quello di $g \circ f$. |
 | `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
 | `identity` | con `construction` | Disegna la retta $y = x$. |
+| `lines` | | Rette guidate dai parametri: `[{ "y": "k" }, { "x": "p", "color": "blue", "dash": false }]` ($y = k$, $x = p$). Opzioni: `color`, `dash` (default tratteggiata), `label`. |
+| `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
 Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
 
@@ -617,5 +619,20 @@ $f(x) = x^2$ su $[-2, 2]$. Con lo slider $k$ la retta $y = k$ incontra il grafic
   },
   "show": ["preimage(f, k)"],
   "highlights": [{ "of": "image(f, [a, b])", "color": "purple" }]
+}
+```
+
+### Rette e controimmagini sul grafico
+
+La stessa controimmagine sul diagramma e sul grafico: la retta $y = k$ taglia il grafico nei punti di $f^{-1}(\{k\})$. Se per ogni $k$ del codominio c'è almeno un punto, $f$ è suriettiva; se non ce n'è mai più di uno, è iniettiva.
+
+```sets
+{
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[-1, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "k": { "min": -1, "max": 4, "step": 0.05, "val": 1 } },
+  "show": ["preimage(f, k)"],
+  "plot": { "lines": [{ "y": "k" }] }
 }
 ```
