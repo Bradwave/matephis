@@ -281,7 +281,7 @@ Una funzione può usare formule diverse su parti diverse del dominio. La conosci
 
 $$\lvert x \rvert = \begin{cases} x & \text{se } x \geq 0 \\ -x & \text{se } x < 0 \end{cases}$$
 
-Un'unica funzione, due formule: per ogni IN si usa **una sola** delle due righe, quella la cui condizione è vera. Le condizioni dividono il dominio in pezzi che non si sovrappongono e lo ricoprono tutto: è proprio quello che serve perché a ogni IN corrisponda esattamente un OUT.
+Nel diagramma la chiamiamo $v$, cioè $v(x) = \lvert x \rvert$. Un'unica funzione, due formule: per ogni IN si usa **una sola** delle due righe, quella la cui condizione è vera. Le condizioni dividono il dominio in pezzi che non si sovrappongono e lo ricoprono tutto: è proprio quello che serve perché a ogni IN corrisponda esattamente un OUT.
 
 *Prima di trascinare: che cosa fanno le frecce a sinistra di $0$? E a destra?*
 
@@ -292,7 +292,7 @@ Un'unica funzione, due formule: per ogni IN si usa **una sola** delle due righe,
     { "id": "X", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] },
     { "id": "Y", "label": "\\mathbb{R}", "interval": "R", "window": [-3, 3] }
   ],
-  "maps": [{ "id": "v", "label": "\\lvert \\cdot \\rvert", "from": "X", "to": "Y", "piecewise": [
+  "maps": [{ "id": "v", "from": "X", "to": "Y", "piecewise": [
     { "on": "[0, +inf)", "expr": "x" },
     { "on": "(-inf, 0)", "expr": "-x" }
   ] }],
@@ -565,3 +565,313 @@ L'iniettività dipende dalla legge e dal dominio. La suriettività dipende **anc
 > Per due ragioni. La prima è che spesso l'immagine non si conosce, o è molto difficile da determinare. Pensiamo alla funzione che associa a ogni istante la posizione di una particella di gas in un contenitore: il codominio naturale è l'insieme dei punti del contenitore, mentre l'immagine, cioè l'insieme dei punti in cui la particella è effettivamente passata, è praticamente impossibile da calcolare.
 >
 > La seconda ragione è che la domanda «$f \colon A \to B$ è suriettiva?» è interessante proprio perché il codominio è fissato: vuol dire «l'equazione $f(x) = k$ ha sempre soluzione, qualunque sia $k \in B$?». Ad esempio, chiedersi se $x \mapsto x^3 + x$ è suriettiva da $\mathbb{R}$ in $\mathbb{R}$ vuol dire chiedersi se ogni equazione di terzo grado della forma $x^3 + x = k$ ha una soluzione reale.
+
+## Biiezioni e cardinalità
+
+### Contare è costruire una biiezione
+
+Quando contiamo i banchi di un'aula, indichiamo il primo e diciamo «uno», il secondo e diciamo «due», e così via, senza saltarne nessuno e senza contarne uno due volte. Stiamo costruendo una biiezione tra l'insieme dei banchi e l'insieme $\lbrace 1, 2, \ldots, n \rbrace$: se l'ultimo numero pronunciato è $24$, i banchi sono $24$.
+
+Due insiemi finiti hanno lo stesso numero di elementi se e solo se esiste una biiezione tra di essi. E se il numero è diverso?
+
+- Se $A$ ha **più** elementi di $B$, nessuna funzione $A \to B$ è iniettiva: almeno due elementi di $A$ devono avere la stessa immagine. È il ***principio dei cassetti*** (o *della piccionaia*): se si mettono $11$ calzini in $10$ cassetti, almeno un cassetto contiene due calzini.
+- Se $A$ ha **meno** elementi di $B$, nessuna funzione $A \to B$ è suriettiva: qualche elemento di $B$ resta senza controimmagine.
+
+È quello che abbiamo visto nel diagramma con gli insiemi $A$, $B$ e $C$: con tre elementi non si raggiungono tutti e quattro gli elementi di $B$, e quattro elementi non possono andare in tre senza che due si "scontrino". Ne segue anche che, tra due insiemi finiti con lo stesso numero di elementi, una funzione è iniettiva se e solo se è suriettiva.
+
+### Insiemi infiniti
+
+Con gli insiemi infiniti non possiamo contare fino all'ultimo elemento, ma possiamo ancora chiederci se esiste una biiezione. È l'idea di Georg Cantor (seconda metà dell'Ottocento):
+
+> **Definizione.** Due insiemi $A$ e $B$ hanno la stessa ***cardinalità*** (lo stesso "numero di elementi", anche se infinito) se esiste una biiezione $f \colon A \to B$.
+
+Le conseguenze sono sorprendenti. Già Galileo, nel 1638, aveva notato che i quadrati perfetti $0, 1, 4, 9, 16, \ldots$ si possono mettere in corrispondenza uno a uno con i numeri naturali ($n \mapsto n^2$), anche se "sembrano" molti meno. Lo stesso accade con i numeri pari: $n \mapsto 2n$ è una biiezione da $\mathbb{N}$ all'insieme $2\mathbb{N}$ dei pari. *Prima di trascinare: c'è un numero pari che non viene raggiunto?*
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "N", "integers": "N", "window": [0, 10] },
+    { "id": "P", "integers": "2N", "window": [0, 20] }
+  ],
+  "maps": [{ "id": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3, "label": "n" } },
+  "probe": { "map": "d", "at": "n" },
+  "show": ["properties(d)"]
+}
+```
+
+L'insieme dei pari è una **parte** di $\mathbb{N}$, eppure ha la stessa cardinalità di $\mathbb{N}$. Per gli insiemi finiti è impossibile: una parte propria ha sempre meno elementi del tutto. Per gli insiemi infiniti, invece, il tutto non è necessariamente "più grande" di una sua parte.
+
+Il cosiddetto ***albergo di Hilbert*** ha infinite stanze, numerate $0, 1, 2, \ldots$, tutte occupate. Arriva un nuovo ospite: il portiere chiede a ogni cliente di spostarsi dalla stanza $n$ alla stanza $n + 1$, e la stanza $0$ si libera. La funzione $n \mapsto n + 1$ è iniettiva (nessuno finisce nella stessa stanza di un altro) ma non suriettiva (nessuno va nella stanza $0$). Al contrario, $n \mapsto \lfloor n/2 \rfloor$ (la parte intera di $n/2$) è suriettiva ma non iniettiva: ogni naturale è raggiunto, due volte.
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "A", "integers": "N", "window": [0, 10] },
+    { "id": "B", "integers": "N", "window": [0, 10] },
+    { "id": "C", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [
+    { "id": "s", "from": "A", "to": "B", "expr": "x + 1", "claims": { "surjective": false } },
+    { "id": "h", "from": "B", "to": "C", "expr": "floor(x/2)", "color": "orange", "claims": { "surjective": true } }
+  ],
+  "show": ["properties(s)", "properties(h)", "preimage(s, 0)"]
+}
+```
+
+Anche gli interi relativi, che "sembrano" il doppio dei naturali, hanno la stessa cardinalità di $\mathbb{N}$. Basta metterli in fila così: $0, -1, 1, -2, 2, -3, \ldots$, cioè mandare i non negativi nei pari e i negativi nei dispari.
+
+$$z(n) = \begin{cases} 2n & \text{se } n \geq 0 \\ -2n - 1 & \text{se } n < 0 \end{cases}$$
+
+*Prima di trascinare: dove va $-3$? Quale intero va in $7$?*
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "Z", "integers": "Z", "window": [-5, 5] },
+    { "id": "N", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [{ "id": "z", "from": "Z", "to": "N", "piecewise": [{ "if": "x >= 0", "expr": "2x" }, { "expr": "-2x - 1" }], "claims": { "surjective": true } }],
+  "params": { "n": { "min": -5, "max": 5, "step": 1, "val": -2, "label": "n" } },
+  "probe": { "map": "z", "at": "n" },
+  "show": ["properties(z)"]
+}
+```
+
+Gli insiemi che hanno la stessa cardinalità di $\mathbb{N}$, cioè i cui elementi si possono "mettere in fila", si dicono ***numerabili***. Sono numerabili $2\mathbb{N}$, $\mathbb{Z}$ e, con un po' più di ingegno, anche $\mathbb{Q}$. Cantor dimostrò invece che $\mathbb{R}$ **non** è numerabile: esistono infiniti "più grandi" di altri.
+
+Anche un segmento ha "tanti punti quanti" un'intera retta. La funzione
+
+$$g \colon (0, 1) \to \mathbb{R} \, , \qquad g(x) = \frac{2x - 1}{x(1 - x)}$$
+
+è una biiezione: quando $x$ si avvicina a $0$ l'OUT diventa negativo e grandissimo in valore assoluto, quando si avvicina a $1$ diventa grandissimo e positivo, e nel mezzo cresce senza mai tornare indietro.
+
+```sets
+{
+  "dynagraph": { "scale": "own" },
+  "sets": [
+    { "id": "I", "interval": "(0, 1)" },
+    { "id": "R", "label": "\\mathbb{R}", "interval": "R", "window": [-10, 10] }
+  ],
+  "maps": [{ "id": "g", "from": "I", "to": "R", "expr": "(2x - 1)/(x*(1 - x))", "claims": { "injective": true, "surjective": true } }],
+  "params": { "p": { "min": 0.02, "max": 0.98, "step": 0.01, "val": 0.7, "label": "x" } },
+  "probe": { "map": "g", "at": "p", "trace": true },
+  "plot": { "maps": ["g"], "xlim": [-0.2, 1.2], "ylim": [-10, 10] }
+}
+```
+
+Altre domande di questo tipo (ad esempio: $[0, 1]$ e $(0, 1)$ hanno la stessa cardinalità?) si trovano negli esercizi.
+
+## La funzione inversa
+
+### La definizione
+
+Se una funzione è biiettiva, ogni OUT proviene da esattamente un IN. Possiamo quindi far funzionare la macchina "al contrario": inserire l'OUT e risalire all'IN.
+
+> **Definizione.** Sia $f \colon A \to B$ biiettiva. La ***funzione inversa*** di $f$ è la funzione $f^{-1} \colon B \to A$ che associa a ogni $b \in B$ l'unico $a \in A$ tale che $f(a) = b$:
+> $$f^{-1}(b) = a \iff f(a) = b \, .$$
+> Una funzione che ha l'inversa si dice ***invertibile***.
+
+Servono entrambe le proprietà:
+- **iniettiva**, perché ogni $b$ abbia **una sola** controimmagine (altrimenti $f^{-1}$ avrebbe due OUT per lo stesso IN e non sarebbe una funzione);
+- **suriettiva**, perché ogni $b$ abbia **almeno una** controimmagine (altrimenti $f^{-1}$ non sarebbe definita su tutto $B$).
+
+L'inversa scambia i ruoli: gli OUT di $f$ diventano gli IN di $f^{-1}$, e viceversa:
+
+$$\textrm{dom}\, f^{-1} = B = \textrm{im}\, f \, , \qquad \textrm{im}\, f^{-1} = A = \textrm{dom}\, f \, .$$
+
+Il diagramma a frecce dell'inversa si ottiene **invertendo il verso delle frecce**. Se $f$ non è biiettiva, le frecce invertite non formano una funzione. *Prima di premere il pulsante: che cosa succede a $1$ e a $3$ quando si invertono le frecce?*
+
+```sets
+{
+  "sets": [
+    { "id": "A", "elements": ["a", "b", "c"], "order": "given" },
+    { "id": "B", "elements": ["1", "2", "3"], "order": "given" }
+  ],
+  "maps": [
+    { "id": "f", "from": "A", "to": "B", "pairs": { "a": "1", "b": "1", "c": "2" } },
+    { "id": "finv", "inverse": "f", "hidden": true, "color": "blue" }
+  ],
+  "show": ["properties(f)"],
+  "controls": [{ "type": "reveal", "label": "Inverti le frecce", "targets": ["arrows(finv)", "properties(finv)"] }]
+}
+```
+
+Al numero $1$ arrivano due frecce di $f$, quindi da $1$ ne partono due "all'indietro"; a $3$ non arriva nessuna freccia, quindi da $3$ non ne parte nessuna.
+
+**Attenzione ai simboli.** In $f^{-1}$ l'esponente $-1$ non indica una potenza: $f^{-1}(x)$ non è $\dfrac{1}{f(x)}$. Inoltre $f^{-1}(b)$, l'IN che corrisponde a $b$, va distinto dalla controimmagine $f^{-1}(\lbrace b \rbrace)$, che è un insieme ed esiste sempre. Quando $f$ è invertibile, la controimmagine di $b$ è l'insieme con il solo elemento $f^{-1}(b)$.
+
+### Tornare al punto di partenza
+
+Che cosa succede se applichiamo $f$ e poi $f^{-1}$? Partiamo da $a$, arriviamo in $b = f(a)$ e torniamo in $a$:
+
+$$f^{-1}(f(a)) = a \quad \forall a \in A \, , \qquad f(f^{-1}(b)) = b \quad \forall b \in B \, .$$
+
+La funzione che lascia ogni elemento dov'è, $\operatorname{id}_A \colon A \to A$, $x \mapsto x$, si chiama ***funzione identità***. Quindi applicare $f$ e poi $f^{-1}$ (o viceversa) equivale all'identità. Inoltre, anche $f^{-1}$ è biiettiva, e la sua inversa è $f$: $(f^{-1})^{-1} = f$.
+
+### Allargare la definizione
+
+La definizione richiede la biiettività, ma spesso si può "aggiustare" una funzione per renderla invertibile.
+
+- **Se $f$ è iniettiva ma non suriettiva**, basta restringere il codominio all'immagine: $f \colon A \to f(A)$ è biiettiva, e la sua inversa è $f^{-1} \colon f(A) \to A$. Per questo molti libri chiamano "invertibili" tutte le funzioni iniettive, sottintendendo che l'inversa è definita sull'immagine.
+- **Se $f$ non è iniettiva**, si può restringere il dominio a una parte in cui lo è. La funzione $x \mapsto x^2$ non è iniettiva su $\mathbb{R}$, ma lo è su $[0, +\infty)$; da $[0, +\infty)$ in $[0, +\infty)$ è biiettiva, e la sua inversa è la radice quadrata, $x \mapsto \sqrt{x}$. Restringendo invece a $(-\infty, 0]$ si ottiene un'altra inversa, $x \mapsto -\sqrt{x}$.
+
+### Come si trova l'inversa di una funzione reale
+
+**Esempio.** Sia $f(x) = \sqrt{x - 2} + 2$. Abbiamo visto che $\textrm{dom}\, f = [2, +\infty)$; l'immagine è $[2, +\infty)$, perché la radice assume tutti i valori $\geq 0$. La funzione è iniettiva (vedremo che è strettamente crescente), ma non è suriettiva come funzione in $\mathbb{R}$: per renderla biiettiva restringiamo il codominio all'immagine, $f \colon [2, +\infty) \to [2, +\infty)$.
+
+Per trovare l'inversa scriviamo l'uguaglianza tra OUT e IN e **ricaviamo l'IN**:
+
+$$\begin{aligned} \text{OUT} &= \sqrt{\text{IN} - 2} + 2 \\ \text{OUT} - 2 &= \sqrt{\text{IN} - 2} \qquad (\text{con } \text{OUT} \geq 2) \\ (\text{OUT} - 2)^2 &= \text{IN} - 2 \\ \text{IN} &= (\text{OUT} - 2)^2 + 2 \end{aligned}$$
+
+La formula ottenuta trasforma un OUT di $f$ nell'IN corrispondente: è l'inversa. Il nome della variabile è un segnaposto, quindi possiamo chiamarla di nuovo $x$:
+
+$$f^{-1} \colon [2, +\infty) \to [2, +\infty) \, , \qquad f^{-1}(x) = (x - 2)^2 + 2 \, .$$
+
+Attenzione al dominio: la formula $(x - 2)^2 + 2$ descrive una parabola intera, ma l'inversa ne è solo il ramo con $x \geq 2$. Il passaggio «con OUT $\geq 2$» non è un dettaglio: elevando al quadrato abbiamo perso l'informazione che $\sqrt{\text{IN} - 2}$ è positiva o nulla.
+
+### Il grafico dell'inversa
+
+Se $(a, b)$ è un punto del grafico di $f$, cioè $f(a) = b$, allora $f^{-1}(b) = a$, cioè $(b, a)$ è un punto del grafico di $f^{-1}$:
+
+$$G_{f^{-1}} = \lbrace (b, a) : (a, b) \in G_f \rbrace \, .$$
+
+Il grafico dell'inversa si ottiene **scambiando le coordinate** di ogni punto, cioè con la **simmetria rispetto alla bisettrice** $y = x$ del primo e del terzo quadrante. Si può fare anche con le mani: disegna il grafico su un foglio trasparente (o in controluce), afferra il foglio per due angoli sulla bisettrice e giralo, facendolo ruotare attorno alla bisettrice. In alternativa: ruota il foglio di $90°$ in senso antiorario, poi capovolgilo come la pagina di un libro, attorno all'asse verticale.
+
+*Prima di trascinare: se il punto sul grafico di $f$ è $(6, 4)$, dove si trova il punto corrispondente sul grafico dell'inversa?*
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[2, 8]" },
+    { "id": "Y", "interval": "[2, 8]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "sqrt(x - 2) + 2" },
+    { "id": "finv", "label": "f^{-1}", "inverse": "f", "hidden": true }
+  ],
+  "params": { "p": { "min": 2, "max": 8, "step": 0.05, "val": 6, "label": "x" } },
+  "probe": [{ "map": "f", "at": "p" }, { "map": "finv", "at": "sqrt(p - 2) + 2", "color": "blue" }],
+  "plot": { "maps": ["f", "finv"], "identity": true, "xlim": [0, 9], "ylim": [0, 9] }
+}
+```
+
+## La composizione di funzioni
+
+### La definizione
+
+Possiamo collegare due macchine in serie: l'OUT della prima diventa l'IN della seconda.
+
+$$x \;\xmapsto{\;\; f \;\;}\; f(x) \;\xmapsto{\;\; g \;\;}\; g(f(x))$$
+
+> **Definizione.** Siano $f \colon A \to B$ e $g \colon C \to D$, con $\textrm{im}\, f \subseteq C$. La ***funzione composta*** $g \circ f$ (si legge «$g$ composto $f$») è la funzione
+> $$g \circ f \colon A \to D \, , \qquad x \mapsto g(f(x)) \, .$$
+
+La condizione $\textrm{im}\, f \subseteq C$ garantisce che ogni OUT di $f$ sia un IN accettabile per $g$. Attenzione all'ordine: in $g \circ f$ si applica **prima** $f$ e **poi** $g$, cioè si legge da destra a sinistra, come in $g(f(x))$.
+
+**Esempio.** Siano $f(x) = \lvert x \rvert$ e $g(x) = x - 1$, entrambe da $\mathbb{R}$ in $\mathbb{R}$. Calcoliamo le due composte con le tabelle IN/OUT: nella prima si applica prima $f$, nella seconda prima $g$. I due diagrammi sono collegati: lo slider muove il punto in entrambi.
+
+$$(g \circ f)(x) = g(f(x)) = g(\lvert x \rvert) = \lvert x \rvert - 1$$
+
+```sets
+{
+  "sync": "comp",
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-3, 3]" },
+    { "id": "Y", "interval": "[-3, 3]" },
+    { "id": "Z", "interval": "[-3, 3]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "abs(x)", "samples": [] },
+    { "id": "g", "from": "Y", "to": "Z", "expr": "x - 1", "color": "blue", "samples": [] },
+    { "id": "gf", "label": "g \\circ f", "compose": ["f", "g"] }
+  ],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.1, "val": -1.5, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "table": { "maps": ["f", "g"], "in": [-2, -1, 0, 1, 2], "probe": true, "headers": ["\\text{IN}", "\\text{OUT} = f(\\text{IN})", "g(\\text{OUT})"] },
+  "plot": { "maps": ["gf"], "position": "below", "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "2:1" }
+}
+```
+
+$$(f \circ g)(x) = f(g(x)) = f(x - 1) = \lvert x - 1 \rvert$$
+
+```sets
+{
+  "sync": "comp",
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-3, 3]" },
+    { "id": "Y", "interval": "[-4, 2]" },
+    { "id": "Z", "interval": "[-3, 3]" }
+  ],
+  "maps": [
+    { "id": "g", "from": "X", "to": "Y", "expr": "x - 1", "color": "blue", "samples": [] },
+    { "id": "f", "from": "Y", "to": "Z", "expr": "abs(x)", "samples": [] },
+    { "id": "fg", "label": "f \\circ g", "compose": ["g", "f"] }
+  ],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.1, "val": -1.5 } },
+  "showSliders": false,
+  "probe": { "map": "fg", "at": "p" },
+  "table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1, 2], "probe": true, "headers": ["\\text{IN}", "\\text{OUT} = g(\\text{IN})", "f(\\text{OUT})"] },
+  "plot": { "maps": ["fg"], "position": "below", "xlim": [-3, 3], "ylim": [-3, 3], "aspectRatio": "2:1" }
+}
+```
+
+Si nota che:
+- $g \circ f \neq f \circ g$: la composizione **non è commutativa**, l'ordine conta;
+- il grafico di $\lvert x \rvert - 1$ è la "V" di $\lvert x \rvert$ abbassata di $1$: abbiamo modificato l'**OUT**, e il grafico si è spostato in **verticale**;
+- il grafico di $\lvert x - 1 \rvert$ è la "V" spostata di $1$ verso **destra**: abbiamo modificato l'**IN**, e il grafico si è spostato in **orizzontale**, e per di più "al contrario" (sottraendo $1$ si va a destra).
+
+Le ultime due osservazioni sono il punto di partenza per studiare le trasformazioni dei grafici.
+
+### Il dominio della funzione composta
+
+Che cosa succede se non tutti gli OUT di $f$ sono IN accettabili per $g$? Siano $f(x) = x - 1$ e $g(x) = \sqrt{x}$. La composta $(g \circ f)(x) = \sqrt{x - 1}$ è definita solo per gli $x$ il cui OUT $f(x)$ sta nel dominio di $g$:
+
+$$\textrm{dom}\,(g \circ f) = \lbrace x \in \textrm{dom}\, f : f(x) \in \textrm{dom}\, g \rbrace = f^{-1}(\textrm{dom}\, g) \, .$$
+
+In questo caso $x - 1 \geq 0$, cioè $\textrm{dom}\,(g \circ f) = [1, +\infty)$. *Prima di guardare: per quali IN la catena si interrompe, e dove?*
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "X", "label": "\\mathbb{R}", "interval": "R", "window": [-2, 4] },
+    { "id": "Y", "label": "\\mathbb{R}", "interval": "R", "window": [-2, 4] },
+    { "id": "Z", "label": "\\mathbb{R}", "interval": "R", "window": [-2, 4] }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x - 1" },
+    { "id": "g", "from": "Y", "to": "Z", "expr": "sqrt(x)", "color": "blue" },
+    { "id": "gf", "label": "g \\circ f", "compose": ["f", "g"] }
+  ],
+  "params": { "p": { "min": -2, "max": 4, "step": 0.1, "val": 0, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "show": ["domain(gf)"]
+}
+```
+
+### Proprietà della composizione
+
+- La composizione è ***associativa***: $h \circ (g \circ f) = (h \circ g) \circ f$. In entrambi i casi si applica prima $f$, poi $g$, poi $h$.
+- L'identità non cambia nulla: $f \circ \operatorname{id}_A = f$ e $\operatorname{id}_B \circ f = f$.
+- Se $f$ è invertibile, $f^{-1} \circ f = \operatorname{id}_A$ e $f \circ f^{-1} = \operatorname{id}_B$.
+- **La composta di due funzioni iniettive è iniettiva.** Infatti, se $g(f(a_1)) = g(f(a_2))$, allora $f(a_1) = f(a_2)$ perché $g$ è iniettiva, e quindi $a_1 = a_2$ perché $f$ è iniettiva. In modo simile si dimostra che la composta di due funzioni suriettive è suriettiva, e quindi che la composta di due biiezioni è una biiezione.
+- L'inversa di una composta si ottiene invertendo i passaggi **in ordine inverso**: $(g \circ f)^{-1} = f^{-1} \circ g^{-1}$. Al mattino si mettono prima le calze e poi le scarpe; la sera si tolgono prima le scarpe e poi le calze.
+
+In Python la composizione è una funzione che riceve due funzioni e ne restituisce una terza:
+
+```python
+def componi(g, f):
+    return lambda x: g(f(x))   # prima f, poi g
+
+f = abs
+g = lambda x: x - 1
+componi(g, f)(-2)   # g(f(-2)) = g(2) = 1
+componi(f, g)(-2)   # f(g(-2)) = f(-3) = 3
+```
