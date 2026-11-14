@@ -124,7 +124,9 @@ function drawTicks(scene, set, P, g) {
     const given = scene.dynagraph.ticks;
     // About one number every 48 px, so fractions fit side by side
     const room = Math.max(2, Math.floor(P.length / 48));
-    const step = typeof given === 'number' && given > 0 && (w[1] - w[0]) / given <= 60 ? given : niceStep(w[1] - w[0], Math.min(8, room));
+    let step = typeof given === 'number' && given > 0 && (w[1] - w[0]) / given <= 60 ? given : niceStep(w[1] - w[0], Math.min(8, room));
+    // A given step on a short line: every other number (or fewer), so they never overlap
+    while (P.length * step / (w[1] - w[0]) < 24) step *= 2;
     const size = scene.fontSize * 0.8;
     const before = P.tickSide === 'before';
     for (let k = Math.ceil(w[0] / step - 1e-9); k * step <= w[1] + 1e-9; k++) {

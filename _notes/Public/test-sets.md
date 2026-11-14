@@ -823,3 +823,54 @@ $0 \mapsto 0$, $-1 \mapsto 1$, $1 \mapsto 2$, $-2 \mapsto 3$, …: i non negativ
   "show": ["properties(z)"]
 }
 ```
+
+### Trasformazioni come composizioni
+
+$a \cdot f(x) + k$ e $a \cdot (f(x) + k)$ sono due composizioni delle stesse funzioni in ordine diverso, con $s(y) = a y$ e $t(z) = z + k$: $T_1 = t \circ s \circ f$ (prima si moltiplica per $a$, poi si somma $k$) e $T_2 = s \circ t \circ f$ (il contrario). I due blocchi hanno `"sync": "tr"`: gli slider del primo muovono anche il secondo. La riga sotto ogni diagramma segue il punto passo per passo.
+
+```sets
+{
+  "sync": "tr",
+  "dynagraph": { "ticks": 2 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" },
+    { "id": "Z", "interval": "[-8, 8]" }, { "id": "W", "interval": "[-10, 10]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x^2" },
+    { "id": "s", "from": "Y", "to": "Z", "expr": "a*x", "color": "blue" },
+    { "id": "t", "from": "Z", "to": "W", "expr": "x + k", "color": "green" },
+    { "id": "T", "label": "T_1", "compose": ["f", "s", "t"] }
+  ],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.5, "val": 2 },
+    "k": { "min": -2, "max": 2, "step": 0.5, "val": 1 },
+    "p": { "min": -2, "max": 2, "step": 0.1, "val": 1.5, "label": "x" }
+  },
+  "probe": { "map": "T", "at": "p" }
+}
+```
+
+```sets
+{
+  "sync": "tr",
+  "dynagraph": { "ticks": 2 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" },
+    { "id": "Z", "interval": "[-2, 6]" }, { "id": "W", "interval": "[-12, 12]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x^2" },
+    { "id": "t", "from": "Y", "to": "Z", "expr": "x + k", "color": "green" },
+    { "id": "s", "from": "Z", "to": "W", "expr": "a*x", "color": "blue" },
+    { "id": "T", "label": "T_2", "compose": ["f", "t", "s"] }
+  ],
+  "params": {
+    "a": { "min": -2, "max": 2, "step": 0.5, "val": 2 },
+    "k": { "min": -2, "max": 2, "step": 0.5, "val": 1 },
+    "p": { "min": -2, "max": 2, "step": 0.1, "val": 1.5 }
+  },
+  "showSliders": false,
+  "probe": { "map": "T", "at": "p" }
+}
+```

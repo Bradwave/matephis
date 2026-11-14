@@ -334,20 +334,24 @@ export function drawProbes(scene) {
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
-            const valueTeX = (y) => (typeof y === 'string' ? String((map.to.elementById.get(y) || { label: y }).label)
+            const valueTeX = (y, set = map.to) => (typeof y === 'string' ? String((set.elementById.get(y) || { label: y }).label)
                 : y && typeof y === 'object' && !Array.isArray(y) && 'outside' in y ? `${niceNumber(y.outside)} \\notin ${setLabelText(scene.model, map.to)}`
                     : fmt(y));
             const name = p.label !== undefined ? String(p.label) : map.label;
             const valid = ys.filter(y => typeof y === 'string' || SetsModel.validPoint(y) || (y && typeof y === 'object' && 'outside' in y));
             const rhs = valid.length === 0 ? '\\text{non definita}'
-                : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(valueTeX).join(',\\,')}\\right\\}`;
+                : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(v => valueTeX(v)).join(',\\,')}\\right\\}`;
             let tex = `${name}\\left(${fmt(x)}\\right) ${rhs}`;
-            if (isCompose && p.label === undefined && valid.length === 1) {
-                // (g ∘ f)(x) = g(f(x)) = g(f(x) as a number) = value
+            if (isCompose && p.label === undefined && valid.length === 1 && map.parts.length > 1) {
+                // (h ∘ f ∘ d)(x) = h(f(d(x))) = h(f(v1)) = h(v2) = value: one step at a time
                 const vals = steps(x);
-                const nested = map.parts.reduce((acc, part) => `${part.label}\\left(${acc}\\right)`, fmt(x));
-                const lastPart = map.parts[map.parts.length - 1];
-                tex = `\\left(${map.label}\\right)\\left(${fmt(x)}\\right) = ${nested} = ${lastPart.label}\\left(${fmt(vals[vals.length - 2])}\\right) ${rhs}`;
+                const val = (v, set) => (typeof v === 'string' ? valueTeX(v, set) : fmt(v));
+                const terms = [];
+                for (let k = 0; k < map.parts.length; k++) {
+                    const inner = k === 0 ? fmt(x) : val(vals[k], map.parts[k - 1].to);
+                    terms.push(map.parts.slice(k).reduce((acc, part) => `${part.label}\\left(${acc}\\right)`, inner));
+                }
+                tex = `\\left(${map.label}\\right)\\left(${fmt(x)}\\right) = ${terms.join(' = ')} ${rhs}`;
             }
             if (below) {
                 // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it

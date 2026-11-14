@@ -715,3 +715,24 @@ describe('Interi: ℕ, ℤ, 2ℕ', () => {
         expect(m.properties(map('z'))).toMatchObject({ isFunction: true, into: true, injective: true });
     });
 });
+
+describe('Composizioni lunghe', () => {
+    it('h ∘ t ∘ s ∘ f su quattro rette', () => {
+        const params = { a: 2, k: 1 };
+        const { m, map, warnings } = model({
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-4, 4]' }, { id: 'Z', interval: '[-8, 8]' }, { id: 'W', interval: '[-9, 9]' }],
+            maps: [
+                { id: 'f', from: 'X', to: 'Y', expr: 'x^2' },
+                { id: 's', from: 'Y', to: 'Z', expr: 'a*x' },
+                { id: 't', from: 'Z', to: 'W', expr: 'x + k' },
+                { id: 'T', compose: ['f', 's', 't'] },
+            ],
+        }, params);
+        expect(warnings).toEqual([]);
+        const T = map('T');
+        expect(T.parts.map(p => p.id)).toEqual(['f', 's', 't']);
+        expect(T.label).toBe('t \\circ s \\circ f');
+        expect(m.apply(T, 1.5)).toEqual([5.5]);
+        expect(m.exprString(T)).not.toBeNull();
+    });
+});
