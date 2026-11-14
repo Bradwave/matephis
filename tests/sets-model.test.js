@@ -736,3 +736,33 @@ describe('Composizioni lunghe', () => {
         expect(m.exprString(T)).not.toBeNull();
     });
 });
+
+describe('Composizione quando im f non sta in dom g', () => {
+    const cfg = (gFrom) => ({
+        sets: [{ id: 'X', interval: '[-2, 4]' }, { id: 'Y', interval: '[-3, 3]' }, { id: 'Y2', interval: '[0, 3]' }, { id: 'Z', interval: '[0, 2]' }],
+        maps: [
+            { id: 'f', from: 'X', to: 'Y', expr: 'x - 1' },
+            { id: 'g', from: gFrom, to: 'Z', expr: 'sqrt(x)' },
+            { id: 'gf', compose: ['f', 'g'] },
+        ],
+    });
+    it('insiemi diversi: dom(g ∘ f) = f^{-1}(dom g)', () => {
+        const { m, map, warnings } = model(cfg('Y2'));
+        expect(warnings).toEqual([]);
+        expect(m.apply(map('gf'), 0)).toEqual([]);
+        expect(m.apply(map('gf'), 2)).toEqual([1]);
+        expect(m.domainOf(map('gf'))).toEqual([{ lo: 1, hi: 4, loClosed: true, hiClosed: true }]);
+    });
+    it('stesso insieme, dominio naturale di g', () => {
+        const { m, map } = model(cfg('Y'));
+        expect(m.domainOf(map('gf'))).toEqual([{ lo: 1, hi: 4, loClosed: true, hiClosed: true }]);
+        expect(m.domainOf(map('g'))).toEqual([{ lo: 0, hi: 3, loClosed: true, hiClosed: true }]);
+    });
+    it('insiemi finiti diversi restano un errore', () => {
+        const { warnings } = model({
+            sets: [{ id: 'A', elements: ['a'] }, { id: 'B', elements: ['b'] }, { id: 'C', elements: ['c'] }],
+            maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: 'b' } }, { id: 'g', from: 'C', to: 'A', pairs: { c: 'a' } }, { id: 'gf', compose: ['f', 'g'] }],
+        });
+        expect(warnings.some(w => /cannot compose/.test(w))).toBe(true);
+    });
+});

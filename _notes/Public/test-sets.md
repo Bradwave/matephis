@@ -66,7 +66,7 @@ Un insieme di interi si comporta come un insieme finito: i suoi elementi sono gl
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
 | `piecewise` | Funzione a tratti: `[{ "on": "(-inf, 0)", "expr": "-x" }, { "on": 0, "expr": "0" }, { "on": "(0, +inf)", "expr": "1" }]`. Ogni tratto vale su un intervallo (`on`, oppure un numero per un solo punto) o dove vale una condizione (`if`: `"x^2 + y^2 < 1"`, anche nel piano); un tratto senza `on` e `if` vale ovunque altrove. Si usa il primo tratto che vale; dove non ne vale nessuno la funzione non è definita (e il motore lo segnala). Immagine, controimmagine e iniettività tengono conto dei salti tra un tratto e l'altro. |
 | `where` | Relazione data da una condizione su $(x, y)$: `"x + y == 3"`, `"x < y"`. Tra insiemi di numeri di cui si possono elencare gli elementi (finiti, interi). |
-| `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g`. Il motore controlla che il codominio di `f` sia il dominio di `g`. |
+| `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g` (nell'ordine in cui si applicano; anche più di due: `["d", "f", "h"]` è $h \circ f \circ d$). Il codominio di `f` dev'essere il dominio di `g`, oppure tutti e due intervalli: allora $g \circ f$ è definita dove $f(x)$ sta nel dominio di `g`, $\mathrm{dom}(g \circ f) = f^{-1}(\mathrm{dom}\, g)$, e `domain(gf)` lo mostra. Dove la catena si interrompe il punto lo segna con una croce. |
 | `iterate` | `["f", 3]` è $f^3 = f \circ f \circ f$; il numero può essere un parametro (`["f", "n"]`, intero da 0 a 50) e allora cambia con lo slider. `f` deve andare da un insieme in sé; $f^0$ è l'identità. Etichetta di default $f^{3}$ (con il valore attuale di $n$). Le sue frecce si vedono come quelle di una funzione qualsiasi. |
 | `inverse` | `"f"`: l'inversa di `f`, dal codominio al dominio di `f` (non servono `from` e `to`; etichetta di default $f^{-1}$). Ogni valore va nei punti dove `f` lo assume: se `f` non è biiettiva l'inversa è una relazione e il riquadro delle proprietà lo spiega. Le sue frecce si curvano per non coprire quelle di `f`. Per funzioni tra insiemi finiti e intervalli. |
 | `samples` | Frecce da un dominio continuo: quanti punti (default 5 su un intervallo, 9 nel piano) oppure la lista dei punti. |
@@ -872,5 +872,29 @@ $a \cdot f(x) + k$ e $a \cdot (f(x) + k)$ sono due composizioni delle stesse fun
   },
   "showSliders": false,
   "probe": { "map": "T", "at": "p" }
+}
+```
+
+### Composizione: dove è definita
+
+$f(x) = x - 1$ va da $[-2, 4]$ in $[-3, 3]$, ma $g(y) = \sqrt{y}$ è definita solo su $[0, 3]$: $g \circ f$ è definita dove $x - 1 \ge 0$. Sul dynagraph le rette hanno la stessa scala: $f(x)$ su $[-3, 3]$ e lo stesso numero su $[0, 3]$ stanno uno sopra l'altro. Trascina il punto a sinistra di $1$: $f(x) < 0$ non sta nel dominio di $g$ e la catena si ferma con una croce.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 4]" },
+    { "id": "Y", "interval": "[-3, 3]" },
+    { "id": "D", "label": "[0, 3]", "interval": "[0, 3]" },
+    { "id": "Z", "interval": "[0, 2]" }
+  ],
+  "maps": [
+    { "id": "f", "from": "X", "to": "Y", "expr": "x - 1" },
+    { "id": "g", "from": "D", "to": "Z", "expr": "sqrt(x)" },
+    { "id": "gf", "compose": ["f", "g"] }
+  ],
+  "params": { "p": { "min": -2, "max": 4, "step": 0.1, "val": 0.4, "label": "x" } },
+  "probe": { "map": "gf", "at": "p" },
+  "show": ["domain(gf)"]
 }
 ```

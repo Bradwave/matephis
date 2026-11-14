@@ -212,6 +212,60 @@ export class SetsModel {
         }
     }
 
+    /**
+     * Where a map of an interval has a value: a union of intervals (for an
+     * expression, its natural domain inside the set; for a composition,
+     * dom(g ∘ f) = {x : f(x) ∈ dom g}). Found by sampling and bisection; an
+     * end that reaches the edge of the window of an unbounded set is ±∞.
+     */
+    domainOf(map) {
+        const set = map.from;
+        if (set.kind !== 'interval') return [];
+        const key = `dom|${map.id}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const ok = (t) => {
+            const ys = this.apply(map, t);
+            const y = ys[0];
+            return ys.length > 0 && (typeof y === 'string' || SetsModel.validPoint(y) || (!!y && typeof y === 'object' && 'outside' in y));
+        };
+        const I = set.I, w = set.window;
+        const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
+        const n = SAMPLES_1D;
+        const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
+        const inside = (t) => !!(contains(I, t, 0) && ok(t));
+        const edge = (a, b, inA) => {
+            for (let it = 0; it < 60; it++) {
+                const m = (a + b) / 2;
+                if (inside(m) === inA) a = m; else b = m;
+            }
+            return inA ? a : b;
+        };
+        const parts = [];
+        let start = null;
+        for (let i = 0; i <= n; i++) {
+            const t = ts[i];
+            const inT = (i === 0 && !I.loClosed && isFinite(I.lo)) || (i === n && !I.hiClosed && isFinite(I.hi)) ? ok(t + (i === 0 ? 1 : -1) * 1e-9 * Math.max(1, Math.abs(t))) : inside(t);
+            if (inT && start === null) start = i === 0 ? lo : edge(ts[i - 1], t, false);
+            if (!inT && start !== null) {
+                parts.push([start, edge(ts[i - 1], t, true)]);
+                start = null;
+            }
+        }
+        if (start !== null) parts.push([start, hi]);
+        const snap = (v) => (Math.abs(v - Math.round(v)) < 1e-7 ? Math.round(v) : v);
+        const out = parts.map(([a, b]) => {
+            a = snap(a);
+            b = snap(b);
+            const loInf = a <= lo && !isFinite(I.lo), hiInf = b >= hi && !isFinite(I.hi);
+            return {
+                lo: loInf ? -Infinity : a, hi: hiInf ? Infinity : b,
+                loClosed: !loInf && contains(I, a, 0) && ok(a), hiClosed: !hiInf && contains(I, b, 0) && ok(b),
+            };
+        });
+        this._cache.set(key, out);
+        return out;
+    }
+
     /** Is the set infinite (integers without one of the bounds)? Its checks are made in the window. */
     isInfinite(set) {
         return !!(set && set.intRule && !(isFinite(set.intRule.lo) && isFinite(set.intRule.hi)));
@@ -283,8 +337,12 @@ export class SetsModel {
                 return;
             }
             for (let k = 1; k < parts.length; k++) {
-                if (parts[k - 1].to !== parts[k].from) {
-                    this.warn(`map '${id}': cannot compose, the codomain of '${parts[k - 1].id}' (${parts[k - 1].to.id}) is not the domain of '${parts[k].id}' (${parts[k].from.id})`);
+                // Between lines the sets may differ: the composition is then
+                // defined where each value lands in the next domain (dom(g ∘ f) = f^{-1}(dom g))
+                const a = parts[k - 1].to, b = parts[k].from;
+                const lines = (s) => s.kind === 'interval';
+                if (a !== b && !(lines(a) && lines(b))) {
+                    this.warn(`map '${id}': cannot compose, the codomain of '${parts[k - 1].id}' (${a.id}) is not the domain of '${parts[k].id}' (${b.id})`);
                     return;
                 }
             }
@@ -634,14 +692,17 @@ export class SetsModel {
         if (map.kind === 'inverse') return this._applyInverse(map, x);
         if (map.kind === 'compose') {
             let current = [x];
-            for (const part of map.parts) {
+            map.parts.forEach((part, k) => {
                 const next = [];
+                // A value that is not in the next map's domain (when the sets differ) stops the chain
+                const check = k > 0 && map.parts[k - 1].to !== part.from;
                 current.forEach(c => {
                     if (c && typeof c === 'object' && !Array.isArray(c) && 'outside' in c) next.push(c);
+                    else if (check && !this.containsPoint(part.from, c, 1e-12)) return;
                     else this.apply(part, c).forEach(v => next.push(v));
                 });
                 current = next;
-            }
+            });
             return current;
         }
         if (map.kind === 'where') {

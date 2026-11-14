@@ -43,6 +43,15 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             drawResult(scene, res, color, label, layer.key);
             if (!readout) return null;
             return { tex: readoutTeX(scene, op, map, arg, res, def), color };
+        } else if (op === 'domain') {
+            // dom f: where the map has a value; its readout says it with ±∞
+            const parts = model.domainOf(map);
+            const color = scene.color(def.color, 'highlight');
+            const res = { kind: 'intervals', set: map.from, parts };
+            const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.label)}`;
+            drawResult(scene, res, color, name, layer.key);
+            if (def.readout === false) return null;
+            return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}`, color };
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
         }

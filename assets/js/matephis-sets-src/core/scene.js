@@ -320,7 +320,7 @@ export class MatephisSets {
             const sel = parseSelector(str);
             if (!sel) return false;
             if (sel.unknown) {
-                this._addWarning(`${where}: unknown operation in '${str}' (use image, preimage, collisions, properties or arrows)`);
+                this._addWarning(`${where}: unknown operation in '${str}' (use image, preimage, domain, fixed, collisions, properties or arrows)`);
                 return true;
             }
             if (!this.model.mapById.has(sel.map)) {

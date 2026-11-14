@@ -267,11 +267,14 @@ export function drawProbes(scene) {
         const steps = (x0) => {
             if (!isCompose) return null;
             const vals = [x0];
-            for (const part of map.parts) {
+            map.parts.forEach((part, k) => {
                 const prev = vals[vals.length - 1];
-                const next = prev === undefined ? [] : scene.model.apply(part, prev);
-                vals.push(next.length ? next[0] : undefined);
-            }
+                // Not in the next map's domain (when the sets differ): the chain stops
+                const out = k > 0 && map.parts[k - 1].to !== part.from && prev !== undefined && !scene.model.containsPoint(part.from, prev, 1e-12);
+                const next = prev === undefined || out ? [] : scene.model.apply(part, prev);
+                const v = next.length ? next[0] : undefined;
+                vals.push(v !== undefined && (typeof v === 'string' || SetsModel.validPoint(v)) ? v : undefined);
+            });
             return vals;
         };
         // Values off the drawn part of a line get no arrow (the value is still written)
@@ -290,6 +293,28 @@ export function drawProbes(scene) {
                         dot.style.fill = color;
                     }
                 });
+                // The chain stops where a value is not in the next domain: a cross there
+                if (!faint) {
+                    const stop = vals.findIndex((v, k) => k > 0 && v === undefined);
+                    if (stop > 1) {
+                        const prevSet = map.parts[stop - 2].to;
+                        const at = vals[stop - 1];
+                        const px = visible(prevSet, at) ? pointPx(scene.layout, prevSet, at) : null;
+                        if (px) {
+                            const red = scene.color(null, 'collisions');
+                            const c = scene.svgEl('g', { class: 'mps-cross' }, parent);
+                            [[-1, -1, 1, 1], [-1, 1, 1, -1]].forEach(([a, b, c2, d]) => {
+                                const l = scene.svgEl('line', { x1: f2(px[0] + 6 * a), y1: f2(px[1] + 6 * b), x2: f2(px[0] + 6 * c2), y2: f2(px[1] + 6 * d) }, c);
+                                l.style.stroke = red;
+                                l.style.strokeWidth = '2.2px';
+                            });
+                            const row = scene.layout.orient === 'row';
+                            scene.text(px[0] + (row ? 0 : 12), px[1] + (row ? -16 : -14), `\\notin \\mathrm{dom}\\, ${map.parts[stop - 1].label}`, {
+                                parent: c, color: red, size: scene.fontSize * 0.8, anchor: row ? 'middle' : 'start',
+                            });
+                        }
+                    }
+                }
                 // The same point reached in one step, when the composition's arrows are shown
                 const last = vals[vals.length - 1];
                 const direct = scene.layers.find(l => l.arrows && l.map === map);
