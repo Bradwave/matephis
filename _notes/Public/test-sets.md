@@ -8,7 +8,7 @@ code: true
 
 Questa pagina serve come test e documentazione per il sistema di diagrammi di insiemi e funzioni generati via codice (JSON). Tutti i diagrammi sono renderizzati da `matephis-sets.js` a partire da un blocco ```` ```sets ````. Per provare una configurazione mentre la scrivi usa il [playground](/playground/) (motore «sets»).
 
-**Stato: fasi 1 e 2 (insiemi, funzioni, dynagraph e grafici).** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione o come inversa; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui; dynagraph (rette parallele) e, accanto al diagramma, il grafico delle funzioni collegato al punto. Diagrammi di Venn ed Eulero, relazioni e partizioni, contrazioni iterate e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
+**Stato: fasi 1 e 2, iterazione e blocchi collegati.** Insiemi finiti con i loro elementi, intervalli, rettangoli e dischi; funzioni date da coppie, da un'espressione, a tratti, come composizione, come inversa o come potenza $f^n$; immagine, controimmagine, collisioni e proprietà calcolate dal motore; punto trascinabile sui domini continui; dynagraph (rette parallele) e, accanto al diagramma, il grafico delle funzioni collegato al punto; orbite passo per passo (con la ragnatela sul grafico); blocchi collegati da `sync`. Diagrammi di Venn ed Eulero, relazioni e partizioni e diagrammi commutativi arrivano nelle fasi successive: le opzioni già previste ma non ancora implementate producono un avviso invece di essere ignorate in silenzio.
 
 ## Documentazione opzioni JSON
 
@@ -26,6 +26,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `layout` | `"row"`/`"column"` | `"row"` | Insiemi affiancati (elementi in colonna) o uno sotto l'altro (elementi in riga). |
 | `dynagraph` | Boolean/Object | | Dynagraph: gli intervalli diventano rette parallele una sotto l'altra, con la stessa scala, tacche e numeri (vedi «Dynagraph e grafici»). |
 | `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
+| `iterate` | Object/Array | | Orbita di un punto, un passo alla volta: $x_0, f(x_0), f(f(x_0)), \dots$ (vedi «Iterazione e blocchi collegati»). |
+| `sync` | String | | Nome di un gruppo: i blocchi con lo stesso nome nella pagina condividono parametri, evidenziazione al passaggio e passi delle orbite (vedi «Iterazione e blocchi collegati»). |
 | `hover` | Boolean | `true` | Passando sopra un elemento (o con Tab) si evidenziano le sue frecce, immagini e controimmagini. |
 | `reorder` | Boolean | `true` | Riordina gli elementi del codominio per ridurre gli incroci e tenere l'immagine in un unico blocco. Un insieme con `"order": "given"` mantiene il suo ordine. |
 | `mapLabels` | Boolean | `true` | Freccia $A \xrightarrow{f} B$ tra i nomi degli insiemi. |
@@ -58,6 +60,7 @@ Un elemento con un valore numerico (`"2"`, oppure `{ "id": "a", "value": 2 }`) p
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
 | `piecewise` | Funzione a tratti: `[{ "on": "(-inf, 0)", "expr": "-x" }, { "on": 0, "expr": "0" }, { "on": "(0, +inf)", "expr": "1" }]`. Ogni tratto vale su un intervallo (`on`, oppure un numero per un solo punto) o dove vale una condizione (`if`: `"x^2 + y^2 < 1"`, anche nel piano); un tratto senza `on` e `if` vale ovunque altrove. Si usa il primo tratto che vale; dove non ne vale nessuno la funzione non è definita (e il motore lo segnala). Immagine, controimmagine e iniettività tengono conto dei salti tra un tratto e l'altro. |
 | `compose` | `["f", "g"]` è $g \circ f$: prima `f`, poi `g`. Il motore controlla che il codominio di `f` sia il dominio di `g`. |
+| `iterate` | `["f", 3]` è $f^3 = f \circ f \circ f$; il numero può essere un parametro (`["f", "n"]`, intero da 0 a 50) e allora cambia con lo slider. `f` deve andare da un insieme in sé; $f^0$ è l'identità. Etichetta di default $f^{3}$ (con il valore attuale di $n$). Le sue frecce si vedono come quelle di una funzione qualsiasi. |
 | `inverse` | `"f"`: l'inversa di `f`, dal codominio al dominio di `f` (non servono `from` e `to`; etichetta di default $f^{-1}$). Ogni valore va nei punti dove `f` lo assume: se `f` non è biiettiva l'inversa è una relazione e il riquadro delle proprietà lo spiega. Le sue frecce si curvano per non coprire quelle di `f`. Per funzioni tra insiemi finiti e intervalli. |
 | `samples` | Frecce da un dominio continuo: quanti punti (default 5 su un intervallo, 9 nel piano) oppure la lista dei punti. |
 | `image` | Immagine data a mano (`"[1/4, 3/4]"`) invece di quella calcolata. |
@@ -125,6 +128,32 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `identity` | con `construction` | Disegna la retta $y = x$. |
 
 Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
+
+### Iterazione e blocchi collegati
+
+Una funzione da un insieme in sé ($f\colon A \to A$) si disegna su un solo insieme: le frecce sono archi prima dell'insieme (sopra in colonna, a sinistra in riga) e un punto fisso ha un piccolo cappio. Il nome della funzione sta accanto agli archi. Su un dynagraph con una sola retta gli archi vanno da un punto all'altro della stessa retta.
+
+`"iterate"` mostra un'orbita un passo alla volta, con i pulsanti «Indietro», «Passo successivo» e «Da capo» (senza animazioni). Ogni passo aggiunge una freccia numerata $x_k \to x_{k+1}$; i punti già visitati restano. Più orbite: un array; avanzano insieme.
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `map` | | La funzione, da un insieme in sé (finito o intervallo). |
+| `start` | | Il punto di partenza: un elemento, un numero, o un parametro (allora l'orbita segue lo slider). |
+| `steps` | `10` | Il numero massimo di passi (al più 100). |
+| `step` | `0` | I passi già fatti all'inizio. |
+| `label` | `"x"` | Nome dei termini nella riga sotto il diagramma: $x_0, x_1, \dots$ |
+| `color` | arancione | Colore dell'orbita. |
+| `showValue` | `true` | `false`: niente riga sotto il diagramma. |
+
+La riga sotto il diagramma dice dove si è arrivati: su un insieme finito tutta l'orbita ($5 \mapsto 1 \mapsto 2$), su un intervallo l'ultimo passo ($x_3 = f(x_2) = 0{,}62$). Quando un valore torna l'orbita si ferma e la riga dice «ciclo di periodo $k$» (o «punto fisso»); si ferma anche quando la funzione non è definita o esce dall'insieme. Con `"plot"` l'orbita è anche la ragnatela sul grafico: da $(x_0, 0)$ su fino al grafico, di lato fino alla retta $y = x$, di nuovo al grafico, un passo per volta (la retta $y = x$ si disegna da sola; `"identity": false` la toglie).
+
+`"sync": "es1"` collega i blocchi con lo stesso nome nella pagina:
+
+- un parametro con lo stesso nome ha lo stesso valore in tutti: lo slider (o il punto trascinato) di uno muove gli altri. Per un solo gruppo di slider si mette `"showSliders": false` negli altri blocchi;
+- passando su un elemento si evidenzia l'elemento con lo stesso insieme e lo stesso id negli altri blocchi;
+- le orbite della stessa funzione (stesso id) avanzano insieme.
+
+Collega i blocchi ```` ```sets ```` tra loro; il grafico di un blocco si collega con `"plot"`.
 
 ## Esempi
 
@@ -474,5 +503,98 @@ $f(x) = \frac{x + 1}{2}$ e $g(x) = \frac{x^2}{2}$ su $[0, 2]$. Sul grafico il pu
   "params": { "p": { "min": 0, "max": 2, "step": 0.01, "val": 1.4, "label": "x" } },
   "probe": { "map": "gf", "at": "p" },
   "plot": { "maps": ["f", "g", "gf"], "construction": true }
+}
+```
+
+### Un'orbita in un insieme finito
+
+$f$ manda $A$ in sé. Premi «Passo successivo»: da $5$ si arriva in $1$, poi si gira per sempre tra $1$, $2$ e $3$.
+
+```sets
+{
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4", "5"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "3", "3": "1", "4": "4", "5": "1" } }],
+  "iterate": { "map": "f", "start": "5", "steps": 8 }
+}
+```
+
+### Le potenze di una funzione
+
+$f^n = f \circ f \circ \dots \circ f$ ($n$ volte). Con lo slider cambia $n$: le frecce mostrano dove va ogni elemento dopo $n$ passi.
+
+```sets
+{
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4", "5"] }],
+  "maps": [
+    { "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "3", "3": "1", "4": "4", "5": "1" }, "hidden": true },
+    { "id": "fn", "iterate": ["f", "n"], "color": "blue" }
+  ],
+  "params": { "n": { "min": 0, "max": 6, "step": 1, "val": 2 } },
+  "show": ["properties(fn)"]
+}
+```
+
+### Iterare il coseno
+
+Su una sola retta: ogni passo va da $x_k$ a $x_{k+1} = \cos x_k$. Sul grafico la stessa orbita è la ragnatela tra $y = \cos x$ e $y = x$; i punti si avvicinano al punto fisso $\cos x = x$.
+
+```sets
+{
+  "dynagraph": { "ticks": 0.5 },
+  "sets": [{ "id": "I", "label": "I", "interval": "[0, 1.5]" }],
+  "maps": [{ "id": "c", "label": "\\cos", "from": "I", "to": "I", "expr": "cos(x)", "hidden": true }],
+  "params": { "p": { "min": 0, "max": 1.5, "step": 0.01, "val": 0.2, "label": "$x_0$" } },
+  "iterate": { "map": "c", "start": "p", "steps": 40 },
+  "plot": { "maps": ["c"] }
+}
+```
+
+### Due diagrammi, uno slider
+
+I due blocchi hanno `"sync": "sq"`: lo slider del primo muove il punto in entrambi, e si può trascinare il punto in tutti e due.
+
+```sets
+{
+  "sync": "sq",
+  "layout": "column",
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1.5, "label": "x" } },
+  "probe": { "map": "f", "at": "p" }
+}
+```
+
+```sets
+{
+  "sync": "sq",
+  "dynagraph": { "ticks": 1 },
+  "sets": [{ "id": "X", "interval": "[-2, 2]" }, { "id": "Y", "interval": "[0, 4]" }],
+  "maps": [{ "id": "f", "from": "X", "to": "Y", "expr": "x^2" }],
+  "params": { "p": { "min": -2, "max": 2, "step": 0.01, "val": 1.5 } },
+  "showSliders": false,
+  "probe": { "map": "f", "at": "p", "trace": true }
+}
+```
+
+### Evidenziazione e orbite collegate
+
+La stessa funzione in riga e in colonna. Passa sopra un elemento: si evidenzia anche nell'altro diagramma. «Passo successivo» fa avanzare insieme l'orbita di $f$ in tutti e due.
+
+```sets
+{
+  "sync": "orb",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "4", "3": "3", "4": "1" } }],
+  "iterate": { "map": "f", "start": "1", "steps": 5 }
+}
+```
+
+```sets
+{
+  "sync": "orb",
+  "layout": "column",
+  "sets": [{ "id": "A", "elements": ["1", "2", "3", "4"] }],
+  "maps": [{ "id": "f", "from": "A", "to": "A", "pairs": { "1": "2", "2": "4", "3": "3", "4": "1" } }],
+  "iterate": { "map": "f", "start": "1", "steps": 5, "showValue": false }
 }
 ```

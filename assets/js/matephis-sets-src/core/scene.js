@@ -22,7 +22,9 @@ import { parseSelector } from './selectors.js';
 import { Controls } from '../ui/controls.js';
 import { Interaction } from '../ui/interaction.js';
 import { drawSets, drawElements, drawHeader } from '../render/sets.js';
-import { drawMapArrows, drawRoutedMaps, drawProbes } from '../render/arrows.js';
+import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts } from '../render/arrows.js';
+import { Orbits } from '../render/orbits.js';
+import { SyncGroup } from './sync.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
 import { LinkedPlot } from '../render/linked-plot.js';
 
@@ -125,11 +127,21 @@ export class MatephisSets {
             this.controls = new Controls(this, cfg.controls);
             this.wrapper.appendChild(this.controls.el);
         }
+        // Orbits, step by step: their buttons go with the other buttons
+        if (cfg.iterate !== undefined) {
+            this.orbits = new Orbits(this, cfg.iterate);
+            if (this.orbits.items.length) {
+                if (this.controls) [...this.orbits.el.children].forEach(b => this.controls.el.appendChild(b));
+                else this.wrapper.appendChild(this.orbits.el);
+            }
+        }
         if (cfg.params && cfg.showSliders !== false) {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
         if (this.linked) this.linked.mount();
+        // Blocks with the same "sync" share params, hover and orbit steps
+        if (typeof cfg.sync === 'string' && cfg.sync) this.syncGroup = SyncGroup.join(cfg.sync, this);
 
         this.interaction = new Interaction(this);
         this.draw();
@@ -269,7 +281,8 @@ export class MatephisSets {
         // The arrows of each map, element by element. A composition is drawn
         // as one curve; its element arrows only with "arrows": true or a button
         this.model.maps.forEach(m => {
-            const always = m.kind === 'compose' ? m.def.arrows === true : m.def.hidden !== true;
+            // f^n ("iterate") has no curve of its own: its arrows are shown as a map's
+            const always = m.kind === 'compose' && !m.iterate ? m.def.arrows === true : m.def.hidden !== true;
             add({ key: `arrows(${m.id})`, map: m, arrows: true, always });
         });
         const fromSelector = (str, always, where, extra = {}) => {
@@ -459,7 +472,7 @@ export class MatephisSets {
         this.layout = computeLayout(this.model, {
             width: this.width, orient: this.orient, fontSize: this.fontSize,
             measure: (s) => this.measure(s), order: elementOrder(this.model, { reorder: cfg.reorder !== false, orient: this.orient }),
-            footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined,
+            footer, spacing: typeof cfg.spacing === 'number' ? cfg.spacing : undefined, selfSets: this._selfSets(),
             height: typeof cfg.height === 'number' ? cfg.height : undefined,
         });
         this.height = Math.ceil(this.layout.height);
@@ -496,12 +509,22 @@ export class MatephisSets {
             }
             else drawLayer(this, l);
         });
-        drawProbes(this);
+        const readouts = [...drawProbes(this), ...(this.orbits ? this.orbits.draw() : [])];
+        if (readouts.length || this.readoutEl) renderReadouts(this, readouts);
         renderProperties(this, props);
         if (this.controls) this.controls.update();
         if (this.linked) this.linked.sync();
         this.interaction.bind();
+        if (this.syncGroup) this.syncGroup.publish(this);
         if (this._warningsDirty) this._renderWarnings();
+    }
+
+    /** Ids of sets with a map into themselves (drawn as arcs before the set) or an orbit. */
+    _selfSets() {
+        const ids = new Set();
+        this.model.maps.forEach(m => { if (m.from === m.to) ids.add(m.from.id); });
+        if (this.orbits) this.orbits.items.forEach(it => ids.add(it.map.from.id));
+        return ids;
     }
 
     /** The curve of a routed map: shown unless the map is hidden (and not revealed). */
@@ -513,7 +536,7 @@ export class MatephisSets {
     _routed(map) {
         if (!map) return false;
         if (map.def.route === 'below' || map.def.route === 'side') return true;
-        if (map.def.route === 'direct') return false;
+        if (map.def.route === 'direct' || map.from === map.to) return false;
         return map.kind === 'compose' || Math.abs(map.from.index - map.to.index) > 1;
     }
 
@@ -527,6 +550,7 @@ export class MatephisSets {
         if (this.sliders) this.sliders.destroy();
         if (this.interaction) this.interaction.destroy();
         if (this.linked) this.linked.destroy();
+        if (this.syncGroup) this.syncGroup.leave(this);
         this._listeners.forEach(([t, type, fn, opts]) => t.removeEventListener(type, fn, opts));
         this._listeners = [];
         this.container.innerHTML = '';

@@ -157,6 +157,7 @@ export class SetsModel {
             }
         }
         this.maps.forEach(map => {
+            if (map.iterate) this._setIterateCount(map);
             if (map.kind !== 'piecewise') return;
             map.pieces.forEach(pc => { pc.I = pc.on ? evalInterval(pc.on, ev) : null; });
             const withI = map.pieces.filter(pc => pc.I);
@@ -211,6 +212,14 @@ export class SetsModel {
 
         if (def.inverse !== undefined) {
             if (this._readInverse(map, def)) {
+                this.maps.push(map);
+                this.mapById.set(id, map);
+            }
+            return;
+        }
+
+        if (def.iterate !== undefined) {
+            if (this._readIterate(map, def)) {
                 this.maps.push(map);
                 this.mapById.set(id, map);
             }
@@ -376,6 +385,91 @@ export class SetsModel {
      * inverse of a map that is not bijective is a relation, and the engine
      * says so). For maps between finite sets and intervals.
      */
+    /**
+     * f^n, from "iterate": ["f", 3] (or a param, ["f", "n"]): a composition of
+     * n copies of f, which must map a set into itself. f^0 is the identity.
+     * The number is read again on every refresh, so a slider can change it.
+     */
+    _readIterate(map, def) {
+        const it = def.iterate;
+        const [baseId, nSrc] = Array.isArray(it) ? it : [it, 2];
+        const base = this.mapById.get(String(baseId));
+        if (!base) {
+            this.warn(`map '${map.id}': "iterate" needs a map defined before it, like ["f", 3] (unknown: '${baseId}')`);
+            return false;
+        }
+        if (base.from !== base.to) {
+            this.warn(`map '${map.id}': cannot iterate '${base.id}', it does not map a set into itself (${base.from.id} → ${base.to.id})`);
+            return false;
+        }
+        map.kind = 'compose';
+        map.iterate = { base, src: nSrc === undefined ? 2 : nSrc };
+        map.from = base.from;
+        map.to = base.to;
+        this._setIterateCount(map);
+        return true;
+    }
+
+    /** Number of copies of f in f^n (0 to 50), from its source; the label follows it. */
+    _setIterateCount(map) {
+        const { base, src } = map.iterate;
+        let n = Math.round(this.evaluate(src));
+        if (!isFinite(n) || n < 0) {
+            if (!map.iterate.warned) this.warn(`map '${map.id}': the number of times in "iterate" must be 0, 1, 2, … (got '${src}')`);
+            map.iterate.warned = true;
+            n = 0;
+        }
+        n = Math.min(n, 50);
+        if (map.iterate.n === n && map.parts) return;
+        map.iterate.n = n;
+        map.parts = Array.from({ length: n }, () => base);
+        if (map.def.label === undefined) {
+            const b = String(base.label);
+            const wrapped = /^[A-Za-z]$|^\\?[A-Za-z]+(_\{?\w+\}?)?$/.test(b) ? b : `\\left(${b}\\right)`;
+            map.label = n === 0 ? `\\mathrm{id}_{${this._setLabel(map.from)}}` : `${wrapped}^{${n}}`;
+        }
+    }
+
+    _setLabel(set) {
+        return set.label !== undefined ? String(set.label) : set.id;
+    }
+
+    /**
+     * The orbit of a point under a map of a set into itself: x0, f(x0),
+     * f(f(x0)), … up to `steps` steps. Stops where f has no value (or a value
+     * outside the set), and when a value comes back: then `cycle` says where
+     * the cycle starts and its period (1: a fixed point).
+     * @returns {{ values: any[], cycle: {start: number, period: number}|null, stop: string|null }}
+     */
+    orbit(map, x0, steps) {
+        const values = [x0];
+        let cycle = null, stop = null;
+        const same = (a, b) => (typeof a === 'number' && typeof b === 'number'
+            ? Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)) : sameValue(a, b));
+        for (let k = 0; k < steps; k++) {
+            const next = this.apply(map, values[k]);
+            const v = next[0];
+            const valid = typeof v === 'string' || SetsModel.validPoint(v);
+            if (next.length !== 1 || !valid || (map.to.kind !== 'finite' && !this.containsPoint(map.to, v, 1e-9))) {
+                stop = next.length > 1 ? 'many' : (v && typeof v === 'object' && 'outside' in v) || (valid && map.to.kind !== 'finite') ? 'outside' : 'undefined';
+                if (stop === 'outside') values.push(v && typeof v === 'object' && 'outside' in v ? v.outside : v);
+                break;
+            }
+            values.push(v);
+            let j = -1;
+            for (let i = values.length - 2; i >= 0 && j < 0; i--) if (same(values[i], v)) j = i;
+            // Numbers converging to a fixed point come close to an earlier value
+            // before the last one: a cycle of numbers needs points well apart
+            const apart = (a, b) => Math.abs(a - b) > 1e-6 * Math.max(1, Math.abs(a));
+            const real = j < 0 || typeof v !== 'number' || values.slice(j, -1).every((u, i, arr) => i === 0 || apart(u, arr[i - 1]));
+            if (j >= 0 && real) {
+                cycle = { start: j, period: values.length - 1 - j };
+                break;
+            }
+        }
+        return { values, cycle, stop };
+    }
+
     _readInverse(map, def) {
         const base = this.mapById.get(String(def.inverse));
         if (!base) {

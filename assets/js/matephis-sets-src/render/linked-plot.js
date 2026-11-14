@@ -106,8 +106,53 @@ export class LinkedPlot {
                 changed = true;
             }
         }
+        // The cobwebs follow the orbits (their steps and their start)
+        this.cobwebItems().forEach(c => c.keys.forEach((key, i) => {
+            const v = c.values[i];
+            if (this.plot.params[key] !== v) {
+                sl.setValue(key, v, false);
+                changed = true;
+            }
+        }));
         this._syncing = false;
         if (changed) this.plot.requestDraw();
+    }
+
+    /**
+     * The cobweb of each orbit on a line: from (x0, 0) up to the graph, across
+     * to y = x, up to the graph again… one corner per step. The corners are
+     * params _c<n>_<i> (x_i) and _c<n>_b (where the first segment starts:
+     * on the axis once a step is shown); the steps not shown yet collapse onto
+     * the last point, so the plot is built once and only its params change.
+     */
+    cobwebItems() {
+        const orbits = this.scene.orbits;
+        if (!orbits || !orbits.items.length) return [];
+        const { model } = this.scene;
+        const current = orbits.current || orbits.compute();
+        const out = [];
+        current.forEach((o, n) => {
+            const { it } = o;
+            if (it.map.from.kind !== 'interval' || !this.maps.some(m => m === it.map || (it.map.iterate && m === it.map.iterate.base))) return;
+            if (model.exprString(it.map) === null) return;
+            const S = it.steps;
+            const xs = Array.from({ length: S + 1 }, (_, i) => `_c${n}_${i}`);
+            const b = `_c${n}_b`;
+            const k = o.values.length ? o.shown : 0;
+            const vals = xs.map((_, i) => (o.values.length ? Number(o.values[Math.min(i, k)]) : 0));
+            const color = this.scene.color(it.def.color || (n === 0 ? 'orange' : ['purple', 'blue', 'green'][(n - 1) % 3]));
+            const items = [];
+            for (let i = 1; i <= S; i++) {
+                items.push({ vector: [[xs[i - 1], i === 1 ? b : xs[i - 1]], [xs[i - 1], xs[i]]], arrow: false, color, width: 1.6 });
+                items.push({ vector: [[xs[i - 1], xs[i]], [xs[i], xs[i]]], arrow: false, color, width: 1.6 });
+            }
+            // The start on the x axis: draggable when it is a param
+            const start = it.def.start;
+            const defs = this.scene.config.params || {};
+            items.push({ points: [[typeof start === 'string' && defs[start] ? start : vals[0], 0]], radius: 6, fillColor: color, color });
+            out.push({ items, keys: [...xs, b], values: [...vals, k >= 1 ? 0 : vals[0]] });
+        });
+        return out;
     }
 
     destroy() {
@@ -150,6 +195,12 @@ export class LinkedPlot {
             data.push({ fn: model.exprString(m), domain: w.slice(), color: color(m), width: 2.2, label });
         });
         if (def.probe !== false) data.push(...this.probeItems(construction));
+        // Orbits: the cobweb between the graph and y = x
+        const cobwebs = this.cobwebItems();
+        if (cobwebs.length && def.identity !== false && !data.some(d => d.fn === 'x')) {
+            data.unshift({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
+        }
+        cobwebs.forEach(c => data.push(...c.items));
 
         const own = {};
         for (const key in def) if (!PLOT_KEYS.includes(key)) own[key] = def[key];
@@ -159,14 +210,17 @@ export class LinkedPlot {
             xr[0] = Math.min(xr[0], a[0]); xr[1] = Math.max(xr[1], a[1]);
             yr[0] = Math.min(yr[0], b[0]); yr[1] = Math.max(yr[1], b[1]);
         });
-        // The construction moves between the axes through y = x: same range on both
+        // The construction (and a cobweb) moves between the axes through y = x: same range on both
         const both = [Math.min(xr[0], yr[0]), Math.max(xr[1], yr[1])];
+        const square = construction || cobwebs.length > 0;
         const params = {};
         const defs = scene.config.params || {};
         for (const key in defs) params[key] = { ...defs[key], val: scene.params[key] / paramScale(defs[key]) };
+        // The cobweb's corners are hidden params, set by sync() at every step
+        cobwebs.forEach(c => c.keys.forEach((key, i) => { params[key] = { min: -1e9, max: 1e9, slider: false, val: c.values[i] }; }));
         return {
-            xlim: pad(construction ? both : xr),
-            ylim: pad(construction ? both : yr),
+            xlim: pad(square ? both : xr),
+            ylim: pad(square ? both : yr),
             aspectRatio: '1:1',
             cssWidth: '100%',
             fullWidth: true,

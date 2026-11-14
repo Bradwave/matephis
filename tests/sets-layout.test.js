@@ -160,8 +160,14 @@ describe('Configurazione', () => {
         expect(validateConfig({ probe: { map: 'f', at: 'p', trace: true } })).toEqual([]);
     });
 
-    it('"piecewise" e "inverse" sono opzioni delle funzioni', () => {
-        const w = validateConfig({ maps: [{ id: 'f', piecewise: [] }, { id: 'g', inverse: 'f' }, { id: 'h', iterate: 2 }] });
-        expect(w).toEqual(["map 'h': option 'iterate' is not implemented yet and is ignored"]);
+    it('"piecewise", "inverse" e "iterate" sono opzioni delle funzioni', () => {
+        const w = validateConfig({ maps: [{ id: 'f', piecewise: [] }, { id: 'g', inverse: 'f' }, { id: 'h', iterate: ['f', 2] }, { id: 'k', sequence: 1 }] });
+        expect(w).toEqual(["map 'k': option 'sequence' is not implemented yet and is ignored"]);
+    });
+
+    it('"iterate" e "sync" alla radice', () => {
+        expect(validateConfig({ iterate: { map: 'f', start: 'a', steps: 4 }, sync: 'es1' })).toEqual([]);
+        expect(validateConfig({ iterate: [{ map: 'f', stpes: 4 }] })[0]).toMatch(/iterate\[0\]: unknown option 'stpes'/);
+        expect(validateConfig({ sync: 3 })[0]).toMatch(/"sync" must be a name/);
     });
 });

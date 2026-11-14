@@ -561,3 +561,59 @@ describe('Dynagraph', () => {
         expect(own.setById.get('X').window).toEqual([0, 1]);
     });
 });
+
+describe('Iterazione', () => {
+    const CICLO = {
+        sets: [{ id: 'A', elements: ['1', '2', '3', '4', '5'] }],
+        maps: [{ id: 'f', from: 'A', to: 'A', pairs: { 1: '2', 2: '3', 3: '1', 4: '4', 5: '1' } }],
+    };
+
+    it('f^n come composizione di n copie di f', () => {
+        const { m, map } = model({ ...CICLO, maps: [...CICLO.maps, { id: 'f2', iterate: ['f', 2] }, { id: 'f3', iterate: ['f', 3] }, { id: 'f0', iterate: ['f', 0] }] });
+        expect(map('f2').label).toBe('f^{2}');
+        expect(m.apply(map('f2'), '1')).toEqual(['3']);
+        expect(m.apply(map('f3'), '1')).toEqual(['1']);
+        expect(m.apply(map('f0'), '5')).toEqual(['5']);
+        expect(map('f0').label).toBe('\\mathrm{id}_{A}');
+        expect(m.properties(map('f3'))).toMatchObject({ injective: false, surjective: false });
+    });
+
+    it('il numero di volte può essere un parametro', () => {
+        const params = { n: 2 };
+        const { m, map } = model({
+            sets: [{ id: 'R', interval: 'R' }],
+            maps: [{ id: 'g', from: 'R', to: 'R', expr: '2x' }, { id: 'gn', iterate: ['g', 'n'] }],
+        }, params);
+        expect(m.apply(map('gn'), 1)).toEqual([4]);
+        expect(m.exprString(map('gn'))).toMatch(/2/);
+        params.n = 5;
+        m.refresh();
+        expect(m.apply(map('gn'), 1)).toEqual([32]);
+        expect(map('gn').label).toBe('g^{5}');
+    });
+
+    it('avvisa se la funzione non va da un insieme in sé', () => {
+        const { warnings } = model({
+            sets: [{ id: 'A', elements: ['a'] }, { id: 'B', elements: ['b'] }],
+            maps: [{ id: 'f', from: 'A', to: 'B', pairs: { a: 'b' } }, { id: 'f2', iterate: ['f', 2] }],
+        });
+        expect(warnings.some(w => /does not map a set into itself/.test(w))).toBe(true);
+    });
+
+    it('orbite: cicli, punti fissi, valori fuori dall\'insieme', () => {
+        const { m, map } = model(CICLO);
+        expect(m.orbit(map('f'), '5', 10)).toEqual({ values: ['5', '1', '2', '3', '1'], cycle: { start: 1, period: 3 }, stop: null });
+        expect(m.orbit(map('f'), '4', 10).cycle).toEqual({ start: 0, period: 1 });
+        expect(m.orbit(map('f'), '1', 2)).toEqual({ values: ['1', '2', '3'], cycle: null, stop: null });
+        const r = model({
+            sets: [{ id: 'I', interval: '[0, 1]' }],
+            maps: [{ id: 'q', from: 'I', to: 'I', expr: 'x + 0.4' }, { id: 'c', from: 'I', to: 'I', expr: 'cos(x)' }],
+        });
+        const o = r.m.orbit(r.map('q'), 0.1, 10);
+        expect(o.stop).toBe('outside');
+        expect(o.values.length).toBe(4);
+        const c = r.m.orbit(r.map('c'), 1, 200);
+        expect(c.cycle && c.cycle.period).toBe(1);
+        expect(c.values[c.values.length - 1]).toBeCloseTo(0.739085, 5);
+    });
+});

@@ -99,6 +99,8 @@ export function computeLayout(model, opts) {
     const maxCount = Math.max(1, ...sets.filter(s => s.kind === 'finite').map(s => s.elements.length));
 
     const out = { orient, sets: new Map(), width: W, height: 0, fontSize: fs };
+    // Sets with a map into themselves (arcs and loops instead of arrows across)
+    const selfSets = opts.selfSets || new Set();
 
     if (orient === 'row') {
         const slot = (W - 2 * MARGIN) / n;
@@ -116,7 +118,9 @@ export function computeLayout(model, opts) {
         const cy = header + extent / 2;
         sets.forEach((set, i) => {
             const cx = MARGIN + slot * (i + 0.5);
-            out.sets.set(set.id, placeSet(model, set, { orient, cx, cy, slot, rx, ry: extent / 2, spacing, order, fs, measure, labelH }));
+            const P = placeSet(model, set, { orient, cx, cy, slot, rx, ry: extent / 2, spacing, order, fs, measure, labelH, self: selfSets.has(set.id) });
+            P.selfRoom = Math.max(30, slot / 2 - P.halfU - 12 + (P.shift || 0));
+            out.sets.set(set.id, P);
         });
         out.height = H;
         out.header = { v: header - 12 - labelH / 2 };
@@ -133,12 +137,17 @@ export function computeLayout(model, opts) {
     const gap = Math.max(70, fs * 4.5);
     let y = MARGIN + 6;
     sets.forEach((set, i) => {
-        const thick = set.kind === 'finite' ? 2 * (labelH + 18) : set.kind === 'interval' ? labelH * 2 + 20 : Math.min(along, 220);
+        const thick = set.kind === 'finite' ? 2 * (labelH + 18) + (selfSets.has(set.id) ? 24 : 0) : set.kind === 'interval' ? labelH * 2 + 20 : Math.min(along, 220);
+        // A set mapped into itself: its arrows are arcs above it, they need room
+        const room = selfSets.has(set.id) && set.kind !== 'rect' && set.kind !== 'disk' ? Math.round(Math.min(110, Math.max(56, along * 0.16))) : 0;
+        y += room;
         const cx = left + MARGIN + headerW + along / 2;
         const cy = y + thick / 2;
-        out.sets.set(set.id, placeSet(model, set, {
-            orient, cx, cy, slot: along, rx: thick / 2, ry: along / 2, spacing, order, fs, measure, labelH, alongMax: along,
-        }));
+        const P = placeSet(model, set, {
+            orient, cx, cy, slot: along, rx: thick / 2, ry: along / 2, spacing, order, fs, measure, labelH, alongMax: along, self: selfSets.has(set.id),
+        });
+        P.selfRoom = room + (set.kind === 'finite' ? P.ru + P.shift - 6 : 0);
+        out.sets.set(set.id, P);
         y += thick + (i < sets.length - 1 ? gap : 0);
     });
     // Footer: also a line under the last set (labels of collisions)
@@ -171,6 +180,13 @@ function placeSet(model, set, o) {
         const k = ids.length;
         let ru = o.rx, rv = o.ry;
         let spacing = o.spacing;
+        // Mapped into itself: a wider oval, the elements off centre, the arcs in the room before them
+        let shift = 0;
+        if (o.self) {
+            ru = orient === 'row' ? Math.min(o.slot * 0.42, Math.max(ru, 78)) : ru;
+            shift = ru * 0.3;
+            spacing *= orient === 'row' ? 1.25 : 1;
+        }
         if (orient === 'column') {
             // Elements along x: shrink the spacing when the row is long
             spacing = Math.min(o.spacing, (o.alongMax - 40) / Math.max(1, k));
@@ -186,10 +202,12 @@ function placeSet(model, set, o) {
         // Element labels: away from the arrows where possible
         // A set in the middle of a chain has arrows on both sides: its labels go across them
         // (above the dot in a row, beside it in a column)
-        const side = set.def.labelSide || (role === 'source' ? 'before' : role === 'target' ? 'after' : role === 'both' ? 'across' : 'before');
+        // Mapped into itself: the arcs go before (above, left), the labels after
+        const side = set.def.labelSide || (o.self ? 'after' : role === 'source' ? 'before' : role === 'target' ? 'after' : role === 'both' ? 'across' : 'before');
+        P.shift = shift;
         ids.forEach((id, j) => {
             const v = vc + (j - (k - 1) / 2) * spacing;
-            const [x, y] = toXY(orient, uc, v);
+            const [x, y] = toXY(orient, uc + shift, v);
             P.elements.set(id, { x, y, side });
         });
     } else if (set.kind === 'interval') {
@@ -201,7 +219,7 @@ function placeSet(model, set, o) {
         P.toPx = (t) => toXY(orient, uc, vAt(t));
         P.start = P.toPx(w[0]);
         P.end = P.toPx(w[1]);
-        P.tickSide = role === 'source' ? 'before' : 'after';
+        P.tickSide = role === 'source' && !o.self ? 'before' : 'after';
     } else {
         // Plane regions: a box with the same scale on both axes
         let wx, wy;

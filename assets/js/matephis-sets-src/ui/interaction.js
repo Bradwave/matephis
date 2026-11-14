@@ -95,9 +95,12 @@ export class Interaction {
         if (this.focusKey) this._apply(this.focusKey);
     }
 
-    focus(key) {
+    /** Lights up an element (null: none); tells the blocks linked by "sync" unless it came from them. */
+    focus(key, { remote = false } = {}) {
+        if (key === this.focusKey) return;
         this.focusKey = key;
         this._apply(key);
+        if (!remote && this.scene.syncGroup) this.scene.syncGroup.focus(this.scene, key);
     }
 
     /** Element key -> what lights up: its arrows, their other ends. */

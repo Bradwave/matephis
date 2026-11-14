@@ -10,23 +10,25 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync",
 ];
 
 /** Root keys of later phases. */
 export const PLANNED_ROOT_KEYS = [
-    "venn", "relations", "partition", "iterate", "cd", "steps", "enumerate", "diagonal", "order", "sync",
+    "venn", "relations", "partition", "cd", "steps", "enumerate", "diagonal", "order",
 ];
 
 export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "color", "window", "order", "labelSide", "endpoints"];
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
 export const MAP_KEYS = [
     "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
-    "claims", "hidden", "route", "dash", "bend", "arrows",
+    "claims", "hidden", "route", "dash", "bend", "arrows", "iterate",
 ];
-export const PLANNED_MAP_KEYS = ["preset", "sequence", "iterate"];
+export const PLANNED_MAP_KEYS = ["preset", "sequence"];
 export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color", "label", "hidden", "fill"];
 export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue", "trace"];
+/** An orbit, step by step ("iterate" at the root). */
+export const ITERATE_KEYS = ["map", "start", "steps", "step", "color", "label", "showValue"];
 export const DYNAGRAPH_KEYS = ["scale", "ticks", "arrows"];
 /** Keys of "plot" read by the sets engine; any other key goes to the plot itself. */
 export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity"];
@@ -77,6 +79,16 @@ export function validateConfig(config) {
     if (config.plot !== undefined && (!config.plot || typeof config.plot !== 'object')) warnings.push('"plot" must be an object like { "maps": ["f"] }');
     if (config.plot && config.plot.position !== undefined && !['right', 'below'].includes(config.plot.position)) {
         warnings.push(`plot: "position" must be "right" or "below", got '${config.plot.position}'`);
+    }
+    if (config.iterate !== undefined) {
+        const its = Array.isArray(config.iterate) ? config.iterate : [config.iterate];
+        its.forEach((it, i) => {
+            if (it && typeof it === 'object') checkKeys(it, ITERATE_KEYS, [], `iterate[${i}]`, warnings);
+            else warnings.push(`iterate[${i}]: expected an object like { "map": "f", "start": "a", "steps": 5 }`);
+        });
+    }
+    if (config.sync !== undefined && (typeof config.sync !== 'string' || !config.sync)) {
+        warnings.push('"sync" must be a name, the same on every block to link, like "es1"');
     }
     if (config.probe !== undefined) {
         const probes = Array.isArray(config.probe) ? config.probe : [config.probe];

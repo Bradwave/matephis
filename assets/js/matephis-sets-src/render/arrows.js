@@ -21,8 +21,9 @@ const footerDir = (layout) => (layout.orient === 'row' ? [0, 1] : [1, 0]);
  * @param {object} o - { from, to, color, bend, trimStart, trimEnd, dash, width, cls }
  */
 export function arrow(scene, parent, o) {
-    const { d, end, angle } = curvedArrow(o.from, o.to, { bend: o.bend || 0, trimStart: o.trimStart || 0, trimEnd: o.trimEnd || 0 });
+    const { d, end, angle, mid } = curvedArrow(o.from, o.to, { bend: o.bend || 0, trimStart: o.trimStart || 0, trimEnd: o.trimEnd || 0 });
     const g = scene.svgEl('g', { class: o.cls || 'mps-arrow' }, parent);
+    g.mid = mid;
     const path = scene.svgEl('path', { d, fill: 'none', class: 'mps-arrow-line' }, g);
     path.style.stroke = o.color;
     if (o.width) path.style.strokeWidth = `${o.width}px`;
@@ -30,6 +31,59 @@ export function arrow(scene, parent, o) {
     const head = scene.svgEl('polygon', { points: arrowHeadPoints(end[0], end[1], angle, o.head || 8), class: 'mps-arrow-head' }, g);
     head.style.fill = o.color;
     return g;
+}
+
+/** Where the arcs of a map of a set into itself bulge: before the set (up in a column, left in a row). */
+const beforeDir = (layout) => (layout.orient === 'row' ? [-1, 0] : [0, -1]);
+
+/**
+ * An arrow between two points of the same set (a map into itself): an arc
+ * bulging before the set, no higher than the room the layout left for it,
+ * or a small loop when the two points are the same (a fixed point).
+ */
+export function selfArrow(scene, parent, set, a, b, o) {
+    const P = scene.layout.sets.get(set.id);
+    const dir = beforeDir(scene.layout);
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 3) return loopArrow(scene, parent, a, dir, o);
+    const room = P && P.selfRoom ? P.selfRoom : 60;
+    // Height of the arc: grows with the distance, never flat, never past the room
+    const h = Math.min(room, 14 + 0.3 * L);
+    const size = (2 * h) / L;
+    // The side of the chord that faces "before"
+    const nx = (b[1] - a[1]) / L, ny = -(b[0] - a[0]) / L;
+    const bend = nx * dir[0] + ny * dir[1] >= 0 ? size : -size;
+    const g = arrow(scene, parent, { ...o, from: a, to: b, bend });
+    g.out = dir;
+    return g;
+}
+
+/** A loop out of a point and back to it (x -> x), on the side `dir`. */
+function loopArrow(scene, parent, p, dir, o) {
+    const R = o.loop || 26;
+    const rot = (d, deg) => {
+        const t = deg * Math.PI / 180;
+        return [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t)];
+    };
+    const at = (d, r) => [p[0] + d[0] * r, p[1] + d[1] * r];
+    const d1 = rot(dir, -28), d2 = rot(dir, 28);
+    const s = at(d1, 6), e = at(d2, 7), c1 = at(rot(dir, -50), R * 1.5), c2 = at(rot(dir, 50), R * 1.5);
+    const g = scene.svgEl('g', { class: o.cls || 'mps-arrow' }, parent);
+    const path = scene.svgEl('path', { d: `M${f2(s[0])},${f2(s[1])}C${f2(c1[0])},${f2(c1[1])} ${f2(c2[0])},${f2(c2[1])} ${f2(e[0])},${f2(e[1])}`, fill: 'none', class: 'mps-arrow-line' }, g);
+    path.style.stroke = o.color;
+    if (o.width) path.style.strokeWidth = `${o.width}px`;
+    if (o.dash) path.setAttribute('stroke-dasharray', o.dash === true ? '5 4' : o.dash);
+    const angle = Math.atan2(e[1] - c2[1], e[0] - c2[0]);
+    const head = scene.svgEl('polygon', { points: arrowHeadPoints(e[0], e[1], angle, o.head || 8), class: 'mps-arrow-head' }, g);
+    head.style.fill = o.color;
+    g.mid = at(dir, R * 1.15);
+    g.out = dir;
+    return g;
+}
+
+/** An arrow from a point of one set to a point of another, or an arc when the set is the same. */
+export function linkArrow(scene, parent, fromSet, toSet, o) {
+    return fromSet === toSet ? selfArrow(scene, parent, fromSet, o.from, o.to, o) : arrow(scene, parent, o);
 }
 
 /** Bend (sign and size) that makes an arrow from a to b bulge towards the footer. */
@@ -79,8 +133,8 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
         if (!toPx) return;
         const style = scene.arrowStyle.get(`${map.id}|${src}|${targetKey(t)}`);
         if (style) color = style;
-        const bend = bendSize ? bendTowardsFooter(layout, srcPx, toPx, bendSize) : 0;
-        const a = arrow(scene, g, { from: srcPx, to: toPx, color, bend, trimStart, trimEnd, dash, head: scene.dynagraph ? 6 : undefined });
+        const bend = bendSize && map.from !== map.to ? bendTowardsFooter(layout, srcPx, toPx, bendSize) : 0;
+        const a = linkArrow(scene, g, map.from, map.to, { from: srcPx, to: toPx, color, bend, trimStart, trimEnd, dash, head: scene.dynagraph ? 6 : undefined });
         if (typeof t !== 'string') {
             const dot = scene.svgEl('circle', { cx: f2(toPx[0]), cy: f2(toPx[1]), r: 2.6, class: 'mps-sample' }, a);
             dot.style.fill = color;
@@ -163,7 +217,7 @@ export function drawRoutedMaps(scene, entries) {
  */
 export function drawProbes(scene) {
     const cfg = scene.config;
-    if (cfg.probe === undefined) return;
+    if (cfg.probe === undefined) return [];
     const probes = Array.isArray(cfg.probe) ? cfg.probe : [cfg.probe];
     const readouts = [];
     probes.forEach((p, i) => {
@@ -210,7 +264,7 @@ export function drawProbes(scene) {
                 map.parts.forEach((part, k) => {
                     const a = pointPx(scene.layout, part.from, vals[k]), b = pointPx(scene.layout, part.to, vals[k + 1]);
                     if (!a || !b || vals[k + 1] === undefined || !visible(part.from, vals[k]) || !visible(part.to, vals[k + 1])) return;
-                    arrow(scene, parent, { from: a, to: b, color, trimStart: 7, trimEnd: 5, width: w, head });
+                    linkArrow(scene, parent, part.from, part.to, { from: a, to: b, color, trimStart: 7, trimEnd: 5, width: w, head });
                     if (!faint) {
                         const dot = scene.svgEl('circle', { cx: f2(b[0]), cy: f2(b[1]), r: 4.5, class: 'mps-probe-target' }, parent);
                         dot.style.fill = color;
@@ -221,7 +275,7 @@ export function drawProbes(scene) {
                 const direct = scene.layers.find(l => l.arrows && l.map === map);
                 const end = last !== undefined && visible(map.to, last) ? pointPx(scene.layout, map.to, last) : null;
                 if (!faint && end && direct && scene.isVisible(direct)) {
-                    arrow(scene, parent, { from: pointPx(scene.layout, map.from, x0), to: end, color, trimStart: 7, trimEnd: 5, width: 1.6, head: 9, dash: '6 4' });
+                    linkArrow(scene, parent, map.from, map.to, { from: pointPx(scene.layout, map.from, x0), to: end, color, trimStart: 7, trimEnd: 5, width: 1.6, head: 9, dash: '6 4' });
                 }
                 return last === undefined ? [] : [last];
             }
@@ -230,7 +284,7 @@ export function drawProbes(scene) {
             vs.forEach(y => {
                 const px = typeof y === 'string' || (SetsModel.validPoint(y) && visible(map.to, y)) ? pointPx(scene.layout, map.to, y) : null;
                 if (!px || !from) return;
-                arrow(scene, parent, { from, to: px, color, trimStart: 7, trimEnd: 5, width: w, head });
+                linkArrow(scene, parent, map.from, map.to, { from, to: px, color, trimStart: 7, trimEnd: 5, width: w, head });
                 if (!faint) {
                     const dot = scene.svgEl('circle', { cx: f2(px[0]), cy: f2(px[1]), r: 4.5, class: 'mps-probe-target' }, parent);
                     dot.style.fill = color;
@@ -255,7 +309,7 @@ export function drawProbes(scene) {
         // Where the value goes is decided by the kind of map, not by the value,
         // so it never jumps between the drawing and the line under it
         const multi = map.kind === 'inverse' || (isCompose && map.parts.some(m => m.kind === 'inverse'));
-        const below = two || map.to.kind !== 'interval' || multi || isCompose;
+        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to;
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
@@ -316,7 +370,7 @@ export function drawProbes(scene) {
             scene.requestDraw();
         });
     });
-    if (readouts.length || scene.readoutEl) renderReadouts(scene, readouts);
+    return readouts;
 }
 
 /**
@@ -325,7 +379,7 @@ export function drawProbes(scene) {
  * keeps the tallest height it has had, so what is under it never jumps.
  */
 
-function renderReadouts(scene, items) {
+export function renderReadouts(scene, items) {
     let el = scene.readoutEl;
     if (!el) {
         el = scene.readoutEl = document.createElement('div');

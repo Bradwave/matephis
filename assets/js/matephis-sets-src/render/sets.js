@@ -194,7 +194,24 @@ export function drawHeader(scene, maps) {
     });
     pairs.forEach((list, key) => {
         const { from, to } = list[0];
-        if (from === to) return;
+        if (from === to) {
+            // A map into itself: its name beside the arcs (left of the set in a
+            // row, over the set's name in a column)
+            const P = layout.sets.get(from.id);
+            // Only the maps drawn (or iterated): a hidden f under f^2 is not named
+            const named = list.filter(m => scene.layers.some(l => l.arrows && l.map === m && scene.isVisible(l))
+                || (scene.orbits && scene.orbits.items.some(it => it.map === m)));
+            if (!named.length) return;
+            const label = named.map(m => m.label).join(',\\ ');
+            const color = named.length === 1 && named[0].color ? scene.color(named[0].color) : scene.ink;
+            if (row) {
+                const reach = from.kind === 'finite' ? P.rx : Math.min(P.selfRoom || 40, 60);
+                scene.text(P.cx - reach - 10, P.cy, label, { parent: groups.header, color, anchor: 'end' });
+            } else {
+                scene.text(hv, P.u - scene.fontSize * 1.5, label, { parent: groups.header, color, anchor: 'end' });
+            }
+            return;
+        }
         // Maps both ways (f and its inverse): two parallel arrows, the way back
         // under (row) or left of (column) the way there, each with its label
         const back = pairs.has(`${to.id}>${from.id}`) ? (from.index < to.index ? 0 : 1) : -1;
