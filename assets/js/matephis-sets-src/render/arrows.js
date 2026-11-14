@@ -240,11 +240,11 @@ export function drawProbes(scene) {
             scene._addWarning(`probe[${i}]: no map '${p.map}'`);
             return;
         }
-        if (map.from.kind === 'finite') {
-            scene._addWarning(`probe[${i}]: '${map.id}' has a finite domain; probes are for intervals and regions`);
+        if (map.from.kind === 'finite' && !map.from.intLine) {
+            scene._addWarning(`probe[${i}]: '${map.id}' has a finite domain; probes are for intervals, integers and regions`);
             return;
         }
-        const two = map.from.kind !== 'interval';
+        const two = map.from.kind !== 'interval' && !map.from.intLine;
         const atList = two ? (Array.isArray(p.at) ? p.at : [p.at, p.at]) : [Array.isArray(p.at) ? p.at[0] : p.at];
         const params = atList.map(a => (typeof a === 'string' && cfg.params && cfg.params[a] ? a : null));
         const values = atList.map((a, k) => (params[k] ? scene.params[params[k]] / paramScaleOf(cfg, params[k]) : scene._num(a, `probe[${i}].at`)));
@@ -255,7 +255,8 @@ export function drawProbes(scene) {
             return names.length === 1 ? names[0] : null;
         });
         if (values.some(v => typeof v !== 'number' || isNaN(v))) return;
-        const x = two ? values : values[0];
+        // On integers the point is an integer of the set (the nearest one)
+        const x = two ? values : map.from.intLine ? snapInt(map.from, values[0]) : values[0];
         const srcPx = pointPx(scene.layout, map.from, x);
         if (!srcPx) return;
         const color = scene.color(p.color, 'probe');
@@ -503,8 +504,19 @@ function paramScaleOf(cfg, name) {
     return def && def.unit === 'deg' ? Math.PI / 180 : 1;
 }
 
+/** The integer of a set nearest to q, in its window. */
+function snapInt(set, q) {
+    const r = set.intRule, w = set.ownWindow || set.window;
+    const lo = Math.max(r.lo, w[0]), hi = Math.min(r.hi, w[1]);
+    let n = r.offset + r.step * Math.round((q - r.offset) / r.step);
+    while (n < lo - 1e-9) n += r.step;
+    while (n > hi + 1e-9) n -= r.step;
+    return n || 0;
+}
+
 /** Nearest point of the drawn part of a set. */
 function clampToSet(set, q) {
+    if (set.intLine) return snapInt(set, q);
     if (set.kind === 'interval') {
         const lo = isFinite(set.I.lo) ? set.I.lo : set.window[0], hi = isFinite(set.I.hi) ? set.I.hi : set.window[1];
         return Math.min(hi, Math.max(lo, q));

@@ -468,7 +468,7 @@ export class LinkedPlot {
             const m = model.mapById.get(String(p.map));
             const at = Array.isArray(p.at) ? p.at[0] : p.at;
             // "at" is a param, or an expression of params ("-p")
-            if (!m || m.from.kind !== 'interval' || typeof at !== 'string' || !(cfg.params && (cfg.params[at] || scene.mentionsParam(at)))) return;
+            if (!m || (m.from.kind !== 'interval' && !m.from.intLine) || typeof at !== 'string' || !(cfg.params && (cfg.params[at] || scene.mentionsParam(at)))) return;
             const chain = m.kind === 'compose' ? m.parts : [m];
             if (chain.some(part => model.exprString(part) === null)) return;
             // v[k]: the value after k steps, as an expression in the param

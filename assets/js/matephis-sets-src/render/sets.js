@@ -16,7 +16,9 @@ export function drawSets(scene) {
         if (!P) return;
         const color = set.color ? scene.color(set.color) : null;
         const g = scene.svgEl('g', { class: `mps-set mps-set-${set.kind}`, 'data-set': set.id }, groups.sets);
-        if (set.kind === 'finite') {
+        if (set.intLine) {
+            drawIntLine(scene, set, P, g, color);
+        } else if (set.kind === 'finite') {
             const el = scene.svgEl('ellipse', { cx: f2(P.cx), cy: f2(P.cy), rx: f2(P.rx), ry: f2(P.ry), class: 'mps-outline' }, g);
             if (color) el.style.stroke = color;
         } else if (set.kind === 'interval') {
@@ -82,6 +84,32 @@ function drawInterval(scene, set, P, g, color) {
     });
 }
 
+/**
+ * A number line of integers: the axis over the window (with an arrow where
+ * the set goes on), a small tick at every integer; the dots of the set's
+ * integers are its elements (drawn by drawElements).
+ */
+function drawIntLine(scene, set, P, g, color) {
+    const ink = color || scene.ink;
+    const axis = scene.svgEl('line', { x1: f2(P.start[0]), y1: f2(P.start[1]), x2: f2(P.end[0]), y2: f2(P.end[1]), class: 'mps-axis' }, g);
+    if (color) axis.style.stroke = color;
+    const w = set.window, r = set.intRule;
+    const ang = Math.atan2(P.end[1] - P.start[1], P.end[0] - P.start[0]);
+    [[P.end, ang, r.hi > (set.ownWindow || w)[1]], [P.start, ang + Math.PI, r.lo < (set.ownWindow || w)[0]]].forEach(([p, dir, more]) => {
+        if (!more) return;
+        const head = scene.svgEl('polygon', { points: arrowHeadPoints(p[0] + 6 * Math.cos(dir), p[1] + 6 * Math.sin(dir), dir, 8) }, g);
+        head.style.fill = ink;
+    });
+    const per = P.length / (w[1] - w[0]);
+    if (per < 5) return;
+    for (let n = Math.ceil(w[0]); n <= w[1]; n++) {
+        const [x, y] = P.toPx(n);
+        const row = P.orient === 'row';
+        scene.svgEl('line', row ? { x1: f2(x - 3), y1: f2(y), x2: f2(x + 3), y2: f2(y) } : { x1: f2(x), y1: f2(y - 3), x2: f2(x), y2: f2(y + 3) }, g)
+            .setAttribute('class', 'mps-tick');
+    }
+}
+
 /** A step of 1, 2 or 5 times a power of ten, giving about `n` ticks over a span. */
 export function niceStep(span, n = 8) {
     const raw = span / n;
@@ -140,7 +168,16 @@ export function drawElements(scene) {
     model.sets.forEach(set => {
         if (set.kind !== 'finite') return;
         const P = layout.sets.get(set.id);
+        // On a number line of integers, a number every so often when the dots are close
+        let every = 1;
+        if (P.intLine) {
+            const gap = P.length / Math.max(1, set.window[1] - set.window[0]) * set.intRule.step;
+            every = Math.max(1, Math.ceil(26 / gap));
+        }
+        let index = 0;
         P.elements.forEach((pos, id) => {
+            const showLabel = !P.intLine || (Math.round((set.elementById.get(id).num - set.intRule.offset) / set.intRule.step) % every === 0);
+            index++;
             const el = set.elementById.get(id);
             const color = el.color ? scene.color(el.color) : null;
             const g = scene.svgEl('g', {
@@ -151,8 +188,10 @@ export function drawElements(scene) {
             scene.svgEl('circle', { cx: f2(pos.x), cy: f2(pos.y), r: 12, class: 'mps-hit' }, g);
             const dot = scene.svgEl('circle', { cx: f2(pos.x), cy: f2(pos.y), r: 3.6, class: 'mps-dot' }, g);
             if (color) dot.style.fill = color;
-            const opts = { parent: g, color: color || scene.ink };
-            if (pos.side === 'across') {
+            const opts = { parent: g, color: color || scene.ink, size: P.intLine ? fs * 0.8 : undefined };
+            if (!showLabel) {
+                // no number here: the dot only
+            } else if (pos.side === 'across') {
                 if (P.orient === 'row') scene.text(pos.x, pos.y - fs * 0.8, el.label, opts);
                 else scene.text(pos.x + 8, pos.y - fs * 0.55, el.label, { ...opts, anchor: 'start' });
             } else if (P.orient === 'row') {

@@ -137,7 +137,8 @@ export function computeLayout(model, opts) {
     const gap = Math.max(70, fs * 4.5);
     let y = MARGIN + 6;
     sets.forEach((set, i) => {
-        const thick = set.kind === 'finite' ? 2 * (labelH + 18) + (selfSets.has(set.id) ? 24 : 0) : set.kind === 'interval' ? labelH * 2 + 20 : Math.min(along, 220);
+        const line = set.kind === 'interval' || set.intLine;
+        const thick = line ? labelH * 2 + 20 : set.kind === 'finite' ? 2 * (labelH + 18) + (selfSets.has(set.id) ? 24 : 0) : Math.min(along, 220);
         // A set mapped into itself: its arrows are arcs above it, they need room
         const room = selfSets.has(set.id) && set.kind !== 'rect' && set.kind !== 'disk' ? Math.round(Math.min(110, Math.max(56, along * 0.16))) : 0;
         y += room;
@@ -146,7 +147,7 @@ export function computeLayout(model, opts) {
         const P = placeSet(model, set, {
             orient, cx, cy, slot: along, rx: thick / 2, ry: along / 2, spacing, order, fs, measure, labelH, alongMax: along, self: selfSets.has(set.id),
         });
-        P.selfRoom = room + (set.kind === 'finite' ? P.ru + P.shift - 6 : 0);
+        P.selfRoom = room + (set.kind === 'finite' && !set.intLine ? P.ru + P.shift - 6 : 0);
         out.sets.set(set.id, P);
         y += thick + (i < sets.length - 1 ? gap : 0);
     });
@@ -175,7 +176,26 @@ function placeSet(model, set, o) {
     const role = setRole(model, set);
     P.role = role;
 
-    if (set.kind === 'finite') {
+    if (set.intLine) {
+        // Integers: a number line, with a dot at each integer of the set in its window
+        const L = Math.max(60, 2 * o.ry - 36);
+        P.length = L;
+        P.intLine = true;
+        const w = set.window;
+        const vAt = (t) => (orient === 'row' ? vc + L / 2 - (t - w[0]) / (w[1] - w[0]) * L : vc - L / 2 + (t - w[0]) / (w[1] - w[0]) * L);
+        P.toPx = (t) => toXY(orient, uc, vAt(t));
+        P.start = P.toPx(w[0]);
+        P.end = P.toPx(w[1]);
+        P.tickSide = role === 'source' && !o.self ? 'before' : 'after';
+        P.ru = 10;
+        P.rv = L / 2;
+        [P.rx, P.ry] = orient === 'row' ? [P.ru, P.rv] : [P.rv, P.ru];
+        P.elements = new Map();
+        set.elements.forEach(e => {
+            const [x, y] = P.toPx(e.num);
+            P.elements.set(e.id, { x, y, side: P.tickSide });
+        });
+    } else if (set.kind === 'finite') {
         const ids = o.order.get(set.id) || set.elements.map(e => e.id);
         const k = ids.length;
         let ru = o.rx, rv = o.ry;
@@ -241,13 +261,14 @@ function placeSet(model, set, o) {
     }
 
     // Abstract extent along v, for the set name and routed maps
-    const halfV = set.kind === 'finite' ? P.rv : set.kind === 'interval' ? P.length / 2 + 8 : (orient === 'row' ? P.box.h : P.box.w) / 2;
-    const halfU = set.kind === 'finite' ? P.ru : set.kind === 'interval' ? 10 : (orient === 'row' ? P.box.w : P.box.h) / 2;
+    const line = set.kind === 'interval' || set.intLine;
+    const halfV = line ? P.length / 2 + 8 : set.kind === 'finite' ? P.rv : (orient === 'row' ? P.box.h : P.box.w) / 2;
+    const halfU = line ? 10 : set.kind === 'finite' ? P.ru : (orient === 'row' ? P.box.w : P.box.h) / 2;
     P.halfV = halfV;
     P.halfU = halfU;
     P.u = uc;
     P.v = vc;
-    if (set.kind === 'interval') {
+    if (line) {
         P.fromPx = (x, y) => {
             const w = set.window, L = P.length;
             const along = orient === 'row' ? (vc + L / 2 - y) / L : (x - (vc - L / 2)) / L;

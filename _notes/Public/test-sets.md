@@ -48,10 +48,13 @@ Le etichette sono formule: `"a_1"` diventa $a_1$, `"\\mathbb{N}"` diventa $\math
 | intervallo | `interval`: `"[0,1]"`, `"(0,1]"`, `"[0,+inf)"`, `"R"`; gli estremi possono essere espressioni (`"[0, a]"`); `window` per la parte disegnata di un intervallo illimitato | Segmento, con pallino pieno (estremo incluso) o vuoto (escluso). |
 | rettangolo | `rect`: `["[0,1]", "[0,1]"]` (lati aperti tratteggiati) | Riquadro con la stessa scala sui due assi. |
 | disco | `disk`: `{ "center": [0,0], "radius": 1, "open": false }` | Cerchio (tratteggiato se aperto). |
+| interi | `integers`: `"N"`, `"N*"`, `"Z"`, `"2N"`, `"2N+1"`, `"3Z"` o un intervallo di interi `"[-3, 5]"`; `window` per la parte disegnata (default $[0, 10]$ per $\mathbb{N}$, $[-5, 5]$ per $\mathbb{Z}$) | Retta con una tacca a ogni intero e un punto a ogni intero dell'insieme; una freccia dove l'insieme continua. Etichetta di default $\mathbb{N}$, $2\mathbb{N}$, … |
 
 Opzioni comuni: `id`, `label` (default: l'id, o l'intervallo), `color`, `labelSide` (`"before"`/`"after"`: lato delle etichette degli elementi), `endpoints: false` (niente numeri agli estremi), `order: "given"`.
 
 Un elemento con un valore numerico (`"2"`, oppure `{ "id": "a", "value": 2 }`) può essere usato da una funzione data con `expr`.
+
+Un insieme di interi si comporta come un insieme finito: i suoi elementi sono gli interi nella finestra (con id `"0"`, `"1"`, …), ognuno con le sue frecce, ed evidenziazioni, collisioni, tabelle, griglie e `sync` funzionano come per gli insiemi finiti. Un valore oltre la finestra appartiene ancora all'insieme ($n \mapsto n + 1$ manda $10$ in $11 \in \mathbb{N}$, senza freccia); un valore che non è nell'insieme esce, come per gli insiemi finiti ($\tfrac{3}{2} \notin \mathbb{N}$). Il punto (`probe`) si ferma sugli interi. Le proprietà sono verificate nella finestra (il riquadro lo dice); la suriettività su un insieme infinito resta «?», a meno di dichiararla con `claims`.
 
 ### Funzioni
 
@@ -762,5 +765,61 @@ $x < y$ su $A = \lbrace 1, 2, 3, 4\rbrace $: ogni colonna ha i punti sopra la di
   "product": { "map": "r" },
   "highlights": [{ "set": "A", "elements": ["4"], "color": "red", "label": "4" }],
   "show": ["properties(r)"]
+}
+```
+
+### Da ℕ in 2ℕ
+
+$n \mapsto 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali.
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "N", "integers": "N", "window": [0, 10] },
+    { "id": "P", "integers": "2N", "window": [0, 20] }
+  ],
+  "maps": [{ "id": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3 } },
+  "probe": { "map": "d", "at": "n" },
+  "show": ["properties(d)"]
+}
+```
+
+### Successivo e metà
+
+$n \mapsto n + 1$ è iniettiva ma non suriettiva su $\mathbb{N}$ (nessuno va in $0$); $n \mapsto \lfloor n/2 \rfloor$ è suriettiva ma non iniettiva (due naturali in ogni valore).
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "A", "integers": "N", "window": [0, 10] },
+    { "id": "B", "integers": "N", "window": [0, 10] },
+    { "id": "C", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [
+    { "id": "s", "label": "n + 1", "from": "A", "to": "B", "expr": "x + 1", "claims": { "surjective": false } },
+    { "id": "h", "label": "\\lfloor n/2 \\rfloor", "from": "B", "to": "C", "expr": "floor(x/2)", "color": "orange", "claims": { "surjective": true } }
+  ],
+  "show": ["properties(s)", "properties(h)", "preimage(s, 0)"]
+}
+```
+
+### Lo zig-zag da ℤ in ℕ
+
+$0 \mapsto 0$, $-1 \mapsto 1$, $1 \mapsto 2$, $-2 \mapsto 3$, …: i non negativi vanno nei pari, i negativi nei dispari. Ogni naturale è raggiunto una volta sola.
+
+```sets
+{
+  "dynagraph": true,
+  "sets": [
+    { "id": "Z", "integers": "Z", "window": [-5, 5] },
+    { "id": "N", "integers": "N", "window": [0, 10] }
+  ],
+  "maps": [{ "id": "z", "from": "Z", "to": "N", "piecewise": [{ "if": "x >= 0", "expr": "2x" }, { "expr": "-2x - 1" }], "claims": { "surjective": true } }],
+  "params": { "n": { "min": -5, "max": 5, "step": 1, "val": -2 } },
+  "probe": { "map": "z", "at": "n" },
+  "show": ["properties(z)"]
 }
 ```

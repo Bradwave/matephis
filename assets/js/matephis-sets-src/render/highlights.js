@@ -39,7 +39,7 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             const readout = def.readout !== undefined ? def.readout === true : live || isEmpty(res);
             const label = def.label !== undefined ? def.label
                 : op === 'image' ? (readout ? `${map.label}\\left(${arg ? argTeX(arg, model) : setLabelText(model, map.from)}\\right)` : imageLabel(scene, map, arg, res))
-                    : `${map.label}^{-1}\\left(${argTeX(arg, model)}\\right)`;
+                    : `${fnTeX(map.label)}^{-1}\\left(${argTeX(arg, model)}\\right)`;
             drawResult(scene, res, color, label, layer.key);
             if (!readout) return null;
             return { tex: readoutTeX(scene, op, map, arg, res, def), color };
@@ -69,6 +69,12 @@ export function drawLayer(scene, layer, { product = null } = {}) {
     } else {
         scene._addWarning(`highlight '${layer.key}': needs "elements" (finite set) or "interval"`);
     }
+}
+
+/** A map's name before an exponent: "f" stays, "n + 1" becomes "(n + 1)". */
+export function fnTeX(label) {
+    const s = String(label);
+    return /^\\?[A-Za-z]+('*)(_\{?[A-Za-z0-9]+\}?)?(\^\{?[^{}]*\}?)?$/.test(s) && !/\^/.test(s) ? s : `\\left(${s}\\right)`;
 }
 
 /** The text of a selector argument (to look for params in it). */
@@ -107,7 +113,7 @@ function readoutTeX(scene, op, map, arg, res, def) {
     const { model } = scene;
     const name = def.label !== undefined ? def.label
         : op === 'image' ? `${map.label}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
-            : `${map.label}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
+            : `${fnTeX(map.label)}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
     return `${name} = ${resultTeX(res)}`;
 }
 
@@ -406,7 +412,7 @@ export function renderProperties(scene, layers) {
         if (!p.exact && !p.claimed) {
             const note = document.createElement('span');
             note.className = 'matephis-sets-props-note';
-            note.textContent = 'verifica numerica';
+            note.textContent = p.window ? 'nella finestra' : 'verifica numerica';
             head.appendChild(note);
         }
         el.appendChild(row);

@@ -82,6 +82,23 @@ export class SetsModel {
         }
         const kind = setKind(def);
         const set = { id, kind, def, label: def.label, color: def.color, index: i };
+        if (def.integers !== undefined) {
+            // Integers (ℕ, ℤ, 2ℕ, a range): a finite set of the integers in the
+            // window, drawn as a number line; values beyond the window still belong to it
+            const rule = parseIntegers(def.integers);
+            if (!rule) {
+                this.warn(`set '${id}': "integers" must be "N", "N*", "Z", "2N", "2N+1", "3Z" or a range like "[-3, 5]" (got '${def.integers}')`);
+                return;
+            }
+            set.intRule = rule;
+            set.intLine = true;
+            set.elements = [];
+            set.elementById = new Map();
+            if (set.label === undefined) set.label = rule.tex;
+            this.sets.push(set);
+            this.setById.set(id, set);
+            return;
+        }
         if (kind === 'finite') {
             const raw = Array.isArray(def.elements) ? def.elements : [];
             if (!Array.isArray(def.elements)) this.warn(`set '${id}': needs "elements" (or "interval", "rect", "disk")`);
@@ -143,6 +160,8 @@ export class SetsModel {
             } else if (set.kind === 'disk') {
                 const c = set.diskDef.center.map(v => this.evaluate(v));
                 set.disk = { cx: c[0], cy: c[1], r: this.evaluate(set.diskDef.radius), open: set.diskDef.open };
+            } else if (set.intRule) {
+                this._fillIntegers(set);
             } else if (set.kind === 'finite') {
                 set.elements.forEach(el => {
                     const v = el.value !== undefined ? this.evaluate(el.value) : Number(el.id);
@@ -151,7 +170,8 @@ export class SetsModel {
             }
         });
         if (this.sharedWindow) {
-            const lines = this.sets.filter(st => st.kind === 'interval');
+            // Number lines of integers share the scale too (their dots stay in their own window)
+            const lines = this.sets.filter(st => st.kind === 'interval' || st.intLine);
             if (lines.length > 1) {
                 const w = [Math.min(...lines.map(st => st.window[0])), Math.max(...lines.map(st => st.window[1]))];
                 lines.forEach(st => { st.window = w.slice(); });
@@ -167,6 +187,34 @@ export class SetsModel {
             }));
         });
         this._cache = new Map();
+    }
+
+    /** The integers of a set in its window become its elements. */
+    _fillIntegers(set) {
+        const r = set.intRule;
+        let w = Array.isArray(set.def.window) && set.def.window.length === 2 ? set.def.window.map(v => this.evaluate(v)) : null;
+        if (!w || !(w[0] < w[1])) {
+            if (w) this.warn(`"window" must be [min, max] with min < max`);
+            const lo = isFinite(r.lo) ? r.lo : isFinite(r.hi) ? r.hi - 10 * r.step : -5 * r.step;
+            const hi = isFinite(r.hi) ? r.hi : lo + 10 * r.step;
+            w = isFinite(r.lo) || isFinite(r.hi) ? [lo, hi] : [-5 * r.step, 5 * r.step];
+        }
+        set.window = w.slice();
+        set.ownWindow = w.slice();
+        set.elements = [];
+        set.elementById = new Map();
+        const start = Math.ceil(w[0] - 1e-9) || 0, end = Math.floor(w[1] + 1e-9);
+        for (let n = start; n <= end && set.elements.length < 400; n++) {
+            if (!intMember(r, n)) continue;
+            const el = { id: String(n), label: String(n), num: n };
+            set.elements.push(el);
+            set.elementById.set(el.id, el);
+        }
+    }
+
+    /** Is the set infinite (integers without one of the bounds)? Its checks are made in the window. */
+    isInfinite(set) {
+        return !!(set && set.intRule && !(isFinite(set.intRule.lo) && isFinite(set.intRule.hi)));
     }
 
     /** The part of the line drawn for an interval: its endpoints, or a cut where it is unbounded. */
@@ -185,6 +233,7 @@ export class SetsModel {
 
     /** Is a point inside a continuous set? */
     containsPoint(set, p, eps = 1e-9) {
+        if (set.intRule) return typeof p === 'number' && intMember(set.intRule, p);
         if (set.kind === 'interval') return contains(set.I, p, eps);
         if (set.kind === 'rect') return Array.isArray(p) && contains(set.sides[0], p[0], eps) && contains(set.sides[1], p[1], eps);
         if (set.kind === 'disk') {
@@ -558,12 +607,19 @@ export class SetsModel {
     /** Number of an element (its "value", or its id read as a number), or null. */
     elementNumber(set, id) {
         const el = set.elementById && set.elementById.get(id);
-        return el ? el.num : null;
+        if (el) return el.num;
+        // An integer beyond the window still belongs to its set
+        if (set.intRule) {
+            const n = Number(id);
+            return intMember(set.intRule, n) ? n : null;
+        }
+        return null;
     }
 
     /** Element of a finite set whose number is v, or null. */
     _elementWithNumber(set, v) {
         if (typeof v !== 'number' || !isFinite(v)) return null;
+        if (set.intRule) return intMember(set.intRule, v) ? String(Math.round(v) || 0) : null;
         const el = set.elements.find(e => e.num !== null && Math.abs(e.num - v) <= 1e-9 * Math.max(1, Math.abs(v)));
         return el ? el.id : null;
     }
@@ -1375,7 +1431,15 @@ export class SetsModel {
                 images.set(e.id, valid);
             });
             res.injective = this.collisions(map).length === 0;
-            if (to.kind === 'finite') {
+            // ℕ, ℤ: the checks are made in the window (a collision found there is real)
+            if (this.isInfinite(from) || this.isInfinite(to)) {
+                res.exact = false;
+                res.window = true;
+            }
+            if (this.isInfinite(to)) {
+                // Onto an infinite set a window cannot tell (unless "claims" says)
+                res.surjective = null;
+            } else if (to.kind === 'finite') {
                 const hit = new Set([].concat(...images.values()));
                 res.surjective = to.elements.every(b => hit.has(b.id));
             } else {
@@ -1626,4 +1690,38 @@ function roundPoint(v) {
 /** Resolves a selector argument (string from a config) for a map. */
 export function argumentOf(raw) {
     return raw === undefined || raw === null ? null : parseArgument(raw);
+}
+
+/**
+ * "N", "N*", "Z", "2N", "2N+1", "3Z", "[-3, 5]" -> { step, offset, lo, hi, tex }:
+ * the integers n = step·k + offset between lo and hi.
+ */
+export function parseIntegers(src) {
+    const s = String(src).replace(/\s+/g, '').replace(/ℕ/g, 'N').replace(/ℤ/g, 'Z');
+    const m = /^(\d*)([NZ])(\*|\+(?![\d]))?(?:([+-])(\d+))?$/.exec(s);
+    if (m) {
+        const step = m[1] ? Number(m[1]) : 1;
+        const offset = m[5] ? (m[4] === '-' ? -1 : 1) * Number(m[5]) : 0;
+        if (!(step >= 1)) return null;
+        const nat = m[2] === 'N';
+        const lo = nat ? (m[3] ? step + offset : offset) : -Infinity;
+        const base = nat ? '\\mathbb{N}' : '\\mathbb{Z}';
+        const tex = `${step > 1 ? step : ''}${base}${m[3] && nat ? '^*' : ''}${offset ? `${offset > 0 ? '+' : '-'}${Math.abs(offset)}` : ''}`;
+        return { step, offset, lo, hi: Infinity, tex };
+    }
+    const r = /^([[(])(-?\d+),(-?\d+)([\])])$/.exec(s);
+    if (r) {
+        const lo = Number(r[2]) + (r[1] === '(' ? 1 : 0), hi = Number(r[3]) - (r[4] === ')' ? 1 : 0);
+        if (!(lo <= hi)) return null;
+        return { step: 1, offset: 0, lo, hi, tex: `\\{${lo},\\dots,${hi}\\}` };
+    }
+    return null;
+}
+
+/** Does an integer rule contain n? */
+export function intMember(r, n) {
+    if (typeof n !== 'number' || !isFinite(n) || Math.abs(n - Math.round(n)) > 1e-9) return false;
+    const k = Math.round(n);
+    if (k < r.lo - 1e-9 || k > r.hi + 1e-9) return false;
+    return ((k - r.offset) % r.step + r.step) % r.step === 0;
 }

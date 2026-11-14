@@ -666,3 +666,52 @@ describe('Relazioni date da una condizione', () => {
         expect(m.properties(map('s'))).toMatchObject({ isFunction: true, bijective: true });
     });
 });
+
+import { parseIntegers, intMember } from '../assets/js/matephis-sets-src/core/model.js';
+
+describe('Interi: ℕ, ℤ, 2ℕ', () => {
+    it('legge gli insiemi di interi', () => {
+        expect(parseIntegers('N')).toMatchObject({ step: 1, offset: 0, lo: 0, hi: Infinity, tex: '\\mathbb{N}' });
+        expect(parseIntegers('N*')).toMatchObject({ lo: 1, tex: '\\mathbb{N}^*' });
+        expect(parseIntegers('2N+1')).toMatchObject({ step: 2, offset: 1, lo: 1, tex: '2\\mathbb{N}+1' });
+        expect(parseIntegers('3Z')).toMatchObject({ step: 3, lo: -Infinity });
+        expect(parseIntegers('[-3, 5]')).toMatchObject({ lo: -3, hi: 5 });
+        expect(parseIntegers('Q')).toBeNull();
+        const even = parseIntegers('2N');
+        expect([0, 1, 2, 7, 8, -2].map(n => intMember(even, n))).toEqual([true, false, true, false, true, false]);
+    });
+
+    it('n ↦ 2n da ℕ in 2ℕ: una biiezione, verificata nella finestra', () => {
+        const { m, map, warnings } = model({
+            sets: [{ id: 'N', integers: 'N', window: [0, 10] }, { id: 'P', integers: '2N', window: [0, 20] }],
+            maps: [{ id: 'd', from: 'N', to: 'P', expr: '2x' }],
+        });
+        expect(warnings).toEqual([]);
+        expect(m.setById.get('N').elements.length).toBe(11);
+        expect(m.setById.get('P').elements.map(e => e.num)).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]);
+        expect(m.apply(map('d'), '3')).toEqual(['6']);
+        const p = m.properties(map('d'));
+        expect(p).toMatchObject({ isFunction: true, into: true, injective: true, surjective: null, window: true, exact: false });
+    });
+
+    it('valori oltre la finestra appartengono ancora all\'insieme; valori fuori no', () => {
+        const { m, map } = model({
+            sets: [{ id: 'N', integers: 'N', window: [0, 10] }, { id: 'M', integers: 'N', window: [0, 10] }, { id: 'P', integers: '2N', window: [0, 10] }],
+            maps: [{ id: 's', from: 'N', to: 'M', expr: 'x + 1' }, { id: 'h', from: 'N', to: 'P', expr: 'x / 2' }, { id: 'q', from: 'N', to: 'M', expr: 'floor(x/2)' }],
+        });
+        expect(m.apply(map('s'), '10')).toEqual(['11']);
+        expect(m.properties(map('s')).into).toBe(true);
+        expect(m.apply(map('h'), '3')).toEqual([{ outside: 1.5 }]);
+        expect(m.properties(map('h')).into).toBe(false);
+        expect(m.properties(map('q')).injective).toBe(false);
+    });
+
+    it('lo zig-zag da ℤ in ℕ con una funzione a tratti', () => {
+        const { m, map } = model({
+            sets: [{ id: 'Z', integers: 'Z', window: [-4, 4] }, { id: 'N', integers: 'N', window: [0, 8] }],
+            maps: [{ id: 'z', from: 'Z', to: 'N', piecewise: [{ if: 'x >= 0', expr: '2x' }, { expr: '-2x - 1' }] }],
+        });
+        expect(['-2', '-1', '0', '1', '2'].map(n => m.apply(map('z'), n)[0])).toEqual(['3', '1', '0', '2', '4']);
+        expect(m.properties(map('z'))).toMatchObject({ isFunction: true, into: true, injective: true });
+    });
+});

@@ -18,7 +18,7 @@ export const PLANNED_ROOT_KEYS = [
     "venn", "relations", "partition", "cd", "steps", "enumerate", "diagonal", "order",
 ];
 
-export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "color", "window", "order", "labelSide", "endpoints"];
+export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "integers", "color", "window", "order", "labelSide", "endpoints"];
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
 export const MAP_KEYS = [
     "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
