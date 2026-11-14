@@ -28,6 +28,7 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `plot` | Object | | Il grafico delle funzioni accanto (o sotto) al diagramma, collegato al punto (vedi «Dynagraph e grafici»). |
 | `iterate` | Object/Array | | Orbita di un punto, un passo alla volta: $x_0, f(x_0), f(f(x_0)), \dots$ (vedi «Iterazione e blocchi collegati»). |
 | `compare` | Array/Object | | Confronta due punti (`probe`): ordine o parità (vedi «Domini continui»). |
+| `table` | Object | | Tabella IN/OUT: gli ingressi e i loro valori, una colonna per funzione (vedi «Tabella IN/OUT»). |
 | `sync` | String | | Nome di un gruppo: i blocchi con lo stesso nome nella pagina condividono parametri, evidenziazione al passaggio e passi delle orbite (vedi «Iterazione e blocchi collegati»). |
 | `hover` | Boolean | `true` | Passando sopra un elemento (o con Tab) si evidenziano le sue frecce, immagini e controimmagini. |
 | `reorder` | Boolean | `true` | Riordina gli elementi del codominio per ridurre gli incroci e tenere l'immagine in un unico blocco. Un insieme con `"order": "given"` mantiene il suo ordine. |
@@ -140,6 +141,21 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | `highlights` | `true` | Le evidenziazioni del diagramma compaiono anche sul grafico: una controimmagine come punti sul grafico (con la linea fino all'asse $x$) o come tratti sull'asse $x$, un'immagine come tratto sull'asse $y$. Nascosta nel diagramma, nascosta anche sul grafico. `false` le toglie. |
 
 Ogni altra opzione va al grafico (`xlim`, `ylim`, `aspectRatio`, `grid`, …): vedi [Matephis Plotting System](/notes/test-plot).
+
+### Tabella IN/OUT
+
+`"table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1, 2], "probe": true }`: una riga per ingresso, una colonna per funzione, nell'ordine in cui si applicano: $x \mid g(x) \mid f(g(x))$. Dove un valore non c'è (fuori dal dominio, o senza immagine) c'è «—».
+
+| Opzione | Default | Descrizione |
+| :--- | :--- | :--- |
+| `maps` | | Le funzioni, nell'ordine in cui si applicano; anche l'id di una composizione (i suoi passi diventano le colonne). |
+| `in` | | Gli ingressi: numeri (o espressioni) oppure elementi. Le loro frecce sono sempre disegnate. |
+| `probe` | `false` | Una riga in più, colorata, che segue il punto sulla prima funzione (o sulla loro composizione). |
+| `headers` | $x$, $g(x)$, $f(g(x))$ | Titoli delle colonne (formule): per esempio `["IN", "OUT", "OUT_2"]`. |
+| `rows` | tutti | Quante righe al massimo. |
+| `position` | `"below"` | `"below"` (sotto il diagramma) o `"right"` (accanto, se c'è spazio). |
+
+Passando su una riga si evidenziano le sue frecce e i suoi punti sul grafico; passando su un elemento (o su una freccia di un ingresso) si evidenzia la sua riga.
 
 ### Iterazione e blocchi collegati
 
@@ -676,5 +692,29 @@ Con $p < q$ entrambi in $[0, 2]$ l'ordine si conserva; se uno dei due passa sott
   },
   "probe": [{ "map": "f", "at": "p" }, { "map": "f", "at": "q", "color": "blue" }],
   "compare": [0, 1]
+}
+```
+
+### Tabella IN/OUT di una composizione
+
+Prima $g(x) = x + 1$, poi $f(x) = x^2$. Passa su una riga: si accendono le sue frecce e i suoi punti sui grafici. L'ultima riga segue il punto.
+
+```sets
+{
+  "dynagraph": { "ticks": 1 },
+  "sets": [
+    { "id": "X", "interval": "[-2, 1]" },
+    { "id": "Y", "interval": "[-1, 2]" },
+    { "id": "Z", "interval": "[0, 4]" }
+  ],
+  "maps": [
+    { "id": "g", "from": "X", "to": "Y", "expr": "x + 1", "samples": [] },
+    { "id": "f", "from": "Y", "to": "Z", "expr": "x^2", "samples": [] },
+    { "id": "fg", "compose": ["g", "f"] }
+  ],
+  "params": { "p": { "min": -2, "max": 1, "step": 0.1, "val": 0.5, "label": "x" } },
+  "probe": { "map": "fg", "at": "p" },
+  "table": { "maps": ["g", "f"], "in": [-2, -1, 0, 1], "probe": true, "headers": ["\\text{IN}", "\\text{OUT}", "\\text{OUT}_2"] },
+  "plot": { "maps": ["g", "f"], "position": "below" }
 }
 ```

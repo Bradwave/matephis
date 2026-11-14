@@ -358,3 +358,57 @@
 .matephis-sets-plot .matephis-plot-container {
   margin-bottom: 0;
 }
+
+/* ==========================================================================
+   IN/OUT table ("table")
+   ========================================================================== */
+
+.matephis-sets-table-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0.4rem 0;
+  overflow-x: auto;
+}
+
+.matephis-sets-split > .matephis-sets-table-wrap.is-right {
+  flex: 0 1 auto;
+  margin: 0;
+}
+
+.matephis-sets-table {
+  border-collapse: collapse;
+  font-size: var(--scale-sm, 0.9rem);
+}
+
+.matephis-sets-table th,
+.matephis-sets-table td {
+  border: 1px solid var(--border, #ddd);
+  padding: 0.2rem 0.7rem;
+  text-align: center;
+  min-width: 3.2rem;
+  height: 2rem;
+}
+
+.matephis-sets-table th {
+  font-weight: normal;
+  color: #888;
+}
+
+.matephis-sets-table tbody tr {
+  cursor: default;
+  outline: none;
+}
+
+.matephis-sets-table tbody tr.mps-lit,
+.matephis-sets-table tbody tr:focus-visible {
+  background: rgba(176, 26, 0, 0.08);
+}
+
+.matephis-sets-table tr.is-probe td {
+  color: inherit;
+  border-top-width: 2px;
+}
+
+[data-theme="dark"] .matephis-sets-table tbody tr.mps-lit {
+  background: rgba(255, 107, 107, 0.12);
+}

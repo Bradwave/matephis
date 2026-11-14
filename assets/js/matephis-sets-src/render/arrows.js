@@ -149,12 +149,19 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
         });
     } else {
         const spec = map.def.samples !== undefined ? map.def.samples : scene.dynagraph ? scene.dynagraph.arrows : undefined;
-        model.arrowSamples(map.from, spec).forEach(p => {
+        // The inputs of a table get their arrows too, with the row's hover key
+        const samples = model.arrowSamples(map.from, spec).map(p => ({ p, key: null }));
+        (scene.table ? scene.table.samplesFor(map) : []).forEach(e => {
+            const same = samples.find(s => typeof s.p === 'number' && Math.abs(s.p - e.p) <= 1e-9 * Math.max(1, Math.abs(e.p)));
+            if (same) same.key = e.key;
+            else if (model.containsPoint(map.from, e.p, 1e-9)) samples.push(e);
+        });
+        samples.forEach(({ p, key }) => {
             const srcPx = pointPx(layout, map.from, p);
             if (!srcPx) return;
             const dot = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 2.6, class: 'mps-sample' }, g);
             dot.style.fill = base;
-            model.apply(map, p).forEach(t => draw(p, null, srcPx, t, 4));
+            model.apply(map, p).forEach(t => draw(p, key, srcPx, t, 4));
         });
     }
 

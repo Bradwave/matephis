@@ -78,3 +78,28 @@ describe('Confronto tra due punti', () => {
         expect(compareReadout(sc(par, [0.6, 1, 'p'], [-0.6, 2, '-p'])).tex).toMatch(/\\ne \\pm/);
     });
 });
+
+import { Table } from '../assets/js/matephis-sets-src/render/table.js';
+
+describe('Tabella IN/OUT', () => {
+    const cfg = {
+        sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-1, 3]' }, { id: 'Z', interval: '[0, 4]' }],
+        maps: [{ id: 'g', from: 'X', to: 'Y', expr: 'x + 1' }, { id: 'f', from: 'Y', to: 'Z', expr: 'sqrt(x)' }, { id: 'fg', compose: ['g', 'f'] }],
+    };
+    it('una colonna per funzione, «—» dove manca il valore', () => {
+        const sc = scene(cfg, {});
+        const t = new Table(sc, { maps: ['g', 'f'], in: [-2, 0, 3] });
+        expect(t.headers()).toEqual(['x', 'g\\left(x\\right)', 'f\\left(g\\left(x\\right)\\right)']);
+        expect(t.inputs()).toEqual([-2, 0, 3]);
+        expect(t.chain(0)).toEqual([0, 1, 1]);
+        // g(-2) = -1, outside the domain of sqrt: no value
+        expect(t.chain(-2)).toEqual([-2, -1, undefined]);
+        // g(3) = 4 is not in Y: no value, no arrow for f
+        expect(t.chain(3)).toEqual([3, undefined, undefined]);
+        expect(t.samplesFor(sc.model.mapById.get('f'))).toEqual([{ p: -1, key: 'T|0' }, { p: 1, key: 'T|1' }]);
+    });
+    it('l\'id di una composizione dà i suoi passi', () => {
+        const t = new Table(scene(cfg, {}), { maps: ['fg'], in: [3] });
+        expect(t.maps.map(m => m.id)).toEqual(['g', 'f']);
+    });
+});

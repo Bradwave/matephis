@@ -10,7 +10,7 @@ export const ROOT_KEYS = [
     "sets", "maps", "show", "highlights", "probe", "params", "animate", "controls", "layout", "hover",
     "reorder", "width", "fullWidth", "cssWidth", "align", "border", "padding", "marginBottom", "marginLeft",
     "marginRight", "theme", "title", "caption", "ariaLabel", "fontSize", "labelHalo", "showSliders",
-    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare",
+    "sliderBorder", "spacing", "mapLabels", "height", "dynagraph", "plot", "iterate", "sync", "compare", "table",
 ];
 
 /** Root keys of later phases. */
@@ -29,6 +29,8 @@ export const HIGHLIGHT_KEYS = ["id", "of", "set", "elements", "interval", "color
 export const PROBE_KEYS = ["map", "at", "drag", "label", "color", "showValue", "trace"];
 /** An orbit, step by step ("iterate" at the root). */
 export const ITERATE_KEYS = ["map", "start", "steps", "step", "color", "label", "showValue"];
+/** The IN/OUT table. */
+export const TABLE_KEYS = ["maps", "map", "in", "probe", "headers", "rows", "position"];
 export const DYNAGRAPH_KEYS = ["scale", "ticks", "arrows"];
 /** Keys of "plot" read by the sets engine; any other key goes to the plot itself. */
 export const PLOT_KEYS = ["maps", "position", "probe", "construction", "identity", "lines", "highlights", "ends"];
@@ -86,6 +88,10 @@ export function validateConfig(config) {
             if (it && typeof it === 'object') checkKeys(it, ITERATE_KEYS, [], `iterate[${i}]`, warnings);
             else warnings.push(`iterate[${i}]: expected an object like { "map": "f", "start": "a", "steps": 5 }`);
         });
+    }
+    if (config.table !== undefined) {
+        if (config.table && typeof config.table === 'object' && !Array.isArray(config.table)) checkKeys(config.table, TABLE_KEYS, [], 'table', warnings);
+        else warnings.push('"table" must be an object like { "maps": ["f"], "in": [0, 1, 2] }');
     }
     if (config.sync !== undefined && (typeof config.sync !== 'string' || !config.sync)) {
         warnings.push('"sync" must be a name, the same on every block to link, like "es1"');

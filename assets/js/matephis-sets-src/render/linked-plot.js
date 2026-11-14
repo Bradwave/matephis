@@ -133,6 +133,74 @@ export class LinkedPlot {
         if (changed) this.plot.requestDraw();
     }
 
+    /**
+     * The table's rows on the graphs: for each plotted map of the table, the
+     * points (input, value) of the rows, and a ring that marks the row under
+     * the pointer (hidden params _r<k>x, _r<k>y).
+     */
+    tableItems() {
+        const t = this.scene.table;
+        if (!t || t.maps[0].from.kind !== 'interval') return [];
+        const { model } = this.scene;
+        const items = [];
+        t.maps.forEach((m, k) => {
+            if (!this.maps.includes(m)) return;
+            const color = this.scene.color(m.color);
+            const pts = [];
+            t.inputs().forEach(x => {
+                // The value after k steps, as an expression (it follows the params)
+                let e = `(${x})`;
+                for (let j = 0; j < k; j++) {
+                    const pe = model.exprString(t.maps[j]);
+                    if (pe === null) return;
+                    e = substituteX(pe, e);
+                }
+                const me = model.exprString(m);
+                if (me === null) return;
+                pts.push([e, substituteX(me, e)]);
+            });
+            if (pts.length) items.push({ points: pts, radius: 4, fillColor: color, color });
+            items.push({ points: [[`_r${k}x`, `_r${k}y`]], radius: 8, fillColor: 'none', strokeColor: color, strokeWidth: 2.5, color });
+        });
+        return items;
+    }
+
+    /** Ring positions for the row with hover key `key` (none: out of sight). */
+    rowValues(key) {
+        const t = this.scene.table;
+        const out = {};
+        if (!t) return out;
+        let vals = null;
+        if (key) {
+            const inputs = t.inputs();
+            const i = inputs.findIndex((x, j) => t.rowKey(x, j) === key);
+            if (i >= 0) vals = t.chain(inputs[i]);
+        }
+        t.maps.forEach((m, k) => {
+            const ok = vals && typeof vals[k] === 'number' && typeof vals[k + 1] === 'number';
+            out[`_r${k}x`] = ok ? vals[k] : OFF;
+            out[`_r${k}y`] = ok ? vals[k + 1] : OFF;
+        });
+        return out;
+    }
+
+    /** Hover on the diagram or the table: the row's points on the graphs. */
+    focusRow(key) {
+        const sl = this.plot && this.plot.sliders;
+        if (!sl || !this.scene.table) return;
+        const v = this.rowValues(key);
+        let changed = false;
+        this._syncing = true;
+        for (const k in v) {
+            if (this.plot.params[k] !== v[k]) {
+                sl.setValue(k, v[k], false);
+                changed = true;
+            }
+        }
+        this._syncing = false;
+        if (changed) this.plot.requestDraw();
+    }
+
     /** "lines": [{ "y": "k" }, { "x": "p", "dash": true, "color": "blue" }]: lines driven by params. */
     lineItems() {
         const { scene } = this;
@@ -343,6 +411,7 @@ export class LinkedPlot {
         data.push(...this.lineItems());
         const mirrors = this.mirrorItems();
         mirrors.forEach(m => data.push(...m.items));
+        data.push(...this.tableItems());
 
         const own = {};
         for (const key in def) if (!PLOT_KEYS.includes(key)) own[key] = def[key];
@@ -364,7 +433,7 @@ export class LinkedPlot {
         const ylim = Array.isArray(def.ylim) ? def.ylim.map(Number) : pad(square ? both : yr);
         this._xlim = xlim;
         this._ylim = ylim;
-        const mv = this.mirrorValues();
+        const mv = { ...this.mirrorValues(), ...this.rowValues(null) };
         for (const key in mv) params[key] = { min: -1e10, max: 1e10, slider: false, val: mv[key] };
         return {
             xlim,

@@ -25,6 +25,7 @@ import { drawSets, drawElements, drawHeader } from '../render/sets.js';
 import { drawMapArrows, drawRoutedMaps, drawProbes, renderReadouts, compareReadout } from '../render/arrows.js';
 import { Orbits } from '../render/orbits.js';
 import { SyncGroup } from './sync.js';
+import { Table } from '../render/table.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
 import { LinkedPlot } from '../render/linked-plot.js';
 
@@ -117,8 +118,21 @@ export class MatephisSets {
             this.linked = new LinkedPlot(this, this.plotHost);
         }
 
+        // The IN/OUT table: its inputs become arrow samples, so it exists before the first draw
+        if (cfg.table !== undefined) this.table = new Table(this, cfg.table);
         this._initLayers();
         this._initSVG();
+        if (this.table) {
+            if (this.table.position === 'right' && !this.split) {
+                const row = document.createElement('div');
+                row.className = 'matephis-sets-split is-right';
+                this.plotStage.before(row);
+                row.appendChild(this.plotStage);
+                row.appendChild(this.table.el);
+            } else {
+                (this.split || this.plotStage).after(this.table.el);
+            }
+        }
 
         this.propsEl = document.createElement('div');
         this.propsEl.className = 'matephis-sets-properties';
@@ -147,7 +161,10 @@ export class MatephisSets {
             this.sliders = new SliderManager(this);
             this.sliders.init();
         }
-        if (this.linked) this.linked.mount();
+        if (this.linked) {
+            this.linked.mount();
+            this.onFocus = (key) => this.linked.focusRow(key);
+        }
         // Blocks with the same "sync" share params, hover and orbit steps
         if (typeof cfg.sync === 'string' && cfg.sync) this.syncGroup = SyncGroup.join(cfg.sync, this);
 
@@ -532,6 +549,7 @@ export class MatephisSets {
         if (cmp) readouts.push(cmp);
         readouts.push(...(this.orbits ? this.orbits.draw() : []), ...layerReadouts);
         if (readouts.length || this.readoutEl) renderReadouts(this, readouts);
+        if (this.table) this.table.draw();
         renderProperties(this, props);
         if (this.controls) this.controls.update();
         if (this.linked) this.linked.sync();

@@ -119,7 +119,9 @@ export class Interaction {
 
     _apply(key) {
         const svg = this.scene.svg;
-        svg.querySelectorAll('.mps-lit').forEach(el => el.classList.remove('mps-lit'));
+        // Lit things may be outside the drawing too (rows of a table)
+        this.scene.wrapper.querySelectorAll('.mps-lit').forEach(el => el.classList.remove('mps-lit'));
+        if (this.scene.onFocus) this.scene.onFocus(key && this.nodes.has(key) ? key : null);
         if (!key || !this.nodes.has(key)) {
             svg.classList.remove('mps-focus');
             return;
