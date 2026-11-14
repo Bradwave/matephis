@@ -38,6 +38,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `height` | Number | | Altezza fissa in px (solo `row`). |
 | `width`, `fullWidth`, `cssWidth`, `align`, `border`, `caption`, `fontSize`, `labelHalo`, `title`, `ariaLabel` | | | Come nei grafici. |
 
+Per i test automatici i parametri si cambiano da JavaScript: con lo slider (`input.value = "2"` e poi un evento `input`), oppure con `contenitore.matephisSets.setParam("k", 2)` sul `div.matephis-sets-container` del diagramma. Il diagramma si ridisegna anche quando la pagina non è in primo piano.
+
 Le etichette sono formule: `"a_1"` diventa $a_1$, `"\\mathbb{N}"` diventa $\mathbb{N}$. Per mescolare testo e formule si usa `$…$`.
 
 ### Insiemi

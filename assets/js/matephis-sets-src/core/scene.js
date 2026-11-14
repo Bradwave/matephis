@@ -520,10 +520,15 @@ export class MatephisSets {
     requestDraw() {
         if (this._drawQueued) return;
         this._drawQueued = true;
-        requestAnimationFrame(() => {
+        const run = () => {
+            if (!this._drawQueued) return;
             this._drawQueued = false;
             if (!this._destroyed) this.draw();
-        });
+        };
+        requestAnimationFrame(run);
+        // A page in the background gets no animation frames (scripted tests, hidden
+        // panes): a timer draws anyway, so params set from JS show up
+        setTimeout(run, 120);
     }
 
     draw() {
