@@ -8,7 +8,9 @@ import { pointPx, setLabelText } from '../core/layout.js';
 import { parseInterval, evalInterval, intervalTeX, niceNumber } from '../core/interval.js';
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
-import { arrow, linkArrow } from './arrows.js';
+import { arrow, linkArrow, fnTeX } from './arrows.js';
+
+export { fnTeX };
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -95,11 +97,6 @@ export function drawLayer(scene, layer, { product = null } = {}) {
     }
 }
 
-/** A map's name before an exponent: "f" stays, "n + 1" becomes "(n + 1)". */
-export function fnTeX(label) {
-    const s = String(label);
-    return /^\\?[A-Za-z]+('*)(_\{?[A-Za-z0-9]+\}?)?(\^\{?[^{}]*\}?)?$/.test(s) && !/\^/.test(s) ? s : `\\left(${s}\\right)`;
-}
 
 /** The text of a selector argument (to look for params in it). */
 function argSource(arg) {
