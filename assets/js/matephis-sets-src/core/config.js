@@ -21,7 +21,7 @@ export const PLANNED_ROOT_KEYS = [
 export const SET_KEYS = ["id", "label", "elements", "interval", "rect", "disk", "integers", "color", "window", "order", "labelSide", "endpoints"];
 export const PLANNED_SET_KEYS = ["at", "subsets", "shape"];
 export const MAP_KEYS = [
-    "id", "label", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
+    "id", "label", "name", "from", "to", "pairs", "expr", "piecewise", "compose", "inverse", "samples", "color", "image",
     "claims", "hidden", "route", "dash", "bend", "arrows", "iterate", "where",
 ];
 export const PLANNED_MAP_KEYS = ["preset", "sequence"];

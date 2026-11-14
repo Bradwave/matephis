@@ -38,6 +38,8 @@ Questa pagina serve come test e documentazione per il sistema di diagrammi di in
 | `height` | Number | | Altezza fissa in px (solo `row`). |
 | `width`, `fullWidth`, `cssWidth`, `align`, `border`, `caption`, `fontSize`, `labelHalo`, `title`, `ariaLabel` | | | Come nei grafici. |
 
+Per i test automatici i parametri si cambiano da JavaScript: con lo slider (`input.value = "2"` e poi un evento `input`), oppure con `contenitore.matephisSets.setParam("k", 2)` sul `div.matephis-sets-container` del diagramma. Il diagramma si ridisegna anche quando la pagina non è in primo piano.
+
 Le etichette sono formule: `"a_1"` diventa $a_1$, `"\\mathbb{N}"` diventa $\mathbb{N}$. Per mescolare testo e formule si usa `$…$`.
 
 ### Insiemi
@@ -60,7 +62,7 @@ Un insieme di interi si comporta come un insieme finito: i suoi elementi sono gl
 
 | Opzione | Descrizione |
 | :--- | :--- |
-| `id`, `label` | Nome; l'etichetta di default è l'id. |
+| `id`, `label`, `name` | `label` è la didascalia della freccia ($n \mapsto 2n$); `name` è il nome della funzione nelle formule e nelle righe sotto il diagramma ($d(3) = 6$, $d^{-1}$, $e \circ d$). Di default `label` è l'id e `name` è `label`. |
 | `from`, `to` | Dominio e codominio (id di insiemi). |
 | `pairs` | Coppie `{ "a_1": "b_1" }`; un array (`{ "a_1": ["b_1", "b_2"] }`) dà una relazione che non è una funzione, e il motore lo segnala. |
 | `expr` | Espressione in `x` (e `y` nel piano); due espressioni `["…", "…"]` per un codominio nel piano. Su insiemi finiti usa i valori numerici degli elementi. Ammette confronti e l'operatore ternario (`x < 0 ? -x : x^2`). |
@@ -123,7 +125,7 @@ Nel piano l'immagine è il bordo trasformato: è corretta per le funzioni contin
 | `[0, 1]` | Ordine: $p < q \Rightarrow f(p) < f(q)$ (ordine conservato) o $f(p) > f(q)$ (ordine invertito). |
 | `{ "probes": [0, 1], "mode": "parity" }` | Parità, con il punto 1 in $-p$: $f(-p) = f(p)$, $f(-p) = -f(p)$, oppure $f(-p) \ne \pm f(p)$. |
 
-Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
+Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramma (nel piano, verso un insieme finito, per le inverse e le composizioni, con più punti, sui dynagraph e sui diagrammi stretti). La scelta dipende dal tipo di funzione, non dal valore, e la riga resta alta quanto la formula più alta già mostrata: muovendo il punto, quello che sta sotto non salta.
 
 ### Dynagraph e grafici
 
@@ -140,7 +142,7 @@ Il valore va nel disegno, sopra la freccia, oppure in una riga sotto il diagramm
 | Opzione | Default | Descrizione |
 | :--- | :--- | :--- |
 | `maps` | tutte quelle disegnabili | Le funzioni da disegnare: da numeri a numeri, date da un'espressione, a tratti, da coppie di numeri, composizioni e inverse (come grafico riflesso). |
-| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti) o `"below"`. |
+| `position` | `"right"` | `"right"` (accanto; sotto sugli schermi stretti, e quando accanto il diagramma diventerebbe troppo stretto, per esempio un dynagraph con etichette lunghe) o `"below"`. |
 | `probe` | `true` | I punti $(x, f(x))$ del punto del diagramma, con la linea tratteggiata fino all'asse $x$. Per $g \circ f$ anche $(f(x), g(f(x)))$ sul grafico di $g$ e $(x, g(f(x)))$ su quello di $g \circ f$. |
 | `construction` | `false` | Per una composizione: da $x$ su fino al grafico di $f$, di lato fino alla retta $y = x$, su fino al grafico di $g$ e di nuovo a $x$. Lo stesso percorso delle frecce del dynagraph, sul piano. |
 | `identity` | con `construction` | Disegna la retta $y = x$. |
@@ -773,7 +775,7 @@ $x < y$ su $A = \lbrace 1, 2, 3, 4\rbrace $: ogni colonna ha i punti sopra la di
 
 ### Da ℕ in 2ℕ
 
-$n \mapsto 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali.
+$d(n) = 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una biiezione tra $\mathbb{N}$ e $2\mathbb{N}$. Trascina il punto: si ferma sui naturali. La freccia ha l'etichetta $n \mapsto 2n$ (`label`), le formule usano il nome $d$ (`name`).
 
 ```sets
 {
@@ -782,7 +784,7 @@ $n \mapsto 2n$ manda ogni naturale in un pari, e ogni pari è raggiunto: è una 
     { "id": "N", "integers": "N", "window": [0, 10] },
     { "id": "P", "integers": "2N", "window": [0, 20] }
   ],
-  "maps": [{ "id": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
+  "maps": [{ "id": "d", "label": "n \\mapsto 2n", "name": "d", "from": "N", "to": "P", "expr": "2x", "claims": { "surjective": true } }],
   "params": { "n": { "min": 0, "max": 10, "step": 1, "val": 3 } },
   "probe": { "map": "d", "at": "n" },
   "show": ["properties(d)"]

@@ -25,6 +25,8 @@ import { paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 /** Highlights drawn on the graph too, and how many points and bands each may have. */
 const MIRROR_OPS = ['image', 'preimage', 'domain', 'fixed'];
 const POINT_SLOTS = 12;
+/** Points of a probe on an inverse (a relation can have several values). */
+const INVERSE_SLOTS = 4;
 const BAND_SLOTS = 6;
 /** Where unused slots go: far outside the plot (the plot skips points out of view). */
 const OFF = 1e9;
@@ -121,8 +123,8 @@ export class LinkedPlot {
                 changed = true;
             }
         }));
-        // Highlights mirrored on the graph (they follow params and reveal buttons)
-        const mv = this.mirrorValues();
+        // Highlights mirrored on the graph (they follow params and reveal buttons), probes on inverses
+        const mv = { ...this.mirrorValues(), ...this.inverseProbeValues() };
         for (const key in mv) {
             if (this.plot.params[key] !== mv[key] && !(isNaN(this.plot.params[key]) && isNaN(mv[key]))) {
                 sl.setValue(key, mv[key], false);
@@ -195,6 +197,21 @@ export class LinkedPlot {
             items.push({ points: [[`_r${k}x`, `_r${k}y`]], radius: 8, fillColor: 'none', strokeColor: color, strokeWidth: 2.5, color });
         });
         return items;
+    }
+
+    /** Values of the hidden params of probes on inverses: (b, a) for each value a of f^{-1}(b). */
+    inverseProbeValues() {
+        const out = {};
+        const pv = this.scene.probeValues || [];
+        (this._inverseProbes || []).forEach(({ i, keys }) => {
+            const o = pv[i];
+            const ys = o && typeof o.x === 'number' ? o.ys.filter(y => typeof y === 'number' && isFinite(y)) : [];
+            keys.forEach(([x, y], j) => {
+                out[x] = j < ys.length ? o.x : OFF;
+                out[y] = j < ys.length ? ys[j] : OFF;
+            });
+        });
+        return out;
     }
 
     /** Ring positions for the row with hover key `key` (none: out of sight). */
@@ -411,7 +428,7 @@ export class LinkedPlot {
             data.push({ fn: 'x', color: scene.color('gray'), dash: '4,4', width: 1.2 });
         }
         this.maps.forEach(m => {
-            const label = `$${m.label}$`;
+            const label = `$${m.name}$`;
             if (m.from.kind === 'finite') {
                 const pts = [];
                 m.from.elements.forEach(e => {
@@ -478,7 +495,7 @@ export class LinkedPlot {
         const ylim = Array.isArray(def.ylim) ? def.ylim.map(Number) : pad(square ? both : yr);
         this._xlim = xlim;
         this._ylim = ylim;
-        const mv = { ...this.mirrorValues(), ...this.rowValues(null) };
+        const mv = { ...this.mirrorValues(), ...this.rowValues(null), ...this.inverseProbeValues() };
         for (const key in mv) params[key] = { min: -1e10, max: 1e10, slider: false, val: mv[key] };
         return {
             xlim,
@@ -508,10 +525,25 @@ export class LinkedPlot {
         const probes = cfg.probe === undefined ? [] : Array.isArray(cfg.probe) ? cfg.probe : [cfg.probe];
         const items = [];
         const pc = scene.color(null, 'probe');
-        probes.forEach(p => {
+        this._inverseProbes = [];
+        probes.forEach((p, i) => {
             if (!p || typeof p !== 'object') return;
             const m = model.mapById.get(String(p.map));
             const at = Array.isArray(p.at) ? p.at[0] : p.at;
+            // On an inverse there is no formula: its points (b, a) come from the
+            // probe's values, through hidden params set at every draw
+            if (m && m.kind === 'inverse' && this.maps.includes(m)) {
+                const color = p.color ? scene.color(p.color) : pc;
+                const keys = [];
+                for (let j = 0; j < INVERSE_SLOTS; j++) {
+                    const x = `_v${i}_${j}x`, y = `_v${i}_${j}y`;
+                    keys.push([x, y]);
+                    items.push({ vector: [[x, 0], [x, y]], arrow: false, dash: '4,3', color, width: 1.4 });
+                    items.push({ points: [[x, y]], radius: 6, fillColor: color, color });
+                }
+                this._inverseProbes.push({ i, keys });
+                return;
+            }
             // "at" is a param, or an expression of params ("-p")
             if (!m || (m.from.kind !== 'interval' && !m.from.intLine) || typeof at !== 'string' || !(cfg.params && (cfg.params[at] || scene.mentionsParam(at)))) return;
             const chain = m.kind === 'compose' ? m.parts : [m];

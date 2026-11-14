@@ -309,7 +309,7 @@ export function drawProbes(scene) {
                                 l.style.strokeWidth = '2.2px';
                             });
                             const row = scene.layout.orient === 'row';
-                            scene.text(px[0] + (row ? 0 : 12), px[1] + (row ? -16 : -14), `\\notin \\mathrm{dom}\\, ${map.parts[stop - 1].label}`, {
+                            scene.text(px[0] + (row ? 0 : 12), px[1] + (row ? -16 : -14), `\\notin \\mathrm{dom}\\, ${map.parts[stop - 1].name}`, {
                                 parent: c, color: red, size: scene.fontSize * 0.8, anchor: row ? 'middle' : 'start',
                             });
                         }
@@ -355,14 +355,17 @@ export function drawProbes(scene) {
         // so it never jumps between the drawing and the line under it
         const multi = map.kind === 'inverse' || (isCompose && map.parts.some(m => m.kind === 'inverse'));
         // With several probes their values would overlap in the drawing: lines under it
-        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to || probes.length > 1;
+        // On a dynagraph (and on narrow diagrams) the sample arrows fill the space
+        // between the lines: the value goes under the diagram too
+        const below = two || map.to.kind !== 'interval' || multi || isCompose || map.from === map.to || probes.length > 1
+            || !!scene.dynagraph || scene.width < 480;
         if (p.showValue !== false && !inside && below) readouts.push({ tex: null, color });
         if (inside && p.showValue !== false) {
             const fmt = (v) => (Array.isArray(v) ? `\\left(${v.map(niceNumber).join(';\\,')}\\right)` : niceNumber(v));
             const valueTeX = (y, set = map.to) => (typeof y === 'string' ? String((set.elementById.get(y) || { label: y }).label)
                 : y && typeof y === 'object' && !Array.isArray(y) && 'outside' in y ? `${niceNumber(y.outside)} \\notin ${setLabelText(scene.model, map.to)}`
                     : fmt(y));
-            const name = p.label !== undefined ? String(p.label) : map.label;
+            const name = p.label !== undefined ? String(p.label) : map.name;
             const valid = ys.filter(y => typeof y === 'string' || SetsModel.validPoint(y) || (y && typeof y === 'object' && 'outside' in y));
             const rhs = valid.length === 0 ? '\\text{non definita}'
                 : valid.length === 1 ? `= ${valueTeX(valid[0])}` : `= \\left\\{${valid.map(v => valueTeX(v)).join(',\\,')}\\right\\}`;
@@ -374,9 +377,9 @@ export function drawProbes(scene) {
                 const terms = [];
                 for (let k = 0; k < map.parts.length; k++) {
                     const inner = k === 0 ? fmt(x) : val(vals[k], map.parts[k - 1].to);
-                    terms.push(map.parts.slice(k).reduce((acc, part) => `${part.label}\\left(${acc}\\right)`, inner));
+                    terms.push(map.parts.slice(k).reduce((acc, part) => `${part.name}\\left(${acc}\\right)`, inner));
                 }
-                tex = `\\left(${map.label}\\right)\\left(${fmt(x)}\\right) = ${terms.join(' = ')} ${rhs}`;
+                tex = `\\left(${map.name}\\right)\\left(${fmt(x)}\\right) = ${terms.join(' = ')} ${rhs}`;
             }
             if (below) {
                 // In the plane, into a finite set or with several values the drawing is crowded: the value goes in a line under it
@@ -400,7 +403,7 @@ export function drawProbes(scene) {
         handle.classList.add('mps-draggable');
         handle.setAttribute('tabindex', '0');
         handle.setAttribute('role', 'slider');
-        handle.setAttribute('aria-label', `Punto di ${String(map.label).replace(/[\\{}$]/g, '')}: trascina`);
+        handle.setAttribute('aria-label', `Punto di ${String(map.name).replace(/[\\{}$]/g, '')}: trascina`);
         const P = scene.layout.sets.get(map.from.id);
         scene.interaction.addDrag(handle, (px, py) => {
             let q = P.fromPx(px, py);
@@ -513,7 +516,7 @@ export function compareReadout(scene) {
     const ya = num(A), yb = num(B);
     if (!A || !B || ya === null || yb === null || typeof A.x !== 'number' || typeof B.x !== 'number') return { tex: null, color };
     const name = (o) => (typeof o.at === 'string' ? o.at.replace(/\*/g, '') : niceNumber(o.x));
-    const fx = (o) => `${o.map.label}\\left(${name(o)}\\right)`;
+    const fx = (o) => `${o.map.name}\\left(${name(o)}\\right)`;
     const close = (u, v) => Math.abs(u - v) <= 1e-9 * Math.max(1, Math.abs(u), Math.abs(v));
     if (spec && spec.mode === 'parity') {
         // Probe 0 at p, probe 1 at -p

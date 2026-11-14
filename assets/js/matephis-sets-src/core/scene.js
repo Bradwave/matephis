@@ -17,7 +17,7 @@ import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-man
 import { toTeX, estimateTextSize } from '../../matephis-physics-src/core/labels.js';
 import { validateConfig } from './config.js';
 import { SetsModel } from './model.js';
-import { computeLayout, elementOrder } from './layout.js';
+import { computeLayout, elementOrder, setLabelText } from './layout.js';
 import { parseSelector } from './selectors.js';
 import { Controls } from '../ui/controls.js';
 import { Interaction } from '../ui/interaction.js';
@@ -248,8 +248,34 @@ export class MatephisSets {
 
     /** Width of the diagram out of the width there is: half of it when the plot is beside it. */
     _setsWidth(total) {
-        if (this.plotPosition === 'right' && total >= 2 * SIDE_MIN) return Math.floor((total - SIDE_GAP) / 2);
+        if (this.plotPosition === 'right') {
+            const half = Math.floor((total - SIDE_GAP) / 2);
+            // Beside the plot only when the diagram still has room there; else under it
+            const side = total >= 2 * SIDE_MIN && this._roomyAt(half);
+            this._wantPlot = side ? 'right' : 'below';
+            this._placePlot(this._wantPlot);
+            if (side) return half;
+        }
         return total;
+    }
+
+    /** Would the diagram be readable at width w? Lines of a column at least ~140 px (180 on a dynagraph), slots of a row ~110 px. */
+    _roomyAt(w) {
+        const n = Math.max(1, this.model.sets.length);
+        if (this.orient !== 'column') return (w - 32) / n >= 110;
+        const headerW = Math.max(20, ...this.model.sets.map(set => this.measure(setLabelText(this.model, set)).w)) + 34;
+        // Dynagraphs need room for their ticks and numbers
+        return w - 32 - headerW - 8 >= (this.dynagraph ? 180 : 140);
+    }
+
+    /** The plot beside the diagram or under it (on narrow pages, or when the diagram needs the width). */
+    _placePlot(where) {
+        if (!this.split || this._plotAt === where) return;
+        this._plotAt = where;
+        this.split.classList.toggle('is-right', where === 'right');
+        this.split.classList.toggle('is-below', where === 'below');
+        this.plotHost.classList.toggle('is-right', where === 'right');
+        this.plotHost.classList.toggle('is-below', where === 'below');
     }
 
     _initSVG() {
@@ -271,6 +297,7 @@ export class MatephisSets {
             this.split.appendChild(this.plotStage);
             this.split.appendChild(this.plotHost);
             this.wrapper.appendChild(this.split);
+            if (this._wantPlot) this._placePlot(this._wantPlot);
         } else {
             this.wrapper.appendChild(this.plotStage);
         }
@@ -493,10 +520,15 @@ export class MatephisSets {
     requestDraw() {
         if (this._drawQueued) return;
         this._drawQueued = true;
-        requestAnimationFrame(() => {
+        const run = () => {
+            if (!this._drawQueued) return;
             this._drawQueued = false;
             if (!this._destroyed) this.draw();
-        });
+        };
+        requestAnimationFrame(run);
+        // A page in the background gets no animation frames (scripted tests, hidden
+        // panes): a timer draws anyway, so params set from JS show up
+        setTimeout(run, 120);
     }
 
     draw() {
@@ -539,7 +571,10 @@ export class MatephisSets {
             arrowLayers.filter(l => !this._routed(l.map) && this.isVisible(l)).forEach(l => drawMapArrows(this, l.map));
             drawRoutedMaps(this, arrowLayers.filter(l => this._routed(l.map) && this._curveShown(l)).map(l => ({ map: l.map, arrows: this.isVisible(l) })));
             drawElements(this);
-            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map)).map(l => l.map));
+            // The arrow A -f-> B between the names: for the maps drawn (a hidden map
+            // is not named until a button shows it), or followed by a probe
+            const probed = new Set((Array.isArray(cfg.probe) ? cfg.probe : cfg.probe ? [cfg.probe] : []).map(p => p && String(p.map)));
+            drawHeader(this, arrowLayers.filter(l => !this._routed(l.map) && (this.isVisible(l) || probed.has(l.map.id) || l.map.from === l.map.to)).map(l => l.map));
         }
         const props = [];
         const layerReadouts = [];
