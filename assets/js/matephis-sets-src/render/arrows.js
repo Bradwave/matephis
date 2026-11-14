@@ -162,6 +162,12 @@ export function drawMapArrows(scene, map, { routed = false } = {}) {
             const dot = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 2.6, class: 'mps-sample' }, g);
             dot.style.fill = base;
             model.apply(map, p).forEach(t => draw(p, key, srcPx, t, 4));
+            // An input of the table: its point lights the row (and the row lights it)
+            if (key) {
+                const hit = scene.svgEl('circle', { cx: f2(srcPx[0]), cy: f2(srcPx[1]), r: 9, class: 'mps-hit mps-sample-hit' }, g);
+                hit.style.pointerEvents = 'all';
+                scene.interaction.addNode(key, hit);
+            }
         });
     }
 
