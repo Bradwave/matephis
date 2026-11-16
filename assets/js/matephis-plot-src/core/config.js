@@ -35,7 +35,7 @@ export const VALID_DATA_KEYS = [
     "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth", "param",
     "freeCoordinates", "name", "from", "to", "arrow", "arrowSize",
     "components", "componentColor", "draggable", "snap", "showValue", "rightAngle",
-    "fill", "fillOpacity", "id"
+    "fill", "fillOpacity", "id", "riemann"
 ];
 
 /** Keys of a multi-plot group block ({ "plots": [...] }). */
@@ -104,7 +104,7 @@ export function validateConfig(config, palettes = null) {
                 if (!VALID_DATA_KEYS.includes(key)) warnings.push(`Unknown data option in item ${i + 1}: '${key}'`);
             }
             const hasContent = item.fn || item.implicit || item.points || item.x !== undefined || item.vector ||
-                item.type === 'vector' || item.angle || item.parametric || item.r;
+                item.type === 'vector' || item.angle || item.parametric || item.r || item.series;
             if (!hasContent) {
                 warnings.push(`Data item ${i + 1} has no content (missing 'fn', 'points', 'implicit', 'x', 'vector', 'parametric', 'r' or 'angle').`);
             }

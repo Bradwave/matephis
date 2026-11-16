@@ -21,6 +21,7 @@ import { SVG_NS } from '../renderers/svg-factory.js';
 import { renderMathJaxLabel } from '../renderers/mathjax-bridge.js';
 import { GridMixin } from '../renderers/grid-renderer.js';
 import { DataMixin } from '../renderers/data-renderer.js';
+import { AreaMixin } from '../renderers/area-renderer.js';
 import { SelectionMixin } from '../interaction/selection.js';
 import { PointerMixin } from '../interaction/pointer.js';
 import { ToolbarMixin } from '../ui/plot-toolbar.js';
@@ -670,6 +671,6 @@ export class MatephisPlot {
     }
 }
 
-Object.assign(MatephisPlot.prototype, GridMixin, DataMixin, SelectionMixin, PointerMixin, ToolbarMixin);
+Object.assign(MatephisPlot.prototype, GridMixin, DataMixin, AreaMixin, SelectionMixin, PointerMixin, ToolbarMixin);
 
 export default MatephisPlot;

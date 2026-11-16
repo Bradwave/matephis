@@ -16,6 +16,12 @@
  *
  * With "compare", the curves of each compared set are drawn too, faded.
  *
+ * "fill" colours the area between a curve and the t axis, the impulse under
+ * a force or the displacement under a velocity: true, or { "curve": 0,
+ * "from": "t1", "to": "t2", "upTo": "now", "color", "opacity", "hatch",
+ * "signed" } (or a list of them). "upTo": "now" stops the area at the
+ * current instant, so it grows while time runs.
+ *
  * "position" places each graph: "below" the scene (default), "right" of it
  * (in a column beside the scene; under it again on narrow screens), or in
  * "tabs" under the scene, one graph at a time.
@@ -23,7 +29,7 @@
 import { niceStep } from '../../matephis-plot-src/renderers/grid-renderer.js';
 import { parseAspectRatio } from '../../matephis-plot-src/core/config.js';
 
-const GRAPH_KEYS = ['y', 'x', 'label', 'legend', 'axisLabels', 'xlim', 'ylim', 'aspectRatio', 'cursor', 'progressive', 'colors', 'plot', 'position'];
+const GRAPH_KEYS = ['y', 'x', 'label', 'legend', 'axisLabels', 'xlim', 'ylim', 'aspectRatio', 'cursor', 'progressive', 'colors', 'plot', 'position', 'fill'];
 const POSITIONS = ['below', 'right', 'tabs'];
 
 /** Where a graph goes ("below" when missing or unknown). */
@@ -232,6 +238,40 @@ export class Graphs {
         it.plot.view = { xMin: it.xlim[0], xMax: it.xlim[1], yMin: it.ylim[0], yMax: it.ylim[1] };
     }
 
+    /**
+     * The "fill" of each curve, as the plot engine wants it: { range, color, ... }
+     * with numbers. Only for graphs over time (the area under x(t) is not
+     * meaningful for a phase plot).
+     */
+    _fills(it, t, live) {
+        const out = [];
+        const d = it.def;
+        if (d.fill === undefined || d.fill === false) return out;
+        if (!it.overTime) {
+            if (!it.fillWarned) { it.fillWarned = true; this.scene._addWarning(`graphs[${it.index}]: "fill" works only for graphs over time`); }
+            return out;
+        }
+        const specs = d.fill === true ? [{}] : listOf(d.fill);
+        specs.forEach((sp, j) => {
+            if (sp === true) sp = {};
+            if (!sp || typeof sp !== 'object') return;
+            const k = sp.curve !== undefined ? Number(sp.curve) : 0;
+            if (!(k >= 0 && k < it.ys.length)) {
+                if (!it.fillWarned) { it.fillWarned = true; this.scene._addWarning(`graphs[${it.index}] fill[${j}]: no curve ${sp.curve}`); }
+                return;
+            }
+            const tEnd = it.ts.length ? it.ts[it.ts.length - 1] : 0;
+            let a = sp.from !== undefined ? this.scene._num(sp.from, 'graphs fill from') : 0;
+            let b = sp.to !== undefined ? this.scene._num(sp.to, 'graphs fill to') : tEnd;
+            if (sp.upTo === 'now' && live) b = Math.min(b, t);
+            if (!(b > a)) return;
+            const f = { range: [a, b] };
+            ['color', 'opacity', 'hatch', 'signed', 'negColor'].forEach(key => { if (sp[key] !== undefined) f[key] = sp[key]; });
+            out[k] = f;
+        });
+        return out;
+    }
+
     /** Redraws with the cursor at the current time (after the scene was resolved there). */
     update() {
         if (typeof window === 'undefined' || !window.MatephisPlot) return;
@@ -255,10 +295,15 @@ export class Graphs {
                     color: colors[k] || COLORS[k % COLORS.length], width: 2, opacity: 0.4, dash: '6,4',
                 }));
             });
-            it.ys.forEach((ys, k) => data.push({
-                series: ys.slice(0, n).map((y, j) => [it.xs[j], y]),
-                color: colors[k] || COLORS[k % COLORS.length], width: 2.5,
-            }));
+            const fills = this._fills(it, t, live);
+            it.ys.forEach((ys, k) => {
+                const item = {
+                    series: ys.slice(0, n).map((y, j) => [it.xs[j], y]),
+                    color: colors[k] || COLORS[k % COLORS.length], width: 2.5,
+                };
+                if (fills[k]) item.fill = fills[k];
+                data.push(item);
+            });
             if (it.legendEl) {
                 // Same colours as the curves, as the plot resolves them (palette names, theme)
                 [...it.legendEl.children].forEach((item, k) => {

@@ -91,6 +91,7 @@ export const DataMixin = {
     _drawData(cs) {
         const data = this.config.data || [];
         const legendItems = [];
+        this._riemannValueCount = 0;
 
         data.forEach((item, idx) => {
             const color = this._getColor(idx, item.color);
@@ -109,6 +110,9 @@ export const DataMixin = {
             let pos = null;
             const keep = (p) => { if (p) pos = p; };
             try {
+                // Areas first, under the curve of the item
+                if (item.fill && (item.fn || item.series)) this._drawFill(st);
+                if (item.riemann) this._drawRiemann(st);
                 if (item.type === 'interpolation' && isArr(item.points)) keep(this._drawInterpolation(st));
                 if (item.fn) keep(this._drawFunction(st));
                 if (item.parametric) keep(this._drawParametric(st));
