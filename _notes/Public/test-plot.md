@@ -67,7 +67,7 @@ Questa pagina serve come test e documentazione per il sistema di grafici generat
 | `opacity` | Number | Opacità (0.0 - 1.0). |
 | `width` | Number | Spessore linea o raggio bordo punto. |
 | `dash` | String | Pattern tratteggio (es. `"5,5"`). |
-| `label` | String | Etichetta (mostrata sul grafico o in legenda). |
+| `label` | String | Etichetta (mostrata sul grafico o in legenda). Può mescolare testo e formule: `"asse fisso $x = 2$"`. |
 | `fill` | Boolean/Object | Area tra la curva (`fn` o `series`) e l'asse x: `true`, oppure `{ "to", "range", "color", "opacity", "hatch", "signed", "negColor" }` (vedi «Aree e somme di Riemann»). |
 | `riemann` | Object | Rettangoli sotto una funzione: `{ "n", "range", "rule", "color", "negColor", "opacity", "signed", "showValue", "valueLabel", "digits" }`. |
 
@@ -955,7 +955,7 @@ Se definisci le coordinate di un punto come espressioni matematiche dipendenti d
   "xlim": [-2, 2],
   "ylim": [-2, 2],
   "params": {
-    "t": { "min": 0, "max": "2PI", "step": 0.05, "val": 0, "round": 2 }
+    "t": { "min": 0, "max": "2*PI", "step": 0.05, "val": 0, "round": 2 }
   },
   "draggablePoints": true,
   "data": [
@@ -974,6 +974,7 @@ Se definisci le coordinate di un punto come espressioni matematiche dipendenti d
     }
   ]
 }
+```
 
 ## 10. Punti Liberi e Vettori
 
@@ -1329,7 +1330,7 @@ Le espressioni supportano l'operatore ternario e i confronti (`x < 0 ? -x : x^2`
 ```
 
 ### Più grafici affiancati (domande a scelta multipla)
-Un blocco con `"plots": [...]` crea una griglia di grafici piccoli. `"layout"`: `"row"` (tutti su una riga) o `"grid"` con `"columns"`; `"mobileColumns"` imposta le colonne su schermi stretti. `"labels"`: `"A"`, `"a"`, `"1"`, `"i"`, un array o `false`. Le opzioni in `"shared"` valgono per tutti i grafici; ogni grafico si apre a schermo intero con un clic.
+Un blocco con `"plots": [...]` crea una griglia di grafici piccoli. `"layout"`: `"row"` (tutti su una riga) o `"grid"` con `"columns"`; `"mobileColumns"` imposta le colonne su schermi stretti. `"labels"`: `"A"`, `"a"`, `"1"`, `"i"`, un array (anche con `$…$`) o `false`. Le opzioni in `"shared"` valgono per tutti i grafici; ogni grafico si apre a schermo intero con un clic.
 
 ```json
 {
@@ -1374,6 +1375,43 @@ Un blocco con `"plots": [...]` crea una griglia di grafici piccoli. `"layout"`: 
     ] },
     { "data": [
       {"fn": "2^x - 2"}
+    ] }
+  ]
+}
+```
+
+### Etichette con testo e formule
+Le etichette (`label` dei dati, legenda, assi) e le `"labels"` di una griglia `"plots"` possono mescolare testo e TeX: il testo resta testo e solo le parti tra `$…$` sono formule (`"asse fisso $x = 2$"`).
+
+```json
+{
+  "layout": "row",
+  "labels": ["$f(x) = x^2$", "grafico di $g(x) = |x|$"],
+  "shared": {"xlim": [-3, 3], "ylim": [-1, 4], "aspectRatio": "3:2", "legend": true, "legendPosition": "bottom-right"},
+  "plots": [
+    { "data": [
+      {"fn": "x^2", "label": "parabola $y = x^2$", "color": "summer2"},
+      {"fn": "1", "label": "retta $y = 1$", "color": "black3", "dash": "5,4"}
+    ] },
+    { "data": [
+      {"fn": "|x|", "label": "asse fisso $x = 0$ e $y = |x|$", "color": "summer6"}
+    ] }
+  ]
+}
+```
+
+```matephis
+{
+  "layout": "row",
+  "labels": ["$f(x) = x^2$", "grafico di $g(x) = |x|$"],
+  "shared": {"xlim": [-3, 3], "ylim": [-1, 4], "aspectRatio": "3:2", "legend": true, "legendPosition": "bottom-right"},
+  "plots": [
+    { "data": [
+      {"fn": "x^2", "label": "parabola $y = x^2$", "color": "summer2"},
+      {"fn": "1", "label": "retta $y = 1$", "color": "black3", "dash": "5,4"}
+    ] },
+    { "data": [
+      {"fn": "|x|", "label": "asse fisso $x = 0$ e $y = |x|$", "color": "summer6"}
     ] }
   ]
 }

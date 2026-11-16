@@ -7,6 +7,7 @@
  *   "columns": 2,              // grid columns (row: number of plots)
  *   "mobileColumns": 2,        // columns on narrow screens (default: min(columns, 2))
  *   "labels": "A",             // "A" | "a" | "1" | "i" | ["…", …] | false -> "A)", "B)", …
+ *                              // custom labels may contain TeX: ["$f(x) = x^2$", "grafico di $g$"]
  *   "shared": { "xlim": [-5, 5], "ylim": [-5, 5] },   // merged into every plot
  *   "plots": [ { "data": [ … ] }, { "data": [ … ], "label": "custom" } ]
  * }
@@ -14,6 +15,7 @@
  */
 import { MatephisPlot } from './plot.js';
 import { cssLength } from './config.js';
+import { typesetElements } from '../renderers/mathjax-bridge.js';
 
 const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'];
 
@@ -53,6 +55,7 @@ export class MatephisPlotGroup {
         this.container = container;
         this.config = config;
         this.plots = [];
+        const texCaptions = [];
 
         const layout = config.layout === 'row' ? 'row' : 'grid';
         const n = config.plots.length;
@@ -80,6 +83,7 @@ export class MatephisPlotGroup {
                 cap.className = 'matephis-plot-cell-label';
                 cap.textContent = caption;
                 cell.appendChild(cap);
+                if (caption.includes('$')) texCaptions.push(cap);
             }
 
             const host = document.createElement('div');
@@ -104,7 +108,11 @@ export class MatephisPlotGroup {
             cap.className = 'matephis-plot-group-caption';
             cap.textContent = config.caption;
             root.appendChild(cap);
+            if (config.caption.includes('$')) texCaptions.push(cap);
         }
+
+        // Plots draw their own labels with tex2svg; captions are HTML
+        if (texCaptions.length) typesetElements(texCaptions);
     }
 
     destroy() {
