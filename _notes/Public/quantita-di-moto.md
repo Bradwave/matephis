@@ -50,9 +50,9 @@ La simulazione qui sotto riproduce l'esperimento. Come in laboratorio, ci sono s
     "s": "0"
   },
   "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
-  "time": {"max": 6, "stopWhen": "x1 < 0.3 || x2 > 3.7 || x1 > 3.7 || x2 < 0.3"},
+  "time": {"max": 6, "stopWhen": "x1 < 0.44 || x2 > 3.56 || x1 > 3.56 || x2 < 0.44"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -193,7 +193,7 @@ L'ipotesi della forza costante è la più discutibile: durante l'urto la forza c
   "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
   "time": {"max": 5, "stopWhen": "x1 < 0.3 || x2 > 3.7 || x1 > 3.7 || x2 < 0.3"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -300,7 +300,7 @@ L'impulso dice quanto una forza esterna modifica la quantità di moto del sistem
   "ode": {"x": "v", "v": "(t < T ? F : 0)/m", "J": "t < T ? F : 0"},
   "time": {"max": 4, "stopWhen": "x < 0.4 || x > 5.6"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -382,7 +382,7 @@ Un carrello va a sbattere contro un respingente a molla fissato a una parete. Il
   "time": {"max": 6, "stopWhen": "x < 0.4"},
   "compare": [{"k": 600, "label": "respingente rigido, k = 600 N/m"}],
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [5, 0.3]},
     {"type": "wall", "at": [4.6, 0.3], "height": 0.8, "side": "right"},
     {"type": "spring", "from": [4.6, 0.43], "to": ["max(x + 0.25, 4.0)", 0.43], "coils": 6, "width": 0.12},
     {
@@ -637,7 +637,7 @@ Nella simulazione puoi cambiare l'elasticità dei respingenti o attivare il velc
   "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
   "time": {"max": 5, "stopWhen": "x1 < 0.3 || x2 > 3.7 || x1 > 3.7 || x2 < 0.3"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [4, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -776,7 +776,7 @@ Prova con il pulsante «Riferimento»: nel riferimento del centro di massa il pu
   "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
   "time": {"max": 6, "stopWhen": "x1 < 0.3 || x2 > 5.7 || x1 > 5.7 || x2 < 0.3"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -1022,7 +1022,7 @@ Il centro di massa di un sistema isolato si muove di moto rettilineo uniforme, q
   "events": [{"when": "x1 - x2 + 0.5 > 0", "set": {"s": 1}, "once": true}],
   "time": {"max": 6, "stopWhen": "x1 < 0.3 || x2 > 5.7 || x1 > 5.7 || x2 < 0.3"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
     {
       "id": "A",
       "type": "cart",
@@ -1091,7 +1091,7 @@ Un caso particolare: due carrelli fermi, spinti in versi opposti da una molla co
   },
   "time": {"max": 5, "stopWhen": "x1 < 0.4 || x2 > 5.6"},
   "objects": [
-    {"id": "g", "type": "ground", "y": 0.3},
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
     {
       "id": "A",
       "type": "cart",
