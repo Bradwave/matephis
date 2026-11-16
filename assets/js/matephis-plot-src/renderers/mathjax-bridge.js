@@ -28,6 +28,41 @@ export function whenMathJaxReady(cb) {
     check();
 }
 
+/**
+ * One TeX string for a label that mixes text and math, so MathJax can
+ * typeset it as a single piece: "asse fisso $x = 2$" -> "\text{asse fisso }x = 2".
+ * A label without "$" is returned as it is (callers pass bare TeX too).
+ */
+export function toTeX(str) {
+    const s = String(str);
+    if (!s.includes('$')) return s;
+    return s.split('$').map((part, i) => {
+        if (i % 2 === 1) return part;
+        return part ? `\\text{${part.replace(/[\\{}#%&]/g, '\\$&')}}` : '';
+    }).join('');
+}
+
+/**
+ * Typesets "$...$" in HTML elements (captions, slider labels) with
+ * MathJax.typesetPromise, one typeset at a time and after the page's own
+ * startup typeset, as MathJax advises: two typesets of the same nodes at once
+ * leave math raw, and one that runs during the startup pass can break it.
+ * @returns {Promise<boolean>} true once typeset, false without MathJax
+ */
+export function typesetElements(els) {
+    if (typeof window === 'undefined' || !els || !els.length) return Promise.resolve(false);
+    return new Promise(resolve => {
+        whenMathJaxReady(() => {
+            const mj = window.MathJax;
+            if (!mj || !mj.typesetPromise) { resolve(false); return; }
+            const queued = (mj.startup && mj.startup.promise ? mj.startup.promise : Promise.resolve())
+                .then(() => mj.typesetPromise(els));
+            if (mj.startup) mj.startup.promise = queued.catch(() => {});
+            queued.then(() => resolve(true), () => resolve(false));
+        });
+    });
+}
+
 /** Typesets TeX once and returns a detached, self-contained <svg> to clone. */
 function typeset(tex) {
     let node = cache.get(tex);
@@ -89,7 +124,10 @@ export function renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline
     if (!hasMathJax()) return fallback ? fallback() : null;
 
     try {
-        const tex = text.replace(/^\s*\$+|\$+\s*$/g, '');
+        // "$x$" -> "x"; "text $x$" -> "\text{text }x"; bare TeX is kept
+        const t = String(text).trim();
+        const single = /^\$+[^$]*\$+$/.test(t);
+        const tex = single ? t.replace(/^\$+|\$+$/g, '') : toTeX(t);
         const proto = typeset(tex);
         if (!proto) return fallback ? fallback() : null;
         const svgNode = proto.cloneNode(true);

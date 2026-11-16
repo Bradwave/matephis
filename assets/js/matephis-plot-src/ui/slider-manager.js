@@ -17,7 +17,7 @@
  * the thumb would move under the pointer and the value would flicker.
  */
 import { MatephisIcons } from './icons.js';
-import { whenMathJaxReady } from '../renderers/mathjax-bridge.js';
+import { typesetElements } from '../renderers/mathjax-bridge.js';
 
 /** "2*PI" -> "2π", "PI/16" -> "π/16" for slider bound labels. */
 function prettyBound(src, value) {
@@ -377,25 +377,15 @@ export class SliderManager {
 
     /** Typesets "$...$" labels once MathJax is ready, then re-checks the layout. */
     _typeset(els) {
-        if (typeof window === 'undefined') return;
-        const run = () => {
-            const mj = window.MathJax;
-            if (!mj || !mj.typesetPromise) return;
-            // One typeset at a time, after the page's own (as MathJax advises):
-            // two typesets of the same nodes at once leave math raw
-            const queued = (mj.startup && mj.startup.promise ? mj.startup.promise : Promise.resolve())
-                .then(() => mj.typesetPromise(els));
-            if (mj.startup) mj.startup.promise = queued.catch(() => {});
-            queued.then(() => {
-                const align = () => els.forEach(alignTexBaseline);
-                align();
-                // Font metrics change once the webfont arrives
-                if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
-                this._layoutWidth = -1;
-                this.updateLayout();
-            }).catch(() => {});
-        };
-        whenMathJaxReady(run);
+        typesetElements(els).then(done => {
+            if (!done) return;
+            const align = () => els.forEach(alignTexBaseline);
+            align();
+            // Font metrics change once the webfont arrives
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+            this._layoutWidth = -1;
+            this.updateLayout();
+        });
     }
 
     _watchLayout() {
