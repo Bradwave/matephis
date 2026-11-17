@@ -1299,7 +1299,9 @@ I vertici di `"angle"` possono essere nomi di punti. `"showValue": true` (o `"ra
 ```
 
 ### Funzioni a tratti, valore assoluto e simboli
-Le espressioni supportano l'operatore ternario e i confronti (`x < 0 ? -x : x^2`), il valore assoluto con `|x|`, `log(x, b)` in base qualunque, `!`, `mod`, `sgn` e la moltiplicazione implicita (`2x`, `3sin(x)`, `(x+1)(x-1)`, `ax` con parametro `a`). `-x^2` vale $-(x^2)$.
+Le espressioni supportano l'operatore ternario e i confronti (`x < 0 ? -x : x^2`), il valore assoluto con `|x|`, `log(x, b)` in base qualunque, `!`, `mod`, `sgn` e la moltiplicazione implicita (`2x`, `3sin(x)`, `(x+1)(x-1)`, `ax` con parametro `a`). `-x^2` vale $-(x^2)$ e `ax^2` vale $a \cdot x^2$.
+
+Alcune scritture si leggono come in matematica: `0 < x < 1` vale `0 < x && x < 1`; `|x||x - 1|` è il prodotto di due valori assoluti e `||x| - 1|` un valore assoluto dentro l'altro (fuori dalle barre `||` resta l'«oppure»); `x mod 2` vale `mod(x, 2)`; `sin 2x` vale $\sin(2x)$, mentre `sin x cos x` vale $\sin x \cdot \cos x$.
 
 ```json
 {
