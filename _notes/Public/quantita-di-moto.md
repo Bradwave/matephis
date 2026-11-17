@@ -488,7 +488,7 @@ Nel grafico una palla da $0{,}40 \text{ kg}$ che arriva a $3{,}0 \text{ m/s}$ vi
 
 Dimezzando la durata dell'urto la forza media raddoppia, e con lei il picco: in questo grafico il picco è sempre $\pi/2 \approx 1{,}6$ volte la forza media.
 
-> [!DETAILS] Per i curiosi: la notazione integrale
+> [!DETAILS] **Per i curiosi:** la notazione integrale
 >
 > Quando gli intervallini diventano infinitamente piccoli la somma si scrive come un integrale:
 >
@@ -1010,7 +1010,9 @@ La scena è disegnata in un piano verticale: abbiamo scelto i frammenti in modo 
 
 Dopo l'esplosione il centro di massa resta sulla verticale del punto di lancio e ricade come sarebbe ricaduto il razzo intero: le sue copie, una ogni quarto di secondo, sono quelle di un corpo in caduta libera partito da fermo dall'apice. La componente orizzontale della quantità di moto totale resta nulla, perché il peso è verticale; quella verticale no, perché il peso le fornisce impulso. Tutto questo vale finché nessun frammento tocca terra: da quel momento agisce anche la forza del suolo.
 
-> **I vettori quantità di moto dei frammenti sono complanari.** Se un corpo fermo esplode in tre frammenti, le loro quantità di moto subito dopo l'esplosione stanno in uno stesso piano.
+> [!DETAILS] **I vettori quantità di moto dei frammenti sono complanari**
+>
+> Se un corpo fermo esplode in tre frammenti, le loro quantità di moto subito dopo l'esplosione stanno in uno stesso piano.
 >
 > **Dimostrazione.** Dalla conservazione della quantità di moto
 >
@@ -1326,6 +1328,175 @@ Il grafico velocità-tempo dell'esempio precedente (urto con respingenti a molla
 > $$v_{A,f} = v_{CM} - e\,(v_{A,i} - v_{CM}) \qquad v_{B,f} = v_{CM} - e\,(v_{B,i} - v_{CM})$$
 >
 > Per una palla che rimbalza sul pavimento (che ha massa enorme e resta ferma) $e$ è il rapporto tra le velocità subito dopo e subito prima del rimbalzo, e l'altezza raggiunta dopo ogni rimbalzo si riduce del fattore $e^2$.
+
+### Casi limite: una massa molto più grande dell'altra
+
+Mettendo insieme $v_f = 2\,v_{CM} - v_i$ e l'espressione di $v_{CM}$ si ottengono le velocità finali di un urto elastico in una dimensione:
+
+$$v_{A,f} = \frac{(m_A - m_B)\,v_{A,i} + 2\,m_B\,v_{B,i}}{m_A + m_B} \qquad\qquad v_{B,f} = \frac{(m_B - m_A)\,v_{B,i} + 2\,m_A\,v_{A,i}}{m_A + m_B}$$
+
+Non serve ricordarle. Ci interessano qui perché, quando una delle due masse è molto più grande dell'altra, si semplificano moltissimo, e **i casi limite si ricavano direttamente da queste equazioni, eliminando i termini molto più piccoli degli altri**.
+
+> **Come si trascura un termine.** Se $m_A \ll m_B$ («$m_A$ è molto minore di $m_B$»), in una somma o in una differenza si può trascurare $m_A$ rispetto a $m_B$: $m_A + m_B \approx m_B$ e $m_A - m_B \approx -m_B$. Si può eliminare soltanto un termine **sommato a un termine dello stesso tipo molto più grande**: un fattore di un prodotto, oppure un termine che resta da solo, non si possono eliminare, per quanto siano piccoli.
+
+#### Un corpo leggero urta un corpo molto pesante ($m_A \ll m_B$)
+
+Nell'espressione di $v_{A,f}$ sostituiamo $m_A - m_B \approx -m_B$ e $m_A + m_B \approx m_B$:
+
+$$v_{A,f} \approx \frac{-m_B\,v_{A,i} + 2\,m_B\,v_{B,i}}{m_B} = 2\,v_{B,i} - v_{A,i}$$
+
+Nell'espressione di $v_{B,f}$ sostituiamo $m_B - m_A \approx m_B$ e $m_A + m_B \approx m_B$; al numeratore, se le velocità iniziali sono confrontabili, anche $2\,m_A v_{A,i}$ è trascurabile rispetto a $m_B v_{B,i}$:
+
+$$v_{B,f} \approx \frac{m_B\,v_{B,i}}{m_B} = v_{B,i}$$
+
+Il corpo pesante prosegue come se niente fosse, e si comporta come una parete in movimento: rispetto a lui il corpo leggero arriva con velocità $v_{A,i} - v_{B,i}$ e riparte con la velocità opposta. Si arriva allo stesso risultato con il centro di massa: dividendo numeratore e denominatore di $v_{CM}$ per $m_B$, i termini che contengono $m_A/m_B$ diventano trascurabili e $v_{CM} \approx v_{B,i}$, cioè il centro di massa si muove (quasi) insieme al corpo pesante.
+
+- **Corpo pesante fermo** ($v_{B,i} = 0$): $v_{A,f} \approx -v_{A,i}$. È la pallina che rimbalza contro un muro, con la stessa velocità in modulo.
+- **Corpo pesante in movimento**: una pallina da tennis arriva a $20 \text{ m/s}$ contro una racchetta che le va incontro a $30 \text{ m/s}$. Con il verso positivo nel verso della racchetta, $v_{A,i} = -20 \text{ m/s}$ e $v_{B,i} = 30 \text{ m/s}$, quindi in un urto ideale (elastico) $v_{A,f} \approx 2 \cdot 30 - (-20) = 80 \text{ m/s}$. Gli urti reali non sono elastici e la pallina riparte più lenta, ma l'idea resta: colpire una palla che arriva le dà più velocità che colpirla ferma.
+
+**Attenzione al corpo pesante fermo.** Se $v_{B,i} = 0$, al numeratore di $v_{B,f}$ il termine $m_B v_{B,i}$ è nullo e $2\,m_A v_{A,i}$ resta da solo: non si può eliminare. Allora $v_{B,f} \approx 2\,\dfrac{m_A}{m_B}\,v_{A,i}$, piccolissima ma non nulla. Il muro riceve una quantità di moto $m_B v_{B,f} \approx 2\,m_A v_{A,i}$, il doppio di quella che aveva la pallina (che infatti la inverte), ma un'energia cinetica trascurabile: la sua velocità è così piccola che $\tfrac12 m_B v_{B,f}^2$ è circa $4\,m_A/m_B$ volte l'energia cinetica della pallina.
+
+Nella simulazione il carrello A è leggero e B molto più pesante. Prima di avviare, prevedi la velocità di A dopo l'urto, con B fermo e poi con B che va incontro ad A; poi confronta la velocità misurata con quella esatta e con quella approssimata. Aumenta la massa di B: la differenza tra i due valori si riduce, perché è dell'ordine di $m_A/m_B$.
+
+```physics
+{
+  "xlim": [0, 6],
+  "ylim": [0, 1.0],
+  "aspectRatio": "5:1",
+  "params": {
+    "m1": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_A"},
+    "m2": {"val": 8, "min": 1, "max": 10, "step": 0.5, "unit": "kg", "label": "m_B"},
+    "u1": {"val": 0.5, "min": 0.2, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
+    "u2": {"val": 0, "min": -0.3, "max": 0.3, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
+    "k": {"val": 200, "min": 50, "max": 1000, "step": 10, "unit": "N/m", "slider": false}
+  },
+  "state": {"x1": 2.5, "v1": "u1", "x2": 3.5, "v2": "u2"},
+  "ode": {
+    "x1": "v1",
+    "v1": "-k*max(0, x1 - x2 + 0.5)/m1",
+    "x2": "v2",
+    "v2": "k*max(0, x1 - x2 + 0.5)/m2"
+  },
+  "time": {"max": 7, "stopWhen": "x1 < 0.3 || x2 > 5.7 || x1 > 5.7 || x2 < 0.3"},
+  "objects": [
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
+    {
+      "id": "A",
+      "type": "cart",
+      "on": "g",
+      "pos": "x1",
+      "posUnit": "m",
+      "size": [0.5, 0.25],
+      "mass": "m1",
+      "label": "A",
+      "color": "red1"
+    },
+    {
+      "id": "B",
+      "type": "cart",
+      "on": "g",
+      "pos": "x2",
+      "posUnit": "m",
+      "size": [0.5, 0.25],
+      "mass": "m2",
+      "label": "B",
+      "color": "blue"
+    },
+    {"type": "velocity", "on": "A", "label": "\\vec v_A", "color": "red1"},
+    {"type": "velocity", "on": "B", "label": "\\vec v_B", "color": "blue"}
+  ],
+  "graphs": [
+    {
+      "y": ["v1", "v2"],
+      "legend": ["A", "B"],
+      "colors": ["red1", "blue"],
+      "label": "Velocità",
+      "axisLabels": ["t (s)", "v (m/s)"]
+    }
+  ],
+  "readouts": [
+    {"label": "v_A misurata", "value": "v1", "unit": "m/s", "digits": 3},
+    {"label": "v_A,f esatta", "value": "((m1 - m2)*u1 + 2*m2*u2)/(m1 + m2)", "unit": "m/s", "digits": 3},
+    {"label": "2 v_B,i − v_A,i", "value": "2*u2 - u1", "unit": "m/s", "digits": 3},
+    {"label": "v_B misurata", "value": "v2", "unit": "m/s", "digits": 3}
+  ]
+}
+```
+
+#### Un corpo molto pesante urta un corpo leggero ($m_A \gg m_B$)
+
+Ora è $m_B$ a essere trascurabile rispetto a $m_A$: $m_A - m_B \approx m_A$, $m_B - m_A \approx -m_A$ e $m_A + m_B \approx m_A$. Se le velocità iniziali sono confrontabili, al numeratore di $v_{A,f}$ anche $2\,m_B v_{B,i}$ è trascurabile rispetto a $m_A v_{A,i}$:
+
+$$v_{A,f} \approx \frac{m_A\,v_{A,i}}{m_A} = v_{A,i} \qquad\qquad v_{B,f} \approx \frac{-m_A\,v_{B,i} + 2\,m_A\,v_{A,i}}{m_A} = 2\,v_{A,i} - v_{B,i}$$
+
+È lo stesso caso di prima, con i ruoli scambiati: il corpo pesante non rallenta (quasi) per niente, e quello leggero rimbalza su di lui come su una parete in movimento. Se il corpo leggero è fermo ($v_{B,i} = 0$) **riparte con il doppio della velocità del corpo pesante**: $v_{B,f} \approx 2\,v_{A,i}$. Nel riferimento del corpo pesante, infatti, B arriva con velocità $-v_{A,i}$ e riparte con velocità $+v_{A,i}$; tornando nel riferimento del laboratorio si aggiunge $v_{A,i}$.
+
+Prevedi la velocità di B dopo l'urto, poi verifica. Che cosa succede se B, prima dell'urto, va incontro ad A?
+
+```physics
+{
+  "xlim": [0, 6],
+  "ylim": [0, 1.0],
+  "aspectRatio": "5:1",
+  "params": {
+    "m1": {"val": 8, "min": 1, "max": 10, "step": 0.5, "unit": "kg", "label": "m_A"},
+    "m2": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_B"},
+    "u1": {"val": 0.4, "min": 0.2, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
+    "u2": {"val": 0, "min": -0.3, "max": 0.2, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
+    "k": {"val": 200, "min": 50, "max": 1000, "step": 10, "unit": "N/m", "slider": false}
+  },
+  "state": {"x1": 1.0, "v1": "u1", "x2": 2.0, "v2": "u2"},
+  "ode": {
+    "x1": "v1",
+    "v1": "-k*max(0, x1 - x2 + 0.5)/m1",
+    "x2": "v2",
+    "v2": "k*max(0, x1 - x2 + 0.5)/m2"
+  },
+  "time": {"max": 7, "stopWhen": "x1 < 0.3 || x2 > 5.7 || x1 > 5.7 || x2 < 0.3"},
+  "objects": [
+    {"id": "g", "type": "ground", "from": [0, 0.3], "to": [6, 0.3]},
+    {
+      "id": "A",
+      "type": "cart",
+      "on": "g",
+      "pos": "x1",
+      "posUnit": "m",
+      "size": [0.5, 0.25],
+      "mass": "m1",
+      "label": "A",
+      "color": "red1"
+    },
+    {
+      "id": "B",
+      "type": "cart",
+      "on": "g",
+      "pos": "x2",
+      "posUnit": "m",
+      "size": [0.5, 0.25],
+      "mass": "m2",
+      "label": "B",
+      "color": "blue"
+    },
+    {"type": "velocity", "on": "A", "label": "\\vec v_A", "color": "red1"},
+    {"type": "velocity", "on": "B", "label": "\\vec v_B", "color": "blue"}
+  ],
+  "graphs": [
+    {
+      "y": ["v1", "v2"],
+      "legend": ["A", "B"],
+      "colors": ["red1", "blue"],
+      "label": "Velocità",
+      "axisLabels": ["t (s)", "v (m/s)"]
+    }
+  ],
+  "readouts": [
+    {"label": "v_B misurata", "value": "v2", "unit": "m/s", "digits": 3},
+    {"label": "v_B,f esatta", "value": "((m2 - m1)*u2 + 2*m1*u1)/(m1 + m2)", "unit": "m/s", "digits": 3},
+    {"label": "2 v_A,i − v_B,i", "value": "2*u1 - u2", "unit": "m/s", "digits": 3},
+    {"label": "v_A misurata", "value": "v1", "unit": "m/s", "digits": 3}
+  ]
+}
+```
 
 ## 7. Urti in due dimensioni
 
