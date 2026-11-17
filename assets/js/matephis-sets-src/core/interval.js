@@ -148,6 +148,38 @@ export function samplePositions(I, n = 400, window = null) {
 }
 
 /**
+ * Sample positions for a search over all of an interval (preimages, fixed
+ * points, domains, images): those of samplePositions in the window, and past
+ * the window at an infinite end, points at doubling distances out to about
+ * 1e12 times the window, marked `far` (and `nearOpen`: their values approach
+ * the end, they do not reach it). `far` says at which infinite ends to go past
+ * the window ({ lo, hi }); where it is false the samples stop at the window.
+ * A part of the interval outside the window still gets a window's width of samples.
+ * @returns {{t: number, nearOpen: boolean, far?: boolean}[]} in increasing order
+ */
+export function searchPositions(I, n = 400, window = null, far = { lo: true, hi: true }) {
+    const w = window || [-10, 10];
+    const width = Math.max(1e-9, w[1] - w[0]);
+    const lo = isFinite(I.lo) ? I.lo : Math.min(w[0], isFinite(I.hi) ? I.hi - width : w[0]);
+    const hi = isFinite(I.hi) ? I.hi : Math.max(w[1], isFinite(I.lo) ? I.lo + width : w[1]);
+    // Where the window cuts an infinite end the sample is an ordinary point
+    const core = samplePositions({ lo, hi, loClosed: I.loClosed || !isFinite(I.lo), hiClosed: I.hiClosed || !isFinite(I.hi) }, n);
+    const reach = 1e12 * Math.max(width, Math.abs(lo), Math.abs(hi));
+    const beyond = (from, sign) => {
+        const out = [];
+        for (let k = 1; ; k++) {
+            const d = width * (Math.pow(2, k) - 1) / 2;
+            if (d > reach) break;
+            out.push({ t: from + sign * d, nearOpen: true, far: true });
+        }
+        return out;
+    };
+    const left = !isFinite(I.lo) && far.lo ? beyond(lo, -1).reverse() : [];
+    const right = !isFinite(I.hi) && far.hi ? beyond(hi, 1) : [];
+    return [...left, ...core, ...right];
+}
+
+/**
  * Image of a set of sampled values: the smallest and largest value, each
  * closed when it is reached at a point of the domain away from its open
  * boundary, open when it is only approached there. Assumes the function is
@@ -169,9 +201,13 @@ export function imageFromSamples(values, limits = []) {
     limits.forEach(l => {
         if (typeof l.v === 'number' && isFinite(l.v)) { lo = Math.min(lo, l.v); hi = Math.max(hi, l.v); }
     });
-    const tol = 1e-9 * Math.max(1, Math.abs(lo), Math.abs(hi)) + 1e-12;
+    // Tolerances from the bounded sides only: a huge sample on an unbounded
+    // side (e^x far out) must not make every value "reached"
+    const loB = unboundedBelow ? 0 : Math.abs(lo), hiB = unboundedAbove ? 0 : Math.abs(hi);
+    const span = unboundedBelow || unboundedAbove ? 0 : Math.abs(hi - lo);
+    const tol = 1e-9 * Math.max(1, loB, hiB) + 1e-12;
     // Reached at a sample that is not just next to an open boundary point
-    const reached = (target) => finite.some(s => !s.nearOpen && Math.abs(s.v - target) <= Math.max(tol, 1e-7 * Math.max(1, Math.abs(hi - lo))));
+    const reached = (target) => finite.some(s => !s.nearOpen && Math.abs(s.v - target) <= Math.max(tol, 1e-7 * Math.max(1, span)));
     return {
         lo: unboundedBelow ? -Infinity : lo,
         hi: unboundedAbove ? Infinity : hi,

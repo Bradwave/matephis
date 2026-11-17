@@ -831,3 +831,107 @@ describe('Nome e etichetta', () => {
         expect(map('w').name).toBe('\\lvert \\cdot \\rvert');
     });
 });
+
+describe('Domini illimitati: oltre la finestra', () => {
+    // A map from one set to another, both given as intervals, default windows
+    const on = (expr, from = 'R', to = 'R', extra = {}) => {
+        const r = model({ sets: [{ id: 'X', interval: from }, { id: 'Y', interval: to }], maps: [{ id: 'f', from: 'X', to: 'Y', expr, ...extra }] });
+        return { ...r, f: r.map('f') };
+    };
+    const img = (expr, from, to) => { const { m, f } = on(expr, from, to); return m.image(f).I; };
+    const close = (I, lo, hi, loClosed, hiClosed) => {
+        if (isFinite(lo)) expect(I.lo).toBeCloseTo(lo, 6); else expect(I.lo).toBe(lo);
+        if (isFinite(hi)) expect(I.hi).toBeCloseTo(hi, 6); else expect(I.hi).toBe(hi);
+        expect([I.loClosed, I.hiClosed]).toEqual([loClosed, hiClosed]);
+    };
+
+    it('immagine con i limiti agli estremi infiniti', () => {
+        close(img('x'), -Infinity, Infinity, false, false);
+        close(img('x^2', 'R', '[0, +inf)'), 0, Infinity, true, false);
+        close(img('e^x', 'R', '(0, +inf)'), 0, Infinity, false, false);
+        close(img('ln(x)', '(0, +inf)'), -Infinity, Infinity, false, false);
+        close(img('sqrt(x - 2) + 2'), 2, Infinity, true, false); // funzioni-reali, ultimo diagramma
+        close(img('atan(x)'), -Math.PI / 2, Math.PI / 2, false, false);
+        close(img('1/(1 + x^2)'), 0, 1, false, true);
+        close(img('x/(1 + x^2)'), -0.5, 0.5, true, true);
+        close(img('-(x - 20)^2'), -Infinity, 0, false, true); // massimo fuori dalla finestra
+        close(img('sin(x)'), -1, 1, true, true);
+        close(img('x sin(x)'), -Infinity, Infinity, false, false);
+        close(img('1/ln(x)', '(1, +inf)'), 0, Infinity, false, false);
+    });
+
+    it('immagine sulle parti del dominio, con i limiti dove finiscono', () => {
+        close(img('log(4 - x^2)'), -Infinity, Math.log(4), false, true);
+        close(img('sqrt(x - 7)'), 0, Infinity, true, false);
+    });
+
+    it('proprietà su ℝ', () => {
+        const id = on('x');
+        expect(id.m.properties(id.f)).toMatchObject({ surjective: true, injective: true });
+        const sq = on('x^2', 'R', '[0, +inf)');
+        expect(sq.m.properties(sq.f)).toMatchObject({ surjective: true, injective: false });
+        const ex = on('e^x', 'R', '(0, +inf)');
+        expect(ex.m.properties(ex.f)).toMatchObject({ surjective: true, injective: true });
+        // Not defined left of -7, out of the default window [-5, 5]
+        const sr = on('sqrt(x + 7)');
+        expect(sr.m.properties(sr.f).isFunction).toBe(false);
+    });
+
+    it('controimmagini oltre la finestra', () => {
+        const { m, f } = on('x^2');
+        const p = m.preimage(f, parseArgument('49'));
+        expect(p.kind).toBe('points');
+        expect(p.points[0]).toBeCloseTo(-7, 9);
+        expect(p.points[1]).toBeCloseTo(7, 9);
+        expect(p.inWindow).toBeUndefined();
+        const parts = m.preimage(f, parseArgument('[16, 36]')).parts;
+        expect(parts).toHaveLength(2);
+        close(parts[0], -6, -4, true, true);
+        close(parts[1], 4, 6, true, true);
+        const id = on('x');
+        close(id.m.preimage(id.f, parseArgument('(0, +inf)')).parts[0], 0, Infinity, false, false);
+    });
+
+    it('dove la funzione oscilla cerca nella finestra e lo dice', () => {
+        const { m, f } = on('sin(x)');
+        const p = m.preimage(f, parseArgument('1/2'));
+        expect(p.inWindow).toBe(true);
+        expect(p.points.every(t => t >= -5 && t <= 5)).toBe(true);
+        expect(p.points.length).toBe(3); // -7π/6, π/6, 5π/6
+        // A part that reaches the edge of the window ends there
+        const q = m.preimage(f, parseArgument('[-1, 1]'));
+        expect(q.inWindow).toBe(true);
+        close(q.parts[0], -5, 5, true, true);
+        expect(m.fixedPoints(on('2 sin(x)').f).inWindow).toBeUndefined(); // 2 sin(x) - x → ∓∞: no oscillation
+    });
+
+    it('punti fissi e dominio oltre la finestra', () => {
+        const { m, f } = on('x^2 - 42');
+        const fx = m.fixedPoints(f);
+        expect(fx.points).toHaveLength(2);
+        expect(fx.points[0]).toBeCloseTo(-6, 9);
+        expect(fx.points[1]).toBeCloseTo(7, 9);
+        const s = on('sqrt(x - 7)');
+        const dom = s.m.domainOf(s.f);
+        expect(dom).toHaveLength(1);
+        close(dom[0], 7, Infinity, true, false);
+        const l = on('ln(x)');
+        close(l.m.domainOf(l.f)[0], 0, Infinity, false, false);
+    });
+
+    it('limiti all\'infinito', () => {
+        const { m } = on('x');
+        const at = (fn, sign) => m._atInfinity(fn, sign);
+        expect(at(x => Math.exp(x), -1)).toEqual({ kind: 'limit', v: 0 });
+        expect(at(x => Math.exp(x), 1)).toEqual({ kind: 'infinite', v: Infinity });
+        expect(at(x => Math.log(x), 1)).toEqual({ kind: 'infinite', v: Infinity });
+        expect(at(x => Math.log(Math.log(x)), 1)).toEqual({ kind: 'infinite', v: Infinity });
+        expect(at(x => Math.sqrt(x), -1)).toEqual({ kind: 'undefined' });
+        expect(at(x => x / (x + 1), 1)).toEqual({ kind: 'limit', v: 1 });
+        expect(at(x => Math.sign(x), -1)).toEqual({ kind: 'limit', v: -1 });
+        expect(at(x => Math.sin(x), 1).kind).toBe('none');
+        expect(at(x => ((x % 2) + 2) % 2, 1).kind).toBe('none');
+        expect(at(x => Math.sin(x) / x, 1)).toEqual({ kind: 'limit', v: 0 });
+        expect(at(x => x * Math.sin(x), 1)).toMatchObject({ kind: 'none', above: true, below: true });
+    });
+});

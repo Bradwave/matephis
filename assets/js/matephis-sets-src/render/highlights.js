@@ -14,6 +14,10 @@ export { fnTeX };
 
 const f2 = (v) => +v.toFixed(2);
 
+/** After a result found only in the drawn window (the map oscillates out there). */
+const IN_WINDOW = '\\ \\text{(nella finestra)}';
+const windowNote = (res) => (res && res.inWindow ? IN_WINDOW : '');
+
 /** Draws one layer (it is visible). On a grid of pairs ("product"), results shade columns and rows. */
 export function drawLayer(scene, layer, { product = null } = {}) {
     const { model } = scene;
@@ -59,7 +63,7 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             else tex = fx.points.length === 0 ? '\\text{nessun punto fisso}'
                 : fx.points.length === 1 ? `${name} = ${niceNumber(fx.points[0])}` : `${name} \\in \\left\\{${fx.points.map(niceNumber).join(';\\ ')}\\right\\}`;
             if (map.from.kind === 'finite') tex = `${map.name}(a) = a:\\ a \\in ${tex}`;
-            return { tex, color };
+            return { tex: tex + windowNote(fx), color };
         } else if (op === 'domain') {
             // dom f: where the map has a value; its readout says it with ±∞
             const parts = model.domainOf(map);
@@ -68,7 +72,7 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.name)}`;
             drawResult(scene, res, color, name, layer.key);
             if (def.readout === false) return null;
-            return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}`, color };
+            return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}${windowNote(parts)}`, color };
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
         }
@@ -135,7 +139,7 @@ function readoutTeX(scene, op, map, arg, res, def) {
     const name = def.label !== undefined ? def.label
         : op === 'image' ? `${map.name}\\left(${arg ? argValueTeX(scene, arg) : setLabelText(model, map.from)}\\right)`
             : `${fnTeX(map.name)}^{-1}\\left(${argValueTeX(scene, arg)}\\right)`;
-    return `${name} = ${resultTeX(res)}`;
+    return `${name} = ${resultTeX(res)}${windowNote(res)}`;
 }
 
 /** A computed result as TeX: a set of elements or numbers, intervals, ∅. */
