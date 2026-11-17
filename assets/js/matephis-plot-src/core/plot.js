@@ -339,11 +339,18 @@ export class MatephisPlot {
 
     _initResizeObserver() {
         if (!window.ResizeObserver) return;
+        // Resize on the next frame, not inside the observer callback: the redraw
+        // changes layout, which would otherwise raise "ResizeObserver loop completed
+        // with undelivered notifications".
+        this._resizeFrame = 0;
         this.resizeObserver = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                const newW = Math.round(entry.contentRect.width);
+            const entry = entries[entries.length - 1];
+            const newW = Math.round(entry.contentRect.width);
+            if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame);
+            this._resizeFrame = requestAnimationFrame(() => {
+                this._resizeFrame = 0;
                 if (newW > 10 && Math.abs(newW - this.width) > 2) this.resize(newW);
-            }
+            });
         });
         this.resizeObserver.observe(this.wrapper);
     }
