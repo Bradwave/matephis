@@ -206,6 +206,16 @@ function tokenize(src) {
 // PARSER (Pratt / precedence climbing) -> AST
 // =========================================================================
 
+/**
+ * A juxtaposed name ("ax", "2aP.x") is parsed as one product node marked `jux`.
+ * A following ^, ! or ° must apply to its last factor only, the way "2x^2"
+ * (separate tokens) already does: ax^2 = a*(x^2), not (a*x)^2.
+ */
+function onLastFactor(node, apply) {
+    if (node && node.jux) return { k: 'bin', op: '*', a: node.a, b: onLastFactor(node.b, apply), jux: true };
+    return apply(node);
+}
+
 class Parser {
     constructor(tokens, scope, src) {
         this.tokens = tokens;
@@ -319,7 +329,8 @@ class Parser {
             this.next();
             // Right associative, exponent may carry its own sign: 2^-x, 2^x^2
             const exp = this.parseUnaryExponent();
-            return { k: 'pow', a: base, b: exp };
+            // "ax^2" = a*x^2: the power applies to the last factor only, as in "2x^2"
+            return onLastFactor(base, b => ({ k: 'pow', a: b, b: exp }));
         }
         return base;
     }
@@ -333,8 +344,9 @@ class Parser {
     parsePostfix() {
         let node = this.parsePrimary();
         while (this.isOp('!') || this.isOp('°')) {
-            if (this.next().v === '°') node = { k: 'bin', op: '*', a: node, b: { k: 'const', v: '(Math.PI/180)' } };
-            else node = { k: 'call', fn: 'factorial', args: [node] };
+            // "ax!" = a*x!, like "2x!": the postfix applies to the last factor only
+            if (this.next().v === '°') node = onLastFactor(node, b => ({ k: 'bin', op: '*', a: b, b: { k: 'const', v: '(Math.PI/180)' } }));
+            else node = onLastFactor(node, b => ({ k: 'call', fn: 'factorial', args: [b] }));
         }
         return node;
     }
@@ -351,7 +363,8 @@ class Parser {
             const node = this.parseTernary();
             this.absDepth = saved;
             this.expect(')');
-            return node;
+            // "(ax)^2" squares the whole product
+            return node.jux ? { ...node, jux: false } : node;
         }
 
         if (tok.t === 'op' && tok.v === '|') {
@@ -380,7 +393,7 @@ class Parser {
                 const prefix = owner ? name.slice(0, -owner.length) : '';
                 const parts = prefix ? (this.resolveAtom(prefix) ? [prefix] : this.splitName(prefix)) : null;
                 if (parts) {
-                    return { k: 'bin', op: '*', a: this.buildProduct(parts), b: { k: 'pt', name: owner, prop: tok.prop } };
+                    return { k: 'bin', op: '*', a: this.buildProduct(parts), b: { k: 'pt', name: owner, prop: tok.prop }, jux: true };
                 }
             }
             return { k: 'pt', name, prop: tok.prop };
@@ -427,6 +440,8 @@ class Parser {
             }
             node = node ? { k: 'bin', op: '*', a: node, b: factor } : factor;
         }
+        // Mark the product so that a following ^, ! or ° applies to its last factor
+        if (node && node.k === 'bin') node = { ...node, jux: true };
         return node;
     }
 
