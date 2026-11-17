@@ -159,6 +159,76 @@ describe('ExpressionParser: nomi accostati e potenze', () => {
     });
 });
 
+describe('ExpressionParser: scritture che prima cambiavano significato', () => {
+    it('|| dentro un valore assoluto sono due barre', () => {
+        const c = compiler();
+        expect(c.fn('|x||x|')(-3)).toBe(9);
+        expect(c.fn('|x-1||x+1|')(3)).toBe(8);
+        expect(c.fn('||x|-1|')(-0.5)).toBe(0.5);
+        expect(c.fn('||x|-1|')(-3)).toBe(2);
+        expect(c.fn('||x||+1')(-2)).toBe(3);
+        expect(c.fn('|x || 1|')(-2)).toBe(2); // |x|·|1|
+    });
+
+    it('|| fuori dalle barre resta l\'oppure', () => {
+        const c = compiler();
+        expect(c.fn('x < 0 || x > 1 ? 1 : 0')(-1)).toBe(1);
+        expect(c.fn('x < 0 || x > 1 ? 1 : 0')(0.5)).toBe(0);
+        expect(c.fn('|x| > 2 || x == 0 ? 1 : 0')(-3)).toBe(1);
+        expect(c.fn('|x| > 2 || x == 0 ? 1 : 0')(1)).toBe(0);
+        expect(c.fn('(|x| < 1 || |x| > 2) ? 1 : 0')(1.5)).toBe(0);
+    });
+
+    it('i confronti in catena si leggono come in matematica', () => {
+        const f = compiler().fn('0 < x < 1 ? 1 : 0');
+        expect(f(0.5)).toBe(1);
+        expect(f(2)).toBe(0);
+        expect(f(-1)).toBe(0);
+        const g = compiler().fn('-1 <= x < 0 ? 1 : 0');
+        expect(g(-1)).toBe(1);
+        expect(g(0)).toBe(0);
+        expect(compiler().fn('3 > x > 1 > 0 ? 1 : 0')(2)).toBe(1);
+        expect(compiler().fn('x < 0 ? -x : x^2')(-2)).toBe(2); // un confronto solo non cambia
+    });
+
+    it('mod tra due operandi', () => {
+        const c = compiler({ n: 3 });
+        expect(c.fn('x mod 2')(5)).toBe(1);
+        expect(c.fn('x mod 2')(-1)).toBe(1);
+        expect(c.fn('2x mod 3 + 1')(2)).toBe(2);
+        expect(c.fn('x mod n')(7)).toBe(1);
+        expect(c.fn('x mod(2)')(5)).toBe(1);
+        expect(c.fn('xmod2')(5)).toBe(1);
+        expect(c.fn('mod(x, 2)')(5)).toBe(1);
+        expect(c.fn('x mod(x, 4)')(6)).toBe(12); // chiamata con due argomenti: x·mod(x, 4)
+    });
+
+    it('sin 2x = sin(2x), come sin2x e sin(2x)', () => {
+        const c = compiler();
+        expect(c.fn('sin 2x')(0.3)).toBeCloseTo(Math.sin(0.6), 12);
+        expect(c.fn('sin 2x^2')(0.5)).toBeCloseTo(Math.sin(0.5), 12);
+        expect(c.fn('cos 2πx')(0.1)).toBeCloseTo(Math.cos(0.2 * Math.PI), 12);
+        expect(c.fn('sin2x')(0.3)).toBeCloseTo(Math.sin(0.6), 12);
+    });
+
+    it('una funzione senza parentesi si ferma alla funzione successiva', () => {
+        const c = compiler();
+        const sc = Math.sin(0.7) * Math.cos(0.7);
+        expect(c.fn('sinxcosx')(0.7)).toBeCloseTo(sc, 12);
+        expect(c.fn('sin x cos x')(0.7)).toBeCloseTo(sc, 12);
+        expect(c.fn('sin 2 cos x')(0.7)).toBeCloseTo(Math.sin(2) * Math.cos(0.7), 12);
+        expect(c.fn('sinsinx')(0.7)).toBeCloseTo(Math.sin(Math.sin(0.7)), 12);
+    });
+
+    it('una funzione senza parentesi non prende i nomi dopo una variabile', () => {
+        const c = compiler({ a: 2 });
+        expect(c.fn('sin x e^x')(0.5)).toBeCloseTo(Math.sin(0.5) * Math.exp(0.5), 12);
+        expect(c.fn('sin x a')(0.5)).toBeCloseTo(Math.sin(0.5) * 2, 12);
+        expect(c.fn('sin(2)x')(0.5)).toBeCloseTo(Math.sin(2) * 0.5, 12);
+        expect(c.fn('sin x^2')(1.5)).toBeCloseTo(Math.sin(2.25), 12);
+    });
+});
+
 describe('ExpressionParser: prefissi sui punti', () => {
     it('legge "iP.y" come i·P.y (numeri complessi scritti come P.x + iP.y)', () => {
         const c = new ExpressionCompiler({ getParams: () => ({}), getPoints: () => ({ P: { x: 2, y: 3 } }), pointNames: ['P'], complex: true });

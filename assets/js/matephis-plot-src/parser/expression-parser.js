@@ -261,8 +261,19 @@ class Parser {
 
     parseOr() {
         let node = this.parseAnd();
-        while (this.isOp('||')) { this.next(); node = { k: 'logic', op: '||', a: node, b: this.parseAnd() }; }
+        while (this.isOp('||')) {
+            // Inside |...| two bars close the absolute value: |x||x| = |x|·|x|, ||x|-1||
+            if (this.absDepth > 0) { this.splitBars(); break; }
+            this.next();
+            node = { k: 'logic', op: '||', a: node, b: this.parseAnd() };
+        }
         return node;
+    }
+
+    /** Replaces a "||" token with two "|" tokens. */
+    splitBars() {
+        const bar = { t: 'op', v: '|' };
+        this.tokens.splice(this.pos, 1, bar, { ...bar });
     }
 
     parseAnd() {
@@ -272,12 +283,17 @@ class Parser {
     }
 
     parseCompare() {
-        let node = this.parseAdd();
+        let left = this.parseAdd();
+        let node = null;
+        // A chain reads as in mathematics: 0 < x < 1 = (0 < x) && (x < 1)
         while (this.peek() && this.peek().t === 'op' && ['<', '>', '<=', '>=', '==', '!='].includes(this.peek().v)) {
             const op = this.next().v;
-            node = { k: 'cmp', op, a: node, b: this.parseAdd() };
+            const right = this.parseAdd();
+            const cmp = { k: 'cmp', op, a: left, b: right };
+            node = node ? { k: 'logic', op: '&&', a: node, b: cmp } : cmp;
+            left = right;
         }
-        return node;
+        return node || left;
     }
 
     parseAdd() {
@@ -306,6 +322,10 @@ class Parser {
             if (this.isOp('*') || this.isOp('/')) {
                 const op = this.next().v;
                 node = { k: 'bin', op, a: node, b: this.parseUnary() };
+            } else if (this.isInfixMod()) {
+                // "x mod 2" = mod(x, 2), with the precedence of * and /
+                this.next();
+                node = { k: 'call', fn: 'mod', args: [node, this.parseUnary()] };
             } else if (this.startsFactor()) {
                 // Implicit multiplication binds like explicit "*": 1/2x = (1/2)*x
                 node = { k: 'bin', op: '*', a: node, b: this.parsePow() };
@@ -314,6 +334,26 @@ class Parser {
             }
         }
         return node;
+    }
+
+    /**
+     * Is the current token "mod" used as an operator? It is unless it is a
+     * parameter or variable, or a call with two arguments: "x mod(2)" is an
+     * operator, "x mod(x, 2)" is x·mod(x, 2).
+     */
+    isInfixMod() {
+        const tok = this.peek();
+        if (!tok || tok.t !== 'id' || tok.v !== 'mod' || tok.prop !== undefined || this.resolveAtom('mod')) return false;
+        if (!this.isOp('(', this.tokens[this.pos + 1])) return true;
+        let depth = 0;
+        for (let j = this.pos + 1; j < this.tokens.length; j++) {
+            const t = this.tokens[j];
+            if (t.t !== 'op') continue;
+            if (t.v === '(') depth++;
+            else if (t.v === ')') { if (--depth === 0) return true; }
+            else if (t.v === ',' && depth === 1) return false;
+        }
+        return true;
     }
 
     parseUnary() {
@@ -367,6 +407,13 @@ class Parser {
             return node.jux ? { ...node, jux: false } : node;
         }
 
+        if (tok.t === 'op' && tok.v === '||') {
+            // "||x|-1|": two opening bars
+            this.pos--;
+            this.splitBars();
+            return this.parsePrimary();
+        }
+
         if (tok.t === 'op' && tok.v === '|') {
             this.absDepth++;
             const node = this.parseTernary();
@@ -405,9 +452,9 @@ class Parser {
         const atom = this.resolveAtom(name);
         if (atom) return atom;
 
-        // Function without parentheses: "sin x" -> sin(x)
+        // Function without parentheses: "sin x" -> sin(x), "sin 2x" -> sin(2x)
         if (scope.functions[name]) {
-            return { k: 'call', fn: name, args: [this.parsePow()] };
+            return { k: 'call', fn: name, args: [this.parseBareArgument()] };
         }
 
         // Juxtaposed names: "ax" -> a*x, "kx" -> k*x, "xy" -> x*y, "pix" -> pi*x, "2sinx" -> 2*sin(x)
@@ -415,6 +462,10 @@ class Parser {
         if (parts) return this.buildProduct(parts);
 
         throw new Error(`Unknown symbol '${name}' in "${this.src}"`);
+    }
+
+    isFunctionPart(part) {
+        return !!this.scope.functions[part] && !this.resolveAtom(part);
     }
 
     buildProduct(parts) {
@@ -425,15 +476,22 @@ class Parser {
             let factor;
             if (/^\d+$/.test(part)) {
                 factor = { k: 'num', v: parseFloat(part) };
+            } else if (part === 'mod' && node && p < parts.length - 1 && !this.resolveAtom(part)) {
+                // "xmod2" = mod(x, 2), like "x mod 2"
+                node = { k: 'call', fn: 'mod', args: [node, this.buildProduct(parts.slice(p + 1))] };
+                break;
             } else if (scope.functions[part] && !this.resolveAtom(part)) {
                 if (p < parts.length - 1) {
-                    // "sinx" -> sin(x): the function takes the rest of the name
-                    factor = { k: 'call', fn: part, args: [this.buildProduct(parts.slice(p + 1))] };
-                    p = parts.length;
+                    // "sinx" -> sin(x): the function takes the rest of the name, up to the
+                    // next function: "sinxcosx" -> sin(x)·cos(x)
+                    let end = p + 1;
+                    while (end < parts.length && !(this.isFunctionPart(parts[end]) && end > p + 1)) end++;
+                    factor = { k: 'call', fn: part, args: [this.buildProduct(parts.slice(p + 1, end))] };
+                    p = end - 1;
                 } else if (this.isOp('(')) {
                     factor = this.parseCall(part);
                 } else {
-                    factor = { k: 'call', fn: part, args: [this.parsePow()] };
+                    factor = { k: 'call', fn: part, args: [this.parseBareArgument()] };
                 }
             } else {
                 factor = this.resolveAtom(part);
@@ -443,6 +501,30 @@ class Parser {
         // Mark the product so that a following ^, ! or ° applies to its last factor
         if (node && node.k === 'bin') node = { ...node, jux: true };
         return node;
+    }
+
+    /**
+     * Argument of a function written without parentheses: a power, and if that
+     * is a plain number, the name written next to it: sin 2x = sin(2x), as
+     * sin2x already was. Otherwise the argument ends there, so sin x y = sin(x)·y,
+     * sin x cos x = sin(x)·cos(x), sin 2 cos x = sin(2)·cos(x).
+     */
+    parseBareArgument() {
+        const node = this.parsePow();
+        const tok = this.peek();
+        if (node.k === 'num' && tok && tok.t === 'id' && !this.startsWithFunction(tok)) {
+            return { k: 'bin', op: '*', a: node, b: this.parsePow() };
+        }
+        return node;
+    }
+
+    /** Does an identifier token name a function, or split into one first or later ("xsinx")? */
+    startsWithFunction(tok) {
+        const { scope } = this;
+        if (tok.prop !== undefined || this.resolveAtom(tok.v)) return false;
+        if (scope.functions[tok.v]) return true;
+        const parts = this.splitName(tok.v);
+        return !!parts && parts.some(p => scope.functions[p] && !this.resolveAtom(p));
     }
 
     parseCall(name) {
