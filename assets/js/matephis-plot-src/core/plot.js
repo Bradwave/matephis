@@ -27,6 +27,7 @@ import { PointerMixin } from '../interaction/pointer.js';
 import { ToolbarMixin } from '../ui/plot-toolbar.js';
 import { SliderManager } from '../ui/slider-manager.js';
 import { LightboxBridge } from '../ui/lightbox-bridge.js';
+import { WarningsMixin } from '../ui/warnings.js';
 
 let uidCounter = 0;
 
@@ -68,7 +69,7 @@ export class MatephisPlot {
         this.plotData = [];
         this.handles = [];
         this.derivativeTrace = [];
-        this.warnings = [];
+        this._initWarnings('Plot');
         this.view = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.interactions = { isDragging: false, draggingSelection: null, draggingHandle: null, currentSelection: null, slopeP1: null, slopeP2: null };
         this.selectionMode = null;
@@ -128,7 +129,8 @@ export class MatephisPlot {
             this.wrapper.appendChild(cap);
         }
 
-        this.warnings = validateConfig(cfg, this.palettes);
+        // Added to the warnings of the params (_initParams), not in their place
+        validateConfig(cfg, this.palettes).forEach(w => this._addWarning(w));
         this.draw();
         this._renderWarnings();
 
@@ -558,7 +560,12 @@ export class MatephisPlot {
         });
     }
 
+    /** Draws everything; warnings raised while drawing replace the previous draw's (ui/warnings.js). */
     draw() {
+        return this._drawingWarnings(() => this._drawNow());
+    }
+
+    _drawNow() {
         if (this._destroyed) return;
         [this.gridGroup, this.secondaryGridGroup, this.dataGroup, this.axesGroup, this.numbersGroup,
             this.labelGroup, this.legendGroup, this.bgGroup].forEach(g => { g.textContent = ""; });
@@ -589,7 +596,6 @@ export class MatephisPlot {
 
         // Redraws the derivative plot once, after selections updated its data
         if (this.derivativePlot) this._syncDerivativePlot();
-        if (this._warningsDirty) this._renderWarnings();
     }
 
     // =========================================================================
@@ -649,35 +655,9 @@ export class MatephisPlot {
     // WARNINGS
     // =========================================================================
 
-    _addWarning(msg) {
-        if (!this.warnings.includes(msg)) {
-            this.warnings.push(msg);
-            this._warningsDirty = true;
-        }
-    }
 
-    _renderWarnings() {
-        this._warningsDirty = false;
-        const old = this.wrapper.querySelector(".matephis-plot-warnings");
-        if (old) old.remove();
-        if (this.warnings.length === 0) return;
-
-        const div = document.createElement("div");
-        div.className = "matephis-plot-warnings";
-        const title = document.createElement("strong");
-        title.textContent = "⚠️ Plot Warnings:";
-        div.appendChild(title);
-        const ul = document.createElement("ul");
-        this.warnings.forEach(w => {
-            const li = document.createElement("li");
-            li.textContent = w;
-            ul.appendChild(li);
-        });
-        div.appendChild(ul);
-        this.wrapper.appendChild(div);
-    }
 }
 
-Object.assign(MatephisPlot.prototype, GridMixin, DataMixin, AreaMixin, SelectionMixin, PointerMixin, ToolbarMixin);
+Object.assign(MatephisPlot.prototype, GridMixin, DataMixin, AreaMixin, SelectionMixin, PointerMixin, ToolbarMixin, WarningsMixin);
 
 export default MatephisPlot;

@@ -14,6 +14,7 @@ import { createPalettes, cssLength, adaptColorForTheme } from '../../matephis-pl
 import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.js';
 import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
+import { WarningsMixin } from '../../matephis-plot-src/ui/warnings.js';
 import { toTeX, estimateTextSize } from '../../matephis-physics-src/core/labels.js';
 import { validateConfig } from './config.js';
 import { SetsModel } from './model.js';
@@ -66,7 +67,7 @@ export class MatephisSets {
         this.container.setAttribute('data-processed', 'true');
         this.uid = `mps${++uidCounter}`;
         this.params = {};
-        this.warnings = [];
+        this._initWarnings('Sets');
         this._listeners = [];
         const cfg = this.config;
 
@@ -531,7 +532,12 @@ export class MatephisSets {
         setTimeout(run, 120);
     }
 
+    /** Draws everything; warnings raised while drawing replace the previous draw's (ui/warnings.js). */
     draw() {
+        return this._drawingWarnings(() => this._drawNow());
+    }
+
+    _drawNow() {
         if (this._destroyed) return;
         const cfg = this.config;
         this.model.refresh();
@@ -602,7 +608,6 @@ export class MatephisSets {
         if (this.linked) this.linked.sync();
         this.interaction.bind();
         if (this.syncGroup) this.syncGroup.publish(this);
-        if (this._warningsDirty) this._renderWarnings();
     }
 
     /** Ids of sets with a map into themselves (drawn as arcs before the set) or an orbit. */
@@ -642,32 +647,9 @@ export class MatephisSets {
         this.container.innerHTML = '';
     }
 
-    _addWarning(msg) {
-        if (!this.warnings.includes(msg)) {
-            this.warnings.push(msg);
-            this._warningsDirty = true;
-        }
-    }
 
-    _renderWarnings() {
-        this._warningsDirty = false;
-        const old = this.wrapper.querySelector('.matephis-plot-warnings');
-        if (old) old.remove();
-        if (!this.warnings.length) return;
-        const div = document.createElement('div');
-        div.className = 'matephis-plot-warnings';
-        const title = document.createElement('strong');
-        title.textContent = '⚠️ Sets Warnings:';
-        div.appendChild(title);
-        const ul = document.createElement('ul');
-        this.warnings.forEach(w => {
-            const li = document.createElement('li');
-            li.textContent = w;
-            ul.appendChild(li);
-        });
-        div.appendChild(ul);
-        this.wrapper.appendChild(div);
-    }
 }
+
+Object.assign(MatephisSets.prototype, WarningsMixin);
 
 export default MatephisSets;

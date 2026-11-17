@@ -18,6 +18,7 @@ import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.
 import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 import { LightboxBridge } from '../../matephis-plot-src/ui/lightbox-bridge.js';
+import { WarningsMixin } from '../../matephis-plot-src/ui/warnings.js';
 import { validateConfig, defaultLimits, DEFAULT_ASPECT_RATIO, DEFAULT_G } from './config.js';
 import { formatAngle } from './angles.js';
 import { fitView, gridValues } from './world.js';
@@ -65,7 +66,7 @@ export class MatephisPhysics {
         const cfg = this.config;
         this.angleUnit = cfg.angleUnit === 'rad' ? 'rad' : 'deg';
         this.params = {};
-        this.warnings = [];
+        this._initWarnings('Physics');
         expandWarnings.forEach(w => this._addWarning(w));
         // Views (projections of the same scene) and reference frames (views.js)
         this.frameDefs = parseFrames(this.config, (m) => this._addWarning(m));
@@ -622,7 +623,12 @@ export class MatephisPhysics {
         });
     }
 
+    /** Draws everything; warnings raised while drawing replace the previous draw's (ui/warnings.js). */
     draw() {
+        return this._drawingWarnings(() => this._drawNow());
+    }
+
+    _drawNow() {
         if (this._destroyed) return;
         if (!this.viewports) {
             this._drawView(true);
@@ -673,8 +679,6 @@ export class MatephisPhysics {
         if (this.graphs) this.graphs.update();
         if (this.controls) this.controls.update();
         if (this.config.debug && !this._viewT) this._drawDebug(cs);
-
-        if (this._warningsDirty) this._renderWarnings();
     }
 
     _drawGrid(cs) {
@@ -1271,33 +1275,9 @@ export class MatephisPhysics {
         this.container.innerHTML = "";
     }
 
-    _addWarning(msg) {
-        if (!this.warnings.includes(msg)) {
-            this.warnings.push(msg);
-            this._warningsDirty = true;
-        }
-    }
 
-    _renderWarnings() {
-        this._warningsDirty = false;
-        const old = this.wrapper.querySelector(".matephis-plot-warnings");
-        if (old) old.remove();
-        if (this.warnings.length === 0) return;
-
-        const div = document.createElement("div");
-        div.className = "matephis-plot-warnings";
-        const title = document.createElement("strong");
-        title.textContent = "⚠️ Physics Warnings:";
-        div.appendChild(title);
-        const ul = document.createElement("ul");
-        this.warnings.forEach(w => {
-            const li = document.createElement("li");
-            li.textContent = w;
-            ul.appendChild(li);
-        });
-        div.appendChild(ul);
-        this.wrapper.appendChild(div);
-    }
 }
+
+Object.assign(MatephisPhysics.prototype, WarningsMixin);
 
 export default MatephisPhysics;
