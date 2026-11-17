@@ -106,7 +106,7 @@ Gli argomenti possono contenere parametri: `preimage(f, k)`, `image(f, [a, b])`,
 
 ### Domini continui
 
-L'immagine di un intervallo è calcolata campionando la funzione, che si suppone continua su ogni tratto: un estremo dell'immagine è incluso se viene raggiunto, escluso se viene solo avvicinato (verso un estremo aperto del dominio o di un tratto). L'immagine di una funzione a tratti può essere un'unione di intervalli.
+L'immagine di un intervallo è calcolata campionando la funzione: un estremo dell'immagine è incluso se viene raggiunto, escluso se viene solo avvicinato (verso un estremo aperto del dominio o di un tratto). I salti della formula sono cercati e il dominio è diviso lì ($\lfloor x \rfloor$ su $[0, 3]$ ha immagine $\{0;\ 1;\ 2;\ 3\}$; $\tan x$ su $[0, 3]$ non è definita in $\tfrac{\pi}{2}$), quindi l'immagine di una funzione a tratti o con salti può essere un'unione di intervalli o un insieme di valori.
 
 Su un intervallo illimitato i calcoli non si fermano alla finestra disegnata: verso un estremo infinito l'immagine segue il limite della funzione ($e^x$ su $\mathbb{R}$ ha immagine $(0, +\infty)$, $\sqrt{x - 2} + 2$ ha immagine $[2, +\infty)$), e controimmagini, punti fissi e dominio sono cercati anche oltre la finestra ($x^2 = 49$ dà $\pm 7$ con la finestra $[-5, 5]$). Dove la funzione oscilla senza limite ($\sin x$) la ricerca resta nella finestra e la riga sotto il diagramma lo dice: «(nella finestra)». Le proprietà sono quindi **verifiche numeriche**, segnalate come tali nel riquadro; con `claims` si dichiarano:
 

@@ -5,7 +5,7 @@
  */
 import { roundedHullPath, convexHull, insideHull } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
-import { parseInterval, evalInterval, intervalTeX, niceNumber } from '../core/interval.js';
+import { parseInterval, evalInterval, intervalTeX, niceNumber, unionTeX } from '../core/interval.js';
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
 import { arrow, linkArrow, fnTeX } from './arrows.js';
@@ -72,7 +72,7 @@ export function drawLayer(scene, layer, { product = null } = {}) {
             const name = def.label !== undefined ? def.label : `\\mathrm{dom}\\, ${fnTeX(map.name)}`;
             drawResult(scene, res, color, name, layer.key);
             if (def.readout === false) return null;
-            return { tex: `${name} = ${parts.length ? parts.map(intervalTeX).join(' \\cup ') : '\\emptyset'}${windowNote(parts)}`, color };
+            return { tex: `${name} = ${parts.length ? unionTeX(parts) : '\\emptyset'}${windowNote(parts)}`, color };
         } else if (op === 'collisions') {
             drawCollisions(scene, map, scene.color(def.color, 'collisions'), def.label);
         }
@@ -148,7 +148,7 @@ export function resultTeX(res) {
     if (res.kind === 'elements') return `\\left\\{${res.ids.map(id => (res.set.elementById.get(id) || { label: id }).label).join(',\\,')}\\right\\}`;
     if (res.kind === 'points') return `\\left\\{${res.points.map(p => (Array.isArray(p) ? `(${p.map(niceNumber).join(';\\,')})` : niceNumber(p))).join(';\\ ')}\\right\\}`;
     if (res.kind === 'interval') return intervalTeX(res.I);
-    if (res.kind === 'intervals') return res.parts.map(intervalTeX).join(' \\cup ');
+    if (res.kind === 'intervals') return unionTeX(res.parts);
     return '\\ldots';
 }
 
@@ -191,7 +191,8 @@ function imageLabel(scene, map, arg, res) {
     const of = arg ? argTeX(arg, scene.model) : setLabelText(scene.model, map.from);
     let s = `${map.name}\\left(${of}\\right)`;
     if (res && res.kind === 'interval' && !res.given) s += ` = ${intervalTeX(res.I)}`;
-    if (res && res.kind === 'intervals' && res.parts.length <= 3) s += ` = ${res.parts.map(intervalTeX).join(' \\cup ')}`;
+    // A few intervals, or a few values (floor(x) on [0, 3]: {0; 1; 2; 3})
+    if (res && res.kind === 'intervals' && (res.parts.length <= 3 || (res.parts.length <= 6 && res.parts.every(P => P.lo === P.hi)))) s += ` = ${unionTeX(res.parts)}`;
     return s;
 }
 
