@@ -966,7 +966,15 @@ export class SetsModel {
         } else {
             exact = this._raw1(map, t);
         }
-        return isFinite(exact) && Math.abs(exact - v2) < 1e-5 * Math.max(1, Math.abs(exact)) ? exact : v2;
+        // The value at t is the limit when it continues the trend of the last
+        // samples (√(1 - x) at 1 moves by 3·10⁻⁵ over the last 10⁻⁹)
+        if (isFinite(exact) && Math.abs(exact - v2) <= Math.max(1e-5 * Math.max(1, Math.abs(exact)), 2 * Math.abs(v1 - v2))) return exact;
+        // Otherwise (a jump at t: x < 1 ? x : x + 1 at 1) the samples extended
+        // to t, exact for a straight line, and snapped to a round value
+        let L = v2 - (v1 - v2) * 1e-9 / (1e-7 - 1e-9);
+        if (!isFinite(L) || !isFinite(v1)) L = v2;
+        const r = Math.round(L * 1e6) / 1e6;
+        return Math.abs(L - r) < 1e-9 * Math.max(1, Math.abs(L)) ? r : L;
     }
 
     /**
@@ -1076,6 +1084,89 @@ export class SetsModel {
      * applies, there is no part). Each part is an interval with `piece`.
      */
     _segments(map, I) {
+        const parts = this._pieceSegments(map, I);
+        if (map.from.kind !== 'interval' || this.dim(map.to) !== 1) return parts;
+        const key = `segj|${map.id}|${I.lo}|${I.hi}|${I.loClosed}|${I.hiClosed}`;
+        if (this._cache.has(key)) return this._cache.get(key);
+        const out = [].concat(...parts.map(S => this._splitAtJumps(map, S)));
+        this._cache.set(key, out);
+        return out;
+    }
+
+    /**
+     * A part of the domain cut where the formula jumps (floor(x) at 1) or has a
+     * pole (tan(x) at π/2), so that each part is continuous, as images and
+     * properties assume. At a jump the point goes with the side its value
+     * belongs to; a pole belongs to no part (the map has no value there).
+     */
+    _splitAtJumps(map, S) {
+        const cuts = this._jumps(map, S);
+        if (!cuts.length) return [S];
+        const out = [];
+        const add = (P) => { if (!isEmpty(P)) out.push(S.piece === undefined ? P : { ...P, piece: S.piece }); };
+        const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+        let lo = S.lo, loClosed = S.loClosed;
+        cuts.forEach(c => {
+            const v = this._raw1(map, c);
+            // One-sided limits; at an end of S only the side inside S
+            const left = c > S.lo ? this._limitAt(map, c, -1) : NaN;
+            const right = c < S.hi ? this._limitAt(map, c, 1) : NaN;
+            const pole = (c > S.lo && !isFinite(left)) || (c < S.hi && !isFinite(right));
+            const inS = contains(S, c) && isFinite(v) && !pole;
+            // The value at c continues the right side, the left side, or stands alone (sign(0) = 0)
+            const withRight = inS && c < S.hi && near(v, right);
+            const withLeft = inS && !withRight && c > S.lo && near(v, left);
+            if (c > S.lo) add(interval(lo, c, loClosed, withLeft));
+            if (inS && !withLeft && !withRight) add(interval(c, c));
+            lo = c;
+            loClosed = withRight;
+        });
+        if (lo < S.hi) add(interval(lo, S.hi, loClosed, S.hiClosed));
+        return out;
+    }
+
+    /**
+     * Where a map jumps inside S: a sample step much larger than its
+     * neighbours, followed by bisection into the half that changes more. A
+     * continuous function (even a steep one, atan(1000x)) shrinks to nothing;
+     * a jump or a pole keeps its size. Only in the window of an unbounded S.
+     */
+    _jumps(map, S) {
+        if (isPoint(S)) return [];
+        const f = (t) => this._raw1(map, t);
+        const ts = searchPositions(S, SAMPLES_1D, map.from.window, { lo: false, hi: false }).map(p => p.t);
+        const vs = ts.map(f);
+        const step = (i) => (i >= 0 && i + 1 < vs.length ? vs[i + 1] - vs[i] : NaN);
+        const size = (x) => (isFinite(x) ? Math.abs(x) : 0);
+        const out = [];
+        for (let i = 0; i + 1 < ts.length; i++) {
+            const d = step(i);
+            if (!isFinite(d)) continue;
+            // Much larger than the smaller neighbouring step (two big steps side
+            // by side, as sign(x) sampled at 0, still count); bisection decides
+            if (!(Math.abs(d) > 2 * Math.min(size(step(i - 1)), size(step(i + 1))))) continue;
+            if (Math.abs(d) <= 1e-9 * Math.max(1, Math.abs(vs[i]), Math.abs(vs[i + 1]))) continue;
+            let a = ts[i], b = ts[i + 1], fa = vs[i], fb = vs[i + 1];
+            for (let k = 0; k < 64 && b - a > 1e-15 * Math.max(1, Math.abs(a)); k++) {
+                const m = (a + b) / 2, fm = f(m);
+                if (!isFinite(fm)) break;
+                if (Math.abs(fm - fa) > Math.abs(fb - fm)) { b = m; fb = fm; } else { a = m; fa = fm; }
+            }
+            if (!(Math.abs(fb - fa) > 1e-7 * Math.max(1, Math.abs(fa), Math.abs(fb)))) continue;
+            let c = (a + b) / 2;
+            const r = Math.round(c * 1e6) / 1e6;
+            if (Math.abs(c - r) < 1e-9 * Math.max(1, Math.abs(c))) c = r;
+            if (c === 0) c = 0; // not -0
+            // A jump at a closed end leaves the end value on its own (floor(x) on [0, 3] at 3)
+            [S.lo, S.hi].forEach(e => { if (isFinite(e) && Math.abs(c - e) < 1e-9 * Math.max(1, Math.abs(e))) c = e; });
+            const atEnd = (c === S.lo && S.loClosed) || (c === S.hi && S.hiClosed);
+            if ((atEnd || (c > S.lo && c < S.hi)) && !out.some(x => Math.abs(x - c) < 1e-9 * Math.max(1, Math.abs(c)))) out.push(c);
+        }
+        return out.sort((x, y) => x - y);
+    }
+
+    /** Parts of I where a piecewise map is given by one piece (the whole I otherwise). */
+    _pieceSegments(map, I) {
         if (map.kind !== 'piecewise' || map.from.kind !== 'interval') return isEmpty(I) ? [] : [I];
         const key = `seg|${map.id}|${I.lo}|${I.hi}|${I.loClosed}|${I.hiClosed}`;
         if (this._cache.has(key)) return this._cache.get(key);

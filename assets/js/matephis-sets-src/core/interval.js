@@ -100,6 +100,13 @@ export function niceNumber(v) {
     if (typeof v !== 'number' || isNaN(v)) return '?';
     const sign = v < 0 ? '-' : '';
     const a = Math.abs(v);
+    // Large values in scientific notation, never as fractions of 16 digits
+    // (whole numbers below a billion stay as they are)
+    if (a >= 1e6 && isFinite(a) && !(a < 1e9 && a === Math.round(a))) {
+        const e = Math.floor(Math.log10(a));
+        const m = +(a / Math.pow(10, e)).toFixed(2);
+        return `${sign}${String(m).replace('.', '{,}')} \\cdot 10^{${e}}`;
+    }
     if (Math.abs(a - Math.round(a)) < 1e-9) return `${sign}${Math.round(a)}`;
     for (let d = 2; d <= 12; d++) {
         const n = a * d;
@@ -123,6 +130,12 @@ export function intervalTeX(I) {
     const lo = niceNumber(I.lo), hi = niceNumber(I.hi);
     const sep = lo.includes('{,}') || hi.includes('{,}') ? ';\\,' : ',\\,';
     return `\\left${I.loClosed ? '[' : '('}${lo}${sep}${hi}\\right${I.hiClosed ? ']' : ')'}`;
+}
+
+/** TeX of a union of intervals: "{0; 1; 2; 3}" when they are all single points, "[0, 1) ∪ [2, 3]" otherwise. */
+export function unionTeX(parts) {
+    if (parts.length > 1 && parts.every(isPoint)) return `\\left\\{${parts.map(P => niceNumber(P.lo)).join(';\\ ')}\\right\\}`;
+    return parts.map(intervalTeX).join(' \\cup ');
 }
 
 /**
@@ -208,6 +221,8 @@ export function imageFromSamples(values, limits = []) {
     const tol = 1e-9 * Math.max(1, loB, hiB) + 1e-12;
     // Reached at a sample that is not just next to an open boundary point
     const reached = (target) => finite.some(s => !s.nearOpen && Math.abs(s.v - target) <= Math.max(tol, 1e-7 * Math.max(1, span)));
+    // A constant computed with rounding noise (sin²x + cos²x) is one value
+    if (!unboundedBelow && !unboundedAbove && hi - lo <= tol && reached(lo)) return { lo, hi: lo, loClosed: true, hiClosed: true };
     return {
         lo: unboundedBelow ? -Infinity : lo,
         hi: unboundedAbove ? Infinity : hi,
@@ -223,15 +238,12 @@ export function imageFromSamples(values, limits = []) {
 export function strictlyMonotone(vs) {
     const f = vs.filter(v => typeof v === 'number' && isFinite(v));
     if (f.length < 2) return true;
-    let sign = 0;
-    for (let i = 1; i < f.length; i++) {
-        const d = f[i] - f[i - 1];
-        const scale = 1e-12 * Math.max(1, Math.abs(f[i]));
-        if (Math.abs(d) <= scale) return false;
-        const s = Math.sign(d);
-        if (sign === 0) sign = s;
-        else if (s !== sign) return false;
-    }
+    // Every step strictly the same way, however small: x^7 near 0 moves by
+    // 1e-17 per sample and is still increasing. A flat part stands still or,
+    // with rounding noise, goes both ways, and fails.
+    const sign = Math.sign(f[1] - f[0]);
+    if (sign === 0) return false;
+    for (let i = 2; i < f.length; i++) if (Math.sign(f[i] - f[i - 1]) !== sign) return false;
     return true;
 }
 

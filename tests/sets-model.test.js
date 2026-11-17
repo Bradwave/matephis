@@ -3,7 +3,7 @@ import { ExpressionCompiler } from '../assets/js/matephis-plot-src/parser/expres
 import { SetsModel, intersect, substituteX } from '../assets/js/matephis-sets-src/core/model.js';
 import {
     parseInterval, evalInterval, intervalTeX, niceNumber, isSubset, sameInterval, contains,
-    imageFromSamples, strictlyMonotone,
+    imageFromSamples, strictlyMonotone, unionTeX,
 } from '../assets/js/matephis-sets-src/core/interval.js';
 import { parseSelector, parseArgument, matchesTarget } from '../assets/js/matephis-sets-src/core/selectors.js';
 
@@ -933,5 +933,72 @@ describe('Domini illimitati: oltre la finestra', () => {
         expect(at(x => ((x % 2) + 2) % 2, 1).kind).toBe('none');
         expect(at(x => Math.sin(x) / x, 1)).toEqual({ kind: 'limit', v: 0 });
         expect(at(x => x * Math.sin(x), 1)).toMatchObject({ kind: 'none', above: true, below: true });
+    });
+});
+
+describe('Proprietà che non possono essere false', () => {
+    const on = (expr, from, to) => {
+        const r = model({ sets: [{ id: 'X', interval: from }, { id: 'Y', interval: to }], maps: [{ id: 'f', from: 'X', to: 'Y', expr }] });
+        const f = r.map('f');
+        const img = r.m.image(f);
+        return { ...r, f, img, parts: img.kind === 'interval' ? [img.I] : img.parts, props: r.m.properties(f) };
+    };
+    const points = (parts) => parts.every(P => P.lo === P.hi && P.loClosed && P.hiClosed) && parts.map(P => P.lo);
+
+    it('potenze dispari piatte vicino a 0 sono iniettive', () => {
+        expect(on('x^7', '[-1, 1]', '[-1, 1]').props).toMatchObject({ injective: true, surjective: true });
+        expect(on('x^5', '[-1/2, 1/2]', '[-1/2, 1/2]').props.injective).toBe(true);
+        expect(on('x^3', '[-1, 1]', '[-1, 1]').props.injective).toBe(true);
+        // A constant, even with rounding noise, is not
+        expect(on('sin(x)^2 + cos(x)^2', '[0, 1]', '[0, 2]').props.injective).toBe(false);
+        expect(strictlyMonotone([0, 1e-17, 2e-17, 1])).toBe(true);
+        expect(strictlyMonotone([1, 1 + 2e-16, 1, 1 + 2e-16])).toBe(false);
+        expect(strictlyMonotone([2, 2])).toBe(false);
+    });
+
+    it('un salto divide l\'immagine: floor, sign, a tratti con un if', () => {
+        const fl = on('floor(x)', '[0, 3]', '[0, 3]');
+        expect(points(fl.parts)).toEqual([0, 1, 2, 3]);
+        expect(fl.props).toMatchObject({ isFunction: true, injective: false, surjective: false });
+        const sg = on('sign(x)', '[-1, 1]', '[-1, 1]');
+        expect(points(sg.parts)).toEqual([-1, 0, 1]);
+        expect(sg.props.surjective).toBe(false);
+        const jump = on('x < 1 ? x : x + 1', '[0, 2]', '[0, 3]');
+        expect(jump.parts.map(P => [P.lo, P.hi, P.loClosed, P.hiClosed])).toEqual([[0, 1, true, false], [2, 3, true, true]]);
+        expect(jump.props).toMatchObject({ injective: true, surjective: false });
+    });
+
+    it('un polo non è un valore: tan su [0, 3]', () => {
+        const t = on('tan(x)', '[0, 3]', 'R');
+        expect(t.parts).toHaveLength(2);
+        expect(t.parts[0].lo).toBe(-Infinity);
+        expect(t.parts[0].hi).toBeCloseTo(Math.tan(3), 9);
+        expect([t.parts[1].lo, t.parts[1].hi, t.parts[1].loClosed]).toEqual([0, Infinity, true]);
+        expect(t.props.isFunction).toBe(false);
+    });
+
+    it('limiti agli estremi aperti: salti e radici', () => {
+        // √(1 - x) at 1 moves faster than 10⁻⁵ over the last sample: its limit is still 0
+        const r = on('sqrt(1 - x)', '[0, 1)', '[0, 1]').parts[0];
+        expect([r.lo, r.hi, r.loClosed, r.hiClosed]).toEqual([0, 1, false, true]);
+        // At a jump the limit from the left is the round value 3, not 2,999999997 ({0} ∪ [0, 3) = [0, 3))
+        expect(on('x < 1 ? 3x : 0', '[0, 2]', 'R').parts.map(P => [P.lo, P.hi, P.hiClosed])).toEqual([[0, 3, false]]);
+    });
+
+    it('le funzioni continue ripide non hanno salti', () => {
+        const a = on('atan(1000x)', '[-1, 1]', 'R');
+        expect(a.parts).toHaveLength(1);
+        expect(a.parts[0].hi).toBeCloseTo(Math.atan(1000), 9);
+        expect(on('x^2', '[-1, 1]', '[0, 1]').props.surjective).toBe(true);
+        expect(on('1/(x - 5)', '[0, 4]', 'R').parts).toHaveLength(1);
+    });
+
+    it('numeri grandi e unioni di punti', () => {
+        expect(niceNumber(1.6331239353195370e16)).toBe('1{,}63 \\cdot 10^{16}');
+        expect(niceNumber(-2.5e10)).toBe('-2{,}5 \\cdot 10^{10}');
+        expect(niceNumber(1000000)).toBe('1000000');
+        expect(niceNumber(1234567.5)).toBe('1{,}23 \\cdot 10^{6}');
+        expect(unionTeX([I('[0, 0]'), I('[1, 1]'), I('[2, 2]')])).toBe('\\left\\{0;\\ 1;\\ 2\\right\\}');
+        expect(unionTeX([I('[0, 1)'), I('[2, 3]')])).toBe('\\left[0,\\,1\\right) \\cup \\left[2,\\,3\\right]');
     });
 });
