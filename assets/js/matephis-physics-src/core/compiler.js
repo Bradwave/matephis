@@ -9,6 +9,10 @@
  *     resolver stores their values under the same name (see aliasId).
  */
 import { ExpressionCompiler } from '../../matephis-plot-src/parser/expression-parser.js';
+import { matchesNotAfter, replaceNotAfter } from '../../matephis-plot-src/parser/not-after.js';
+
+/** What may not come just before an id in an expression (no lookbehind: see not-after.js). */
+const ID_BEFORE = /[A-Za-z0-9_.]/;
 
 /** Kinematic properties, computed from positions over time. */
 export const KIN_PROPS = ['vx', 'vy', 'speed', 'ax', 'ay', 'acc'];
@@ -32,12 +36,12 @@ export class PhysicsCompiler extends ExpressionCompiler {
     setIds(ids) {
         const dotted = ids.filter(id => id.includes('.')).sort((a, b) => b.length - a.length);
         ids.forEach(id => this.pointNames.add(aliasId(id)));
-        this._dotted = dotted.length ? new RegExp(`(?<![A-Za-z0-9_.])(${dotted.map(escape).join('|')})(?=\\.[A-Za-z])`, 'g') : null;
+        this._dotted = dotted.length ? new RegExp(`(${dotted.map(escape).join('|')})(?=\\.[A-Za-z])`, 'g') : null;
         this.cache.clear();
     }
 
     rewrite(src) {
-        return this._dotted ? String(src).replace(this._dotted, (m) => aliasId(m)) : src;
+        return this._dotted ? replaceNotAfter(String(src), this._dotted, ID_BEFORE, (m) => aliasId(m)) : src;
     }
 
     fn(src, vars, opts) {
@@ -52,9 +56,6 @@ export class PhysicsCompiler extends ExpressionCompiler {
 export function kinematicIds(cfg, ids) {
     if (!ids.length) return [];
     const text = JSON.stringify(cfg);
-    const re = new RegExp(`(?<![A-Za-z0-9_.])(${[...ids].sort((a, b) => b.length - a.length).map(escape).join('|')})\\.(${KIN_PROPS.join('|')})\\b`, 'g');
-    const out = new Set();
-    let m;
-    while ((m = re.exec(text)) !== null) out.add(m[1]);
-    return [...out];
+    const re = new RegExp(`(${[...ids].sort((a, b) => b.length - a.length).map(escape).join('|')})\\.(${KIN_PROPS.join('|')})\\b`, 'g');
+    return [...new Set(matchesNotAfter(text, re, ID_BEFORE).map(m => m[1]))];
 }

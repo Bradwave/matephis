@@ -16,6 +16,7 @@
  *  - point properties A.x, A.y, A.r, A.theta (and A.rad, A.deg for angles)
  *  - degrees: postfix ° (30° = 30·π/180), deg(x) radians -> degrees, rad(x) degrees -> radians
  */
+import { replaceNotAfter } from './not-after.js';
 
 // =========================================================================
 // COMPLEX RUNTIME
@@ -788,8 +789,9 @@ export function substituteLabel(str, resolvedPoints = {}) {
         .join('|');
     // Longest names first, so "BA.x" is not read as B + "A.x"; a letter prefix is
     // allowed on purpose ("iP.y" -> "i2", for complex numbers written as P.x + iP.y)
-    const re = new RegExp(`(?<![0-9_.])(${esc})\\.(theta|rad|deg|len|x|y|r)(?![A-Za-z0-9_])`, 'g');
-    return str.replace(re, (m, name, prop) => {
+    // Not after a digit, "_" or "." (no lookbehind: see not-after.js)
+    const re = new RegExp(`(${esc})\\.(theta|rad|deg|len|x|y|r)(?![A-Za-z0-9_])`, 'g');
+    return replaceNotAfter(str, re, /[0-9_.]/, (m, name, prop) => {
         const v = Runtime.pt(resolvedPoints, name, prop);
         return v === undefined || Number.isNaN(v) ? m : formatNumber(v);
     });
