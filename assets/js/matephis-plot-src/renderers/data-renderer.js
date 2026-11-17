@@ -11,6 +11,8 @@ import { sampleImplicit } from './implicit-sampler.js';
 import { hasMathJax } from './mathjax-bridge.js';
 
 const TAU = 2 * Math.PI;
+/** Largest pixel coordinate worth drawing (WebKit's boxes top out near 2^25). */
+const MAX_PX = 1e6;
 const POLAR_VARS = ['x', 't', 'θ', 'theta'];
 
 /** "4,4", [4, 4] or 4 -> SVG dasharray string. */
@@ -628,6 +630,9 @@ export const DataMixin = {
         const pfx = cs.mapX(fx), pfy = cs.mapY(fy), ptx = cs.mapX(tx), pty = cs.mapY(ty);
         const dx = ptx - pfx, dy = pty - pfy;
         const len = Math.hypot(dx, dy);
+        // Ends absurdly far from the view (a vector parked at 1e9 to hide it): skip it.
+        // Safari loses the whole clip-path of dataGroup when a child's box is that large.
+        if (![pfx, pfy, ptx, pty].every(v => Math.abs(v) <= MAX_PX)) return null;
 
         // One group, so opacity applies once to line + head (no darker overlap)
         const g = document.createElementNS(SVG_NS, 'g');
