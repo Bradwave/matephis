@@ -338,7 +338,7 @@ Nella simulazione l'area tratteggiata nel grafico forza-tempo è l'impulso fino 
   "ylim": [0, 1.3],
   "aspectRatio": "4:1",
   "params": {
-    "m": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m"},
+    "m": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m", "slider": false},
     "F": {"val": 0.4, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "N", "label": "F"},
     "T": {"val": 1.5, "min": 0.25, "max": 3, "step": 0.25, "unit": "s", "label": "Δt (durata della spinta)"},
     "v0": {"val": 0.2, "min": -0.3, "max": 0.5, "step": 0.05, "unit": "m/s", "label": "v iniziale"}
@@ -394,7 +394,7 @@ Nella simulazione l'area tratteggiata nel grafico forza-tempo è l'impulso fino 
 }
 ```
 
-Prova con una forza opposta alla velocità iniziale: l'impulso è negativo e il carrello rallenta. Con quale combinazione di $F$ e $\Delta t$ il carrello si ferma esattamente?
+Prova con una forza opposta alla velocità iniziale: l'impulso è negativo e il carrello rallenta. La massa del carrello è $0{,}50 \text{ kg}$: con quale combinazione di $F$ e $\Delta t$ il carrello si ferma esattamente?
 
 ### Forza variabile
 
@@ -413,7 +413,7 @@ Nella simulazione un carrello urta un respingente a molla; i due grafici sono qu
   "aspectRatio": "4:1",
   "params": {
     "m": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m"},
-    "v0": {"val": 0.6, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v iniziale"},
+    "v0": {"val": 0.6, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v iniziale", "slider": false},
     "k": {"val": 60, "min": 20, "max": 600, "step": 10, "unit": "N/m", "label": "rigidità del respingente", "slider": false}
   },
   "state": {"x": 3.5, "v": "v0", "J": 0},
@@ -505,7 +505,7 @@ Un carrello va a sbattere contro un respingente a molla fissato a una parete. Il
   "aspectRatio": "4:1",
   "params": {
     "k": {"val": 60, "min": 20, "max": 1000, "step": 10, "unit": "N/m", "label": "rigidità del respingente"},
-    "v0": {"val": 0.6, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v iniziale"}
+    "v0": {"val": 0.6, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v iniziale", "slider": false}
   },
   "state": {"x": 1.5, "v": "v0"},
   "ode": {"x": "v", "v": "-k*max(0, x - 3.75)/0.5"},
@@ -744,8 +744,8 @@ Il centro di massa di un sistema isolato si muove di moto rettilineo uniforme, q
   "params": {
     "m1": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m_A"},
     "m2": {"val": 1.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m_B"},
-    "u1": {"val": 0.7, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
-    "u2": {"val": -0.1, "min": -0.8, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
+    "u1": {"val": 0.7, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale", "slider": false},
+    "u2": {"val": -0.1, "min": -0.8, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_B iniziale", "slider": false},
     "e": {"val": 0.6, "min": 0, "max": 1, "step": 0.05, "label": "elasticità dei respingenti"},
     "k": {
       "val": 120,
@@ -1052,8 +1052,8 @@ Nella simulazione puoi cambiare l'elasticità dei respingenti o attivare il velc
   "params": {
     "m1": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m_A"},
     "m2": {"val": 1.0, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m_B"},
-    "u1": {"val": 0.6, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
-    "u2": {"val": 0.0, "min": -0.8, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
+    "u1": {"val": 0.6, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale", "slider": false},
+    "u2": {"val": 0.0, "min": -0.8, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_B iniziale", "slider": false},
     "e": {"val": 1.0, "min": 0, "max": 1, "step": 0.05, "label": "elasticità dei respingenti"},
     "k": {
       "val": 120,
@@ -1220,7 +1220,7 @@ Prova con il pulsante «Riferimento»: nel riferimento del centro di massa il pu
     "m2": {"val": 0.5, "min": 0.25, "max": 2, "step": 0.25, "unit": "kg", "label": "m_B"},
     "u1": {"val": 0.5, "min": -0.6, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
     "u2": {"val": -0.2, "min": -0.8, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
-    "e": {"val": 1.0, "min": 0, "max": 1, "step": 0.05, "label": "elasticità dei respingenti"},
+    "e": {"val": 1.0, "min": 0, "max": 1, "step": 0.05, "label": "elasticità dei respingenti", "slider": false},
     "k": {
       "val": 120,
       "min": 40,
@@ -1364,9 +1364,9 @@ Nella simulazione il carrello A è leggero e B molto più pesante. Prima di avvi
   "ylim": [0, 1.0],
   "aspectRatio": "5:1",
   "params": {
-    "m1": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_A"},
+    "m1": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_A", "slider": false},
     "m2": {"val": 8, "min": 1, "max": 10, "step": 0.5, "unit": "kg", "label": "m_B"},
-    "u1": {"val": 0.5, "min": 0.2, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
+    "u1": {"val": 0.5, "min": 0.2, "max": 0.8, "step": 0.05, "unit": "m/s", "label": "v_A iniziale", "slider": false},
     "u2": {"val": 0, "min": -0.3, "max": 0.3, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
     "k": {"val": 200, "min": 50, "max": 1000, "step": 10, "unit": "N/m", "slider": false}
   },
@@ -1440,8 +1440,8 @@ Prevedi la velocità di B dopo l'urto, poi verifica. Che cosa succede se B, prim
   "aspectRatio": "5:1",
   "params": {
     "m1": {"val": 8, "min": 1, "max": 10, "step": 0.5, "unit": "kg", "label": "m_A"},
-    "m2": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_B"},
-    "u1": {"val": 0.4, "min": 0.2, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
+    "m2": {"val": 0.2, "min": 0.1, "max": 0.5, "step": 0.05, "unit": "kg", "label": "m_B", "slider": false},
+    "u1": {"val": 0.4, "min": 0.2, "max": 0.6, "step": 0.05, "unit": "m/s", "label": "v_A iniziale", "slider": false},
     "u2": {"val": 0, "min": -0.3, "max": 0.2, "step": 0.05, "unit": "m/s", "label": "v_B iniziale"},
     "k": {"val": 200, "min": 50, "max": 1000, "step": 10, "unit": "N/m", "slider": false}
   },
@@ -1515,7 +1515,7 @@ Nella simulazione due dischi scivolano senza attrito su un piano (come su un tav
   "params": {
     "m1": {"val": 0.2, "min": 0.1, "max": 0.6, "step": 0.05, "unit": "kg", "label": "m_A"},
     "m2": {"val": 0.2, "min": 0.1, "max": 0.6, "step": 0.05, "unit": "kg", "label": "m_B"},
-    "u": {"val": 0.8, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v_A iniziale"},
+    "u": {"val": 0.8, "min": 0.2, "max": 1, "step": 0.05, "unit": "m/s", "label": "v_A iniziale", "slider": false},
     "b": {"val": 0.12, "min": 0, "max": 0.3, "step": 0.01, "unit": "m", "label": "parametro d'urto"},
     "e": {"val": 1.0, "min": 0, "max": 1, "step": 0.05, "label": "elasticità"},
     "k": {"val": 400, "min": 100, "max": 2000, "step": 50, "slider": false}
