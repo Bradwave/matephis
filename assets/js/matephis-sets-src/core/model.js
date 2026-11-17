@@ -13,7 +13,7 @@
  */
 import {
     parseInterval, evalInterval, interval, contains, isSubset, sameInterval, isEmpty, isPoint,
-    samplePositions, imageFromSamples, strictlyMonotone, unionIntervals, overlaps,
+    samplePositions, searchPositions, imageFromSamples, strictlyMonotone, unionIntervals, overlaps,
 } from './interval.js';
 import { isSimplePolyline, insidePolygon } from './geometry.js';
 import { parseArgument, parseSelector } from './selectors.js';
@@ -229,10 +229,19 @@ export class SetsModel {
             return ys.length > 0 && (typeof y === 'string' || SetsModel.validPoint(y) || (!!y && typeof y === 'object' && 'outside' in y));
         };
         const I = set.I, w = set.window;
-        const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
-        const n = SAMPLES_1D;
-        const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
         const inside = (t) => !!(contains(I, t, 0) && ok(t));
+        // Past the window at an infinite end, when the map is defined at all the
+        // far samples there or at none of them (sqrt(x - 7) on ℝ: [7, +∞));
+        // otherwise only in the window, and the result says so
+        const all = searchPositions(I, SAMPLES_1D, w);
+        const core = all.filter(p => !p.far);
+        const side = (sgn) => all.filter(p => p.far && (sgn < 0 ? p.t < core[0].t : p.t > core[core.length - 1].t));
+        const uniform = (ps) => ps.every(p => inside(p.t)) || ps.every(p => !inside(p.t));
+        const left = side(-1), right = side(1);
+        const useL = uniform(left), useR = uniform(right);
+        const ts = [...(useL ? left : []), ...core, ...(useR ? right : [])].map(p => p.t);
+        const n = ts.length - 1;
+        const lo = isFinite(I.lo) ? I.lo : ts[0], hi = isFinite(I.hi) ? I.hi : ts[n];
         const edge = (a, b, inA) => {
             for (let it = 0; it < 60; it++) {
                 const m = (a + b) / 2;
@@ -244,7 +253,7 @@ export class SetsModel {
         let start = null;
         for (let i = 0; i <= n; i++) {
             const t = ts[i];
-            const inT = (i === 0 && !I.loClosed && isFinite(I.lo)) || (i === n && !I.hiClosed && isFinite(I.hi)) ? ok(t + (i === 0 ? 1 : -1) * 1e-9 * Math.max(1, Math.abs(t))) : inside(t);
+            const inT = inside(t);
             if (inT && start === null) start = i === 0 ? lo : edge(ts[i - 1], t, false);
             if (!inT && start !== null) {
                 parts.push([start, edge(ts[i - 1], t, true)]);
@@ -262,6 +271,7 @@ export class SetsModel {
                 loClosed: !loInf && contains(I, a, 0) && ok(a), hiClosed: !hiInf && contains(I, b, 0) && ok(b),
             };
         });
+        if (!useL || !useR) out.inWindow = true;
         this._cache.set(key, out);
         return out;
     }
@@ -290,8 +300,12 @@ export class SetsModel {
             const g = (t) => this._raw1(map, t) - t;
             const I = from.I, w = from.window;
             const lo = isFinite(I.lo) ? I.lo : w[0], hi = isFinite(I.hi) ? I.hi : w[1];
-            const n = SAMPLES_1D;
-            const ts = Array.from({ length: n + 1 }, (_, i) => lo + (hi - lo) * i / n);
+            // Past the window where f(x) - x settles (x^2 - 42 on ℝ: -6 and 7);
+            // where it oscillates, only in the window, and the result says so
+            const far = this._searchEnds(map, I, g, 'fix');
+            if (far.inWindow) out.inWindow = true;
+            const ts = searchPositions(I, SAMPLES_1D, w, far).map(p => p.t);
+            const n = ts.length - 1;
             const gs = ts.map(g);
             const scale = Math.max(1, Math.abs(lo), Math.abs(hi));
             const tiny = 1e-9 * scale;
@@ -933,6 +947,14 @@ export class SetsModel {
         const v1 = this._raw1(map, t + inward * 1e-7 * scale);
         const v2 = this._raw1(map, t + inward * 1e-9 * scale);
         if (!isFinite(v2) || (Math.abs(v2) > 1e6 && Math.abs(v2) > 10 * Math.abs(v1))) return v2 > 0 || v1 > 0 ? Infinity : -Infinity;
+        // A slow blow-up (log(4 - x^2) at 2): as the distance shrinks tenfold the
+        // value keeps moving the same way by steps that do not shrink
+        const vs = [3, 4, 5, 6, 7, 8, 9, 10, 11].map(k => this._raw1(map, t + inward * Math.pow(10, -k) * scale));
+        if (vs.every(isFinite)) {
+            const d = vs.slice(1).map((v, i) => v - vs[i]).slice(-5);
+            const same = d.every(x => x > 0) || d.every(x => x < 0);
+            if (same && d.slice(1).every((x, i) => Math.abs(x) >= 0.75 * Math.abs(d[i]))) return d[0] > 0 ? Infinity : -Infinity;
+        }
         // The formula used just inside, evaluated at t (for a piecewise map, the
         // piece at t itself may be another one)
         let exact;
@@ -944,6 +966,87 @@ export class SetsModel {
             exact = this._raw1(map, t);
         }
         return isFinite(exact) && Math.abs(exact - v2) < 1e-5 * Math.max(1, Math.abs(exact)) ? exact : v2;
+    }
+
+    /**
+     * How a function behaves as t → sign·∞:
+     *   { kind: 'limit', v }            a finite limit
+     *   { kind: 'infinite', v }         v = ±Infinity
+     *   { kind: 'none', above, below }  no limit (it oscillates); above / below:
+     *                                   it also grows without bound on that side
+     *   { kind: 'undefined' }           no value far out (sqrt(x) at -∞)
+     * Sampled at t = ±φ·10^k. For k = 1…15 the values must end up monotone,
+     * or there is no limit (φ keeps the samples off a period, as of x mod 2).
+     * Then k = 2, 4, …, 256 tell a limit (steps that shrink: Aitken's estimate)
+     * from ±∞ (steps that do not shrink: ln x, √x).
+     */
+    _atInfinity(fn, sign) {
+        const PHI = 1.6180339887498949;
+        const seq = (ks) => {
+            const vs = [];
+            for (const k of ks) {
+                const v = fn(sign * PHI * Math.pow(10, k));
+                if (v === Infinity || v === -Infinity) return { inf: v, vs };
+                if (typeof v !== 'number' || isNaN(v)) break;
+                vs.push(v);
+            }
+            return { inf: null, vs };
+        };
+        const steps = (vs) => vs.slice(1).map((v, i) => v - vs[i]);
+        const A = seq(Array.from({ length: 15 }, (_, i) => i + 1));
+        if (A.inf !== null) return { kind: 'infinite', v: A.inf };
+        const a = A.vs;
+        if (!a.length) return { kind: 'undefined' };
+        if (a.length < 8) return { kind: 'none', above: false, below: false };
+        const last = a[a.length - 1];
+        const settled = (x) => Math.abs(x) <= 1e-12 * Math.max(1, Math.abs(last));
+        const d = steps(a);
+        if (d.slice(-3).every(settled)) return { kind: 'limit', v: snapLimit(last) };
+        const tail = d.slice(-6).filter(x => !settled(x));
+        const up = tail.every(x => x > 0), down = tail.every(x => x < 0);
+        if (!up && !down) {
+            const big = 1e6 * Math.max(1, ...a.slice(0, 3).map(Math.abs));
+            return { kind: 'none', above: a.some(v => v > big), below: a.some(v => v < -big) };
+        }
+        const B = seq([2, 4, 8, 16, 32, 64, 128, 256]);
+        if (B.inf !== null) return { kind: 'infinite', v: B.inf };
+        const b = B.vs;
+        if (b.length < 4) return { kind: 'none', above: false, below: false };
+        const e = steps(b), m = e.length;
+        const bl = b[b.length - 1];
+        if (Math.abs(e[m - 1]) <= 1e-12 * Math.max(1, Math.abs(bl))) return { kind: 'limit', v: snapLimit(bl) };
+        const r1 = Math.abs(e[m - 1] / e[m - 2]), r2 = Math.abs(e[m - 2] / e[m - 3]);
+        if (r1 < 0.75 && r2 < 0.75) {
+            let L = bl - e[m - 1] * e[m - 1] / (e[m - 1] - e[m - 2]);
+            if (!isFinite(L)) L = bl;
+            // The estimate is rough for slow sequences (1/ln x): an integer within
+            // a thousandth of the range the values covered is the limit
+            if (Math.abs(L - Math.round(L)) <= 1e-3 * Math.abs(b[0] - bl)) L = Math.round(L);
+            return { kind: 'limit', v: snapLimit(L) };
+        }
+        return { kind: 'infinite', v: up ? Infinity : -Infinity };
+    }
+
+    /** _atInfinity at the infinite ends of an interval (null at a finite end), cached per map and function. */
+    _ends(map, I, fn = (t) => this._raw1(map, t), kind = 'value') {
+        const end = (sign) => {
+            const key = `inf|${map.id}|${kind}|${sign}`;
+            if (!this._cache.has(key)) this._cache.set(key, this._atInfinity(fn, sign));
+            return this._cache.get(key);
+        };
+        return { lo: isFinite(I.lo) ? null : end(-1), hi: isFinite(I.hi) ? null : end(1) };
+    }
+
+    /**
+     * At which infinite ends of I a search goes past the window: where fn has
+     * a limit, tends to ±∞ or has no value far out, so that it crosses a value
+     * finitely often there. Where it oscillates the search stays in the window
+     * (`inWindow`).
+     */
+    _searchEnds(map, I, fn, kind) {
+        const ends = this._ends(map, I, fn, kind);
+        const go = (b) => !!b && b.kind !== 'none';
+        return { lo: go(ends.lo), hi: go(ends.hi), inWindow: (!!ends.lo && !go(ends.lo)) || (!!ends.hi && !go(ends.hi)) };
     }
 
     /**
@@ -1208,7 +1311,17 @@ export class SetsModel {
 
     /** Image of a part D of an interval domain, into an interval: a union of intervals (one per piece). */
     _image1(map, D) {
-        return unionIntervals(this._segments(map, D).map(S => this._imageOfSegment(map, S)).filter(Boolean));
+        const parts = [].concat(...this._segments(map, D).map(S => this._definedParts(map, S)));
+        return unionIntervals(parts.map(S => this._imageOfSegment(map, S)).filter(Boolean));
+    }
+
+    /**
+     * The parts of a segment where the map has a value: an open end inside the
+     * segment then gets its limit (log(4 - x^2) on ℝ tends to -∞ at ±2).
+     */
+    _definedParts(map, S) {
+        if (map.from.kind !== 'interval' || isPoint(S)) return [S];
+        return this.domainOf(map).map(P => intersect(P, S)).filter(P => !isEmpty(P));
     }
 
     /** Image of a part of the domain where the map is given by one (continuous) formula. */
@@ -1217,7 +1330,8 @@ export class SetsModel {
             const v = this._raw1(map, S.lo);
             return isFinite(v) ? interval(v, v) : null;
         }
-        const samples = samplePositions(S, SAMPLES_1D, map.from.window);
+        // Past the window too, at an infinite end: a maximum beyond the window is found
+        const samples = searchPositions(S, SAMPLES_1D, map.from.window);
         const values = samples.map(s => ({ v: this._raw1(map, s.t), nearOpen: s.nearOpen }));
         // A minimum or maximum inside the segment usually falls between two
         // samples: find it, so that x^2 on [-1, 2] reaches 0 exactly
@@ -1225,6 +1339,14 @@ export class SetsModel {
         const limits = [];
         if (!S.loClosed && isFinite(S.lo)) limits.push({ v: this._limitAt(map, S.lo, 1) });
         if (!S.hiClosed && isFinite(S.hi)) limits.push({ v: this._limitAt(map, S.hi, -1) });
+        // At an infinite end, its limit (e^x: 0 at -∞, +∞ at +∞): approached, not reached
+        const ends = this._ends(map, S);
+        [ends.lo, ends.hi].forEach(b => {
+            if (!b) return;
+            if (b.kind === 'limit' || b.kind === 'infinite') limits.push({ v: b.v });
+            if (b.kind === 'none' && b.above) limits.push({ v: Infinity });
+            if (b.kind === 'none' && b.below) limits.push({ v: -Infinity });
+        });
         return imageFromSamples(values, limits);
     }
 
@@ -1241,7 +1363,7 @@ export class SetsModel {
                 const v = values[i].v;
                 if (typeof v === 'number' && isFinite(v) && (best < 0 || sign * v < sign * values[best].v)) best = i;
             }
-            if (best <= 0 || best >= n - 1 || values[best].nearOpen) return;
+            if (best <= 0 || best >= n - 1 || (values[best].nearOpen && !samples[best].far)) return;
             const g = (t) => sign * this._raw1(map, t);
             let a = samples[best - 1].t, b = samples[best + 1].t;
             const r = (Math.sqrt(5) - 1) / 2;
@@ -1251,7 +1373,8 @@ export class SetsModel {
                 else { a = c; c = d; gc = gd; d = a + r * (b - a); gd = g(d); }
             }
             const t = (a + b) / 2, v = this._raw1(map, t);
-            if (isFinite(v) && sign * v < sign * values[best].v) out.push({ v, nearOpen: false });
+            // (equal counts too: the extreme may sit on a far sample, which only approaches)
+            if (isFinite(v) && sign * v <= sign * values[best].v) out.push({ v, nearOpen: false });
         });
         return out;
     }
@@ -1324,9 +1447,11 @@ export class SetsModel {
             return out;
         };
         if (from.kind === 'interval' && dOut < 2) {
-            const parts = unionIntervals([].concat(...values().map(J => this._preimage1D(map, J))));
-            if (parts.every(isPoint)) return { kind: 'points', set: from, points: parts.map(P => P.lo) };
-            return { kind: 'intervals', set: from, parts };
+            const lists = values().map(J => this._preimage1D(map, J));
+            const parts = unionIntervals([].concat(...lists));
+            const res = parts.every(isPoint) ? { kind: 'points', set: from, points: parts.map(P => P.lo) } : { kind: 'intervals', set: from, parts };
+            if (lists.some(l => l.inWindow)) res.inWindow = true;
+            return res;
         }
         if (this.dim(from) === 2 && dOut === 1) {
             const Js = values();
@@ -1378,17 +1503,25 @@ export class SetsModel {
             const t = (a + b) / 2;
             return Math.abs(f(t) - y) <= 1e-6 * Math.max(1, Math.abs(y)) ? t : null;
         };
+        let inWindow = false;
         this._segments(map, D).forEach(S => {
             if (isPoint(S)) {
                 if (inJ(S.lo)) out.push(interval(S.lo, S.lo));
                 return;
             }
-            const ts = samplePositions(S, SAMPLES_1D * 2, map.from.window).map(s => s.t);
+            // Past the window at an infinite end where f settles (x^2 = 49 on ℝ: ±7);
+            // where it oscillates only in the window, and the result says so
+            const far = this._searchEnds(map, S, f, 'value');
+            if (far.inWindow) inWindow = true;
+            const ts = searchPositions(S, SAMPLES_1D * 2, map.from.window, far).map(s => s.t);
             const vs = ts.map(f);
             const ok = vs.map(v => contains(J, v, tol));
+            // A part that reaches the last sample reaches the end of S, unless the search stopped at the window
+            const first = !isFinite(S.lo) && !far.lo ? { t: ts[0], closed: true } : { t: S.lo, closed: S.loClosed };
+            const lastEnd = !isFinite(S.hi) && !far.hi ? { t: ts[ts.length - 1], closed: true } : { t: S.hi, closed: S.hiClosed };
             let start = null;
             for (let i = 0; i < ts.length; i++) {
-                if (ok[i] && start === null) start = i === 0 ? { t: S.lo, closed: S.loClosed } : edge(ts[i], ts[i - 1]);
+                if (ok[i] && start === null) start = i === 0 ? first : edge(ts[i], ts[i - 1]);
                 if (!ok[i] && start !== null) {
                     const e = edge(ts[i - 1], ts[i]);
                     out.push(interval(start.t, e.t, start.closed, e.closed));
@@ -1405,11 +1538,13 @@ export class SetsModel {
                     }
                 }
             }
-            if (start !== null) out.push(interval(start.t, S.hi, start.closed, S.hiClosed));
+            if (start !== null) out.push(interval(start.t, lastEnd.t, start.closed, lastEnd.closed));
         });
         // Tiny parts are single points (a value taken at one point, seen through the tolerance)
         const tiny = (P) => isFinite(P.lo) && P.hi - P.lo <= (single ? 1e-6 : 1e-12) * Math.max(1, Math.abs(P.lo));
-        return unionIntervals(out.map(P => (tiny(P) ? interval((P.lo + P.hi) / 2, (P.lo + P.hi) / 2) : P)));
+        const res = unionIntervals(out.map(P => (tiny(P) ? interval((P.lo + P.hi) / 2, (P.lo + P.hi) / 2) : P)));
+        if (inWindow) res.inWindow = true;
+        return res;
     }
 
     /**
@@ -1599,6 +1734,11 @@ export class SetsModel {
                 undefinedSomewhere = segs.some(S => samplePositions(S, SAMPLES_1D, from.window).some(s => !s.nearOpen
                     && !SetsModel.validPoint(dOut === 2 ? this.apply(map, s.t)[0] : this._raw1(map, s.t))));
             }
+            // Past the window too (sqrt(x + 7) on ℝ is not defined everywhere)
+            if (!undefinedSomewhere && dOut < 2) {
+                const dom = this.domainOf(map);
+                undefinedSomewhere = !(dom.length === 1 && sameInterval(dom[0], from.I, 1e-9));
+            }
             if (undefinedSomewhere) {
                 res.isFunction = false;
                 problems.push(`${map.name} non è definita in tutto ${fromL}`);
@@ -1785,9 +1925,18 @@ function mergeResults(list, set) {
     });
     if (!ok) return rs[0];
     const u = unionIntervals(parts);
-    if (!u.length) return { kind: 'points', set: rs[0].set || set, points: [] };
-    if (u.every(isPoint)) return { kind: 'points', set: rs[0].set, points: u.map(P => P.lo) };
-    return u.length === 1 ? { kind: 'interval', set: rs[0].set, I: u[0] } : { kind: 'intervals', set: rs[0].set, parts: u };
+    const res = !u.length ? { kind: 'points', set: rs[0].set || set, points: [] }
+        : u.every(isPoint) ? { kind: 'points', set: rs[0].set, points: u.map(P => P.lo) }
+            : u.length === 1 ? { kind: 'interval', set: rs[0].set, I: u[0] } : { kind: 'intervals', set: rs[0].set, parts: u };
+    if (rs.some(r => r.inWindow)) res.inWindow = true;
+    return res;
+}
+
+/** A computed limit: tiny values are 0, values next to an integer are that integer. */
+function snapLimit(v) {
+    if (Math.abs(v) < 1e-9) return 0;
+    const r = Math.round(v);
+    return Math.abs(v - r) < 1e-9 * Math.max(1, Math.abs(v)) ? r : v;
 }
 
 /** Bounding box [x0, y0, x1, y1] of points. */
