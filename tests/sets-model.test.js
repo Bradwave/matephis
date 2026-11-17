@@ -537,7 +537,39 @@ describe('Espressioni per il grafico', () => {
     const at = (src, x) => compiler.fn(src, ['x'])(x);
 
     it('sostituisce x senza toccare exp o max', () => {
-        expect(substituteX('x^2 + 2x - exp(x) + max(x, 1)', 'p')).toBe('(p)^2 + 2(p) - exp((p)) + max((p), 1)');
+        const s = substituteX('x^2 + 2x - exp(x) + max(x, 1)', 'p', ['p']);
+        const c = new ExpressionCompiler({ getParams: () => ({ p: 0.7 }), getPoints: () => ({}), paramNames: ['p'] });
+        expect(c.eval(s)).toBeCloseTo(0.49 + 1.4 - Math.exp(0.7) + 1, 12);
+        expect(s).not.toMatch(/\bx\b/);
+    });
+
+    it('sostituisce x anche nei fattori accostati: ax, xsin(x), x2 (sets finding 2)', () => {
+        const params = { a: 3 };
+        const c = new ExpressionCompiler({ getParams: () => params, getPoints: () => ({}), paramNames: ['a'] });
+        const val = (src, by, t) => c.fn(substituteX(src, by, ['a']), ['t'])(t);
+        expect(val('ax', 't^2', 2)).toBe(12);
+        expect(val('ax^2', 't + 1', 1)).toBe(12);
+        expect(val('xsin(x)', '2t', 0.5)).toBeCloseTo(Math.sin(1), 12);
+        expect(val('2x + x2', 't', 3)).toBe(12);
+        expect(val('x < 0 ? -x : x', 't - 5', 1)).toBe(4);
+        expect(val('|x||x - 1|', 't', -2)).toBe(6);
+        // The plot's hidden params are not known here: by text, as before
+        expect(substituteX('x + _c1_2', 't')).toBe('(t) + _c1_2');
+    });
+
+    it('composizione con un parametro accostato: g = ax, g ∘ f con f = x²', () => {
+        const params = { a: 2 };
+        const c = new ExpressionCompiler({ getParams: () => params, getPoints: () => ({}), paramNames: ['a'] });
+        const mm = new SetsModel({
+            params: { a: { val: 2 } },
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[0, 4]' }, { id: 'Z', interval: '[0, 8]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }, { id: 'g', from: 'Y', to: 'Z', expr: 'ax' }, { id: 'gf', compose: ['f', 'g'] }],
+        }, { evaluate: (v) => (typeof v === 'number' ? v : c.eval(String(v))), compile: (src, vars) => c.fn(src, vars) });
+        const gf = c.fn(mm.exprString(mm.mapById.get('gf')), ['x']);
+        expect(gf(1.5)).toBe(4.5); // a·x², not "(ax)" = a·x
+        params.a = -1;
+        expect(gf(1.5)).toBe(-2.25);
+        expect(c.fn(mm.substitute('ax', 'p^2'), ['p'])(3)).toBe(-9);
     });
 
     it('una composizione e una funzione a tratti diventano una formula sola', () => {

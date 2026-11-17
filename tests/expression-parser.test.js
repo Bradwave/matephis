@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ExpressionCompiler, compileExpression, evalValue, substituteLabel } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
+import { ExpressionCompiler, compileExpression, evalValue, substituteLabel, parseExpression, printExpression, substituteVariable } from '../assets/js/matephis-plot-src/parser/expression-parser.js';
 
 const compiler = (params = {}, points = {}, complex = false) => new ExpressionCompiler({
     getParams: () => params,
@@ -281,5 +281,36 @@ describe('Proprietà aggiuntive dei punti', () => {
         // Declared but missing on this point: NaN, not an error
         expect(c.eval('A.mag')).toBeNaN();
         expect(() => c.fn('A.spede', [])).toThrow(/Unknown property/);
+    });
+});
+
+describe('ExpressionParser: riscrittura di un\'espressione', () => {
+    const SRC = [
+        'x', '3x^2 + 2x - 5', 'ax^2 + bx + c', '-x^2', '2^-x', '2^x^2', '1/2x', 'x/(1+x^2)', 'sin 2x', 'sinxcosx', '2sinx^2',
+        'e^x', 'E^-x^2', 'pi x', 'tau/4 + x', '|x||x - 1|', '||x| - 1|', 'x < 0 ? -x : x^2', '0 < x < 1 ? 1 : 0',
+        'x < 0 || x > 1 ? 1 : 0', '!(x > 0) ? 2 : 3', 'x mod 2', 'xmod2 + 1', 'log(x, 2)', 'max(x, 1, -x)', 'floor(x)/2',
+        '30° + x', '(x+1)!', 'ax!', 'sqrt(x^2 + 1) - x', 'e^ax', 'x == 1 ? 5 : x != 2 ? 6 : 7', 'inf > x ? 1 : 0', '1e-3x + 2.5e2',
+    ];
+    const params = { a: 1.5, b: -2, c: 0.25 };
+    const XS = [-2.5, -1, -0.3, 0, 0.4, 1, 1.7, 3];
+    const same = (u, v) => (Number.isNaN(u) && Number.isNaN(v)) || u === v || Math.abs(u - v) <= 1e-12 * Math.max(1, Math.abs(u));
+
+    it('stampata e riletta dà la stessa funzione', () => {
+        const opts = { vars: ['x'], params: Object.keys(params) };
+        for (const src of SRC) {
+            const printed = printExpression(parseExpression(src, opts));
+            const f = compileExpression(src, opts), g = compileExpression(printed, opts);
+            XS.forEach(x => expect(same(f(params, {}, x), g(params, {}, x)), `${src} -> ${printed} at ${x}`).toBe(true));
+        }
+    });
+
+    it('sostituisce una variabile come composizione', () => {
+        const opts = { vars: ['x'], params: Object.keys(params) };
+        for (const src of SRC) {
+            const by = 'x^2 - 1';
+            const composed = compileExpression(substituteVariable(src, 'x', by, { params: Object.keys(params) }), opts);
+            const f = compileExpression(src, opts), inner = compileExpression(by, opts);
+            XS.forEach(x => expect(same(composed(params, {}, x), f(params, {}, inner(params, {}, x))), `${src} at ${x}`).toBe(true));
+        }
     });
 });

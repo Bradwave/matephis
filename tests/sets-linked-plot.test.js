@@ -138,3 +138,107 @@ describe('Nomi nelle righe sotto il diagramma', () => {
         expect(compareReadout(sc).tex).toMatch(/^p < q \\Rightarrow \\left\(g \\circ f\\right\)\\left\(p\\right\) > \\left\(g \\circ f\\right\)\\left\(q\\right\)/);
     });
 });
+
+describe('Il grafico collegato segue gli slider (sets finding 5)', () => {
+    /** A LinkedPlot with a stand-in plot that records what it is given. */
+    function linked(cfg, params) {
+        const sc = scene(cfg, params);
+        const lp = new LinkedPlot(sc, { textContent: '' });
+        const conf = lp.config();
+        lp._remember(conf);
+        const plot = {
+            config: conf, params: Object.fromEntries(Object.entries(conf.params).map(([k, d]) => [k, d.val])),
+            view: { xMin: 0, xMax: 1, yMin: 0, yMax: 1 }, draws: 0,
+            requestDraw() { this.draws++; },
+            destroy() {},
+        };
+        plot.sliders = { setValue: (k, v) => { plot.params[k] = v; } };
+        lp.plot = plot;
+        const move = (k, v) => { params[k] = v; sc.model.refresh(); lp.sync(); };
+        return { lp, plot, sc, move };
+    }
+    const graph = (plot, label) => plot.config.data.find(d => d.label === label);
+
+    it('il dominio [a, 2] segue a', () => {
+        const { plot, move } = linked({
+            params: { a: { val: 0 } },
+            sets: [{ id: 'X', interval: '[a, 2]' }, { id: 'Y', interval: '[0, 4]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }],
+            plot: { maps: ['f'], xlim: [-1, 3], ylim: [-1, 5] },
+        }, { a: 0 });
+        expect(graph(plot, '$f$').domain).toEqual([0, 2]);
+        move('a', 1);
+        expect(graph(plot, '$f$').domain).toEqual([1, 2]);
+        expect(plot.params.a).toBe(1);
+        expect(plot.draws).toBe(1);
+        // Fixed limits: the view is kept
+        expect(plot.view.xMin).toBe(0);
+    });
+
+    it('i limiti di default seguono la finestra', () => {
+        const { plot, move } = linked({
+            params: { a: { val: 0 } },
+            sets: [{ id: 'X', interval: '[a, 2]' }, { id: 'Y', interval: '[0, 4]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }],
+            plot: { maps: ['f'] },
+        }, { a: 0 });
+        const x0 = plot.config.xlim[0];
+        move('a', -1);
+        expect(plot.config.xlim[0]).toBeLessThan(x0);
+        expect(plot.view.xMin).toBeNull(); // recomputed from xlim at the next draw
+    });
+
+    it('i tagli di una funzione a tratti seguono il parametro', () => {
+        const { plot, move } = linked({
+            params: { c: { val: 0 } },
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-2, 4]' }],
+            maps: [{ id: 'p', from: 'X', to: 'Y', piecewise: [{ on: '[-2, c)', expr: '-x' }, { on: '[c, 2]', expr: 'x^2' }] }],
+            plot: { maps: ['p'] },
+        }, { c: 0 });
+        const domains = () => plot.config.data.filter(d => d.fn).map(d => d.domain);
+        expect(domains()).toEqual([[-2, 0], [0, 2]]);
+        move('c', 1);
+        expect(domains()).toEqual([[-2, 1], [1, 2]]);
+    });
+
+    it('i punti di una funzione su un insieme finito seguono i parametri', () => {
+        const { plot, move } = linked({
+            params: { k: { val: 1 } },
+            sets: [{ id: 'A', elements: ['1', '2', '3'] }, { id: 'Y', interval: '[0, 10]' }],
+            maps: [{ id: 'f', from: 'A', to: 'Y', expr: 'k x' }],
+            plot: { maps: ['f'] },
+        }, { k: 1 });
+        expect(graph(plot, '$f$').points).toEqual([[1, 1], [2, 2], [3, 3]]);
+        move('k', 2);
+        expect(graph(plot, '$f$').points).toEqual([[1, 2], [2, 4], [3, 6]]);
+    });
+
+    it('senza cambi di struttura il grafico resta quello', () => {
+        const { plot, move } = linked({
+            params: { k: { val: 1 } },
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[-1, 4]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2 + k' }],
+            plot: { maps: ['f'] },
+        }, { k: 1 });
+        const data = plot.config.data;
+        move('k', 2);
+        expect(plot.config.data).toBe(data); // the formula follows k by itself
+        expect(plot.params.k).toBe(2);
+    });
+
+    it('composizione con un fattore accostato: g = ax disegna a·x² (sets finding 2)', () => {
+        const params = { a: 2, p: 1 };
+        const { plot } = linked({
+            params: { a: { val: 2 }, p: { val: 1 } },
+            sets: [{ id: 'X', interval: '[-2, 2]' }, { id: 'Y', interval: '[0, 4]' }, { id: 'Z', interval: '[0, 8]' }],
+            maps: [{ id: 'f', from: 'X', to: 'Y', expr: 'x^2' }, { id: 'g', from: 'Y', to: 'Z', expr: 'ax' }, { id: 'gf', compose: ['f', 'g'] }],
+            probe: { map: 'gf', at: 'p' },
+            plot: { maps: ['gf'] },
+        }, params);
+        const c = new ExpressionCompiler({ getParams: () => params, getPoints: () => ({}), paramNames: Object.keys(params) });
+        expect(c.fn(graph(plot, '$g \\circ f$').fn, ['x'])(1.5)).toBe(4.5);
+        // The probe point (p, g(f(p))) compiles and lands on the graph
+        const pt = plot.config.data.find(d => d.points && d.radius === 6).points.at(-1);
+        expect(c.eval(pt[1])).toBe(2);
+    });
+});

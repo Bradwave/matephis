@@ -67,9 +67,10 @@ describe('Lookbehind senza lookbehind', () => {
     });
 
     it('le funzioni dei motori danno gli stessi risultati di prima', () => {
+        // substituteX works on the parsed expression now (sets finding 2); the text
+        // replacement is its fallback, for what does not parse: same as before
         const oldX = (src, by) => String(src).replace(/(?<![A-Za-z_])x(?![A-Za-z0-9_])/g, `(${by})`);
-        EXPR.forEach(s => expect(substituteX(s, 't+1'), s).toBe(oldX(s, 't+1')));
-        expect(substituteX('x^2 + 2x - exp(x)', 't+1')).toBe('(t+1)^2 + 2(t+1) - exp((t+1))');
+        ['x @ x', 'x_1 @ x', 'exp(x) @ max(x)', '.x @ _x', 'xx @ x'].forEach(s => expect(substituteX(s, 't+1'), s).toBe(oldX(s, 't+1')));
 
         const pts = { A: { x: 3, y: 4, rad: 0.52 }, BA: { x: 1, y: 1 }, P: { x: 2, y: 3 }, B: { x: 5, y: 6 } };
         const oldLabel = (str) => {

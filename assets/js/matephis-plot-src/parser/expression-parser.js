@@ -654,6 +654,49 @@ export function parseExpression(src, { vars = ['x'], params = [], points = [], p
     return new Parser(tokenize(String(src)), scope, String(src)).parseTop();
 }
 
+/** Source names of the constants (uppercase: a param called "e" or "pi" cannot hide them). */
+const CONSTANT_SOURCE = {
+    'Math.PI': 'PI', '(2*Math.PI)': '(2*PI)', 'Math.E': 'E', 'Infinity': 'Infinity', '(Math.PI/180)': '(PI/180)',
+};
+
+/**
+ * Writes a parsed expression back as source, every operation in parentheses,
+ * so that it reads the same wherever it is pasted. `subst` replaces variables
+ * by other expressions: { x: "t + 1" } writes (t + 1) for each x.
+ */
+export function printExpression(ast, subst = {}) {
+    const p = (n) => {
+        switch (n.k) {
+            case 'num': return String(n.v);
+            case 'const': return CONSTANT_SOURCE[n.v] || n.v;
+            case 'var': return Object.prototype.hasOwnProperty.call(subst, n.name) ? `(${subst[n.name]})` : n.name;
+            case 'param': return n.name;
+            case 'pt': return `${n.name}.${n.prop}`;
+            case 'imag': return 'i';
+            case 'neg': return `(-${p(n.a)})`;
+            case 'not': return `(!${p(n.a)})`;
+            case 'bin': case 'cmp': case 'logic': return `(${p(n.a)}${n.op}${p(n.b)})`;
+            case 'pow': return `(${p(n.a)}^${p(n.b)})`;
+            case 'tern': return `(${p(n.c)}?${p(n.a)}:${p(n.b)})`;
+            case 'call': return n.fn === 'factorial' ? `(${p(n.args[0])})!` : `${n.fn}(${n.args.map(p).join(',')})`;
+        }
+        throw new Error(`Unsupported node ${n.k}`);
+    };
+    return p(ast);
+}
+
+/**
+ * Replaces a variable in an expression by another expression, on the parsed
+ * expression and not on the text: in "ax^2" with the param a, x is a factor of
+ * its own, and "ax^2" with x = t + 1 is a·(t + 1)², not "ax^2" untouched.
+ * `params` are the names that are params (they decide how "ax" splits).
+ * Throws when the expression does not parse.
+ */
+export function substituteVariable(src, name, by, { params = [], vars = [] } = {}) {
+    const ast = parseExpression(src, { vars: [name, ...vars.filter(v => v !== name)], params: params.filter(q => q !== name) });
+    return printExpression(ast, { [name]: by });
+}
+
 /**
  * Compiles an expression into raw JS source and a function with the signature
  * (params, points, ...vars) => value.
