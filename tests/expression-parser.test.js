@@ -97,6 +97,68 @@ describe('ExpressionParser', () => {
     });
 });
 
+describe('ExpressionParser: nomi accostati e potenze', () => {
+    // "ax" is one token, split into a·x: a following ^ must apply to x only, as in "2x^2"
+    it('ax^2 = a·x², non (a·x)²', () => {
+        const params = { a: -2, b: 1, c: 1, k: 3 };
+        const c = compiler(params);
+        expect(c.fn('ax^2')(3)).toBe(-18);
+        expect(c.fn('kx^2')(2)).toBe(12);
+        expect(c.fn('2ax^2')(3)).toBe(-36);
+        expect(c.fn('ax^3')(-2)).toBe(16);
+        expect(c.fn('ax^2+bx+c')(2)).toBe(-8 + 2 + 1);
+        expect(c.fn('ax^-1')(4)).toBe(-0.5);
+        expect(c.fn('ax^2^2')(2)).toBe(-32);
+        params.a = 1;
+        expect(c.fn('ax^2')(3)).toBe(9);
+    });
+
+    it('xe^x = x·eˣ', () => {
+        expect(compiler().fn('xe^x')(2)).toBeCloseTo(2 * Math.exp(2), 12);
+        expect(compiler().fn('pix^2')(2)).toBeCloseTo(4 * Math.PI, 12);
+    });
+
+    it('xy^2 = x·y² nelle curve implicite', () => {
+        const F = compiler().fn('xy^2 = 1', ['x', 'y']);
+        expect(F(2, 3)).toBe(17);
+    });
+
+    it('le parentesi elevano tutto il prodotto', () => {
+        const c = compiler({ a: -2 });
+        expect(c.fn('(ax)^2')(3)).toBe(36);
+        expect(c.fn('a(x)^2')(3)).toBe(-18);
+    });
+
+    it('un esponente accostato resta intero: e^kx = e^(kx)', () => {
+        expect(compiler({ k: 2 }).fn('e^kx')(1)).toBeCloseTo(Math.exp(2), 12);
+        expect(compiler({ a: 2 }).fn('e^ax^2')(3)).toBeCloseTo(Math.exp(18), 6);
+    });
+
+    it('! e ° valgono per l\'ultimo fattore', () => {
+        expect(compiler({ a: 2 }).fn('ax!')(3)).toBe(12);
+        expect(compiler({ a: 2 }).eval('a30°')).toBeCloseTo(Math.PI / 3, 12);
+    });
+
+    it('le funzioni non cambiano', () => {
+        const c = compiler({ a: 2 });
+        expect(c.fn('sinx^2')(1)).toBeCloseTo(Math.sin(1) ** 2, 12);
+        expect(c.fn('sin x^2')(1.5)).toBeCloseTo(Math.sin(2.25), 12);
+        expect(c.fn('2sinx^2')(1)).toBeCloseTo(2 * Math.sin(1) ** 2, 12);
+        expect(c.fn('asinx')(0.5)).toBeCloseTo(Math.asin(0.5), 12);
+        expect(c.fn('exp(x)^2')(1)).toBeCloseTo(Math.exp(2), 12);
+        expect(c.fn('aexp(x)')(1)).toBeCloseTo(2 * Math.E, 12);
+        expect(c.fn('acos(x)^2')(0)).toBeCloseTo((Math.PI / 2) ** 2, 12);
+        expect(c.fn('2x^2')(3)).toBe(18);
+    });
+
+    it('vale anche per i prefissi dei punti: 2aP.x^2 = 2a·(P.x)²', () => {
+        const c = new ExpressionCompiler({
+            getParams: () => ({ a: 3 }), getPoints: () => ({ P: { x: 2, y: 0 } }), paramNames: ['a'], pointNames: ['P'],
+        });
+        expect(c.eval('2aP.x^2')).toBe(24);
+    });
+});
+
 describe('ExpressionParser: prefissi sui punti', () => {
     it('legge "iP.y" come i·P.y (numeri complessi scritti come P.x + iP.y)', () => {
         const c = new ExpressionCompiler({ getParams: () => ({}), getPoints: () => ({ P: { x: 2, y: 3 } }), pointNames: ['P'], complex: true });
