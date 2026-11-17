@@ -17,6 +17,7 @@
  * Keyboard (focused plot): arrows pan, + / - zoom, 0 resets, Esc clears.
  */
 import { CoordinateSystem, constrainRange } from '../core/coordinate-system.js';
+import { testNotAfter } from '../parser/not-after.js';
 
 const HOLD_MS = 350;
 const SLOP_PX = 8;
@@ -264,8 +265,9 @@ export const PointerMixin = {
         for (const key in this.params) {
             const ui = this.sliders.paramUIs[key];
             if (!ui) continue;
-            const rx = new RegExp(`(?<![A-Za-z0-9_])${key}(?![A-Za-z0-9_])`);
-            if (!exprs.some(e => typeof e === 'string' && rx.test(e))) continue;
+            // The param as a whole name, not inside a longer one (no lookbehind: see not-after.js)
+            const rx = new RegExp(`${key}(?![A-Za-z0-9_])`);
+            if (!exprs.some(e => typeof e === 'string' && testNotAfter(e, rx, /[A-Za-z0-9_]/))) continue;
 
             const lo = parseFloat(ui.input.min), hi = parseFloat(ui.input.max);
             const N = 200;

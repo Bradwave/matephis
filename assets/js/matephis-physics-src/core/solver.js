@@ -20,6 +20,7 @@
  */
 import { add, sub, scale, norm, dot, len } from './vec.js';
 import { aliasId } from './compiler.js';
+import { testNotAfter } from '../../matephis-plot-src/parser/not-after.js';
 import { massOf } from '../objects/shared.js';
 import { ownerId } from '../objects/autoforces.js';
 
@@ -49,7 +50,7 @@ export function solveLinear(A, b) {
 /** Does an expression read the time or a state variable? Then the motion is given, not solved. */
 function prescribed(v, names) {
     if (typeof v !== 'string') return Array.isArray(v) ? v.some(e => prescribed(e, names)) : false;
-    return [...names, 't'].some(n => new RegExp(`(?<![A-Za-z0-9_.])${n}(?![A-Za-z0-9_])`).test(v));
+    return [...names, 't'].some(n => testNotAfter(v, new RegExp(`${n}(?![A-Za-z0-9_])`), /[A-Za-z0-9_.]/));
 }
 
 export class Solver {

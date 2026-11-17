@@ -12,6 +12,7 @@ import { parseRef } from './anchors.js';
 import { add, sub, scale, norm, perp, fromAngle, angleOf, len, len3, rotate } from './vec.js';
 import { expandAutoForces } from '../objects/autoforces.js';
 import { aliasId } from './compiler.js';
+import { matchesNotAfter } from '../../matephis-plot-src/parser/not-after.js';
 
 const WORLD_FRAME = { t: { x: 1, y: 0, z: 0 }, n: { x: 0, y: 1, z: 0 }, labels: ['x', 'y'] };
 const DIR_WORDS = ['up', 'down', 'left', 'right', 'in', 'out', 'tangent', '-tangent', 'normal', '-normal', 'toward', 'away', 'along'];
@@ -41,7 +42,7 @@ export class Resolver {
         this.objects.forEach(o => { if (o.id && !this.byId.has(o.id)) this.byId.set(o.id, o); });
         this.ids = [...this.byId.keys()];
         this._idPattern = this.ids.length
-            ? new RegExp(`(?<![A-Za-z0-9_.])(${[...this.ids].sort((a, b) => b.length - a.length).map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\.`, 'g')
+            ? new RegExp(`(${[...this.ids].sort((a, b) => b.length - a.length).map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\.`, 'g')
             : null;
         this.resolved = {};
         this.view = { xMin: 0, xMax: 10, yMin: 0, yMax: 5 };
@@ -127,9 +128,8 @@ export class Resolver {
     /** Resolves objects named in "A.x"-style references before evaluating. */
     _resolveReferencedIds(src) {
         if (!this._idPattern || !this._resolving) return;
-        this._idPattern.lastIndex = 0;
-        let m;
-        while ((m = this._idPattern.exec(src)) !== null) this.state(m[1]);
+        // "A." not after a letter, digit, "_" or "." (no lookbehind: see not-after.js)
+        matchesNotAfter(src, this._idPattern, /[A-Za-z0-9_.]/).forEach(m => this.state(m[1]));
     }
 
     // =========================================================================

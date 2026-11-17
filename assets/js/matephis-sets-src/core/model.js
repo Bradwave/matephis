@@ -17,6 +17,7 @@ import {
 } from './interval.js';
 import { isSimplePolyline, insidePolygon } from './geometry.js';
 import { parseArgument, parseSelector } from './selectors.js';
+import { replaceNotAfter } from '../../matephis-plot-src/parser/not-after.js';
 
 export const SET_KINDS = ['finite', 'interval', 'rect', 'disk'];
 
@@ -1903,7 +1904,9 @@ export class SetsModel {
  * (exp, max) are left alone.
  */
 export function substituteX(src, by) {
-    return String(src).replace(/(?<![A-Za-z_])x(?![A-Za-z0-9_])/g, `(${by})`);
+    // Not after a letter or "_" (no lookbehind: a regex literal with one is a
+    // SyntaxError on Safari before 16.4, and the whole bundle would not load)
+    return replaceNotAfter(String(src), /x(?![A-Za-z0-9_])/g, /[A-Za-z_]/, () => `(${by})`);
 }
 
 /** Joins results of the same kind (pieces of one image or preimage). */
