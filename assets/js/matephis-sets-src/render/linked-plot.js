@@ -19,7 +19,6 @@
  * Any other key goes to the plot (xlim, ylim, aspectRatio, grid, …).
  */
 import { PLOT_KEYS } from '../core/config.js';
-import { substituteX } from '../core/model.js';
 import { paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 
 /** Highlights drawn on the graph too, and how many points and bands each may have. */
@@ -87,7 +86,9 @@ export class LinkedPlot {
             return;
         }
         if (!this.maps.length) return;
-        this.plot = Plot.render(this.host, this.config(), { noLightbox: true });
+        const cfg = this.config();
+        this._remember(cfg);
+        this.plot = Plot.render(this.host, cfg, { noLightbox: true });
         // The plot's sliders are the diagram's: hide them, keep them for dragging points
         const sl = this.plot.sliders;
         if (sl && sl.controls) sl.controls.style.display = 'none';
@@ -100,8 +101,48 @@ export class LinkedPlot {
         }
     }
 
-    /** Diagram -> plot: copies param values that changed. */
+    /** What the plot was last built from: its param names, its graphs and its limits. */
+    _remember(cfg) {
+        this._paramKeys = Object.keys(cfg.params).sort().join(',');
+        this._dataSig = JSON.stringify(cfg.data);
+        this._limSig = JSON.stringify([cfg.xlim, cfg.ylim]);
+    }
+
+    /**
+     * The parts of the graph that are numbers, not expressions, computed again
+     * from the current params (sets finding 5): a domain [a, 2], the cuts of a
+     * piecewise map with param bounds, the points of a map on a finite set,
+     * f^n with n a slider, the limits, the colours after a theme switch. They
+     * replace the plot's when they changed; a change of hidden params (the
+     * steps of a cobweb) builds the plot again.
+     * @returns {boolean} true when the plot changed
+     */
+    _refreshStructure() {
+        const cfg = this.config();
+        if (Object.keys(cfg.params).sort().join(',') !== this._paramKeys) {
+            this.destroy();
+            this.host.textContent = '';
+            this.mount();
+            return false;
+        }
+        const dataSig = JSON.stringify(cfg.data), limSig = JSON.stringify([cfg.xlim, cfg.ylim]);
+        if (dataSig === this._dataSig && limSig === this._limSig) return false;
+        this.plot.config.data = cfg.data;
+        if (limSig !== this._limSig) {
+            this.plot.config.xlim = cfg.xlim;
+            this.plot.config.ylim = cfg.ylim;
+            this.plot.view = { xMin: null, xMax: null, yMin: null, yMax: null };
+        }
+        this._dataSig = dataSig;
+        this._limSig = limSig;
+        return true;
+    }
+
+    /** Diagram -> plot: copies param values that changed, and the parts of the graph that follow them. */
     sync() {
+        if (!this.plot || !this.plot.sliders) return;
+        const structural = this._refreshStructure();
+        // A rebuilt plot is a new one (with the current values already)
         const sl = this.plot && this.plot.sliders;
         if (!sl) return;
         const defs = this.scene.config.params || {};
@@ -132,7 +173,7 @@ export class LinkedPlot {
             }
         }
         this._syncing = false;
-        if (changed) this.plot.requestDraw();
+        if (changed || structural) this.plot.requestDraw();
     }
 
     /**
@@ -152,7 +193,7 @@ export class LinkedPlot {
             const pc = m.pieces[S.piece];
             if (!pc || typeof pc.src.expr !== 'string' && typeof pc.src.expr !== 'number') return null;
             const e = `(${pc.src.expr})`;
-            const at = (t) => substituteX(e, `(${t})`);
+            const at = (t) => model.substitute(e, `(${t})`);
             const dot = (t, closed) => dots.push({ points: [[t, at(t)]], radius: 4.5, fillColor: closed ? color : bg, strokeColor: color, strokeWidth: 2, color });
             if (S.lo === S.hi) {
                 dot(S.lo, true);
@@ -187,11 +228,11 @@ export class LinkedPlot {
                 for (let j = 0; j < k; j++) {
                     const pe = model.exprString(t.maps[j]);
                     if (pe === null) return;
-                    e = substituteX(pe, e);
+                    e = model.substitute(pe, e);
                 }
                 const me = model.exprString(m);
                 if (me === null) return;
-                pts.push([e, substituteX(me, e)]);
+                pts.push([e, model.substitute(me, e)]);
             });
             if (pts.length) items.push({ points: pts, radius: 4, fillColor: color, color });
             items.push({ points: [[`_r${k}x`, `_r${k}y`]], radius: 8, fillColor: 'none', strokeColor: color, strokeWidth: 2.5, color });
@@ -445,7 +486,7 @@ export class LinkedPlot {
             if (m.kind === 'inverse') {
                 // The graph of f reflected: (f(t), t) over the domain of f
                 const e = model.exprString(m.base);
-                data.push({ parametric: [substituteX(e, 't'), 't'], domain: m.base.from.window.slice(), color: color(m), width: 2.2, label });
+                data.push({ parametric: [model.substitute(e, 't'), 't'], domain: m.base.from.window.slice(), color: color(m), width: 2.2, label });
                 return;
             }
             // A piecewise map: one graph per piece (jumps are not joined), with
@@ -555,7 +596,7 @@ export class LinkedPlot {
             if (chain.some(part => model.exprString(part) === null)) return;
             // v[k]: the value after k steps, as an expression in the param
             const v = [cfg.params[at] ? at : `(${at})`];
-            chain.forEach(part => v.push(substituteX(model.exprString(part), v[v.length - 1])));
+            chain.forEach(part => v.push(model.substitute(model.exprString(part), v[v.length - 1])));
             const n = chain.length;
             const color = p.color ? scene.color(p.color) : pc;
             const seg = (a, b) => items.push({ vector: [a, b], arrow: false, dash: '4,3', color, width: 1.4 });

@@ -18,6 +18,7 @@ import {
 import { isSimplePolyline, insidePolygon } from './geometry.js';
 import { parseArgument, parseSelector } from './selectors.js';
 import { replaceNotAfter } from '../../matephis-plot-src/parser/not-after.js';
+import { substituteVariable } from '../../matephis-plot-src/parser/expression-parser.js';
 
 export const SET_KINDS = ['finite', 'interval', 'rect', 'disk'];
 
@@ -55,6 +56,8 @@ export class SetsModel {
         this.isExpression = isExpression;
         this.compile = compile;
         this.warn = warn;
+        /** Names of the params: they decide how a name such as "ax" splits (substitute) */
+        this.paramNames = cfg && cfg.params && typeof cfg.params === 'object' ? Object.keys(cfg.params) : [];
         this.sets = [];
         this.setById = new Map();
         this.maps = [];
@@ -1236,6 +1239,11 @@ export class SetsModel {
      * applies), a composition by substitution. Null when it cannot be one
      * (an inverse, pairs, the plane).
      */
+    /** An expression with x replaced by another one (substituteX with this diagram's params). */
+    substitute(src, by) {
+        return substituteX(src, by, this.paramNames);
+    }
+
     exprString(map) {
         if (!map || this.dim(map.from) === 2) return null;
         if (map.kind === 'expr') return typeof map.def.expr === 'string' || typeof map.def.expr === 'number' ? `(${map.def.expr})` : null;
@@ -1264,7 +1272,7 @@ export class SetsModel {
             for (const part of map.parts) {
                 const pe = this.exprString(part);
                 if (pe === null) return null;
-                e = substituteX(pe, e);
+                e = this.substitute(pe, e);
             }
             return e;
         }
@@ -1994,10 +2002,17 @@ export class SetsModel {
  * "x^2 + 2x" with "(t+1)" -> "(t+1)^2 + 2(t+1)". Names that contain an x
  * (exp, max) are left alone.
  */
-export function substituteX(src, by) {
-    // Not after a letter or "_" (no lookbehind: a regex literal with one is a
-    // SyntaxError on Safari before 16.4, and the whole bundle would not load)
-    return replaceNotAfter(String(src), /x(?![A-Za-z0-9_])/g, /[A-Za-z_]/, () => `(${by})`);
+export function substituteX(src, by, params = []) {
+    // On the parsed expression, so juxtaposed factors count: "ax" with x = x^2
+    // is a·(x^2) (review: sets finding 2); the plot reads it the same way
+    try {
+        return substituteVariable(String(src), 'x', by, { params });
+    } catch (e) {
+        // Not an expression the parser knows (a name of the plot's own): by text.
+        // Not after a letter or "_" (no lookbehind: a regex literal with one is a
+        // SyntaxError on Safari before 16.4, and the whole bundle would not load)
+        return replaceNotAfter(String(src), /x(?![A-Za-z0-9_])/g, /[A-Za-z_]/, () => `(${by})`);
+    }
 }
 
 /** Joins results of the same kind (pieces of one image or preimage). */
