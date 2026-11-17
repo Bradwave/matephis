@@ -124,10 +124,11 @@ export const SelectionMixin = {
 
             if (valY !== null && typeof valY === 'object') {
                 if (!isFinite(valY.re) || !isFinite(valY.im)) return null;
-                return { type: 'fn', index, x: cs.mapX(valY.re), y: cs.mapY(valY.im), valX: valY.re, valY: valY.im, dist: 0, complex: true };
+                // argX: where f was evaluated (valX is the real part of the value here)
+                return { type: 'fn', index, x: cs.mapX(valY.re), y: cs.mapY(valY.im), valX: valY.re, valY: valY.im, argX: valX, dist: 0, complex: true };
             }
             if (!isFinite(valY)) return null;
-            return { type: 'fn', index, x: cs.mapX(valX), y: cs.mapY(valY), valX, valY, dist: 0 };
+            return { type: 'fn', index, x: cs.mapX(valX), y: cs.mapY(valY), valX, valY, argX: valX, dist: 0 };
         } catch (e) { return null; }
     },
 
@@ -362,20 +363,45 @@ export const SelectionMixin = {
         }
     },
 
-    /** Re-projects stored selections after the view changed. */
-    _restoreSelectionVisuals() {
+    /**
+     * After a redraw: a selection on a function or an interpolation is computed
+     * again at its x, so it stays on the curve when a slider changes it (and is
+     * dropped where the function is no longer defined); any other selection is
+     * re-projected for the new view.
+     * @returns {boolean} false when the selection was dropped
+     */
+    _followSelection(p) {
+        if (!p) return true;
+        // In complex mode valX may be the real part of a value, not an x: follow only a known x
+        const knowsX = p.argX !== undefined || !this.config.complexMode;
+        if ((p.type === 'fn' || p.type === 'interpolation') && p.index !== undefined && p.valX !== undefined && knowsX) {
+            const fresh = this._getPointAtGraphX(p.argX !== undefined ? p.argX : p.valX, p.index, false);
+            if (!fresh) return false;
+            ['x', 'y', 'valX', 'valY', 'argX', 'polyline', 'lines'].forEach(k => { if (fresh[k] !== undefined) p[k] = fresh[k]; });
+            return true;
+        }
         const cs = this.transform;
-        const reproject = (p) => {
-            if (p && p.valX !== undefined && p.valY !== undefined) {
-                p.x = cs.mapX(p.valX);
-                p.y = cs.mapY(p.valY);
-            }
-        };
-        const sel = this.interactions.currentSelection ||
-            (typeof this.interactions.draggingSelection === 'object' ? this.interactions.draggingSelection : null);
-        reproject(sel);
-        reproject(this.interactions.slopeP1);
-        reproject(this.interactions.slopeP2);
+        if (p.valX !== undefined && p.valY !== undefined) {
+            p.x = cs.mapX(p.valX);
+            p.y = cs.mapY(p.valY);
+        }
+        return true;
+    },
+
+    /** Re-projects stored selections after the view or a param changed. */
+    _restoreSelectionVisuals() {
+        const it = this.interactions;
+        const sel = it.currentSelection ||
+            (typeof it.draggingSelection === 'object' ? it.draggingSelection : null);
+        if (!this._followSelection(sel)) {
+            it.currentSelection = null;
+            if (typeof it.draggingSelection === 'object') it.draggingSelection = null;
+        }
+        // A slope needs both points
+        if (!this._followSelection(it.slopeP1) || !this._followSelection(it.slopeP2)) {
+            it.slopeP1 = null;
+            it.slopeP2 = null;
+        }
         // Keep the selection's geometry in sync with the redrawn curve
         if (sel && sel.index !== undefined) {
             const fresh = this.plotData.find(pd => pd.index === sel.index && pd.type === sel.type);
