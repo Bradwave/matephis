@@ -9,6 +9,7 @@
  * value follows in brackets ("compare": false on an item leaves it out).
  */
 import { KIN_PROPS } from './compiler.js';
+import { typesetElements } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 /** Unit guessed from an expression that is a single property: "A.speed" -> "m/s". */
 function guessUnit(src) {
@@ -49,11 +50,8 @@ export class Readouts {
             out.digits = item.digits !== undefined ? Math.max(0, Math.min(8, Number(item.digits) || 0)) : 2;
             return out;
         }).filter(Boolean);
-        // "$...$" labels are typeset once
-        const mj = window.MathJax;
-        if (this.items.some(i => /\$/.test(i.span.textContent)) && mj && mj.typesetPromise) {
-            mj.typesetPromise([this.el]).catch(() => {});
-        }
+        // "$...$" labels are typeset once (with the other blocks' labels, after the page's typeset)
+        if (this.items.some(i => /\$/.test(i.span.textContent))) typesetElements([this.el]);
     }
 
     /** Values of a "compare" set (the scene is resolved with its params). */

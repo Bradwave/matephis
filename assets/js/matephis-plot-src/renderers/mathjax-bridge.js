@@ -1,13 +1,47 @@
 /**
- * MathJax (tex2svg) label rendering for SVG plots.
+ * MathJax for the engines: tex2svg labels inside SVG drawings, formulas in
+ * HTML around them (readouts, tables), and typesetting of HTML elements
+ * (slider labels, captions).
  *
- * Typeset results are cached by TeX source, so labels that are redrawn on
- * every frame (sliders, dragging) do not hit MathJax again.
+ * The three engines are separate bundles, each with its own copy of this
+ * module, so what they share (the caches, the typeset queue) lives on window.
+ *
+ * SVG labels are cached by TeX source, so labels that are redrawn on every
+ * frame (sliders, dragging) do not hit MathJax again: a call to MathJax costs
+ * the conversion and also adds to its global font cache, which makes the
+ * browser restyle the page.
  */
 import { SVG_NS } from './svg-factory.js';
 
-const cache = new Map();
 const CACHE_LIMIT = 500;
+
+/** State shared by the three bundles; `v` changes when its shape does. */
+function shared() {
+    const KEY = '__matephisMath';
+    const VERSION = 1;
+    let s = window[KEY];
+    if (!s || s.v !== VERSION) {
+        s = window[KEY] = { v: VERSION, labels: new Map(), queue: [], scheduled: false };
+    }
+    return s;
+}
+
+function remember(map, key, value) {
+    if (map.size >= CACHE_LIMIT) map.delete(map.keys().next().value);
+    map.set(key, value);
+}
+
+/** Runs fn once on the next animation frame, or after a timer in a background tab (no frames there). */
+export function onNextFrame(fn) {
+    let done = false;
+    const run = () => {
+        if (done) return;
+        done = true;
+        fn();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    setTimeout(run, 100);
+}
 
 export function hasMathJax() {
     return typeof window !== 'undefined' && !!(window.MathJax && window.MathJax.tex2svg);
@@ -47,24 +81,90 @@ export function toTeX(str) {
  * MathJax.typesetPromise, one typeset at a time and after the page's own
  * startup typeset, as MathJax advises: two typesets of the same nodes at once
  * leave math raw, and one that runs during the startup pass can break it.
+ *
+ * Requests from every block (and every engine) made in the same frame go
+ * into one queue and are typeset together, with one call to MathJax.
  * @returns {Promise<boolean>} true once typeset, false without MathJax
  */
 export function typesetElements(els) {
     if (typeof window === 'undefined' || !els || !els.length) return Promise.resolve(false);
     return new Promise(resolve => {
-        whenMathJaxReady(() => {
-            const mj = window.MathJax;
-            if (!mj || !mj.typesetPromise) { resolve(false); return; }
-            const queued = (mj.startup && mj.startup.promise ? mj.startup.promise : Promise.resolve())
-                .then(() => mj.typesetPromise(els));
-            if (mj.startup) mj.startup.promise = queued.catch(() => {});
-            queued.then(() => resolve(true), () => resolve(false));
-        });
+        const s = shared();
+        s.queue.push({ els: Array.from(els), resolve });
+        if (s.scheduled) return;
+        s.scheduled = true;
+        whenMathJaxReady(() => onNextFrame(() => flushTypeset(s)));
     });
+}
+
+/** Elements that are not inside another one of the list (MathJax would find their math twice). */
+export function outermost(els) {
+    const list = [...new Set(els)];
+    return list.filter(el => !list.some(other => other !== el && other.contains && other.contains(el)));
+}
+
+function flushTypeset(s) {
+    s.scheduled = false;
+    const batch = s.queue.splice(0);
+    if (!batch.length) return;
+    const mj = window.MathJax;
+    if (!mj || !mj.typesetPromise) {
+        batch.forEach(b => b.resolve(false));
+        return;
+    }
+    const run = (els) => mj.typesetPromise(outermost(els));
+    const queued = (mj.startup && mj.startup.promise ? mj.startup.promise : Promise.resolve())
+        .then(() => run(batch.flatMap(b => b.els)))
+        .then(
+            () => batch.forEach(b => b.resolve(true)),
+            // One bad formula fails the whole call: each request again on its own
+            () => batch.reduce((p, b) => p.then(() => run(b.els)).then(() => b.resolve(true), () => b.resolve(false)), Promise.resolve()));
+    if (mj.startup) mj.startup.promise = queued.catch(() => {});
+}
+
+/**
+ * Formulas for HTML (readouts, map names) that are drawn again on every
+ * redraw: a formula that has not changed since the last draw is the same node
+ * again, so MathJax is not called and the node keeps what MathJax attached to
+ * it (its menu). Not clones of a cache: clones lose the menu.
+ *
+ *   const pool = scene._readoutTex || (scene._readoutTex = new TexNodes());
+ *   line.appendChild(pool.get(tex));   // null without MathJax or on an error
+ *   pool.done();                       // after the draw: unused formulas go
+ */
+export class TexNodes {
+    constructor() {
+        this.prev = new Map();
+        this.next = new Map();
+    }
+
+    get(tex, display = false) {
+        if (!hasMathJax()) return null;
+        const key = `${display ? 'D' : 'I'}${tex}`;
+        const reuse = this.prev.get(key);
+        let node = reuse && reuse.pop();
+        if (!node) {
+            try {
+                node = window.MathJax.tex2svg(tex, { display });
+            } catch (e) {
+                return null;
+            }
+            if (!node) return null;
+        }
+        if (!this.next.has(key)) this.next.set(key, []);
+        this.next.get(key).push(node);
+        return node;
+    }
+
+    done() {
+        this.prev = this.next;
+        this.next = new Map();
+    }
 }
 
 /** Typesets TeX once and returns a detached, self-contained <svg> to clone. */
 function typeset(tex) {
+    const cache = shared().labels;
     let node = cache.get(tex);
     if (node) return node;
 
@@ -89,8 +189,7 @@ function typeset(tex) {
         }
     });
 
-    if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value);
-    cache.set(tex, node);
+    remember(cache, tex, node);
     return node;
 }
 

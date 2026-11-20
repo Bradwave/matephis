@@ -7,6 +7,7 @@ import { curvedArrow, arrowHeadPoints } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
 import { niceNumber } from '../core/interval.js';
 import { SetsModel } from '../core/model.js';
+import { TexNodes, hasMathJax, onNextFrame } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -441,6 +442,9 @@ export function drawProbes(scene) {
  * Values of probes, under the diagram (MathJax when the page has it). A
  * formula changes height with its content (fractions, braces): each line
  * keeps the tallest height it has had, so what is under it never jumps.
+ * The heights are read in the next frame, for every line of every diagram
+ * at once: a read right after each line is drawn would make the browser lay
+ * out the page again for each one.
  */
 
 export function renderReadouts(scene, items) {
@@ -452,33 +456,48 @@ export function renderReadouts(scene, items) {
     }
     el.textContent = '';
     if (!scene.readoutHeights) scene.readoutHeights = [];
+    // A formula that has not changed since the last draw is the same node again
+    const pool = scene._readoutTex || (scene._readoutTex = new TexNodes());
     items.forEach(({ tex, color }, k) => {
         const line = document.createElement('div');
         line.className = 'matephis-sets-readout';
         line.style.color = color;
-        const keep = () => {
-            const h = line.getBoundingClientRect().height;
-            if (h > (scene.readoutHeights[k] || 0)) scene.readoutHeights[k] = h;
-            if (scene.readoutHeights[k]) line.style.minHeight = `${scene.readoutHeights[k]}px`;
-        };
+        if (scene.readoutHeights[k]) line.style.minHeight = `${scene.readoutHeights[k]}px`;
         if (tex === null) {
             // No value now (the point is outside the set): keep the line's place
             el.appendChild(line);
-            keep();
+            keepHeight(scene, k, line);
             return;
         }
-        const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
-        if (mj) {
-            try {
-                line.appendChild(window.MathJax.tex2svg(tex, { display: false }));
-            } catch (e) {
-                line.textContent = tex;
-            }
+        if (hasMathJax()) {
+            const node = pool.get(tex);
+            if (node) line.appendChild(node);
+            else line.textContent = tex;
         } else {
             line.textContent = tex.replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\left|\\right|\\,/g, '').replace(/\\tfrac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2');
         }
         el.appendChild(line);
-        keep();
+        keepHeight(scene, k, line);
+    });
+    pool.done();
+}
+
+/** Readout lines whose height is read in the next frame. */
+const toMeasure = [];
+
+export function keepHeight(scene, k, line) {
+    toMeasure.push({ scene, k, line });
+    if (toMeasure.length === 1) onNextFrame(measureReadouts);
+}
+
+/** All the reads, then all the writes: one layout. Lines redrawn since are gone from the page and skipped. */
+export function measureReadouts() {
+    const batch = toMeasure.splice(0).filter(m => m.line.isConnected);
+    const heights = batch.map(m => m.line.getBoundingClientRect().height);
+    batch.forEach(({ scene, k, line }, i) => {
+        const kept = scene.readoutHeights;
+        if (heights[i] > (kept[k] || 0)) kept[k] = heights[i];
+        if (kept[k]) line.style.minHeight = `${kept[k]}px`;
     });
 }
 

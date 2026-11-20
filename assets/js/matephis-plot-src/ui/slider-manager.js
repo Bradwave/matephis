@@ -97,25 +97,34 @@ function reserveCh(el, chars) {
 }
 
 /**
- * Puts MathJax formulas in a label on the text baseline. Browsers disagree on
+ * Puts MathJax formulas in labels on the text baseline. Browsers disagree on
  * where an inline SVG sits (Safari draws it about 1px high), so each formula
  * is compared with a zero-size marker on the baseline right before it and
  * moved by the difference, which is 0 where the browser already gets it right.
+ * Markers for every formula first, then all the reads, then all the moves:
+ * one layout for any number of labels.
+ * @param {HTMLElement|HTMLElement[]} labels
  */
-export function alignTexBaseline(label) {
+export function alignTexBaseline(labels) {
     if (typeof document === 'undefined') return;
-    label.querySelectorAll('mjx-container > svg').forEach(svg => {
+    const items = [];
+    [].concat(labels).forEach(label => label.querySelectorAll('mjx-container > svg').forEach(svg => {
         svg.style.position = '';
         svg.style.top = '';
         const container = svg.parentNode;
         const marker = document.createElement('span');
         marker.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
         container.parentNode.insertBefore(marker, container);
-        const baseline = marker.getBoundingClientRect().top;
+        items.push({ svg, marker });
+    }));
+    items.forEach(it => {
+        it.baseline = it.marker.getBoundingClientRect().top;
+        it.rect = it.svg.getBoundingClientRect();
+    });
+    items.forEach(({ svg, marker, baseline, rect }) => {
         marker.remove();
         // MathJax's vertical-align (in ex) is the formula's depth under the baseline;
         // 1ex in px comes from the SVG's own height, also given in ex
-        const rect = svg.getBoundingClientRect();
         const va = svg.style.verticalAlign || '0';
         const exPx = rect.height / (parseFloat(svg.getAttribute('height')) || 1);
         const depth = -(parseFloat(va) || 0) * (/ex$/.test(va) ? exPx : 1);
@@ -379,7 +388,7 @@ export class SliderManager {
     _typeset(els) {
         typesetElements(els).then(done => {
             if (!done) return;
-            const align = () => els.forEach(alignTexBaseline);
+            const align = () => alignTexBaseline(els);
             align();
             // Font metrics change once the webfont arrives
             if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);

@@ -32,7 +32,8 @@ renderers/
   implicit-sampler.js         marching squares + stitching for F(x, y) = 0
   grid-renderer.js            grid, axes, tick numbers, axis labels        (mixin)
   data-renderer.js            data series, vectors, angles, labels, legend (mixin)
-  mathjax-bridge.js           cached tex2svg labels
+  mathjax-bridge.js           MathJax for the three engines: cached tex2svg labels, one typeset
+                              queue for HTML labels (one MathJax call per frame), TexNodes
   svg-factory.js              SVG helpers
 interaction/
   pointer.js                  mouse, touch, wheel, keyboard                (mixin)
@@ -56,6 +57,12 @@ Pure modules (parser, samplers, coordinate system) have no DOM dependency and ar
 - **Curves are sampled in screen space.** Refinement uses the 2D distance of the midpoint from
   the chord, so accuracy is the same on any axis scale; jumps are told apart from steep
   continuous segments by bisection; parts far outside the view are not refined.
+- **MathJax is called as little as possible.** On a page with hundreds of formulas each call
+  to MathJax, and each layout read right after a DOM change, costs a restyle or relayout of
+  the whole page. SVG labels are cached by TeX; HTML labels of every block (slider labels,
+  captions, readouts) are typeset together, once per frame, after the page's own typeset;
+  formulas redrawn unchanged are the same nodes again; heights and baselines are read in one
+  pass after all the writes.
 - **Implicit curves** use a pixel-sized grid, reject sign changes through poles and stitch
   segments into polylines (dash patterns render correctly).
 - **Geometry cache.** Every line-like item stores its screen polylines in `plotData`
