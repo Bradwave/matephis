@@ -30,6 +30,7 @@ import { Table } from '../render/table.js';
 import { Product } from '../render/product.js';
 import { drawLayer, renderProperties, drawPropertyMarks } from '../render/highlights.js';
 import { LinkedPlot } from '../render/linked-plot.js';
+import { lazyEnabled, flushPending, placeBlock, placeholder, slidersHeight } from '../../matephis-plot-src/core/lazy-init.js';
 
 let uidCounter = 0;
 
@@ -180,25 +181,35 @@ export class MatephisSets {
         if (options.observeResize !== false) this._initResizeObserver();
     }
 
-    /** Scans the document for ```sets code blocks and .matephis-sets divs. */
-    static init(root = document) {
-        const showError = (el, e) => {
-            const div = document.createElement('div');
-            div.className = 'matephis-plot-error';
-            div.textContent = `Errore nel diagramma: ${e.message}`;
-            el.appendChild(div);
-        };
+    /**
+     * Scans the document for ```sets code blocks and .matephis-sets divs.
+     * @param {object} [opts]
+     * @param {boolean} [opts.lazy=false] - placeholders now, each block built when it comes
+     *   near the screen (plot engine's lazy-init.js); blocks with the same "sync" are built
+     *   together. Without it every block is built now.
+     */
+    static init(root = document, opts = {}) {
+        const lazy = !!opts.lazy && lazyEnabled();
+        if (!lazy) flushPending(root);
+        const place = (container, source, label) => placeBlock(container, source, {
+            lazy,
+            build: (el, src, width) => new MatephisSets(el, src, width > 0 ? { width } : {}),
+            placeholder: (cfg) => MatephisSets.placeholder(cfg),
+            group: (cfg) => (typeof cfg.sync === 'string' && cfg.sync ? `sets:${cfg.sync}` : null),
+            fail: (el, e) => {
+                console.error(label, e);
+                const div = document.createElement('div');
+                div.className = 'matephis-plot-error';
+                div.textContent = `Errore nel diagramma: ${e.message}`;
+                el.appendChild(div);
+            },
+        });
         root.querySelectorAll('.matephis-sets').forEach(container => {
             if (container.getAttribute('data-processed')) return;
             const source = container.textContent;
             container.setAttribute('data-processed', 'true');
-            try {
-                container.innerHTML = '';
-                new MatephisSets(container, source);
-            } catch (e) {
-                console.error('Sets Error', e);
-                showError(container, e);
-            }
+            container.innerHTML = '';
+            place(container, source, 'Sets Error');
         });
         root.querySelectorAll('code.language-sets').forEach(code => {
             const target = code.closest('div.language-sets') || code.closest('pre') || code.parentElement;
@@ -209,12 +220,20 @@ export class MatephisSets {
             container.setAttribute('data-processed', 'true');
             target.parentNode.insertBefore(container, target);
             target.style.display = 'none';
-            try {
-                new MatephisSets(container, code.textContent);
-            } catch (e) {
-                console.error('Code Block Sets Error', e);
-                showError(container, e);
-            }
+            place(container, code.textContent, 'Code Block Sets Error');
+        });
+    }
+
+    /** A placeholder of about the size of a diagram, until it is built (the height of a diagram depends on its layout: a typical one). */
+    static placeholder(cfg) {
+        const plot = cfg.plot && typeof cfg.plot === 'object';
+        return placeholder({
+            className: `matephis-plot-container matephis-sets-container${cfg.border ? ' bordered' : ''}`,
+            layout: (box) => MatephisSets.prototype._applyLayout.call({ config: { ...cfg }, wrapper: box }),
+            // Calibrated on the site's pages (a typical diagram, its plot under it on a phone)
+            height: 300,
+            extra: slidersHeight(cfg) + (cfg.caption ? 24 : 0) + (plot ? 420 : 0)
+                + (Array.isArray(cfg.probes) ? 27 * cfg.probes.length : 0) + (Array.isArray(cfg.controls) ? 40 : 0),
         });
     }
 
@@ -281,11 +300,23 @@ export class MatephisSets {
 
     _initSVG() {
         const cfg = this.config;
+        const right = this.plotPosition === 'right';
+        const observe = this.options.observeResize !== false;
+        // The box's width on the page, read before the first draw (or measured by lazy-init.js)
+        const cw = (cfg.fullWidth || right || observe) ? (this.options.width > 0 ? this.options.width : this.wrapper.clientWidth) : 0;
         let targetWidth = cfg.width || 600;
-        if (cfg.fullWidth || this.plotPosition === 'right') {
-            const cw = this.wrapper.clientWidth;
+        if (cfg.fullWidth || right) {
             targetWidth = this._setsWidth(cw > 50 ? cw : Math.min(window.innerWidth || 600, 600));
             if (cfg.width) targetWidth = Math.min(targetWidth, cfg.width);
+        }
+        // Already the width the ResizeObserver would set (same rule as there and in
+        // resize()): the first draw is the right one
+        if (observe && cw > 10) {
+            let w = this._setsWidth(Math.round(cw));
+            if (w > 10 && Math.abs(w - Math.max(160, targetWidth)) > 2) {
+                if ((!cfg.fullWidth || right) && cfg.width && w > cfg.width) w = cfg.width;
+                targetWidth = w;
+            }
         }
         this.width = Math.max(160, targetWidth);
         this.height = 200;
@@ -395,11 +426,19 @@ export class MatephisSets {
 
     _initResizeObserver() {
         if (!window.ResizeObserver) return;
+        // Resize on the next frame, not inside the observer callback: the redraw changes
+        // the layout, which would raise "ResizeObserver loop completed with undelivered
+        // notifications"; several reports in a frame make one redraw
+        this._resizeFrame = 0;
         this.resizeObserver = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                const w = this._setsWidth(Math.round(entry.contentRect.width));
+            const newW = Math.round(entries[entries.length - 1].contentRect.width);
+            if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame);
+            this._resizeFrame = requestAnimationFrame(() => {
+                this._resizeFrame = 0;
+                if (this._destroyed) return;
+                const w = this._setsWidth(newW);
                 if (w > 10 && Math.abs(w - this.width) > 2) this.resize(w);
-            }
+            });
         });
         this.resizeObserver.observe(this.wrapper);
     }

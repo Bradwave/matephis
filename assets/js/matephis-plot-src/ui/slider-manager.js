@@ -387,21 +387,16 @@ export class SliderManager {
     /** Typesets "$...$" labels once MathJax is ready, then re-checks the layout. */
     _typeset(els) {
         typesetElements(els).then(done => {
-            if (!done) return;
-            const align = () => alignTexBaseline(els);
-            align();
-            // Font metrics change once the webfont arrives
-            if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
-            this._layoutWidth = -1;
-            this.updateLayout();
+            if (done) afterTypeset(this, els);
         });
     }
 
     _watchLayout() {
         if (this.layoutMode !== 'auto') return;
         if (typeof ResizeObserver !== 'undefined') {
-            this._resizeObserver = new ResizeObserver(() => this.updateLayout());
-            this._resizeObserver.observe(this.controls);
+            this._observed = true;
+            panelObserver().observe(this.controls);
+            panels.set(this.controls, this);
         } else {
             requestAnimationFrame(() => this.updateLayout());
         }
@@ -413,26 +408,76 @@ export class SliderManager {
      * Every row switches together, so the sliders keep lining up.
      */
     updateLayout() {
-        if (this.layoutMode !== 'auto') return;
-        const panel = this.controls;
-        const width = panel.clientWidth;
-        if (!width || width === this._layoutWidth) return;
-        this._layoutWidth = width;
+        SliderManager.relayout([this]);
+    }
 
-        panel.classList.remove('stacked');
-        const uis = Object.values(this.paramUIs);
+    /**
+     * updateLayout() for several panels at once: all the reads of each step
+     * together, so the page is laid out twice whatever the number of panels.
+     */
+    static relayout(managers) {
+        const list = managers.filter(m => m.layoutMode === 'auto' && m.controls.isConnected);
+        // Widths (read), then the panels whose width changed go back inline (write)
+        const changed = list.filter(m => {
+            const width = m.controls.clientWidth;
+            if (!width || width === m._layoutWidth) return false;
+            m._layoutWidth = width;
+            return true;
+        });
+        changed.forEach(m => m.controls.classList.remove('stacked'));
+        // Measures inline (read), then the panels that are too tight are stacked (write)
         const lineHeight = (el) => parseFloat(getComputedStyle(el).lineHeight) || 20;
-        const tooTight = uis.some(ui => {
-            if (ui.input.getBoundingClientRect().width < width * MIN_TRACK_SHARE) return true;
+        const tight = changed.filter(m => Object.values(m.paramUIs).some(ui => {
+            if (ui.input.getBoundingClientRect().width < m._layoutWidth * MIN_TRACK_SHARE) return true;
             // A label taller than one line has wrapped
             return ui.label.getBoundingClientRect().height > lineHeight(ui.label) * 1.8;
-        });
-        if (tooTight) panel.classList.add('stacked');
+        }));
+        tight.forEach(m => m.controls.classList.add('stacked'));
     }
 
     destroy() {
         this.animations.forEach(a => a.stop());
         this.animations.clear();
-        if (this._resizeObserver) this._resizeObserver.disconnect();
+        if (this._observed) {
+            panelObserver().unobserve(this.controls);
+            panels.delete(this.controls);
+        }
     }
+}
+
+/**
+ * One ResizeObserver for every slider panel of the page: the panels reported
+ * in a frame are laid out together (SliderManager.relayout).
+ */
+const panels = new Map();
+let observer = null;
+function panelObserver() {
+    if (!observer) {
+        observer = new ResizeObserver(entries => {
+            SliderManager.relayout(entries.map(e => panels.get(e.target)).filter(Boolean));
+        });
+    }
+    return observer;
+}
+
+/**
+ * After a typeset: the labels of every panel typeset together are aligned
+ * together (one layout), then their panels laid out again.
+ */
+let typeset = [];
+function afterTypeset(manager, els) {
+    typeset.push({ manager, els });
+    if (typeset.length > 1) return;
+    // The other panels of the same typeset resolve right after this one
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+        const done = typeset;
+        typeset = [];
+        const labels = done.flatMap(d => d.els);
+        const align = () => alignTexBaseline(labels.filter(el => el.isConnected));
+        align();
+        // Font metrics change once the webfont arrives
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(align);
+        done.forEach(d => { d.manager._layoutWidth = -1; });
+        SliderManager.relayout(done.map(d => d.manager));
+    });
 }
