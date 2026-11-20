@@ -7,6 +7,7 @@
 import { MatephisPlot } from './core/plot.js';
 import { MatephisPlotGroup } from './core/group.js';
 import { whenMathJaxReady } from './renderers/mathjax-bridge.js';
+import { lazyEnabled } from './core/lazy-init.js';
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     window.MatephisPlot = MatephisPlot;
@@ -14,7 +15,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
     // Hosts that render content themselves (Obsidian) set this before loading
     if (!window.MATEPHIS_NO_AUTO_INIT) {
-        const start = () => whenMathJaxReady(() => MatephisPlot.init());
+        // Lazy: placeholders now, blocks built near the screen once MathJax is ready
+        // (lazy-init.js); window.MATEPHIS_EAGER = true builds them all at once, as before
+        const start = () => (lazyEnabled()
+            ? MatephisPlot.init(document, { lazy: true })
+            : whenMathJaxReady(() => MatephisPlot.init()));
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
         else start();
     }

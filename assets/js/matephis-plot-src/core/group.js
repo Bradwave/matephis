@@ -95,7 +95,8 @@ export class MatephisPlotGroup {
             delete cfg.label;
             delete cfg.align;
             try {
-                this.plots.push(new MatephisPlot(host, cfg, options));
+                // Each plot reads its own cell's width (options.width is the group's)
+                this.plots.push(new MatephisPlot(host, cfg, { ...options, width: undefined }));
             } catch (e) {
                 console.error('Plot Group Error', e);
                 host.textContent = `Errore nel grafico ${caption || k + 1}: ${e.message}`;

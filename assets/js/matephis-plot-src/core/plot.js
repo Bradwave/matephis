@@ -27,6 +27,7 @@ import { PointerMixin } from '../interaction/pointer.js';
 import { ToolbarMixin } from '../ui/plot-toolbar.js';
 import { SliderManager } from '../ui/slider-manager.js';
 import { LightboxBridge } from '../ui/lightbox-bridge.js';
+import { lazyEnabled, flushPending, placeBlock, placeholder, slidersHeight } from './lazy-init.js';
 import { WarningsMixin } from '../ui/warnings.js';
 
 let uidCounter = 0;
@@ -43,6 +44,9 @@ export class MatephisPlot {
      * @param {boolean} [options.observeResize=true]
      * @param {object} [options.params] - live params owned by a host (a physics scene),
      *   read by expressions; the host changes them and calls draw()
+     * @param {number} [options.width] - the width the plot's box has on the page, when the
+     *   caller has already measured it (lazy-init.js reads a batch of blocks at once);
+     *   otherwise it is read here, before the first draw
      */
     constructor(container, source, options = {}) {
         this.container = container;
@@ -146,31 +150,38 @@ export class MatephisPlot {
      * Scans the document (or `root`) for plot containers and initializes them.
      * Handles explicit `.matephis-plot` divs and `language-matephis` code blocks.
      * Blocks with a "plots" array become a MatephisPlotGroup.
+     * @param {object} [opts]
+     * @param {boolean} [opts.lazy=false] - placeholders now, each block built when it
+     *   comes near the screen (lazy-init.js); the page's auto-init uses it. Without it
+     *   every block is built now, as are the ones a lazy init left waiting in root.
      */
-    static init(root = document) {
-        const create = (container, source) => {
-            const cfg = JSON.parse(source);
-            if (Array.isArray(cfg.plots) && MatephisPlot.Group) return new MatephisPlot.Group(container, cfg);
-            return new MatephisPlot(container, cfg);
-        };
-        const showError = (el, e) => {
-            const div = document.createElement('div');
-            div.className = 'matephis-plot-error';
-            div.textContent = `Errore nel grafico: ${e.message}`;
-            el.appendChild(div);
-        };
+    static init(root = document, opts = {}) {
+        const lazy = !!opts.lazy && lazyEnabled();
+        if (!lazy) flushPending(root);
+        const place = (container, source, label) => placeBlock(container, source, {
+            lazy,
+            build: (el, src, width) => {
+                const cfg = JSON.parse(src);
+                const options = width > 0 ? { width } : {};
+                if (Array.isArray(cfg.plots) && MatephisPlot.Group) return new MatephisPlot.Group(el, cfg);
+                return new MatephisPlot(el, cfg, options);
+            },
+            placeholder: (cfg) => MatephisPlot.placeholder(cfg),
+            fail: (el, e) => {
+                console.error(label, e);
+                const div = document.createElement('div');
+                div.className = 'matephis-plot-error';
+                div.textContent = `Errore nel grafico: ${e.message}`;
+                el.appendChild(div);
+            },
+        });
 
         root.querySelectorAll('.matephis-plot').forEach(container => {
             if (container.getAttribute('data-processed')) return;
             const source = container.textContent;
             container.setAttribute('data-processed', 'true');
-            try {
-                container.innerHTML = "";
-                create(container, source);
-            } catch (e) {
-                console.error("Plot Error", e);
-                showError(container, e);
-            }
+            container.innerHTML = "";
+            place(container, source, "Plot Error");
         });
 
         root.querySelectorAll('code.language-matephis').forEach(code => {
@@ -182,12 +193,39 @@ export class MatephisPlot {
             container.setAttribute('data-processed', 'true');
             target.parentNode.insertBefore(container, target);
             target.style.display = 'none';
-            try {
-                create(container, code.textContent);
-            } catch (e) {
-                console.error("Code Block Plot Error", e);
-                showError(container, e);
-            }
+            place(container, code.textContent, "Code Block Plot Error");
+        });
+    }
+
+    /** A placeholder of about the size of the plot (or group) of a config, until it is built. */
+    static placeholder(cfg) {
+        if (Array.isArray(cfg.plots)) {
+            const n = cfg.plots.length;
+            let cols = cfg.layout === 'row' ? n : Math.max(1, Math.min(n, cfg.columns || 2));
+            // Same breakpoint as the group's CSS (no layout read: a media query)
+            const narrow = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+            if (narrow) cols = cfg.mobileColumns || Math.min(cols, 2);
+            const rows = Math.ceil(n / cols);
+            const labels = cfg.labels !== false && cfg.labels !== null;
+            return placeholder({
+                className: 'matephis-plot-group',
+                layout: (box) => {
+                    // A block, not the group's grid: the placeholder is one box
+                    box.style.display = 'block';
+                    if (cfg.cssWidth || cfg.fullWidth) box.style.maxWidth = cfg.fullWidth ? '100%' : cssLength(cfg.cssWidth);
+                },
+                // Square cells by default, side by side
+                aspect: cols / rows,
+                extra: (cfg.caption ? 24 : 0) + rows * ((labels ? 24 : 0) + 16),
+            });
+        }
+        const ratio = parseAspectRatio(cfg.aspectRatio) || (cfg.width && cfg.height ? cfg.width / cfg.height : (cfg.height ? null : 1));
+        return placeholder({
+            className: `matephis-plot-container${cfg.border ? ' bordered' : ''}`,
+            layout: (box) => MatephisPlot.prototype._applyLayout.call({ config: { ...cfg }, wrapper: box }),
+            aspect: ratio,
+            height: cfg.height,
+            extra: slidersHeight(cfg) + (cfg.caption ? 24 : 0) + (cfg.addDerivativePlot ? 250 : 0),
         });
     }
 
@@ -259,11 +297,14 @@ export class MatephisPlot {
 
     _initSVG() {
         const cfg = this.config;
+        const observe = this.options.observeResize !== false;
+        // The box's width on the page, read before the first draw
+        const cw = (cfg.fullWidth || observe) ? (this.options.width > 0 ? this.options.width : this.wrapper.clientWidth) : 0;
         let targetWidth = cfg.width || 600;
-        if (cfg.fullWidth) {
-            const cw = this.wrapper.clientWidth;
-            targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? window.innerWidth : 1000);
-        }
+        if (cfg.fullWidth) targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? window.innerWidth : 1000);
+        // Already the width the ResizeObserver would set (same rule as there): the first
+        // draw is the right one, and the observer's first report changes nothing
+        if (observe && cw > 10 && Math.abs(Math.round(cw) - targetWidth) > 2) targetWidth = Math.round(cw);
         this.width = Math.max(50, targetWidth);
         this.height = Math.max(50, this._heightFor(this.width));
         this._computePadding();

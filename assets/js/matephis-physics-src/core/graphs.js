@@ -219,7 +219,12 @@ export class Graphs {
     _create(it) {
         const d = it.def;
         // Wide and low on a page, taller in a narrow column or on a phone, so curves and numbers keep some room
-        const w = it.host.clientWidth || 600;
+        // A graph under the scene is as wide as the scene's box (its width is known, no
+        // layout read while building); beside it or in tabs, read
+        const sc = this.scene;
+        const known = it.position === 'below' && !sc.stageHost ? (sc.viewports ? sc._layoutWidth : sc.width) : 0;
+        const hostW = known > 0 ? known : it.host.clientWidth;
+        const w = hostW || 600;
         const aspect = d.aspectRatio !== undefined ? d.aspectRatio : w < 520 ? 1.6 : 2.5;
         const plotCfg = {
             fullWidth: true, aspectRatio: aspect, grid: true,
@@ -234,7 +239,8 @@ export class Graphs {
             data: [],
             ...(d.plot && typeof d.plot === 'object' ? d.plot : {}),
         };
-        it.plot = new window.MatephisPlot(it.host, plotCfg, { noLightbox: true, params: this.scene.params });
+        // The width just read is the plot's (fullWidth): it does not read it again
+        it.plot = new window.MatephisPlot(it.host, plotCfg, { noLightbox: true, params: this.scene.params, width: hostW > 0 ? hostW : undefined });
         it.plot.view = { xMin: it.xlim[0], xMax: it.xlim[1], yMin: it.ylim[0], yMax: it.ylim[1] };
     }
 

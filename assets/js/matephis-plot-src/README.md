@@ -13,14 +13,31 @@ npm test          # vitest (parser, samplers, coordinate system)
 ```
 
 The bundle works both as a `<script>` (sets `window.MatephisPlot` and auto-renders on
-`DOMContentLoaded`, after MathJax) and via `require()` (returns the `MatephisPlot` class).
+`DOMContentLoaded`) and via `require()` (returns the `MatephisPlot` class).
 Set `window.MATEPHIS_NO_AUTO_INIT = true` before loading to disable auto-rendering.
+
+Auto-rendering is lazy (`core/lazy-init.js`, shared by the plot, physics and sets engines):
+on `DOMContentLoaded` every block gets a placeholder of about its size, and is built once
+MathJax has typeset the page and the block is within about one viewport of the screen, the
+ones on screen first, a few at a time with a yield in between. Sets blocks with the same
+`"sync"` are built together. To build everything at once:
+
+- `window.MATEPHIS_EAGER = true` before the scripts load (no lazy building);
+- `window.MatephisLazy.flush()` (or `flush(root)`) builds what is still waiting, now;
+- `MatephisPlot.init(root)` without `{ lazy: true }` builds every block in `root` now, as before;
+- printing builds every block (`beforeprint`).
+
+`MatephisPlot.render(el, source, options)` (and the same in the other engines) always builds
+right away. `options.width` passes the box's width when the caller has measured it; otherwise
+it is read before the first draw, so the first draw has the final width and the
+ResizeObserver's first report changes nothing.
 
 ## Layout
 
 ```
 index.js                      entry: globals + auto-init
 core/
+  lazy-init.js                lazy building of a page's blocks (all three engines), placeholders
   plot.js                     MatephisPlot: lifecycle, layout, resize, draw orchestration, lightbox, destroy
   group.js                    MatephisPlotGroup: several small plots in a row / grid ("plots": [...])
   config.js                   valid keys, palettes, validation, small helpers

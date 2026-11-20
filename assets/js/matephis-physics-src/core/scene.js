@@ -41,6 +41,7 @@ import { Graphs, graphPosition } from './graphs.js';
 import { Clock } from './clock.js';
 import { DragController } from './drag.js';
 import { OBJECT_TYPES, LAYERS } from '../objects/index.js';
+import { lazyEnabled, flushPending, placeBlock, placeholder, slidersHeight } from '../../matephis-plot-src/core/lazy-init.js';
 
 let uidCounter = 0;
 
@@ -240,26 +241,32 @@ export class MatephisPhysics {
     /**
      * Scans the document (or `root`) for scenes: `.matephis-physics` divs and
      * ```physics code blocks.
+     * @param {object} [opts]
+     * @param {boolean} [opts.lazy=false] - placeholders now, each scene built when it comes
+     *   near the screen (plot engine's lazy-init.js). Without it every scene is built now.
      */
-    static init(root = document) {
-        const showError = (el, e) => {
-            const div = document.createElement('div');
-            div.className = 'matephis-plot-error';
-            div.textContent = `Errore nel diagramma: ${e.message}`;
-            el.appendChild(div);
-        };
+    static init(root = document, opts = {}) {
+        const lazy = !!opts.lazy && lazyEnabled();
+        if (!lazy) flushPending(root);
+        const place = (container, source, label) => placeBlock(container, source, {
+            lazy,
+            build: (el, src, width) => new MatephisPhysics(el, src, width > 0 ? { width } : {}),
+            placeholder: (cfg) => MatephisPhysics.placeholder(cfg),
+            fail: (el, e) => {
+                console.error(label, e);
+                const div = document.createElement('div');
+                div.className = 'matephis-plot-error';
+                div.textContent = `Errore nel diagramma: ${e.message}`;
+                el.appendChild(div);
+            },
+        });
 
         root.querySelectorAll('.matephis-physics').forEach(container => {
             if (container.getAttribute('data-processed')) return;
             const source = container.textContent;
             container.setAttribute('data-processed', 'true');
-            try {
-                container.innerHTML = "";
-                new MatephisPhysics(container, source);
-            } catch (e) {
-                console.error("Physics Error", e);
-                showError(container, e);
-            }
+            container.innerHTML = "";
+            place(container, source, "Physics Error");
         });
 
         root.querySelectorAll('code.language-physics').forEach(code => {
@@ -271,12 +278,19 @@ export class MatephisPhysics {
             container.setAttribute('data-processed', 'true');
             target.parentNode.insertBefore(container, target);
             target.style.display = 'none';
-            try {
-                new MatephisPhysics(container, code.textContent);
-            } catch (e) {
-                console.error("Code Block Physics Error", e);
-                showError(container, e);
-            }
+            place(container, code.textContent, "Code Block Physics Error");
+        });
+    }
+
+    /** A placeholder of about the size of a scene, until it is built. */
+    static placeholder(cfg) {
+        const graphs = Array.isArray(cfg.graphs) ? cfg.graphs.length : 0;
+        return placeholder({
+            className: `matephis-plot-container matephis-physics-container${cfg.border ? ' bordered' : ''}`,
+            layout: (box) => MatephisPhysics.prototype._applyLayout.call({ config: { ...cfg }, wrapper: box }),
+            aspect: parseAspectRatio(cfg.aspectRatio) || DEFAULT_ASPECT_RATIO,
+            extra: slidersHeight(cfg) + (cfg.caption ? 24 : 0) + graphs * 220
+                + (Array.isArray(cfg.readouts) ? 32 : 0) + (cfg.time !== undefined || graphs ? 44 : 0),
         });
     }
 
@@ -315,11 +329,18 @@ export class MatephisPhysics {
 
     _initSVG() {
         const cfg = this.config;
+        const observe = this.options.observeResize !== false;
+        // The width of the scene's column, read before the first draw; lazy-init.js measures
+        // the box, which is the column unless graphs sit beside the scene
+        const cw = (cfg.fullWidth || this.viewDefs || observe)
+            ? (this.options.width > 0 && !this.stageHost ? this.options.width : (this.stageHost || this.wrapper).clientWidth) : 0;
         let targetWidth = cfg.width || 600;
         if (cfg.fullWidth || this.viewDefs) {
-            const cw = (this.stageHost || this.wrapper).clientWidth;
             targetWidth = cw > 50 ? cw : (window.innerWidth > 0 ? Math.min(window.innerWidth, cfg.width || 600) : 600);
         }
+        // Already the width the ResizeObserver would set (same rule as there): the first
+        // draw is the right one
+        if (observe && cw > 10 && Math.abs(Math.round(cw) - targetWidth) > 2) targetWidth = Math.round(cw);
         this.padding = typeof cfg.padding === 'number' ? cfg.padding : 12;
         this.plotStage = document.createElement("div");
         this.plotStage.className = "matephis-plot-stage";
@@ -471,12 +492,18 @@ export class MatephisPhysics {
 
     _initResizeObserver() {
         if (!window.ResizeObserver) return;
+        // Resize on the next frame, not inside the observer callback (see the plot engine):
+        // no "ResizeObserver loop" warning, one redraw for several reports
+        this._resizeFrame = 0;
         this.resizeObserver = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                const newW = Math.round(entry.contentRect.width);
+            const newW = Math.round(entries[entries.length - 1].contentRect.width);
+            if (this._resizeFrame) cancelAnimationFrame(this._resizeFrame);
+            this._resizeFrame = requestAnimationFrame(() => {
+                this._resizeFrame = 0;
+                if (this._destroyed) return;
                 const current = this.viewports ? this._layoutWidth : this.width;
                 if (newW > 10 && Math.abs(newW - current) > 2) this.resize(newW);
-            }
+            });
         });
         // The scene's own column when graphs sit beside it
         this.resizeObserver.observe(this.stageHost || this.wrapper);
