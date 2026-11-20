@@ -9,6 +9,7 @@ import { parseInterval, evalInterval, intervalTeX, niceNumber, unionTeX } from '
 import { intersect } from '../core/model.js';
 import { parseSelector } from '../core/selectors.js';
 import { arrow, linkArrow, fnTeX } from './arrows.js';
+import { TexNodes, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 export { fnTeX };
 
@@ -428,6 +429,8 @@ export function drawPropertyMarks(scene, map) {
 export function renderProperties(scene, layers) {
     const el = scene.propsEl;
     el.textContent = '';
+    // A name that has not changed since the last draw is the same formula node again
+    const pool = scene._propsTex || (scene._propsTex = new TexNodes());
     layers.forEach(l => {
         const map = scene.model.mapById.get(l.sel.map);
         if (!map) return;
@@ -437,15 +440,9 @@ export function renderProperties(scene, layers) {
         const name = document.createElement('span');
         name.className = 'matephis-sets-props-name';
         const from = setValueText(scene, map.from), to = setValueText(scene, map.to);
-        const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
-        let typeset = false;
-        if (mj) {
-            try {
-                name.appendChild(window.MathJax.tex2svg(`${map.name}\\colon ${from} \\to ${to}`, { display: false }));
-                typeset = true;
-            } catch (e) { /* plain text below */ }
-        }
-        if (!typeset) name.textContent = `${plain(map.name)}: ${plain(from)} → ${plain(to)}`;
+        const node = hasMathJax() ? pool.get(`${map.name}\\colon ${from} \\to ${to}`) : null;
+        if (node) name.appendChild(node);
+        else name.textContent = `${plain(map.name)}: ${plain(from)} → ${plain(to)}`;
         // Two blocks that wrap as wholes: the name (with the note), the chips
         const head = document.createElement('span');
         head.className = 'matephis-sets-props-head';
@@ -477,6 +474,7 @@ export function renderProperties(scene, layers) {
         }
         el.appendChild(row);
     });
+    pool.done();
 }
 
 /**

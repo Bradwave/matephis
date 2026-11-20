@@ -28,6 +28,7 @@
  */
 import { niceStep } from '../../matephis-plot-src/renderers/grid-renderer.js';
 import { parseAspectRatio } from '../../matephis-plot-src/core/config.js';
+import { typesetElements } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 const GRAPH_KEYS = ['y', 'x', 'label', 'legend', 'axisLabels', 'xlim', 'ylim', 'aspectRatio', 'cursor', 'progressive', 'colors', 'plot', 'position', 'fill'];
 const POSITIONS = ['below', 'right', 'tabs'];
@@ -110,8 +111,7 @@ export class Graphs {
                 legendEl.appendChild(item);
             });
             box.appendChild(legendEl);
-            const mj = typeof window !== 'undefined' && window.MathJax;
-            if (d.legend.some(n => /\$/.test(String(n))) && mj && mj.typesetPromise) mj.typesetPromise([legendEl]).catch(() => {});
+            if (d.legend.some(n => /\$/.test(String(n)))) typesetElements([legendEl]);
         }
         const host = document.createElement('div');
         box.appendChild(host);
