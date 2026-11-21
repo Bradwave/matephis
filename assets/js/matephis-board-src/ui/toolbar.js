@@ -426,7 +426,7 @@ export class BoardToolbar {
             btn.className = 'board-tray-btn';
             btn.title = `${sz.label} (${sz.width} mm)`;
             btn.dataset.sizeWidth = String(sz.width);
-            const dotPx = 3.5 + i * 3;
+            const dotPx = 3 + i * 2.2;
             btn.innerHTML = `<span class="board-size-dot" style="width:${dotPx}px;height:${dotPx}px;"></span>`;
             btn.addEventListener('click', () => {
                 this.state.penWidth = sz.width;

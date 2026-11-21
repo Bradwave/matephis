@@ -28,10 +28,10 @@ export const HIGHLIGHTER_COLORS = [
 
 // World-space widths in millimeters (landscape A4 = 297 x 210 mm)
 export const PEN_SIZES = [
-    { id: 'xs', label: 'Fine',    width: 0.45 },
-    { id: 'sm', label: 'Normale', width: 0.75 },
-    { id: 'md', label: 'Medio',   width: 1.25 },
-    { id: 'lg', label: 'Spesso',  width: 2.00 },
+    { id: 'xs', label: 'Sottile', width: 0.30 },
+    { id: 'sm', label: 'Fine',    width: 0.45 },
+    { id: 'md', label: 'Medio',   width: 0.70 },
+    { id: 'lg', label: 'Spesso',  width: 1.05 },
 ];
 
 export const HIGHLIGHTER_SIZES = [

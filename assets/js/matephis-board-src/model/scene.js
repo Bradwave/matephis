@@ -229,7 +229,7 @@ export class BoardScene {
             generated.push(createStroke({
                 tool: 'pen',
                 color: colors[i % colors.length],
-                width: 0.75,
+                width: 0.45,
                 style: styles[i % styles.length],
                 points: pts,
             }));

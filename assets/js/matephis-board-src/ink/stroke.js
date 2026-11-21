@@ -15,7 +15,7 @@ export function createStroke({
     id = nextStrokeId(),
     tool = 'pen',
     color = 0,
-    width = 0.75,
+    width = 0.45,
     style = 'solid',
     points = [],
 }) {
