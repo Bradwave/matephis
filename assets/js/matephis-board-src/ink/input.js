@@ -406,9 +406,9 @@ export class InputController {
         this.surface.setActiveStroke(null);
         if (!stroke || stroke.points.length === 0) return;
 
-        // Simplify curve in world mm for compact storage while preserving smoothness
+        // Simplify curve in world mm for compact storage while preserving fine handwriting hooks
         if (stroke.points.length > 3) {
-            stroke.points = simplifyRDP(stroke.points, 0.14);
+            stroke.points = simplifyRDP(stroke.points, 0.09);
         }
         refreshStrokeBBox(stroke);
 

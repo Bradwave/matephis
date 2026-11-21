@@ -438,7 +438,7 @@ export class BoardToolbar {
             sizesWrap.appendChild(btn);
         }
 
-        tray.append(colorsWrap, this._makeDivider(), stylesWrap, this._makeDivider(), sizesWrap);
+        tray.append(stylesWrap, this._makeDivider(), colorsWrap, this._makeDivider(), sizesWrap);
         return tray;
     }
 

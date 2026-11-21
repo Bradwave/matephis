@@ -142,10 +142,43 @@ export function drawStroke(ctx, stroke, theme = 'light') {
     if (pts.length === 2) {
         ctx.lineTo(pts[1].x, pts[1].y);
     } else {
+        // Corner-aware clamped quadratic smoothing:
+        // - Sharp turns (> ~41°, cos < 0.75) hit the exact vertex so letters like "t", "v", "z", "7"
+        //   stay razor-sharp even after RDP simplification (zero extra points needed).
+        // - Gentle curves smooth smoothly with tangent pull clamped to <= 2.2 mm so long straight
+        //   segments never warp into wide arcs.
+        const SHARP_COS_THRESHOLD = 0.75;
+        const MAX_PULL_MM = 2.2;
+
         for (let i = 1; i < pts.length - 1; i++) {
-            const midX = (pts[i].x + pts[i + 1].x) * 0.5;
-            const midY = (pts[i].y + pts[i + 1].y) * 0.5;
-            ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
+            const prev = pts[i - 1];
+            const curr = pts[i];
+            const next = pts[i + 1];
+
+            const ax = curr.x - prev.x;
+            const ay = curr.y - prev.y;
+            const bx = next.x - curr.x;
+            const by = next.y - curr.y;
+            const lenA = Math.hypot(ax, ay);
+            const lenB = Math.hypot(bx, by);
+
+            if (lenA < 1e-4 || lenB < 1e-4) {
+                ctx.lineTo(curr.x, curr.y);
+                continue;
+            }
+
+            const cosTheta = (ax * bx + ay * by) / (lenA * lenB);
+            if (cosTheta < SHARP_COS_THRESHOLD) {
+                ctx.lineTo(curr.x, curr.y);
+            } else {
+                const pull = Math.min(lenA * 0.45, lenB * 0.45, MAX_PULL_MM);
+                const inX = curr.x - (ax / lenA) * pull;
+                const inY = curr.y - (ay / lenA) * pull;
+                const outX = curr.x + (bx / lenB) * pull;
+                const outY = curr.y + (by / lenB) * pull;
+                ctx.lineTo(inX, inY);
+                ctx.quadraticCurveTo(curr.x, curr.y, outX, outY);
+            }
         }
         const last = pts[pts.length - 1];
         ctx.lineTo(last.x, last.y);
