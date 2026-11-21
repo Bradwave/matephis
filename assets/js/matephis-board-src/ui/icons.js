@@ -10,6 +10,9 @@ import undo from './icons/undo.svg';
 import redo from './icons/redo.svg';
 import more from './icons/more.svg';
 import collapse from './icons/collapse.svg';
+import chevronRight from './icons/chevron-right.svg';
+import add from './icons/add.svg';
+import jump from './icons/jump.svg';
 import pinTop from './icons/pin-top.svg';
 import pinLeft from './icons/pin-left.svg';
 import overview from './icons/overview.svg';
@@ -31,6 +34,10 @@ export const BoardIcons = {
     redo,
     more,
     collapse,
+    chevronLeft: collapse,
+    chevronRight,
+    add,
+    jump,
     pinTop,
     pinLeft,
     overview,

@@ -1,4 +1,6 @@
-/* Matephis Board (/board/) — Delta stylesheet over assets/css/style.css */
+/* Matephis Board (/board/) — Delta stylesheet over assets/css/style.css
+ * Deliberately zero UI transitions or scale animations for instant smartboard feel.
+ */
 
 html:has(.board-body),
 body.board-body {
@@ -48,12 +50,12 @@ body.board-body {
     cursor: crosshair;
 }
 
-/* --- Top-right discrete status pills --- */
+/* --- Top-right discrete status & page navigation cluster --- */
 
 .board-status-cluster {
     position: fixed;
-    top: 14px;
-    right: 16px;
+    top: 12px;
+    right: 14px;
     z-index: 30;
     display: flex;
     align-items: center;
@@ -66,12 +68,14 @@ body.board-body {
     color: var(--secondary-text);
     border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    padding: 5px 10px;
+    padding: 0 10px;
+    height: 36px;
     font-family: var(--font-plot);
     font-size: 12px;
-    line-height: 1.2;
+    line-height: 1;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
 }
 
 .board-pill:hover {
@@ -103,7 +107,60 @@ body.board-body {
     border-radius: 50%;
     background: currentColor;
     margin-right: 6px;
-    vertical-align: middle;
+}
+
+/* Multi-page switcher (< 1 / N > +) */
+
+.board-page-nav {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    height: 36px;
+}
+
+.board-page-btn {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.board-page-btn svg {
+    width: 19px;
+    height: 19px;
+    display: block;
+}
+
+.board-page-btn:hover:not(:disabled) {
+    background: var(--bg2);
+    color: var(--accent);
+}
+
+.board-page-btn:disabled {
+    opacity: 0.28;
+    cursor: default;
+}
+
+.board-page-add {
+    border-left: 1px solid var(--border);
+}
+
+.board-page-indicator {
+    font-family: var(--font-plot);
+    font-size: 12px;
+    color: var(--title);
+    padding: 0 6px;
+    min-width: 44px;
+    text-align: center;
 }
 
 /* --- Bottom-centered Matephis floating dock --- */
@@ -176,7 +233,6 @@ body.board-body {
     height: 44px;
     padding: 0;
     flex-shrink: 0;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 
 .board-tool-btn svg,
@@ -223,17 +279,15 @@ body.board-body {
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
 .board-swatch:hover {
-    transform: scale(1.1);
+    border-color: var(--title);
 }
 
 .board-swatch.active {
     border-color: var(--bg);
     box-shadow: 0 0 0 2px var(--title);
-    transform: scale(1.12);
 }
 
 /* --- Contextual trays above dock (Pen / Eraser / Highlighter) --- */
@@ -241,8 +295,8 @@ body.board-body {
 .board-tray {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 10px;
+    padding: 12px 14px;
     background: var(--bg);
     border: 1px solid var(--border);
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.10);
@@ -252,16 +306,64 @@ body.board-body {
     display: none;
 }
 
+.board-pen-tray {
+    min-width: 320px;
+}
+
+.board-tray-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.board-tray-label {
+    font-family: var(--font-plot);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--secondary-text);
+}
+
+.board-color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    justify-items: center;
+    padding: 4px 2px 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+.board-pen-tray .board-swatch {
+    width: 30px;
+    height: 30px;
+}
+
+.board-pen-meta-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+}
+
+.board-seg-grid {
+    display: grid;
+    gap: 4px;
+}
+
+.board-seg-grid-3 {
+    grid-template-columns: repeat(3, 44px);
+}
+
+.board-seg-grid-4 {
+    grid-template-columns: repeat(4, 38px);
+}
+
 .board-tray-row {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     flex-wrap: wrap;
-}
-
-.board-tray-colors {
-    gap: 8px;
 }
 
 .board-seg-group {
@@ -281,12 +383,11 @@ body.board-body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
+    min-width: 38px;
     height: 36px;
     padding: 0 8px;
     font-family: var(--font);
     font-size: 13px;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 
 .board-seg-btn:hover,
@@ -331,7 +432,7 @@ body.board-body {
     bottom: calc(max(16px, env(safe-area-inset-bottom)) + 66px);
     transform: translateX(-50%);
     z-index: 45;
-    width: min(310px, calc(100vw - 24px));
+    width: min(320px, calc(100vw - 24px));
     background: var(--bg);
     border: 1px solid var(--border);
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
@@ -417,7 +518,6 @@ body.board-body {
     font-family: var(--font);
     font-size: 13px;
     cursor: pointer;
-    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 
 .board-action-btn svg {
@@ -425,32 +525,36 @@ body.board-body {
     height: 17px;
 }
 
-.board-action-btn:hover {
+.board-action-btn:hover:not(:disabled) {
     border-color: var(--title);
     color: var(--title);
 }
 
+.board-action-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 .board-action-btn.is-danger {
-    grid-column: 1 / -1;
     color: var(--accent);
 }
 
-.board-action-btn.is-danger:hover {
+.board-action-btn.is-danger:hover:not(:disabled) {
     background: var(--accent);
     border-color: var(--accent);
     color: #ffffff;
 }
 
-/* --- Approach A: Pinned Reference Strip --- */
+/* --- Approach A: Interactive Vector Pinned Reference Strip --- */
 
 .board-pinned-strip {
     position: fixed;
     z-index: 25;
-    background: var(--bg2);
+    background: var(--bg);
     border: 1px solid var(--border);
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
-    display: flex;
     overflow: hidden;
+    touch-action: none;
 }
 
 .board-pinned-strip[hidden] {
@@ -467,7 +571,6 @@ body.board-body {
     border-left: none;
     border-right: none;
     border-bottom: 2px solid var(--border);
-    flex-direction: row;
 }
 
 .board-pinned-strip.is-left {
@@ -480,64 +583,49 @@ body.board-body {
     border-left: none;
     border-bottom: none;
     border-right: 2px solid var(--border);
-    flex-direction: column;
 }
 
-.board-pinned-preview {
-    position: relative;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    cursor: pointer;
-    background: var(--bg);
-}
-
-.board-pinned-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+.board-pinned-canvas {
+    position: absolute;
+    inset: 0;
     display: block;
+    touch-action: none;
+    cursor: grab;
+}
+
+.board-pinned-canvas:active {
+    cursor: grabbing;
+}
+
+.board-pinned-bar {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .board-pinned-badge {
-    position: absolute;
-    left: 10px;
-    top: 8px;
     font-family: var(--font-plot);
     font-size: 11px;
-    padding: 2px 6px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    padding: 0 9px;
     color: var(--secondary-text);
-    pointer-events: none;
+    border-right: 1px solid var(--border);
+    line-height: 32px;
 }
 
-.board-pinned-actions {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    display: flex;
-    gap: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+.board-pinned-bar .board-icon-btn {
+    width: 32px;
+    height: 32px;
 }
 
-.board-pinned-strip.is-top .board-pinned-actions {
-    /* Leave room for top-right status pills if overlapping */
-    right: auto;
-    left: 110px;
-}
-
-.board-pinned-actions .board-icon-btn {
-    width: 34px;
-    height: 34px;
-}
-
-.board-pinned-actions .board-icon-btn svg {
-    width: 18px;
-    height: 18px;
+.board-pinned-bar .board-icon-btn svg {
+    width: 17px;
+    height: 17px;
 }
 
 /* --- Perf & Input Debug HUD --- */

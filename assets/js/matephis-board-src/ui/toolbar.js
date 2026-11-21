@@ -1,11 +1,10 @@
 /**
  * Bottom-centered Matephis-styled dock with:
- * - Always-visible Pen + 5 inline quick color swatches + Eraser + Undo/Redo
- * - Instant auto-dismiss trays for Pen (10 colors, solid/dashed/dotted, 4 sizes),
- *   Eraser (4 sizes + partial/whole-stroke toggle), and Highlighter (4 colors, 3 sizes)
- * - Horizontal dock expansion revealing Highlighter, Laser, Pin Top/Left, Overview,
- *   Theme toggle, and Canvas Options
- * - Discrete top-right A4 footprint & zoom reset pills
+ * - Always-visible Pen + 5 inline quick color swatches + Eraser + Undo/Redo + Pin Top & Pin Left
+ * - Elegantly structured Pen tray (2x5 color grid, 3 stroke styles, 4 world sizes)
+ * - Instant Eraser tray (4 sizes + partial/whole-stroke toggle)
+ * - Horizontal dock expansion revealing Highlighter, Laser, Overview, Theme, and Canvas Options
+ * - Top-right compact Page Switcher (< 1 / N > +) + A4 footprint & zoom reset pills
  */
 
 import {
@@ -31,6 +30,9 @@ export class BoardToolbar {
         onToggleTheme,
         onToggleOptions,
         onResetZoom,
+        onPrevPage,
+        onNextPage,
+        onAddPage,
     }) {
         this.hostEl = hostEl;
         this.getTheme = getTheme;
@@ -43,12 +45,15 @@ export class BoardToolbar {
         this.onToggleTheme = onToggleTheme;
         this.onToggleOptions = onToggleOptions;
         this.onResetZoom = onResetZoom;
+        this.onPrevPage = onPrevPage;
+        this.onNextPage = onNextPage;
+        this.onAddPage = onAddPage;
 
         this.state = {
-            tool: 'pen',          // 'pen' | 'eraser' | 'highlighter' | 'laser'
+            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser'
             penColor: 0,
             penWidth: PEN_SIZES[1].width,
-            penStyle: 'solid',    // 'solid' | 'dashed' | 'dotted'
+            penStyle: 'solid',     // 'solid' | 'dashed' | 'dotted'
             eraserRadius: ERASER_SIZES[1].radius,
             eraserMode: 'partial', // 'partial' | 'stroke'
             highlighterColor: HIGHLIGHTER_COLORS[0].id,
@@ -77,6 +82,12 @@ export class BoardToolbar {
     setHistoryState(canUndo, canRedo) {
         this.undoBtn.disabled = !canUndo;
         this.redoBtn.disabled = !canRedo;
+    }
+
+    setPageState(currentIndex, totalPages) {
+        this.pageIndicatorEl.textContent = `${currentIndex + 1} / ${totalPages}`;
+        this.prevPageBtn.disabled = currentIndex <= 0;
+        this.nextPageBtn.disabled = currentIndex >= totalPages - 1;
     }
 
     setOverviewActive(active) {
@@ -116,15 +127,25 @@ export class BoardToolbar {
     }
 
     _buildDOM() {
-        // Top-right discrete status cluster
+        // Top-right cluster: Zoom pill + A4 footprint pill + Page Switcher (< 1 / N > +)
         this.statusCluster = document.createElement('div');
         this.statusCluster.className = 'board-status-cluster';
         this.statusCluster.innerHTML = `
             <button type="button" class="board-pill board-zoom-pill" hidden title="Torna allo zoom di scrittura (100%)">100%</button>
             <button type="button" class="board-pill board-footprint-pill" title="Estensione A4 — tocca per vista generale">1×1 A4</button>
+            <div class="board-page-nav" aria-label="Navigazione pagine">
+                <button type="button" class="board-page-btn board-page-prev" title="Pagina precedente (PageUp)">${BoardIcons.chevronLeft}</button>
+                <span class="board-page-indicator">1 / 1</span>
+                <button type="button" class="board-page-btn board-page-next" title="Pagina successiva (PageDown)">${BoardIcons.chevronRight}</button>
+                <button type="button" class="board-page-btn board-page-add" title="Nuova pagina">${BoardIcons.add}</button>
+            </div>
         `;
         this.zoomPill = this.statusCluster.querySelector('.board-zoom-pill');
         this.footprintPill = this.statusCluster.querySelector('.board-footprint-pill');
+        this.prevPageBtn = this.statusCluster.querySelector('.board-page-prev');
+        this.nextPageBtn = this.statusCluster.querySelector('.board-page-next');
+        this.addPageBtn = this.statusCluster.querySelector('.board-page-add');
+        this.pageIndicatorEl = this.statusCluster.querySelector('.board-page-indicator');
 
         this.zoomPill.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -134,15 +155,26 @@ export class BoardToolbar {
             e.stopPropagation();
             if (this.onToggleOverview) this.onToggleOverview();
         });
+        this.prevPageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.onPrevPage) this.onPrevPage();
+        });
+        this.nextPageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.onNextPage) this.onNextPage();
+        });
+        this.addPageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.onAddPage) this.onAddPage();
+        });
         this.statusCluster.addEventListener('pointerdown', (e) => e.stopPropagation());
         this.hostEl.appendChild(this.statusCluster);
 
-        // Bottom dock wrapper (holds trays above + horizontal dock bar)
+        // Bottom dock wrapper (contextual trays above + horizontal dock bar)
         this.dockWrap = document.createElement('div');
         this.dockWrap.className = 'board-dock-wrap';
         this.dockWrap.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-        // Contextual trays above the dock
         this.penTray = this._buildPenTray();
         this.eraserTray = this._buildEraserTray();
         this.highlighterTray = this._buildHighlighterTray();
@@ -154,7 +186,6 @@ export class BoardToolbar {
         this.dock = document.createElement('div');
         this.dock.className = 'board-dock';
 
-        // Primary tools
         this.penBtn = this._makeToolBtn('Penna (P) — stile, spessore e colori', BoardIcons.pen, () => {
             if (this.state.tool === 'pen') {
                 this.openTray = this.openTray === 'pen' ? null : 'pen';
@@ -209,6 +240,18 @@ export class BoardToolbar {
             if (this.onRedo) this.onRedo();
         });
 
+        // Pin strip buttons — ALWAYS visible on main dock
+        this.pinTopBtn = this._makeToolBtn('Fissa in alto e scorri sotto', BoardIcons.pinTop, () => {
+            this.closeTrays();
+            this._closeOptionsIfOpen();
+            if (this.onPinTop) this.onPinTop();
+        });
+        this.pinLeftBtn = this._makeToolBtn('Fissa a sinistra e scorri a destra', BoardIcons.pinLeft, () => {
+            this.closeTrays();
+            this._closeOptionsIfOpen();
+            if (this.onPinLeft) this.onPinLeft();
+        });
+
         // Horizontal expandable drawer for secondary tools
         this.extraGroup = document.createElement('div');
         this.extraGroup.className = 'board-dock-extra';
@@ -234,16 +277,6 @@ export class BoardToolbar {
             if (this.onToolChange) this.onToolChange(this.state);
         });
 
-        this.pinTopBtn = this._makeToolBtn('Fissa in alto e scorri sotto', BoardIcons.pinTop, () => {
-            this.closeTrays();
-            if (this.onPinTop) this.onPinTop();
-        });
-
-        this.pinLeftBtn = this._makeToolBtn('Fissa a sinistra e scorri a destra', BoardIcons.pinLeft, () => {
-            this.closeTrays();
-            if (this.onPinLeft) this.onPinLeft();
-        });
-
         this.overviewBtn = this._makeToolBtn('Vista generale A4 (O)', BoardIcons.overview, () => {
             this.closeTrays();
             if (this.onToggleOverview) this.onToggleOverview();
@@ -265,10 +298,7 @@ export class BoardToolbar {
             this.highlighterBtn,
             this.laserBtn,
             this._makeDivider(),
-            this.pinTopBtn,
-            this.pinLeftBtn,
             this.overviewBtn,
-            this._makeDivider(),
             this.themeBtn,
             this.optionsBtn
         );
@@ -294,6 +324,9 @@ export class BoardToolbar {
             this._makeDivider(),
             this.undoBtn,
             this.redoBtn,
+            this._makeDivider(),
+            this.pinTopBtn,
+            this.pinLeftBtn,
             this.extraGroup,
             this._makeDivider(),
             this.expandBtn
@@ -324,14 +357,24 @@ export class BoardToolbar {
         return sep;
     }
 
+    /**
+     * Structured Pen tray:
+     * - Section 1: COLORE (clean 2x5 color swatch grid)
+     * - Section 2: TRATTO (3 equal-width style buttons: solid / dashed / dotted)
+     * - Section 3: SPESSORE (4 equal-width stroke weight buttons)
+     */
     _buildPenTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-pen-tray';
         tray.hidden = true;
 
-        // Row 1: Full 10-color palette (zero extra click!)
-        const colorsRow = document.createElement('div');
-        colorsRow.className = 'board-tray-row board-tray-colors';
+        // Section 1: Colors (2 rows of 5)
+        const colorsSection = document.createElement('div');
+        colorsSection.className = 'board-tray-section';
+        colorsSection.innerHTML = '<div class="board-tray-label">Colore</div>';
+
+        const colorsGrid = document.createElement('div');
+        colorsGrid.className = 'board-color-grid';
         this.penTraySwatches = [];
         for (const c of PEN_COLORS) {
             const btn = document.createElement('button');
@@ -346,15 +389,20 @@ export class BoardToolbar {
                 if (this.onToolChange) this.onToolChange(this.state);
             });
             this.penTraySwatches.push(btn);
-            colorsRow.appendChild(btn);
+            colorsGrid.appendChild(btn);
         }
+        colorsSection.appendChild(colorsGrid);
 
-        // Row 2: 3 stroke styles (solid, dashed, dotted) + 4 world sizes
-        const controlsRow = document.createElement('div');
-        controlsRow.className = 'board-tray-row board-tray-controls';
+        // Section 2 & 3 side-by-side: Style + Size
+        const bottomGrid = document.createElement('div');
+        bottomGrid.className = 'board-pen-meta-grid';
+
+        const styleSection = document.createElement('div');
+        styleSection.className = 'board-tray-section';
+        styleSection.innerHTML = '<div class="board-tray-label">Tratto</div>';
 
         const stylesWrap = document.createElement('div');
-        stylesWrap.className = 'board-seg-group';
+        stylesWrap.className = 'board-seg-grid board-seg-grid-3';
         this.styleBtns = [];
         for (const st of PEN_STYLES) {
             const btn = document.createElement('button');
@@ -377,9 +425,14 @@ export class BoardToolbar {
             this.styleBtns.push(btn);
             stylesWrap.appendChild(btn);
         }
+        styleSection.appendChild(stylesWrap);
+
+        const sizeSection = document.createElement('div');
+        sizeSection.className = 'board-tray-section';
+        sizeSection.innerHTML = '<div class="board-tray-label">Spessore</div>';
 
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-seg-group';
+        sizesWrap.className = 'board-seg-grid board-seg-grid-4';
         this.penSizeBtns = [];
         for (let i = 0; i < PEN_SIZES.length; i++) {
             const sz = PEN_SIZES[i];
@@ -399,9 +452,10 @@ export class BoardToolbar {
             this.penSizeBtns.push(btn);
             sizesWrap.appendChild(btn);
         }
+        sizeSection.appendChild(sizesWrap);
 
-        controlsRow.append(stylesWrap, this._makeDivider(), sizesWrap);
-        tray.append(colorsRow, controlsRow);
+        bottomGrid.append(styleSection, sizeSection);
+        tray.append(colorsSection, bottomGrid);
         return tray;
     }
 
@@ -413,7 +467,6 @@ export class BoardToolbar {
         const row = document.createElement('div');
         row.className = 'board-tray-row board-tray-controls';
 
-        // Eraser sizes
         const sizesWrap = document.createElement('div');
         sizesWrap.className = 'board-seg-group';
         this.eraserSizeBtns = [];
@@ -436,7 +489,6 @@ export class BoardToolbar {
             sizesWrap.appendChild(btn);
         }
 
-        // Partial (default) vs Whole-Stroke toggle
         const modeWrap = document.createElement('div');
         modeWrap.className = 'board-seg-group';
         this.eraserModeBtns = [];
@@ -527,24 +579,20 @@ export class BoardToolbar {
     render() {
         const theme = this.getTheme();
 
-        // Active tool buttons
         this.penBtn.classList.toggle('active', this.state.tool === 'pen');
         this.eraserBtn.classList.toggle('active', this.state.tool === 'eraser');
         this.highlighterBtn.classList.toggle('active', this.state.tool === 'highlighter');
         this.laserBtn.classList.toggle('active', this.state.tool === 'laser');
 
-        // Theme button icon
         this.themeBtn.innerHTML = theme === 'dark' ? BoardIcons.sun : BoardIcons.moon;
         this.themeBtn.title = theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro';
 
-        // Quick + full pen swatches
         for (const btn of [...this.quickSwatchBtns, ...this.penTraySwatches]) {
             const id = Number(btn.dataset.colorId);
             btn.style.setProperty('--swatch-color', resolveInkColor(id, theme));
             btn.classList.toggle('active', this.state.tool === 'pen' && this.state.penColor === id);
         }
 
-        // Pen styles & sizes
         for (const btn of this.styleBtns) {
             btn.classList.toggle('active', btn.dataset.styleId === this.state.penStyle);
         }
@@ -552,7 +600,6 @@ export class BoardToolbar {
             btn.classList.toggle('active', Number(btn.dataset.sizeWidth) === this.state.penWidth);
         }
 
-        // Eraser sizes & mode
         for (const btn of this.eraserSizeBtns) {
             btn.classList.toggle('active', Number(btn.dataset.eraserRadius) === this.state.eraserRadius);
         }
@@ -560,7 +607,6 @@ export class BoardToolbar {
             btn.classList.toggle('active', btn.dataset.eraseMode === this.state.eraserMode);
         }
 
-        // Highlighter swatches & sizes
         for (const btn of this.hlSwatchBtns) {
             const id = btn.dataset.colorId;
             btn.style.setProperty('--swatch-color', resolveInkColor(id, theme));

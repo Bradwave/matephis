@@ -19,6 +19,120 @@ import { drawStroke } from './stroke.js';
 
 const LASER_LIFETIME_MS = 1250;
 
+/**
+ * Shared helper: draws faint landscape A4 borders + subtle corner ticks.
+ */
+export function drawA4Borders(ctx, cam, viewBox, theme = 'light') {
+    const minCol = Math.floor(viewBox.minX / A4_W);
+    const maxCol = Math.ceil(viewBox.maxX / A4_W);
+    const minRow = Math.floor(viewBox.minY / A4_H);
+    const maxRow = Math.ceil(viewBox.maxY / A4_H);
+
+    // Guard against extreme zoom-out drawing too many grid lines
+    if ((maxCol - minCol) * (maxRow - minRow) > 200) return;
+
+    const isDark = theme === 'dark';
+    const armPx = clamp(cam.scale * 5.0, 5, 14);
+
+    ctx.save();
+
+    // 1. Subtle continuous dashed A4 page borders
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.11)' : 'rgba(0, 0, 0, 0.11)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath();
+
+    const topPt = worldToScreen(0, minRow * A4_H, cam);
+    const botPt = worldToScreen(0, maxRow * A4_H, cam);
+    for (let col = minCol; col <= maxCol; col++) {
+        const x = Math.round(worldToScreen(col * A4_W, 0, cam).x) + 0.5;
+        ctx.moveTo(x, topPt.y);
+        ctx.lineTo(x, botPt.y);
+    }
+
+    const leftPt = worldToScreen(minCol * A4_W, 0, cam);
+    const rightPt = worldToScreen(maxCol * A4_W, 0, cam);
+    for (let row = minRow; row <= maxRow; row++) {
+        const y = Math.round(worldToScreen(0, row * A4_H, cam).y) + 0.5;
+        ctx.moveTo(leftPt.x, y);
+        ctx.lineTo(rightPt.x, y);
+    }
+    ctx.stroke();
+
+    // 2. Slightly crisper solid corner crosshairs at A4 intersections
+    ctx.setLineDash([]);
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+            const pt = worldToScreen(col * A4_W, row * A4_H, cam);
+            const sx = Math.round(pt.x) + 0.5;
+            const sy = Math.round(pt.y) + 0.5;
+            ctx.moveTo(sx - armPx, sy);
+            ctx.lineTo(sx + armPx, sy);
+            ctx.moveTo(sx, sy - armPx);
+            ctx.lineTo(sx, sy + armPx);
+        }
+    }
+    ctx.stroke();
+
+    // 3. Quiet tile label at top-left of each A4 tile
+    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.24)';
+    ctx.font = '500 10px "Space Mono", monospace';
+    for (let row = minRow; row < maxRow; row++) {
+        for (let col = minCol; col < maxCol; col++) {
+            const pt = worldToScreen(col * A4_W, row * A4_H, cam);
+            const label = col === 0 && row === 0 ? 'A4' : `${row + 1}·${col + 1}`;
+            ctx.fillText(label, Math.round(pt.x) + 6, Math.round(pt.y) + 14);
+        }
+    }
+
+    ctx.restore();
+}
+
+/**
+ * Shared vector renderer for rendering any page's strokes into a target canvas
+ * (reused by PinnedStrip for crisp zoomable/pannable vector previews).
+ */
+export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme = 'light', showBorders = true) {
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.fillStyle = theme === 'dark' ? '#121212' : '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    const viewBox = {
+        minX: cam.x - 10,
+        minY: cam.y - 10,
+        maxX: cam.x + width / cam.scale + 10,
+        maxY: cam.y + height / cam.scale + 10,
+    };
+
+    if (showBorders) {
+        drawA4Borders(ctx, cam, viewBox, theme);
+    }
+
+    ctx.save();
+    ctx.scale(cam.scale, cam.scale);
+    ctx.translate(-cam.x, -cam.y);
+
+    for (let i = 0; i < strokes.length; i++) {
+        const s = strokes[i];
+        if (s.tool !== 'highlighter') continue;
+        if (!bboxIntersects(s.bbox, viewBox)) continue;
+        drawStroke(ctx, s, theme);
+    }
+    for (let i = 0; i < strokes.length; i++) {
+        const s = strokes[i];
+        if (s.tool === 'highlighter') continue;
+        if (!bboxIntersects(s.bbox, viewBox)) continue;
+        drawStroke(ctx, s, theme);
+    }
+
+    ctx.restore();
+    ctx.restore();
+}
+
 export class InkSurface {
     constructor(container, { scene, onPerfSample = null, onCameraChange = null }) {
         this.container = container;
@@ -179,55 +293,11 @@ export class InkSurface {
     }
 
     /**
-     * Faint landscape A4 corner crop marks on the clean blank canvas.
-     * Drawn in screen space (1px crisp) at every visible A4 tile corner.
+     * Landscape A4 page borders + subtle corner ticks on the clear canvas.
+     * Drawn crisp in screen space (1px) for all visible A4 tiles.
      */
     _drawA4CropMarks(ctx, cam, viewBox) {
-        const minCol = Math.floor(viewBox.minX / A4_W);
-        const maxCol = Math.ceil(viewBox.maxX / A4_W);
-        const minRow = Math.floor(viewBox.minY / A4_H);
-        const maxRow = Math.ceil(viewBox.maxY / A4_H);
-
-        // Guard against extreme zoom-out drawing too many marks
-        if ((maxCol - minCol) * (maxRow - minRow) > 200) return;
-
-        const armPx = clamp(cam.scale * 5.5, 6, 16);
-        const isDark = this.theme === 'dark';
-
-        ctx.save();
-        ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-
-        for (let row = minRow; row <= maxRow; row++) {
-            for (let col = minCol; col <= maxCol; col++) {
-                const pt = worldToScreen(col * A4_W, row * A4_H, cam);
-                const sx = Math.round(pt.x) + 0.5;
-                const sy = Math.round(pt.y) + 0.5;
-
-                // Small crisp crosshair at every A4 corner intersection
-                ctx.moveTo(sx - armPx, sy);
-                ctx.lineTo(sx + armPx, sy);
-                ctx.moveTo(sx, sy - armPx);
-                ctx.lineTo(sx, sy + armPx);
-            }
-        }
-        ctx.stroke();
-
-        // Very subtle A4 tile badge at top-left corner of occupied/visible non-origin tiles
-        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.22)';
-        ctx.font = '500 10px "Space Mono", monospace';
-        for (let row = minRow; row < maxRow; row++) {
-            for (let col = minCol; col < maxCol; col++) {
-                const pt = worldToScreen(col * A4_W, row * A4_H, cam);
-                const label = col === 0 && row === 0
-                    ? 'A4'
-                    : `${row + 1}·${col + 1}`;
-                ctx.fillText(label, Math.round(pt.x) + 6, Math.round(pt.y) + 14);
-            }
-        }
-
-        ctx.restore();
+        drawA4Borders(ctx, cam, viewBox, this.theme);
     }
 
     /**

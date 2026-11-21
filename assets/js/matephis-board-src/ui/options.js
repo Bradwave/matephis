@@ -14,6 +14,7 @@ export class OptionsMenu {
         onExportJSON,
         onImportJSON,
         onClearBoard,
+        onDeletePage,
     }) {
         this.hostEl = hostEl;
         this.scene = scene;
@@ -23,6 +24,7 @@ export class OptionsMenu {
         this.onExportJSON = onExportJSON;
         this.onImportJSON = onImportJSON;
         this.onClearBoard = onClearBoard;
+        this.onDeletePage = onDeletePage;
 
         this.open = false;
 
@@ -37,7 +39,7 @@ export class OptionsMenu {
                     <input type="checkbox" data-opt="darkTheme" />
                 </label>
                 <label class="board-opt-row">
-                    <span>Indicatori angoli A4</span>
+                    <span>Bordi pagina A4</span>
                     <input type="checkbox" data-opt="showCropMarks" />
                 </label>
                 <label class="board-opt-row">
@@ -69,7 +71,10 @@ export class OptionsMenu {
                     ${BoardIcons.upload}<span>Importa JSON</span>
                 </button>
                 <button type="button" class="board-action-btn is-danger" data-action="clear">
-                    ${BoardIcons.delete}<span>Pulisci</span>
+                    ${BoardIcons.delete}<span>Pulisci pagina</span>
+                </button>
+                <button type="button" class="board-action-btn is-danger" data-action="delete-page">
+                    ${BoardIcons.close}<span>Elimina pagina</span>
                 </button>
             </div>
             <input type="file" accept=".json,.mboard.json" class="board-file-input" hidden />
@@ -137,6 +142,12 @@ export class OptionsMenu {
             if (this.onClearBoard) this.onClearBoard();
             this.hide();
         });
+
+        this.deletePageBtn = this.el.querySelector('[data-action="delete-page"]');
+        this.deletePageBtn.addEventListener('click', () => {
+            if (this.onDeletePage) this.onDeletePage();
+            this.hide();
+        });
     }
 
     _syncPalmSliderVisibility() {
@@ -153,6 +164,9 @@ export class OptionsMenu {
         this.el.querySelector('[data-opt="palmThreshold"]').value = String(th);
         this.el.querySelector('[data-opt-val="palmThreshold"]').textContent = `${th} px`;
         this._syncPalmSliderVisibility();
+        if (this.deletePageBtn) {
+            this.deletePageBtn.disabled = this.scene.pageCount <= 1;
+        }
     }
 
     toggle() {

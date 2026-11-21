@@ -22,7 +22,24 @@ async function initMatephisBoard() {
 
     const rect = canvasHost.getBoundingClientRect();
     const scene = new BoardScene(rect.width || window.innerWidth, rect.height || window.innerHeight, savedSettings);
-    const history = new HistoryStack(150);
+
+    // Independent Undo/Redo history per page
+    const pageHistories = new Map();
+    const getCurrentHistory = () => {
+        const pid = scene.currentPage.id;
+        if (!pageHistories.has(pid)) {
+            pageHistories.set(pid, new HistoryStack(150));
+        }
+        return pageHistories.get(pid);
+    };
+    const historyProxy = {
+        get canUndo() { return getCurrentHistory().canUndo; },
+        get canRedo() { return getCurrentHistory().canRedo; },
+        push(cmd) { getCurrentHistory().push(cmd); },
+        undo(strokes) { return getCurrentHistory().undo(strokes); },
+        redo(strokes) { return getCurrentHistory().redo(strokes); },
+        clearAll() { pageHistories.clear(); },
+    };
 
     const getTheme = () => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
 
@@ -37,19 +54,41 @@ async function initMatephisBoard() {
         try { localStorage.setItem('matephis_theme', theme); } catch (_) { /* ignore */ }
         window.dispatchEvent(new CustomEvent('matephis-theme-change', { detail: { theme } }));
         surface.setTheme(theme);
-        if (pinnedStrip) pinnedStrip.rerenderForTheme();
+        if (pinnedStrip) pinnedStrip.render();
         if (toolbar) toolbar.render();
         if (optionsMenu) optionsMenu.syncFromState();
     };
 
     const syncUI = () => {
         if (toolbar) {
-            toolbar.setHistoryState(history.canUndo, history.canRedo);
+            toolbar.setHistoryState(historyProxy.canUndo, historyProxy.canRedo);
+            toolbar.setPageState(scene.currentPageIndex, scene.pageCount);
             toolbar.updateFootprint(scene.getFootprint());
             toolbar.updateZoom(scene.camera);
             toolbar.setOverviewActive(surface.overviewMode);
         }
+        if (optionsMenu) optionsMenu.syncFromState();
         if (perfHud) perfHud.refreshSceneStats(surface.dpr);
+    };
+
+    const switchToPage = (targetIndex, targetCamera = null) => {
+        if (surface.overviewMode) {
+            surface.overviewMode = false;
+            surface.savedCamera = null;
+        }
+        const changed = scene.goToPage(targetIndex);
+        if (targetCamera) {
+            scene.camera.x = targetCamera.x;
+            scene.camera.y = targetCamera.y;
+            scene.camera.scale = targetCamera.scale;
+        }
+        if (changed || targetCamera) {
+            surface.renderCommittedNow();
+            surface.renderActiveNow();
+            if (pinnedStrip) pinnedStrip.render();
+            syncUI();
+            storage.scheduleSave(scene, 400);
+        }
     };
 
     const surface = new InkSurface(canvasHost, {
@@ -68,8 +107,9 @@ async function initMatephisBoard() {
         onStressTest: () => {
             const batch = scene.generateStressStrokes(200);
             for (const s of batch) scene.strokes.push(s);
-            history.push({ type: 'batch-add', strokes: batch });
+            historyProxy.push({ type: 'batch-add', strokes: batch });
             surface.renderCommittedNow();
+            if (pinnedStrip) pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
             storage.scheduleSave(scene);
         },
@@ -78,7 +118,13 @@ async function initMatephisBoard() {
     pinnedStrip = new PinnedStrip(root, {
         surface,
         scene,
-        onCameraChange: (cam) => { if (toolbar) toolbar.updateZoom(cam); },
+        onJumpToPage: (pageIndex, targetCam) => {
+            if (pageIndex !== scene.currentPageIndex) {
+                switchToPage(pageIndex, targetCam);
+            } else {
+                surface.animateCameraTo(targetCam, 180);
+            }
+        },
     });
 
     optionsMenu = new OptionsMenu(root, {
@@ -87,9 +133,13 @@ async function initMatephisBoard() {
         onToggleTheme: (nextTheme) => applyTheme(nextTheme),
         onSettingChange: (key, value) => {
             storage.saveSettings(scene.settings);
-            if (key === 'showCropMarks') surface.requestCommittedRedraw();
+            if (key === 'showCropMarks') {
+                surface.requestCommittedRedraw();
+                pinnedStrip.render();
+            }
             if (key === 'lowDpr') {
                 surface.resize();
+                pinnedStrip.render();
                 perfHud.refreshSceneStats(surface.dpr);
             }
             if (key === 'showHud') {
@@ -100,7 +150,8 @@ async function initMatephisBoard() {
         onExportJSON: () => storage.exportJSONFile(scene),
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
-                history.clear();
+                historyProxy.clearAll();
+                pinnedStrip.close();
                 surface.renderCommittedNow();
                 syncUI();
                 storage.saveBoardNow(scene);
@@ -110,10 +161,25 @@ async function initMatephisBoard() {
             if (scene.strokes.length === 0) return;
             const prev = scene.strokes.slice();
             scene.strokes.length = 0;
-            history.push({ type: 'clear', strokes: prev });
+            historyProxy.push({ type: 'clear', strokes: prev });
             surface.renderCommittedNow();
+            pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
             storage.scheduleSave(scene);
+        },
+        onDeletePage: () => {
+            const deletedId = scene.currentPage.id;
+            if (scene.deleteCurrentPage()) {
+                pageHistories.delete(deletedId);
+                if (surface.overviewMode) {
+                    surface.overviewMode = false;
+                    surface.savedCamera = null;
+                }
+                surface.renderCommittedNow();
+                pinnedStrip.render();
+                syncUI();
+                storage.saveBoardNow(scene);
+            }
         },
     });
 
@@ -121,15 +187,17 @@ async function initMatephisBoard() {
         getTheme,
         onToolChange: () => { /* input reads state on demand */ },
         onUndo: () => {
-            if (history.undo(scene.strokes)) {
+            if (historyProxy.undo(scene.strokes)) {
                 surface.renderCommittedNow();
+                pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
             }
         },
         onRedo: () => {
-            if (history.redo(scene.strokes)) {
+            if (historyProxy.redo(scene.strokes)) {
                 surface.renderCommittedNow();
+                pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
             }
@@ -155,17 +223,32 @@ async function initMatephisBoard() {
                 y: centerWy - (surface.height / baseScale) * 0.5,
             }, 180);
         },
+        onPrevPage: () => switchToPage(scene.currentPageIndex - 1),
+        onNextPage: () => switchToPage(scene.currentPageIndex + 1),
+        onAddPage: () => {
+            if (surface.overviewMode) {
+                surface.overviewMode = false;
+                surface.savedCamera = null;
+            }
+            scene.addPage(true);
+            surface.renderCommittedNow();
+            surface.renderActiveNow();
+            pinnedStrip.render();
+            syncUI();
+            storage.saveBoardNow(scene);
+        },
     });
 
     new InputController(surface, {
         scene,
-        history,
+        history: historyProxy,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
             toolbar.closeTrays();
             optionsMenu.hide();
         },
         onSceneMutated: () => {
+            pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
             storage.scheduleSave(scene);
         },
@@ -186,13 +269,15 @@ async function initMatephisBoard() {
         if (mod && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             if (e.shiftKey) {
-                if (history.redo(scene.strokes)) {
+                if (historyProxy.redo(scene.strokes)) {
                     surface.renderCommittedNow();
+                    pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                     syncUI();
                     storage.scheduleSave(scene);
                 }
-            } else if (history.undo(scene.strokes)) {
+            } else if (historyProxy.undo(scene.strokes)) {
                 surface.renderCommittedNow();
+                pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
             }
@@ -200,14 +285,26 @@ async function initMatephisBoard() {
         }
         if (mod && e.key.toLowerCase() === 'y') {
             e.preventDefault();
-            if (history.redo(scene.strokes)) {
+            if (historyProxy.redo(scene.strokes)) {
                 surface.renderCommittedNow();
+                pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
             }
             return;
         }
         if (mod) return;
+
+        if (e.key === 'PageUp' || (e.altKey && e.key === 'ArrowLeft')) {
+            e.preventDefault();
+            switchToPage(scene.currentPageIndex - 1);
+            return;
+        }
+        if (e.key === 'PageDown' || (e.altKey && e.key === 'ArrowRight')) {
+            e.preventDefault();
+            switchToPage(scene.currentPageIndex + 1);
+            return;
+        }
 
         switch (e.key.toLowerCase()) {
             case 'p': toolbar.selectTool('pen'); break;
@@ -232,6 +329,7 @@ async function initMatephisBoard() {
     // Resize & lifecycle autosave
     const ro = new ResizeObserver(() => {
         surface.resize();
+        pinnedStrip.render();
         toolbar.updateZoom(scene.camera);
         perfHud.refreshSceneStats(surface.dpr);
     });

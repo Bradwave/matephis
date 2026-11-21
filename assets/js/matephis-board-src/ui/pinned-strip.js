@@ -1,33 +1,54 @@
 /**
- * Approach A: Pinned Reference Strip (Split View).
+ * Approach A: Interactive Vector Pinned Reference Strip (Split View).
  *
- * Captures a lightweight snapshot of the current viewport, docks it at the top
- * or left edge (~28%), and smoothly pans the canvas into fresh space at exact
- * 100% writing zoom so stroke thickness and handwriting ergonomics stay constant.
+ * Docks a live, independently zoomable & pannable vector view of a pinned page
+ * at the top or left edge (~28%) while opening fresh space on the main canvas
+ * at exact 100% writing zoom. Persists seamlessly across scrolling AND page changes.
+ *
+ * Gestures inside the strip:
+ * - 1 pointer drag: pan the pinned reference
+ * - 2-finger pinch / Ctrl+wheel: zoom the pinned reference
+ * - Wheel: pan the pinned reference
+ * - Jump button (or double-tap): jump main board to that page & region
  */
 
+import { MAX_SCALE, MIN_SCALE, clamp, screenToWorld } from '../ink/geometry.js';
+import { renderPageToContext } from '../ink/surface.js';
 import { BoardIcons } from './icons.js';
 
 export class PinnedStrip {
-    constructor(hostEl, { surface, scene, onCameraChange = null }) {
+    constructor(hostEl, { surface, scene, onJumpToPage = null }) {
         this.hostEl = hostEl;
         this.surface = surface;
         this.scene = scene;
-        this.onCameraChange = onCameraChange;
+        this.onJumpToPage = onJumpToPage;
 
         this.active = false;
         this.side = 'top'; // 'top' | 'left'
-        this.snapshot = null;
+        this.pinnedPageId = null;
+        this.stripCamera = { x: 0, y: 0, scale: 2.0 };
 
+        // Pointer interaction state inside strip
+        this.pointers = new Map();
+        this.panAnchor = null;
+        this.pinchAnchor = null;
+        this.lastTapTime = 0;
+
+        this._buildDOM();
+        this._bindEvents();
+    }
+
+    _buildDOM() {
         this.el = document.createElement('div');
         this.el.className = 'board-pinned-strip';
         this.el.hidden = true;
         this.el.innerHTML = `
-            <div class="board-pinned-preview" title="Tocca per tornare a questa vista">
-                <img class="board-pinned-img" alt="Vista precedente" draggable="false" />
-                <span class="board-pinned-badge">Riferimento</span>
-            </div>
-            <div class="board-pinned-actions">
+            <canvas class="board-pinned-canvas"></canvas>
+            <div class="board-pinned-bar">
+                <span class="board-pinned-badge">Pag. 1</span>
+                <button type="button" class="board-icon-btn board-pinned-jump" title="Vai a questa zona nella lavagna principale">
+                    ${BoardIcons.jump}
+                </button>
                 <button type="button" class="board-icon-btn board-pinned-refresh" title="Aggiorna riferimento con vista attuale">
                     ${BoardIcons.refresh}
                 </button>
@@ -37,89 +58,300 @@ export class PinnedStrip {
             </div>
         `;
 
-        this.imgEl = this.el.querySelector('.board-pinned-img');
-        this.previewEl = this.el.querySelector('.board-pinned-preview');
+        this.canvas = this.el.querySelector('.board-pinned-canvas');
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+        this.badgeEl = this.el.querySelector('.board-pinned-badge');
+        this.jumpBtn = this.el.querySelector('.board-pinned-jump');
         this.refreshBtn = this.el.querySelector('.board-pinned-refresh');
         this.closeBtn = this.el.querySelector('.board-pinned-close');
 
-        this.previewEl.addEventListener('click', () => this._jumpToPinned());
+        this.hostEl.appendChild(this.el);
+
+        this._ro = new ResizeObserver(() => {
+            if (this.active) this.render();
+        });
+        this._ro.observe(this.el);
+    }
+
+    _bindEvents() {
+        this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+        this.jumpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._jumpToPinned();
+        });
         this.refreshBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.refreshSnapshot();
+            this.refreshFromCurrent();
         });
         this.closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.close();
         });
 
-        this.hostEl.appendChild(this.el);
+        this.canvas.addEventListener('pointerdown', (e) => this._onPointerDown(e));
+        this.canvas.addEventListener('pointermove', (e) => this._onPointerMove(e));
+        this.canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
+        this.canvas.addEventListener('pointercancel', (e) => this._onPointerUp(e));
+        this.canvas.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
+    }
+
+    _getLocalPoint(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
+    }
+
+    _getPinnedPageInfo() {
+        if (!this.pinnedPageId) return null;
+        const idx = this.scene.pages.findIndex((p) => p.id === this.pinnedPageId);
+        if (idx === -1) return null;
+        return { page: this.scene.pages[idx], index: idx };
     }
 
     /**
-     * Pin current viewport to `side` ('top' or 'left') and pan smoothly into fresh space
-     * at the standard 100% writing scale.
+     * Fit the main board's visible world rectangle neatly inside the strip canvas.
+     */
+    _fitWorldRectInStrip(worldX, worldY, worldW, worldH) {
+        const rect = this.el.getBoundingClientRect();
+        const sw = Math.max(120, rect.width || (this.side === 'top' ? window.innerWidth : window.innerWidth * 0.29));
+        const sh = Math.max(80, rect.height || (this.side === 'top' ? window.innerHeight * 0.27 : window.innerHeight));
+
+        const scale = clamp(Math.min(sw / worldW, sh / worldH) * 0.96, MIN_SCALE * 0.5, MAX_SCALE);
+        const x = worldX - ((sw / scale) - worldW) * 0.5;
+        const y = worldY - ((sh / scale) - worldH) * 0.5;
+        this.stripCamera = { x, y, scale };
+    }
+
+    /**
+     * Pin current page & viewport to `side` ('top' or 'left') and pan the main canvas
+     * smoothly into fresh blank space at exact 100% writing zoom.
      */
     pinAndContinue(side = 'top') {
         if (this.surface.overviewMode) {
             this.surface.exitOverview();
         }
 
-        const snap = this.surface.captureViewportSnapshot();
-        this.snapshot = snap;
         this.side = side === 'left' ? 'left' : 'top';
+        this.pinnedPageId = this.scene.currentPage.id;
         this.active = true;
 
-        this.imgEl.src = snap.dataUrl;
+        const currCam = { ...this.scene.camera };
+        const visibleW = this.surface.width / currCam.scale;
+        const visibleH = this.surface.height / currCam.scale;
+
         this.el.classList.toggle('is-top', this.side === 'top');
         this.el.classList.toggle('is-left', this.side === 'left');
         this.el.hidden = false;
 
-        // Calculate fresh-space pan keeping comfortable 100% writing zoom
-        const baseScale = this.scene.camera.baseScale || this.scene.camera.scale;
-        const currCam = snap.camera;
-        const visibleW = this.surface.width / currCam.scale;
-        const visibleH = this.surface.height / currCam.scale;
+        this._fitWorldRectInStrip(currCam.x, currCam.y, visibleW, visibleH);
+        this.render();
 
+        // Pan main canvas into fresh space at comfortable 100% writing zoom
+        const baseScale = this.scene.camera.baseScale || currCam.scale;
         let targetX = currCam.x;
         let targetY = currCam.y;
 
         if (this.side === 'top') {
-            // Slide below current work; leave ~30% top margin for the strip itself
-            const stripWorldH = (this.surface.height * 0.28) / baseScale;
+            const stripWorldH = (this.surface.height * 0.27) / baseScale;
             targetY = currCam.y + visibleH * 0.88 - stripWorldH;
         } else {
-            // Slide right of current work; leave ~30% left margin for the strip
-            const stripWorldW = (this.surface.width * 0.28) / baseScale;
+            const stripWorldW = (this.surface.width * 0.29) / baseScale;
             targetX = currCam.x + visibleW * 0.88 - stripWorldW;
         }
 
-        this.surface.animateCameraTo({ x: targetX, y: targetY, scale: baseScale }, 240);
+        this.surface.animateCameraTo({ x: targetX, y: targetY, scale: baseScale }, 200);
     }
 
-    refreshSnapshot() {
+    refreshFromCurrent() {
         if (!this.active) return;
-        const snap = this.surface.captureViewportSnapshot();
-        this.snapshot = snap;
-        this.imgEl.src = snap.dataUrl;
+        this.pinnedPageId = this.scene.currentPage.id;
+        const currCam = this.scene.camera;
+        const visibleW = this.surface.width / currCam.scale;
+        const visibleH = this.surface.height / currCam.scale;
+        this._fitWorldRectInStrip(currCam.x, currCam.y, visibleW, visibleH);
+        this.render();
     }
 
-    rerenderForTheme() {
-        if (!this.active || !this.snapshot) return;
-        const snap = this.surface.captureViewportSnapshot(this.snapshot.camera);
-        this.snapshot = snap;
-        this.imgEl.src = snap.dataUrl;
+    /**
+     * Re-render live vector canvas (call on theme flip, pinned page edit, or page reorder).
+     */
+    render() {
+        if (!this.active) return;
+        const info = this._getPinnedPageInfo();
+        if (!info) {
+            this.close();
+            return;
+        }
+
+        const rect = this.el.getBoundingClientRect();
+        const w = Math.max(1, Math.round(rect.width));
+        const h = Math.max(1, Math.round(rect.height));
+        const maxDpr = this.scene.settings.lowDpr ? 1 : 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+
+        if (this.canvas.width !== Math.round(w * dpr) || this.canvas.height !== Math.round(h * dpr)) {
+            this.canvas.width = Math.round(w * dpr);
+            this.canvas.height = Math.round(h * dpr);
+            this.canvas.style.width = `${w}px`;
+            this.canvas.style.height = `${h}px`;
+        }
+
+        this.badgeEl.textContent = `Pag. ${info.index + 1}`;
+        renderPageToContext(
+            this.ctx,
+            w,
+            h,
+            dpr,
+            info.page.strokes,
+            this.stripCamera,
+            this.surface.theme,
+            this.scene.settings.showCropMarks
+        );
+    }
+
+    /**
+     * Only re-render if the currently edited page is the one shown in the strip.
+     */
+    syncIfShowingPage(pageId) {
+        if (this.active && this.pinnedPageId === pageId) {
+            this.render();
+        }
     }
 
     _jumpToPinned() {
-        if (!this.snapshot || !this.snapshot.camera) return;
-        this.surface.animateCameraTo({ ...this.snapshot.camera }, 220);
-        if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+        const info = this._getPinnedPageInfo();
+        if (!info) return;
+
+        const rect = this.el.getBoundingClientRect();
+        const sw = Math.max(1, rect.width);
+        const sh = Math.max(1, rect.height);
+        const centerWx = this.stripCamera.x + (sw / this.stripCamera.scale) * 0.5;
+        const centerWy = this.stripCamera.y + (sh / this.stripCamera.scale) * 0.5;
+        const baseScale = this.scene.camera.baseScale || 5.0;
+
+        const targetCam = {
+            scale: baseScale,
+            x: centerWx - (this.surface.width / baseScale) * 0.5,
+            y: centerWy - (this.surface.height / baseScale) * 0.5,
+        };
+
+        if (this.onJumpToPage) {
+            this.onJumpToPage(info.index, targetCam);
+        } else {
+            this.surface.animateCameraTo(targetCam, 200);
+        }
+    }
+
+    _onPointerDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { this.canvas.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+
+        const { sx, sy } = this._getLocalPoint(e);
+        this.pointers.set(e.pointerId, { sx, sy, startSx: sx, startSy: sy, moved: false });
+
+        if (this.pointers.size === 1) {
+            this.panAnchor = {
+                sx,
+                sy,
+                camX: this.stripCamera.x,
+                camY: this.stripCamera.y,
+            };
+            this.pinchAnchor = null;
+        } else if (this.pointers.size === 2) {
+            const pts = Array.from(this.pointers.values());
+            const midX = (pts[0].sx + pts[1].sx) * 0.5;
+            const midY = (pts[0].sy + pts[1].sy) * 0.5;
+            const dist = Math.max(10, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
+            this.pinchAnchor = {
+                dist,
+                worldMid: screenToWorld(midX, midY, this.stripCamera),
+                startScale: this.stripCamera.scale,
+            };
+            this.panAnchor = null;
+        }
+    }
+
+    _onPointerMove(e) {
+        if (!this.pointers.has(e.pointerId)) return;
+        e.preventDefault();
+        const { sx, sy } = this._getLocalPoint(e);
+        const rec = this.pointers.get(e.pointerId);
+        rec.sx = sx;
+        rec.sy = sy;
+        if (Math.hypot(sx - rec.startSx, sy - rec.startSy) > 5) {
+            rec.moved = true;
+        }
+
+        if (this.pointers.size >= 2 && this.pinchAnchor) {
+            const pts = Array.from(this.pointers.values());
+            const midX = (pts[0].sx + pts[1].sx) * 0.5;
+            const midY = (pts[0].sy + pts[1].sy) * 0.5;
+            const dist = Math.max(10, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
+
+            const newScale = clamp(
+                this.pinchAnchor.startScale * (dist / this.pinchAnchor.dist),
+                MIN_SCALE * 0.5,
+                MAX_SCALE
+            );
+            this.stripCamera.scale = newScale;
+            this.stripCamera.x = this.pinchAnchor.worldMid.x - midX / newScale;
+            this.stripCamera.y = this.pinchAnchor.worldMid.y - midY / newScale;
+            this.render();
+        } else if (this.pointers.size === 1 && this.panAnchor) {
+            const dx = sx - this.panAnchor.sx;
+            const dy = sy - this.panAnchor.sy;
+            this.stripCamera.x = this.panAnchor.camX - dx / this.stripCamera.scale;
+            this.stripCamera.y = this.panAnchor.camY - dy / this.stripCamera.scale;
+            this.render();
+        }
+    }
+
+    _onPointerUp(e) {
+        const rec = this.pointers.get(e.pointerId);
+        this.pointers.delete(e.pointerId);
+
+        if (rec && !rec.moved && this.pointers.size === 0) {
+            const now = performance.now();
+            if (now - this.lastTapTime < 320) {
+                this.lastTapTime = 0;
+                this._jumpToPinned();
+            } else {
+                this.lastTapTime = now;
+            }
+        }
+
+        if (this.pointers.size < 2) {
+            this.pinchAnchor = null;
+        }
+        if (this.pointers.size === 0) {
+            this.panAnchor = null;
+        }
+    }
+
+    _onWheel(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const { sx, sy } = this._getLocalPoint(e);
+
+        if (e.ctrlKey || e.metaKey) {
+            const worldBefore = screenToWorld(sx, sy, this.stripCamera);
+            const zoomFactor = Math.exp(-e.deltaY * 0.008);
+            const newScale = clamp(this.stripCamera.scale * zoomFactor, MIN_SCALE * 0.5, MAX_SCALE);
+            this.stripCamera.scale = newScale;
+            this.stripCamera.x = worldBefore.x - sx / newScale;
+            this.stripCamera.y = worldBefore.y - sy / newScale;
+        } else {
+            this.stripCamera.x += e.deltaX / this.stripCamera.scale;
+            this.stripCamera.y += e.deltaY / this.stripCamera.scale;
+        }
+        this.render();
     }
 
     close() {
         this.active = false;
-        this.snapshot = null;
+        this.pinnedPageId = null;
+        this.pointers.clear();
         this.el.hidden = true;
-        this.imgEl.removeAttribute('src');
     }
 }
