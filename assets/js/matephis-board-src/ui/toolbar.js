@@ -107,11 +107,8 @@ export class BoardToolbar {
     updateZoom(camera) {
         const base = camera.baseScale || 1;
         const pct = Math.round((camera.scale / base) * 100);
-        const show = Math.abs(pct - 100) >= 4;
-        this.zoomBtn.hidden = !show;
-        if (show) {
-            this.zoomBtn.textContent = `${pct}%`;
-        }
+        this.zoomBtn.textContent = `${pct}%`;
+        this.zoomBtn.classList.toggle('is-zoomed', Math.abs(pct - 100) >= 4);
     }
 
     selectTool(tool, openTray = false) {
@@ -242,7 +239,6 @@ export class BoardToolbar {
         this.zoomBtn = document.createElement('button');
         this.zoomBtn.type = 'button';
         this.zoomBtn.className = 'board-dock-mono-btn board-zoom-btn';
-        this.zoomBtn.hidden = true;
         this.zoomBtn.textContent = '100%';
         this.zoomBtn.title = 'Torna allo zoom di scrittura (100%)';
         this.zoomBtn.addEventListener('click', () => {

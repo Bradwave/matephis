@@ -27,6 +27,9 @@ export class PinnedStrip {
         this.side = 'top'; // 'top' | 'left'
         this.pinnedPageId = null;
         this.stripCamera = { x: 0, y: 0, scale: 2.0 };
+        this.topHeightPx = null;
+        this.leftWidthPx = null;
+        this.resizeDrag = null;
 
         // Pointer interaction state inside strip
         this.pointers = new Map();
@@ -63,6 +66,9 @@ export class PinnedStrip {
                     ${BoardIcons.close}
                 </button>
             </div>
+            <div class="board-pinned-resizer" title="Trascina per ridimensionare">
+                <span class="board-pinned-grip"></span>
+            </div>
         `;
 
         this.canvas = this.el.querySelector('.board-pinned-canvas');
@@ -73,6 +79,7 @@ export class PinnedStrip {
         this.jumpBtn = this.el.querySelector('.board-pinned-jump');
         this.refreshBtn = this.el.querySelector('.board-pinned-refresh');
         this.closeBtn = this.el.querySelector('.board-pinned-close');
+        this.resizerEl = this.el.querySelector('.board-pinned-resizer');
 
         this.hostEl.appendChild(this.el);
 
@@ -111,6 +118,60 @@ export class PinnedStrip {
         this.canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
         this.canvas.addEventListener('pointercancel', (e) => this._onPointerUp(e));
         this.canvas.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
+
+        this.resizerEl.addEventListener('pointerdown', (e) => this._onResizeDown(e));
+        this.resizerEl.addEventListener('pointermove', (e) => this._onResizeMove(e));
+        this.resizerEl.addEventListener('pointerup', (e) => this._onResizeUp(e));
+        this.resizerEl.addEventListener('pointercancel', (e) => this._onResizeUp(e));
+    }
+
+    _applyStoredSize() {
+        if (this.side === 'top') {
+            this.el.style.width = '';
+            this.el.style.height = this.topHeightPx ? `${this.topHeightPx}px` : '';
+        } else {
+            this.el.style.height = '';
+            this.el.style.width = this.leftWidthPx ? `${this.leftWidthPx}px` : '';
+        }
+    }
+
+    _onResizeDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { this.resizerEl.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+        const rect = this.el.getBoundingClientRect();
+        this.resizeDrag = {
+            pointerId: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            startW: rect.width,
+            startH: rect.height,
+        };
+    }
+
+    _onResizeMove(e) {
+        if (!this.resizeDrag || e.pointerId !== this.resizeDrag.pointerId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.side === 'top') {
+            const minH = Math.max(96, Math.round(window.innerHeight * 0.12));
+            const maxH = Math.round(window.innerHeight * 0.68);
+            const nextH = clamp(this.resizeDrag.startH + (e.clientY - this.resizeDrag.startY), minH, maxH);
+            this.topHeightPx = Math.round(nextH);
+            this.el.style.height = `${this.topHeightPx}px`;
+        } else {
+            const minW = Math.max(150, Math.round(window.innerWidth * 0.14));
+            const maxW = Math.round(window.innerWidth * 0.65);
+            const nextW = clamp(this.resizeDrag.startW + (e.clientX - this.resizeDrag.startX), minW, maxW);
+            this.leftWidthPx = Math.round(nextW);
+            this.el.style.width = `${this.leftWidthPx}px`;
+        }
+        this.render();
+    }
+
+    _onResizeUp(e) {
+        if (!this.resizeDrag || e.pointerId !== this.resizeDrag.pointerId) return;
+        this.resizeDrag = null;
     }
 
     _getLocalPoint(e) {
@@ -164,6 +225,7 @@ export class PinnedStrip {
 
         this.el.classList.toggle('is-top', this.side === 'top');
         this.el.classList.toggle('is-left', this.side === 'left');
+        this._applyStoredSize();
         this.el.hidden = false;
 
         this._fitWorldRectInStrip(refCam.x, refCam.y, visibleW, visibleH);

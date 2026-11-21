@@ -248,6 +248,20 @@ body.board-body {
     cursor: default;
 }
 
+.board-zoom-btn {
+    min-width: 44px;
+    font-variant-numeric: tabular-nums;
+}
+
+.board-zoom-btn.is-zoomed {
+    color: var(--title);
+}
+
+.board-footprint-btn {
+    min-width: 36px;
+    font-variant-numeric: tabular-nums;
+}
+
 .board-footprint-btn.is-warning:not(.active) {
     color: #b45309;
 }
@@ -481,7 +495,6 @@ body.board-body {
     left: 0;
     right: 0;
     height: 27vh;
-    max-height: 250px;
     border-top: none;
     border-left: none;
     border-right: none;
@@ -493,11 +506,54 @@ body.board-body {
     left: 0;
     bottom: 0;
     width: 29vw;
-    max-width: 360px;
     border-top: none;
     border-left: none;
     border-bottom: none;
     border-right: 2px solid var(--border);
+}
+
+.board-pinned-resizer {
+    position: absolute;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+}
+
+.board-pinned-strip.is-top .board-pinned-resizer {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 14px;
+    cursor: ns-resize;
+}
+
+.board-pinned-strip.is-left .board-pinned-resizer {
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    cursor: ew-resize;
+}
+
+.board-pinned-grip {
+    background: var(--border);
+    display: block;
+}
+
+.board-pinned-strip.is-top .board-pinned-grip {
+    width: 38px;
+    height: 3px;
+}
+
+.board-pinned-strip.is-left .board-pinned-grip {
+    width: 3px;
+    height: 38px;
+}
+
+.board-pinned-resizer:hover .board-pinned-grip {
+    background: var(--title);
 }
 
 .board-pinned-canvas {
