@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>{%- if page.title -%}{{ page.title }} - {%- endif -%}{{ site.heading }}</title>
+    <link rel="canonical" href="{{ site.url }}{{ page.url }}" />
+    {%- if site.apple_touch_icon -%}
+    <link rel="apple-touch-icon" href="{{ site.baseurl }}{{ site.apple_touch_icon }}">
+    {%- endif -%}
+    {%- if site.favicon -%}
+    <link rel="icon" href="{{ site.baseurl }}{{ site.favicon }}" type="image/svg+xml" sizes="any" />
+    {%- endif -%}
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('matephis_theme') === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    {%- if site.css_file -%}
+    <link href="{{ site.baseurl }}{{ site.css_file }}?v=2.16" rel="stylesheet" media="all" class="default" />
+    {%- else -%}
+    <link href="{{ site.baseurl }}/assets/css/style.css?v=2.16" rel="stylesheet" media="all" class="default" />
+    {%- endif -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-board.css?v=0.1" rel="stylesheet" />
+</head>
+
+<body class="board-body">
+    {{ content }}
+    <script src="{{ site.baseurl }}/assets/js/matephis-board.js?v=0.1"></script>
+</body>
+
+</html>
