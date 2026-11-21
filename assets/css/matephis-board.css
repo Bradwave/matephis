@@ -1,5 +1,5 @@
 /* Matephis Board (/board/) — Compact delta stylesheet over assets/css/style.css
- * Deliberately zero UI transitions or scale animations for instant smartboard feel.
+ * Zero UI transitions or animations anywhere inside /board/.
  */
 
 html:has(.board-body),
@@ -13,6 +13,12 @@ body.board-body {
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+}
+
+.board-root,
+.board-root * {
+    transition: none !important;
+    animation: none !important;
 }
 
 .board-root {
@@ -50,66 +56,7 @@ body.board-body {
     cursor: crosshair;
 }
 
-/* --- Top-right discrete status pills --- */
-
-.board-status-cluster {
-    position: fixed;
-    top: 10px;
-    right: 12px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.board-pill {
-    appearance: none;
-    background: var(--bg);
-    color: var(--secondary-text);
-    border: 1px solid var(--border);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    padding: 0 8px;
-    height: 28px;
-    font-family: var(--font-plot);
-    font-size: 11px;
-    line-height: 1;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-}
-
-.board-pill:hover {
-    background: var(--bg2);
-    color: var(--title);
-}
-
-.board-pill.active {
-    background: var(--title);
-    color: var(--bg);
-    border-color: var(--title);
-}
-
-.board-footprint-pill.is-warning {
-    border-color: #d97706;
-    color: #b45309;
-}
-
-[data-theme="dark"] .board-footprint-pill.is-warning {
-    border-color: #f59e0b;
-    color: #fbbf24;
-}
-
-.board-footprint-pill.is-warning::before {
-    content: "";
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
-    margin-right: 5px;
-}
-
-/* --- Bottom-centered Matephis floating dock (compact scale) --- */
+/* --- Bottom-centered Matephis floating dock & unified contextual trays --- */
 
 .board-dock-wrap {
     position: fixed;
@@ -120,11 +67,12 @@ body.board-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     max-width: calc(100vw - 20px);
 }
 
-.board-dock {
+.board-dock,
+.board-tray {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -137,7 +85,12 @@ body.board-body {
     scrollbar-width: none;
 }
 
-.board-dock::-webkit-scrollbar {
+.board-dock::-webkit-scrollbar,
+.board-tray::-webkit-scrollbar {
+    display: none;
+}
+
+.board-tray[hidden] {
     display: none;
 }
 
@@ -214,8 +167,11 @@ body.board-body {
     text-align: center;
 }
 
+/* Dock & Tray buttons (identical 34px height, crisp borderless-until-active style) */
+
 .board-tool-btn,
-.board-icon-btn {
+.board-icon-btn,
+.board-tray-btn {
     appearance: none;
     background: transparent;
     border: 1px solid transparent;
@@ -228,6 +184,8 @@ body.board-body {
     height: 34px;
     padding: 0;
     flex-shrink: 0;
+    font-family: var(--font);
+    font-size: 12px;
 }
 
 .board-tool-btn svg,
@@ -237,13 +195,48 @@ body.board-body {
     display: block;
 }
 
+.board-style-btn {
+    width: 36px;
+}
+
+.board-tray-text-btn {
+    width: auto;
+    padding: 0 9px;
+    font-size: 12px;
+}
+
+.board-dock-mono-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--secondary-text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 8px;
+    flex-shrink: 0;
+    font-family: var(--font-plot);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.board-dock-mono-btn[hidden] {
+    display: none;
+}
+
 .board-tool-btn:hover:not(:disabled),
-.board-icon-btn:hover:not(:disabled) {
+.board-icon-btn:hover:not(:disabled),
+.board-tray-btn:hover:not(:disabled),
+.board-dock-mono-btn:hover:not(:disabled) {
     background: var(--bg2);
     color: var(--accent);
 }
 
-.board-tool-btn.active {
+.board-tool-btn.active,
+.board-tray-btn.active,
+.board-dock-mono-btn.active {
     background: var(--title);
     color: var(--bg);
     border-color: var(--title);
@@ -255,7 +248,25 @@ body.board-body {
     cursor: default;
 }
 
-/* Ultra-minimal inline quick color strip on dock */
+.board-footprint-btn.is-warning:not(.active) {
+    color: #b45309;
+}
+
+[data-theme="dark"] .board-footprint-btn.is-warning:not(.active) {
+    color: #fbbf24;
+}
+
+.board-footprint-btn.is-warning::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 5px;
+}
+
+/* Unified minimal color dots (shared by both bottom dock AND Pen / Highlighter trays) */
 
 .board-quick-colors {
     display: flex;
@@ -302,143 +313,11 @@ body.board-body {
     background: var(--title);
 }
 
-/* Full tray swatches (Pen / Highlighter popups) */
-
-.board-swatch {
-    appearance: none;
-    position: relative;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border);
-    background: var(--swatch-color, var(--title));
-    cursor: pointer;
+.board-tray-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
     flex-shrink: 0;
-    padding: 0;
-}
-
-.board-swatch:hover {
-    border-color: var(--title);
-}
-
-.board-swatch.active {
-    border-color: var(--bg);
-    box-shadow: 0 0 0 2px var(--title);
-}
-
-/* --- Contextual trays above dock (Pen / Eraser / Highlighter) --- */
-
-.board-tray {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 9px 11px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.10);
-}
-
-.board-tray[hidden] {
-    display: none;
-}
-
-.board-pen-tray {
-    min-width: 276px;
-}
-
-.board-tray-section {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.board-tray-label {
-    font-family: var(--font-plot);
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--secondary-text);
-}
-
-.board-color-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    justify-items: center;
-    padding: 2px 2px 6px;
-    border-bottom: 1px solid var(--border);
-}
-
-.board-pen-meta-grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 10px;
-    align-items: start;
-}
-
-.board-seg-grid {
-    display: grid;
-    gap: 3px;
-}
-
-.board-seg-grid-3 {
-    grid-template-columns: repeat(3, 38px);
-}
-
-.board-seg-grid-4 {
-    grid-template-columns: repeat(4, 32px);
-}
-
-.board-tray-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    flex-wrap: wrap;
-}
-
-.board-seg-group {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.board-seg-btn,
-.board-size-btn,
-.board-text-seg-btn {
-    appearance: none;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    height: 30px;
-    padding: 0 7px;
-    font-family: var(--font);
-    font-size: 12px;
-}
-
-.board-seg-btn svg {
-    width: 26px;
-    height: 10px;
-}
-
-.board-seg-btn:hover,
-.board-size-btn:hover,
-.board-text-seg-btn:hover {
-    background: var(--bg2);
-    color: var(--accent);
-}
-
-.board-seg-btn.active,
-.board-size-btn.active,
-.board-text-seg-btn.active {
-    background: var(--title);
-    color: var(--bg);
-    border-color: var(--title);
 }
 
 .board-size-dot {
@@ -465,7 +344,7 @@ body.board-body {
 .board-popover {
     position: fixed;
     left: 50%;
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 50px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 48px);
     transform: translateX(-50%);
     z-index: 45;
     width: min(290px, calc(100vw - 20px));
@@ -674,7 +553,7 @@ body.board-body {
 
 .board-perf-hud {
     position: fixed;
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 50px);
     right: 12px;
     z-index: 35;
     width: 248px;

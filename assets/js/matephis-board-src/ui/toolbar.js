@@ -1,10 +1,10 @@
 /**
  * Bottom-centered Matephis-styled dock with:
- * - Always-visible Pen + 5 inline quick color swatches + Eraser + Undo/Redo + Pin Top & Pin Left
- * - Elegantly structured Pen tray (2x5 color grid, 3 stroke styles, 4 world sizes)
- * - Instant Eraser tray (4 sizes + partial/whole-stroke toggle)
- * - Horizontal dock expansion revealing Highlighter, Laser, Overview, Theme, and Canvas Options
- * - Top-right compact Page Switcher (< 1 / N > +) + A4 footprint & zoom reset pills
+ * - Always-visible: Page nav (< 1/N > +) | Pen + 5 minimal color dots | Eraser | Undo/Redo | Pin Top & Left + A4 Overview (1x1) + Zoom pill | Expand (...)
+ * - Contextual trays (Pen, Eraser, Highlighter) matching the exact height, borderless-until-active
+ *   button grammar, dividers, and minimal 12px color dots of the bottom bar
+ * - Horizontal dock expansion revealing Highlighter, Laser, Theme, and Canvas Options
+ * - Zero top-corner UI chrome: entire top viewport stays pure canvas
  */
 
 import {
@@ -92,26 +92,25 @@ export class BoardToolbar {
 
     setOverviewActive(active) {
         this.overviewActive = Boolean(active);
-        this.overviewBtn.classList.toggle('active', this.overviewActive);
-        this.footprintPill.classList.toggle('active', this.overviewActive);
+        this.footprintBtn.classList.toggle('active', this.overviewActive);
     }
 
     updateFootprint(fp) {
-        const label = `${fp.cols}×${fp.rows} A4`;
-        this.footprintPill.textContent = label;
-        this.footprintPill.classList.toggle('is-warning', Boolean(fp.warning));
-        this.footprintPill.title = fp.warning
-            ? `Lavagna estesa (${label}) — tocca per vista generale`
-            : `Estensione attuale (${label}) — tocca per vista generale`;
+        const label = `${fp.cols}×${fp.rows}`;
+        this.footprintBtn.textContent = label;
+        this.footprintBtn.classList.toggle('is-warning', Boolean(fp.warning));
+        this.footprintBtn.title = fp.warning
+            ? `Vista generale (O) — lavagna estesa (${label} A4)`
+            : `Vista generale (O) — ${label} A4`;
     }
 
     updateZoom(camera) {
         const base = camera.baseScale || 1;
         const pct = Math.round((camera.scale / base) * 100);
         const show = Math.abs(pct - 100) >= 4;
-        this.zoomPill.hidden = !show;
+        this.zoomBtn.hidden = !show;
         if (show) {
-            this.zoomPill.textContent = `${pct}%`;
+            this.zoomBtn.textContent = `${pct}%`;
         }
     }
 
@@ -127,28 +126,7 @@ export class BoardToolbar {
     }
 
     _buildDOM() {
-        // Top-right discrete status pills (only Zoom + A4 footprint)
-        this.statusCluster = document.createElement('div');
-        this.statusCluster.className = 'board-status-cluster';
-        this.statusCluster.innerHTML = `
-            <button type="button" class="board-pill board-zoom-pill" hidden title="Torna allo zoom di scrittura (100%)">100%</button>
-            <button type="button" class="board-pill board-footprint-pill" title="Estensione A4 — tocca per vista generale">1×1 A4</button>
-        `;
-        this.zoomPill = this.statusCluster.querySelector('.board-zoom-pill');
-        this.footprintPill = this.statusCluster.querySelector('.board-footprint-pill');
-
-        this.zoomPill.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.onResetZoom) this.onResetZoom();
-        });
-        this.footprintPill.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.onToggleOverview) this.onToggleOverview();
-        });
-        this.statusCluster.addEventListener('pointerdown', (e) => e.stopPropagation());
-        this.hostEl.appendChild(this.statusCluster);
-
-        // Bottom dock wrapper (contextual trays above + horizontal dock bar)
+        // Bottom dock wrapper (contextual trays directly above + horizontal dock bar)
         this.dockWrap = document.createElement('div');
         this.dockWrap.className = 'board-dock-wrap';
         this.dockWrap.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -164,7 +142,7 @@ export class BoardToolbar {
         this.dock = document.createElement('div');
         this.dock.className = 'board-dock';
 
-        // Compact Page Switcher directly inside the bottom dock (< 1/N > +)
+        // Compact Page Switcher inside bottom dock (< 1/N > +)
         this.pageNavEl = document.createElement('div');
         this.pageNavEl.className = 'board-page-nav';
         this.pageNavEl.setAttribute('aria-label', 'Navigazione pagine');
@@ -201,18 +179,12 @@ export class BoardToolbar {
             if (this.onToolChange) this.onToolChange(this.state);
         });
 
-        // Minimal inline 5 quick color dots (always visible, compact footprint)
+        // Minimal inline 5 quick color dots
         this.quickColorsEl = document.createElement('div');
         this.quickColorsEl.className = 'board-quick-colors';
         this.quickSwatchBtns = [];
         for (const c of PEN_COLORS.filter((item) => item.quick)) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'board-quick-dot';
-            btn.title = c.name;
-            btn.dataset.colorId = String(c.id);
-            btn.innerHTML = '<span class="board-quick-dot-fill"></span>';
-            btn.addEventListener('click', () => {
+            const btn = this._makeColorDot(c.id, c.name, () => {
                 this.state.penColor = c.id;
                 this.state.tool = 'pen';
                 this.openTray = null;
@@ -224,7 +196,7 @@ export class BoardToolbar {
             this.quickColorsEl.appendChild(btn);
         }
 
-        // Eraser — immediately opens size selector on selection
+        // Eraser — immediately opens size/mode bar on selection
         this.eraserBtn = this._makeToolBtn('Gomma (E)', BoardIcons.eraser, () => {
             if (this.state.tool === 'eraser') {
                 this.openTray = this.openTray === 'eraser' ? null : 'eraser';
@@ -244,7 +216,7 @@ export class BoardToolbar {
             if (this.onRedo) this.onRedo();
         });
 
-        // Pin strip buttons — ALWAYS visible on main dock
+        // Spatial view controls — ALWAYS visible on dock: Pin Top, Pin Left, A4 Overview (1x1), conditional Zoom reset
         this.pinTopBtn = this._makeToolBtn('Fissa in alto e scorri sotto', BoardIcons.pinTop, () => {
             this.closeTrays();
             this._closeOptionsIfOpen();
@@ -254,6 +226,27 @@ export class BoardToolbar {
             this.closeTrays();
             this._closeOptionsIfOpen();
             if (this.onPinLeft) this.onPinLeft();
+        });
+
+        this.footprintBtn = document.createElement('button');
+        this.footprintBtn.type = 'button';
+        this.footprintBtn.className = 'board-dock-mono-btn board-footprint-btn';
+        this.footprintBtn.textContent = '1×1';
+        this.footprintBtn.title = 'Vista generale (O) — 1×1 A4';
+        this.footprintBtn.addEventListener('click', () => {
+            this.closeTrays();
+            this._closeOptionsIfOpen();
+            if (this.onToggleOverview) this.onToggleOverview();
+        });
+
+        this.zoomBtn = document.createElement('button');
+        this.zoomBtn.type = 'button';
+        this.zoomBtn.className = 'board-dock-mono-btn board-zoom-btn';
+        this.zoomBtn.hidden = true;
+        this.zoomBtn.textContent = '100%';
+        this.zoomBtn.title = 'Torna allo zoom di scrittura (100%)';
+        this.zoomBtn.addEventListener('click', () => {
+            if (this.onResetZoom) this.onResetZoom();
         });
 
         // Horizontal expandable drawer for secondary tools
@@ -281,11 +274,6 @@ export class BoardToolbar {
             if (this.onToolChange) this.onToolChange(this.state);
         });
 
-        this.overviewBtn = this._makeToolBtn('Vista generale A4 (O)', BoardIcons.overview, () => {
-            this.closeTrays();
-            if (this.onToggleOverview) this.onToggleOverview();
-        });
-
         this.themeBtn = this._makeToolBtn('Cambia tema chiaro/scuro', BoardIcons.moon, () => {
             if (this.onToggleTheme) {
                 this.onToggleTheme(this.getTheme() === 'dark' ? 'light' : 'dark');
@@ -302,7 +290,6 @@ export class BoardToolbar {
             this.highlighterBtn,
             this.laserBtn,
             this._makeDivider(),
-            this.overviewBtn,
             this.themeBtn,
             this.optionsBtn
         );
@@ -333,6 +320,8 @@ export class BoardToolbar {
             this._makeDivider(),
             this.pinTopBtn,
             this.pinLeftBtn,
+            this.footprintBtn,
+            this.zoomBtn,
             this.extraGroup,
             this._makeDivider(),
             this.expandBtn
@@ -357,6 +346,17 @@ export class BoardToolbar {
         return btn;
     }
 
+    _makeColorDot(colorId, name, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'board-quick-dot';
+        btn.title = name;
+        btn.dataset.colorId = String(colorId);
+        btn.innerHTML = '<span class="board-quick-dot-fill"></span>';
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
     _makeDivider() {
         const sep = document.createElement('span');
         sep.className = 'board-dock-sep';
@@ -364,64 +364,47 @@ export class BoardToolbar {
     }
 
     /**
-     * Structured Pen tray:
-     * - Section 1: COLORE (clean 2x5 color swatch grid)
-     * - Section 2: TRATTO (3 equal-width style buttons: solid / dashed / dotted)
-     * - Section 3: SPESSORE (4 equal-width stroke weight buttons)
+     * Pen tray — matches the exact single-row height, dividers, borderless buttons,
+     * and minimal 12px color dots of the bottom bar.
      */
     _buildPenTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-pen-tray';
         tray.hidden = true;
 
-        // Section 1: Colors (2 rows of 5)
-        const colorsSection = document.createElement('div');
-        colorsSection.className = 'board-tray-section';
-        colorsSection.innerHTML = '<div class="board-tray-label">Colore</div>';
-
-        const colorsGrid = document.createElement('div');
-        colorsGrid.className = 'board-color-grid';
+        // Extended + primary 10 colors in the exact same minimal dot style as the dock
+        const colorsWrap = document.createElement('div');
+        colorsWrap.className = 'board-quick-colors';
         this.penTraySwatches = [];
-        for (const c of PEN_COLORS) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'board-swatch';
-            btn.title = c.name;
-            btn.dataset.colorId = String(c.id);
-            btn.addEventListener('click', () => {
+        for (let i = 0; i < PEN_COLORS.length; i++) {
+            const c = PEN_COLORS[i];
+            if (i === 5) colorsWrap.appendChild(this._makeDivider());
+            const btn = this._makeColorDot(c.id, c.name, () => {
                 this.state.penColor = c.id;
                 this.state.tool = 'pen';
                 this.render();
                 if (this.onToolChange) this.onToolChange(this.state);
             });
             this.penTraySwatches.push(btn);
-            colorsGrid.appendChild(btn);
+            colorsWrap.appendChild(btn);
         }
-        colorsSection.appendChild(colorsGrid);
 
-        // Section 2 & 3 side-by-side: Style + Size
-        const bottomGrid = document.createElement('div');
-        bottomGrid.className = 'board-pen-meta-grid';
-
-        const styleSection = document.createElement('div');
-        styleSection.className = 'board-tray-section';
-        styleSection.innerHTML = '<div class="board-tray-label">Tratto</div>';
-
+        // 3 stroke styles (solid, dashed, dotted)
         const stylesWrap = document.createElement('div');
-        stylesWrap.className = 'board-seg-grid board-seg-grid-3';
+        stylesWrap.className = 'board-tray-group';
         this.styleBtns = [];
         for (const st of PEN_STYLES) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-seg-btn';
+            btn.className = 'board-tray-btn board-style-btn';
             btn.title = st.label;
             btn.dataset.styleId = st.id;
             const dashAttr = st.id === 'dashed'
-                ? 'stroke-dasharray="6 4"'
+                ? 'stroke-dasharray="5 3.5"'
                 : st.id === 'dotted'
-                    ? 'stroke-dasharray="0.5 5"'
+                    ? 'stroke-dasharray="0.5 4.5"'
                     : '';
-            btn.innerHTML = `<svg viewBox="0 0 36 12" width="32" height="12"><line x1="3" y1="6" x2="33" y2="6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" ${dashAttr}/></svg>`;
+            btn.innerHTML = `<svg viewBox="0 0 28 10" width="24" height="10"><line x1="2" y1="5" x2="26" y2="5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ${dashAttr}/></svg>`;
             btn.addEventListener('click', () => {
                 this.state.penStyle = st.id;
                 this.state.tool = 'pen';
@@ -431,23 +414,19 @@ export class BoardToolbar {
             this.styleBtns.push(btn);
             stylesWrap.appendChild(btn);
         }
-        styleSection.appendChild(stylesWrap);
 
-        const sizeSection = document.createElement('div');
-        sizeSection.className = 'board-tray-section';
-        sizeSection.innerHTML = '<div class="board-tray-label">Spessore</div>';
-
+        // 4 world stroke sizes
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-seg-grid board-seg-grid-4';
+        sizesWrap.className = 'board-tray-group';
         this.penSizeBtns = [];
         for (let i = 0; i < PEN_SIZES.length; i++) {
             const sz = PEN_SIZES[i];
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-size-btn';
+            btn.className = 'board-tray-btn';
             btn.title = `${sz.label} (${sz.width} mm)`;
             btn.dataset.sizeWidth = String(sz.width);
-            const dotPx = 4 + i * 3.5;
+            const dotPx = 3.5 + i * 3;
             btn.innerHTML = `<span class="board-size-dot" style="width:${dotPx}px;height:${dotPx}px;"></span>`;
             btn.addEventListener('click', () => {
                 this.state.penWidth = sz.width;
@@ -458,32 +437,30 @@ export class BoardToolbar {
             this.penSizeBtns.push(btn);
             sizesWrap.appendChild(btn);
         }
-        sizeSection.appendChild(sizesWrap);
 
-        bottomGrid.append(styleSection, sizeSection);
-        tray.append(colorsSection, bottomGrid);
+        tray.append(colorsWrap, this._makeDivider(), stylesWrap, this._makeDivider(), sizesWrap);
         return tray;
     }
 
+    /**
+     * Eraser tray — exact same single-row height & minimal style as the bottom bar.
+     */
     _buildEraserTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-eraser-tray';
         tray.hidden = true;
 
-        const row = document.createElement('div');
-        row.className = 'board-tray-row board-tray-controls';
-
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-seg-group';
+        sizesWrap.className = 'board-tray-group';
         this.eraserSizeBtns = [];
         for (let i = 0; i < ERASER_SIZES.length; i++) {
             const sz = ERASER_SIZES[i];
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-size-btn';
+            btn.className = 'board-tray-btn';
             btn.title = `Gomma ${sz.label}`;
             btn.dataset.eraserRadius = String(sz.radius);
-            const dotPx = 7 + i * 4;
+            const dotPx = 6 + i * 3.5;
             btn.innerHTML = `<span class="board-eraser-dot" style="width:${dotPx}px;height:${dotPx}px;"></span>`;
             btn.addEventListener('click', () => {
                 this.state.eraserRadius = sz.radius;
@@ -496,7 +473,7 @@ export class BoardToolbar {
         }
 
         const modeWrap = document.createElement('div');
-        modeWrap.className = 'board-seg-group';
+        modeWrap.className = 'board-tray-group';
         this.eraserModeBtns = [];
         for (const m of [
             { id: 'partial', label: 'Parziale' },
@@ -504,7 +481,7 @@ export class BoardToolbar {
         ]) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-text-seg-btn';
+            btn.className = 'board-tray-btn board-tray-text-btn';
             btn.textContent = m.label;
             btn.dataset.eraseMode = m.id;
             btn.addEventListener('click', () => {
@@ -517,29 +494,23 @@ export class BoardToolbar {
             modeWrap.appendChild(btn);
         }
 
-        row.append(sizesWrap, this._makeDivider(), modeWrap);
-        tray.appendChild(row);
+        tray.append(sizesWrap, this._makeDivider(), modeWrap);
         return tray;
     }
 
+    /**
+     * Highlighter tray — exact same single-row height & minimal color dots as the bottom bar.
+     */
     _buildHighlighterTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-highlighter-tray';
         tray.hidden = true;
 
-        const row = document.createElement('div');
-        row.className = 'board-tray-row board-tray-controls';
-
         const colorsWrap = document.createElement('div');
-        colorsWrap.className = 'board-seg-group';
+        colorsWrap.className = 'board-quick-colors';
         this.hlSwatchBtns = [];
         for (const c of HIGHLIGHTER_COLORS) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'board-swatch';
-            btn.title = c.name;
-            btn.dataset.colorId = c.id;
-            btn.addEventListener('click', () => {
+            const btn = this._makeColorDot(c.id, c.name, () => {
                 this.state.highlighterColor = c.id;
                 this.state.tool = 'highlighter';
                 this.render();
@@ -550,16 +521,16 @@ export class BoardToolbar {
         }
 
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-seg-group';
+        sizesWrap.className = 'board-tray-group';
         this.hlSizeBtns = [];
         for (let i = 0; i < HIGHLIGHTER_SIZES.length; i++) {
             const sz = HIGHLIGHTER_SIZES[i];
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-size-btn';
+            btn.className = 'board-tray-btn';
             btn.title = sz.label;
             btn.dataset.hlWidth = String(sz.width);
-            const hPx = 6 + i * 4;
+            const hPx = 5 + i * 3.5;
             btn.innerHTML = `<span class="board-hl-bar" style="height:${hPx}px;"></span>`;
             btn.addEventListener('click', () => {
                 this.state.highlighterWidth = sz.width;
@@ -571,8 +542,7 @@ export class BoardToolbar {
             sizesWrap.appendChild(btn);
         }
 
-        row.append(colorsWrap, this._makeDivider(), sizesWrap);
-        tray.appendChild(row);
+        tray.append(colorsWrap, this._makeDivider(), sizesWrap);
         return tray;
     }
 
