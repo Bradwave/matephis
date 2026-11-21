@@ -85,7 +85,7 @@ export class BoardToolbar {
     }
 
     setPageState(currentIndex, totalPages) {
-        this.pageIndicatorEl.textContent = `${currentIndex + 1} / ${totalPages}`;
+        this.pageIndicatorEl.textContent = `${currentIndex + 1}/${totalPages}`;
         this.prevPageBtn.disabled = currentIndex <= 0;
         this.nextPageBtn.disabled = currentIndex >= totalPages - 1;
     }
@@ -127,25 +127,15 @@ export class BoardToolbar {
     }
 
     _buildDOM() {
-        // Top-right cluster: Zoom pill + A4 footprint pill + Page Switcher (< 1 / N > +)
+        // Top-right discrete status pills (only Zoom + A4 footprint)
         this.statusCluster = document.createElement('div');
         this.statusCluster.className = 'board-status-cluster';
         this.statusCluster.innerHTML = `
             <button type="button" class="board-pill board-zoom-pill" hidden title="Torna allo zoom di scrittura (100%)">100%</button>
             <button type="button" class="board-pill board-footprint-pill" title="Estensione A4 — tocca per vista generale">1×1 A4</button>
-            <div class="board-page-nav" aria-label="Navigazione pagine">
-                <button type="button" class="board-page-btn board-page-prev" title="Pagina precedente (PageUp)">${BoardIcons.chevronLeft}</button>
-                <span class="board-page-indicator">1 / 1</span>
-                <button type="button" class="board-page-btn board-page-next" title="Pagina successiva (PageDown)">${BoardIcons.chevronRight}</button>
-                <button type="button" class="board-page-btn board-page-add" title="Nuova pagina">${BoardIcons.add}</button>
-            </div>
         `;
         this.zoomPill = this.statusCluster.querySelector('.board-zoom-pill');
         this.footprintPill = this.statusCluster.querySelector('.board-footprint-pill');
-        this.prevPageBtn = this.statusCluster.querySelector('.board-page-prev');
-        this.nextPageBtn = this.statusCluster.querySelector('.board-page-next');
-        this.addPageBtn = this.statusCluster.querySelector('.board-page-add');
-        this.pageIndicatorEl = this.statusCluster.querySelector('.board-page-indicator');
 
         this.zoomPill.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -154,18 +144,6 @@ export class BoardToolbar {
         this.footprintPill.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.onToggleOverview) this.onToggleOverview();
-        });
-        this.prevPageBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.onPrevPage) this.onPrevPage();
-        });
-        this.nextPageBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.onNextPage) this.onNextPage();
-        });
-        this.addPageBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.onAddPage) this.onAddPage();
         });
         this.statusCluster.addEventListener('pointerdown', (e) => e.stopPropagation());
         this.hostEl.appendChild(this.statusCluster);
@@ -186,6 +164,31 @@ export class BoardToolbar {
         this.dock = document.createElement('div');
         this.dock.className = 'board-dock';
 
+        // Compact Page Switcher directly inside the bottom dock (< 1/N > +)
+        this.pageNavEl = document.createElement('div');
+        this.pageNavEl.className = 'board-page-nav';
+        this.pageNavEl.setAttribute('aria-label', 'Navigazione pagine');
+        this.pageNavEl.innerHTML = `
+            <button type="button" class="board-page-btn board-page-prev" title="Pagina precedente (PageUp)">${BoardIcons.chevronLeft}</button>
+            <span class="board-page-indicator">1/1</span>
+            <button type="button" class="board-page-btn board-page-next" title="Pagina successiva (PageDown)">${BoardIcons.chevronRight}</button>
+            <button type="button" class="board-page-btn board-page-add" title="Nuova pagina">${BoardIcons.add}</button>
+        `;
+        this.prevPageBtn = this.pageNavEl.querySelector('.board-page-prev');
+        this.nextPageBtn = this.pageNavEl.querySelector('.board-page-next');
+        this.addPageBtn = this.pageNavEl.querySelector('.board-page-add');
+        this.pageIndicatorEl = this.pageNavEl.querySelector('.board-page-indicator');
+
+        this.prevPageBtn.addEventListener('click', () => {
+            if (this.onPrevPage) this.onPrevPage();
+        });
+        this.nextPageBtn.addEventListener('click', () => {
+            if (this.onNextPage) this.onNextPage();
+        });
+        this.addPageBtn.addEventListener('click', () => {
+            if (this.onAddPage) this.onAddPage();
+        });
+
         this.penBtn = this._makeToolBtn('Penna (P) — stile, spessore e colori', BoardIcons.pen, () => {
             if (this.state.tool === 'pen') {
                 this.openTray = this.openTray === 'pen' ? null : 'pen';
@@ -198,16 +201,17 @@ export class BoardToolbar {
             if (this.onToolChange) this.onToolChange(this.state);
         });
 
-        // Inline 5 quick color swatches (always visible!)
+        // Minimal inline 5 quick color dots (always visible, compact footprint)
         this.quickColorsEl = document.createElement('div');
         this.quickColorsEl.className = 'board-quick-colors';
         this.quickSwatchBtns = [];
         for (const c of PEN_COLORS.filter((item) => item.quick)) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-swatch';
+            btn.className = 'board-quick-dot';
             btn.title = c.name;
             btn.dataset.colorId = String(c.id);
+            btn.innerHTML = '<span class="board-quick-dot-fill"></span>';
             btn.addEventListener('click', () => {
                 this.state.penColor = c.id;
                 this.state.tool = 'pen';
@@ -317,6 +321,8 @@ export class BoardToolbar {
         });
 
         this.dock.append(
+            this.pageNavEl,
+            this._makeDivider(),
             this.penBtn,
             this.quickColorsEl,
             this._makeDivider(),

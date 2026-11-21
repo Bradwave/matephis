@@ -45,7 +45,14 @@ export class PinnedStrip {
         this.el.innerHTML = `
             <canvas class="board-pinned-canvas"></canvas>
             <div class="board-pinned-bar">
+                <button type="button" class="board-icon-btn board-pinned-prev" title="Mostra pagina precedente nel riferimento">
+                    ${BoardIcons.chevronLeft}
+                </button>
                 <span class="board-pinned-badge">Pag. 1</span>
+                <button type="button" class="board-icon-btn board-pinned-next" title="Mostra pagina successiva nel riferimento">
+                    ${BoardIcons.chevronRight}
+                </button>
+                <span class="board-pinned-sep"></span>
                 <button type="button" class="board-icon-btn board-pinned-jump" title="Vai a questa zona nella lavagna principale">
                     ${BoardIcons.jump}
                 </button>
@@ -60,6 +67,8 @@ export class PinnedStrip {
 
         this.canvas = this.el.querySelector('.board-pinned-canvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false });
+        this.prevBtn = this.el.querySelector('.board-pinned-prev');
+        this.nextBtn = this.el.querySelector('.board-pinned-next');
         this.badgeEl = this.el.querySelector('.board-pinned-badge');
         this.jumpBtn = this.el.querySelector('.board-pinned-jump');
         this.refreshBtn = this.el.querySelector('.board-pinned-refresh');
@@ -76,6 +85,14 @@ export class PinnedStrip {
     _bindEvents() {
         this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
 
+        this.prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._stepPinnedPage(-1);
+        });
+        this.nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._stepPinnedPage(1);
+        });
         this.jumpBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this._jumpToPinned();
@@ -123,8 +140,9 @@ export class PinnedStrip {
     }
 
     /**
-     * Pin current page & viewport to `side` ('top' or 'left') and pan the main canvas
-     * smoothly into fresh blank space at exact 100% writing zoom.
+     * Pin current page & viewport to `side` ('top' or 'left') and pan smoothly into fresh space.
+     * Smart fallback: if the current page is completely empty and a previous page exists,
+     * automatically pin the previous page instead (without scrolling the blank current page).
      */
     pinAndContinue(side = 'top') {
         if (this.surface.overviewMode) {
@@ -132,34 +150,56 @@ export class PinnedStrip {
         }
 
         this.side = side === 'left' ? 'left' : 'top';
-        this.pinnedPageId = this.scene.currentPage.id;
+        const isBlankWithPrev = this.scene.strokes.length === 0 && this.scene.currentPageIndex > 0;
+        const targetPage = isBlankWithPrev
+            ? this.scene.getPage(this.scene.currentPageIndex - 1)
+            : this.scene.currentPage;
+
+        this.pinnedPageId = targetPage.id;
         this.active = true;
 
-        const currCam = { ...this.scene.camera };
-        const visibleW = this.surface.width / currCam.scale;
-        const visibleH = this.surface.height / currCam.scale;
+        const refCam = { ...targetPage.camera };
+        const visibleW = this.surface.width / refCam.scale;
+        const visibleH = this.surface.height / refCam.scale;
 
         this.el.classList.toggle('is-top', this.side === 'top');
         this.el.classList.toggle('is-left', this.side === 'left');
         this.el.hidden = false;
 
-        this._fitWorldRectInStrip(currCam.x, currCam.y, visibleW, visibleH);
+        this._fitWorldRectInStrip(refCam.x, refCam.y, visibleW, visibleH);
         this.render();
 
+        if (isBlankWithPrev) return;
+
         // Pan main canvas into fresh space at comfortable 100% writing zoom
-        const baseScale = this.scene.camera.baseScale || currCam.scale;
-        let targetX = currCam.x;
-        let targetY = currCam.y;
+        const baseScale = this.scene.camera.baseScale || refCam.scale;
+        let targetX = refCam.x;
+        let targetY = refCam.y;
 
         if (this.side === 'top') {
             const stripWorldH = (this.surface.height * 0.27) / baseScale;
-            targetY = currCam.y + visibleH * 0.88 - stripWorldH;
+            targetY = refCam.y + visibleH * 0.88 - stripWorldH;
         } else {
             const stripWorldW = (this.surface.width * 0.29) / baseScale;
-            targetX = currCam.x + visibleW * 0.88 - stripWorldW;
+            targetX = refCam.x + visibleW * 0.88 - stripWorldW;
         }
 
         this.surface.animateCameraTo({ x: targetX, y: targetY, scale: baseScale }, 200);
+    }
+
+    _stepPinnedPage(delta) {
+        const info = this._getPinnedPageInfo();
+        if (!info) return;
+        const nextIdx = info.index + delta;
+        const targetPage = this.scene.getPage(nextIdx);
+        if (!targetPage) return;
+
+        this.pinnedPageId = targetPage.id;
+        const refCam = targetPage.camera;
+        const visibleW = this.surface.width / refCam.scale;
+        const visibleH = this.surface.height / refCam.scale;
+        this._fitWorldRectInStrip(refCam.x, refCam.y, visibleW, visibleH);
+        this.render();
     }
 
     refreshFromCurrent() {
@@ -197,6 +237,8 @@ export class PinnedStrip {
         }
 
         this.badgeEl.textContent = `Pag. ${info.index + 1}`;
+        this.prevBtn.disabled = info.index <= 0;
+        this.nextBtn.disabled = info.index >= this.scene.pageCount - 1;
         renderPageToContext(
             this.ctx,
             w,
