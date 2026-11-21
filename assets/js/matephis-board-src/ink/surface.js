@@ -22,7 +22,7 @@ const LASER_LIFETIME_MS = 1250;
 /**
  * Shared helper: draws faint landscape A4 borders + subtle corner ticks.
  */
-export function drawA4Borders(ctx, cam, viewBox, theme = 'light') {
+export function drawA4Borders(ctx, cam, viewBox, theme = 'light', showLabels = true) {
     const minCol = Math.floor(viewBox.minX / A4_W);
     const maxCol = Math.ceil(viewBox.maxX / A4_W);
     const minRow = Math.floor(viewBox.minY / A4_H);
@@ -76,14 +76,16 @@ export function drawA4Borders(ctx, cam, viewBox, theme = 'light') {
     }
     ctx.stroke();
 
-    // 3. Quiet tile label at top-left of each A4 tile
-    ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.24)';
-    ctx.font = '500 10px "Space Mono", monospace';
-    for (let row = minRow; row < maxRow; row++) {
-        for (let col = minCol; col < maxCol; col++) {
-            const pt = worldToScreen(col * A4_W, row * A4_H, cam);
-            const label = col === 0 && row === 0 ? 'A4' : `${row + 1}·${col + 1}`;
-            ctx.fillText(label, Math.round(pt.x) + 6, Math.round(pt.y) + 14);
+    // 3. Quiet tile label at top-left of each A4 tile (hidden in pinned strip preview)
+    if (showLabels) {
+        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.24)';
+        ctx.font = '500 10px "Space Mono", monospace';
+        for (let row = minRow; row < maxRow; row++) {
+            for (let col = minCol; col < maxCol; col++) {
+                const pt = worldToScreen(col * A4_W, row * A4_H, cam);
+                const label = col === 0 && row === 0 ? 'A4' : `${row + 1}·${col + 1}`;
+                ctx.fillText(label, Math.round(pt.x) + 6, Math.round(pt.y) + 14);
+            }
         }
     }
 
@@ -109,7 +111,7 @@ export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme
     };
 
     if (showBorders) {
-        drawA4Borders(ctx, cam, viewBox, theme);
+        drawA4Borders(ctx, cam, viewBox, theme, false);
     }
 
     ctx.save();
