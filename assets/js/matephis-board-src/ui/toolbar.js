@@ -40,6 +40,7 @@ export class BoardToolbar {
         getSettings,
         onSettingChange,
         onToolChange,
+        onLassoAction = null,
         onUndo,
         onRedo,
         onPinTop,
@@ -57,6 +58,7 @@ export class BoardToolbar {
         this.getSettings = getSettings || (() => ({}));
         this.onSettingChange = onSettingChange;
         this.onToolChange = onToolChange;
+        this.onLassoAction = onLassoAction;
         this.onUndo = onUndo;
         this.onRedo = onRedo;
         this.onPinTop = onPinTop;
@@ -70,7 +72,7 @@ export class BoardToolbar {
         this.onAddPage = onAddPage;
 
         this.state = {
-            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser'
+            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser' | 'lasso' | 'shape'
             penColor: 0,
             penWidth: PEN_SIZES[1].width,
             penStyle: 'solid',     // 'solid' | 'dashed' | 'dotted'
@@ -78,7 +80,10 @@ export class BoardToolbar {
             eraserMode: 'partial', // 'partial' | 'stroke'
             highlighterColor: HIGHLIGHTER_COLORS[0].id,
             highlighterWidth: HIGHLIGHTER_SIZES[1].width,
+            lassoMode: 'lasso',    // 'lasso' | 'rect'
+            shapeKind: 'line',     // 'line' | 'arrow' | 'rect' | 'ellipse' | 'triangle'
         };
+        this._lassoSelectionCount = 0;
 
         this.layout = 'bar';  // 'rail' | 'bar'
         this.side = 'right';  // rail side: 'right' | 'left'
@@ -109,10 +114,19 @@ export class BoardToolbar {
         const insertOpen = this.activeFuturePopover === 'plot'
             || this.activeFuturePopover === 'diagrams'
             || this.activeFuturePopover === 'exercises';
-        this.insertBtn.classList.toggle('active', insertOpen || this.openTray === 'insert'
+        this.insertBtn.classList.toggle('active', this.state.tool === 'shape'
+            || insertOpen || this.openTray === 'insert'
             || this.openTray === 'shapes' || this.openTray === 'connectors');
         this.cloudBtn.classList.toggle('active', this.activeFuturePopover === 'cloud');
         this._syncPressed();
+    }
+
+    setLassoSelectionCount(count) {
+        this._lassoSelectionCount = Math.max(0, Number(count) || 0);
+        if (!this.lassoActionBtns) return;
+        for (const btn of this.lassoActionBtns) {
+            btn.disabled = this._lassoSelectionCount === 0;
+        }
     }
 
     /** Trigger element a popover should be anchored to. */
@@ -174,7 +188,7 @@ export class BoardToolbar {
 
     selectTool(tool, openTray = false) {
         this.state.tool = tool;
-        if (openTray && (tool === 'pen' || tool === 'eraser' || tool === 'highlighter')) {
+        if (openTray && (tool === 'pen' || tool === 'eraser' || tool === 'highlighter' || tool === 'lasso')) {
             this.openTray = tool;
         } else {
             this.openTray = null;
@@ -356,9 +370,9 @@ export class BoardToolbar {
         this.eraserBtn = this._makeToolBtn('Gomma (E)', BoardIcons.eraser, () => {
             this._activateToolWithTray('eraser');
         });
-        this.lassoBtn = this._makeToolBtn('Selezione lazo (in arrivo)', BoardIcons.lasso, () => {
-            this._toggleTray('lasso');
-        }, true);
+        this.lassoBtn = this._makeToolBtn('Selezione lazo', BoardIcons.lasso, () => {
+            this._activateToolWithTray('lasso');
+        });
         this.laserBtn = this._makeToolBtn('Puntatore laser (L)', BoardIcons.laser, () => {
             this.state.tool = 'laser';
             this.openTray = null;
@@ -538,22 +552,28 @@ export class BoardToolbar {
         tray.className = 'board-tray board-insert-tray';
         tray.hidden = true;
         const items = [
-            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes },
-            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector },
-            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes },
-            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram },
-            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise },
+            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: false },
+            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: true },
+            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: true },
+            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: true },
+            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: true },
         ];
         const grid = document.createElement('div');
         grid.className = 'board-insert-grid';
         for (const it of items) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-insert-item is-stub';
-            btn.title = `${it.label} (in arrivo)`;
+            btn.className = it.stub ? 'board-insert-item is-stub' : 'board-insert-item';
+            btn.title = it.stub ? `${it.label} (in arrivo)` : it.label;
             btn.innerHTML = `${it.icon}<span>${it.label}</span>`;
             btn.addEventListener('click', () => {
-                if (it.id === 'shapes' || it.id === 'connectors') {
+                if (it.id === 'shapes') {
+                    this.state.tool = 'shape';
+                    this.openTray = 'shapes';
+                    this._closePopovers();
+                    this.render();
+                    if (this.onToolChange) this.onToolChange(this.state);
+                } else if (it.id === 'connectors') {
                     this.openTray = it.id;
                     this._closePopovers();
                     this.render();
@@ -767,52 +787,119 @@ export class BoardToolbar {
     }
 
     /**
-     * Phase 2 stub tray: Lasso / Rectangle selection & actions.
+     * Lasso / Rectangle selection & actions tray.
      */
     _buildLassoTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-stack-tray board-lasso-tray';
         tray.hidden = true;
-        tray.innerHTML = `
-            <div class="board-stack-section">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Lazo</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Rettangolo</button>
-            </div>
-            <div class="board-stack-section">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Duplica</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Ricolora</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Elimina</button>
-            </div>
-        `;
+
+        const modeWrap = document.createElement('div');
+        modeWrap.className = 'board-stack-section';
+        this.lassoModeBtns = [];
+        for (const m of [
+            { id: 'lasso', label: 'Lazo', title: 'Selezione a mano libera' },
+            { id: 'rect', label: 'Rettangolo', title: 'Selezione rettangolare' },
+        ]) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn board-tray-text-btn';
+            btn.textContent = m.label;
+            btn.title = m.title;
+            btn.dataset.lassoMode = m.id;
+            btn.addEventListener('click', () => {
+                this.state.lassoMode = m.id;
+                this.state.tool = 'lasso';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+            this.lassoModeBtns.push(btn);
+            modeWrap.appendChild(btn);
+        }
+
+        const actionWrap = document.createElement('div');
+        actionWrap.className = 'board-stack-section';
+        this.lassoActionBtns = [];
+        for (const act of [
+            { id: 'duplicate', label: 'Duplica', title: 'Duplica selezione' },
+            { id: 'recolor', label: 'Ricolora', title: 'Ricolora con il colore penna corrente' },
+            { id: 'delete', label: 'Elimina', title: 'Elimina selezione' },
+        ]) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn board-tray-text-btn';
+            btn.textContent = act.label;
+            btn.title = act.title;
+            btn.dataset.lassoAction = act.id;
+            btn.disabled = this._lassoSelectionCount === 0;
+            btn.addEventListener('click', () => {
+                if (this.onLassoAction) this.onLassoAction(act.id, this.state);
+            });
+            this.lassoActionBtns.push(btn);
+            actionWrap.appendChild(btn);
+        }
+
+        tray.append(modeWrap, actionWrap);
         return tray;
     }
 
     /**
-     * Phase 2 stub tray: Basic geometry shapes (no hold-to-snap).
+     * Basic geometry shapes tray (no hold-to-snap).
      */
     _buildShapesTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-shapes-tray';
         tray.hidden = true;
-        tray.innerHTML = `
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn is-stub" title="Linea (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Vettore / Freccia (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="9,4 16,4 16,11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Rettangolo (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><rect x="3" y="4.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Cerchio / Ellisse (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><circle cx="10" cy="10" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Triangolo (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><polygon points="10,3.5 17,16.5 3,16.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-                </button>
-            </div>
-        `;
+        const group = document.createElement('div');
+        group.className = 'board-tray-group';
+        const shapes = [
+            {
+                id: 'line',
+                title: 'Linea',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+            },
+            {
+                id: 'arrow',
+                title: 'Vettore / Freccia',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="9,4 16,4 16,11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+            },
+            {
+                id: 'rect',
+                title: 'Rettangolo',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><rect x="3" y="4.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+            },
+            {
+                id: 'ellipse',
+                title: 'Cerchio / Ellisse',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><circle cx="10" cy="10" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+            },
+            {
+                id: 'triangle',
+                title: 'Triangolo',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><polygon points="10,3.5 17,16.5 3,16.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+            },
+        ];
+
+        this.shapeBtns = [];
+        for (const sh of shapes) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn';
+            btn.title = sh.title;
+            btn.setAttribute('aria-label', sh.title);
+            btn.dataset.shapeKind = sh.id;
+            btn.innerHTML = sh.svg;
+            btn.addEventListener('click', () => {
+                this.state.shapeKind = sh.id;
+                this.state.tool = 'shape';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+            this.shapeBtns.push(btn);
+            group.appendChild(btn);
+        }
+
+        tray.appendChild(group);
         return tray;
     }
 
@@ -843,7 +930,7 @@ export class BoardToolbar {
             if (!open && !el.hidden) clearFloating(el);
             el.hidden = !open;
         }
-        this.lassoBtn.classList.toggle('active', this.openTray === 'lasso');
+        this.lassoBtn.classList.toggle('active', this.state.tool === 'lasso' || this.openTray === 'lasso');
         this.pinBtn.classList.toggle('active', this.openTray === 'pin');
         this.setActiveFuturePopover(this.activeFuturePopover);
         this._placeTray();
@@ -899,6 +986,17 @@ export class BoardToolbar {
         }
         for (const btn of this.hlSizeBtns) {
             btn.classList.toggle('active', Number(btn.dataset.hlWidth) === this.state.highlighterWidth);
+        }
+
+        for (const btn of this.lassoModeBtns) {
+            const active = btn.dataset.lassoMode === this.state.lassoMode;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        }
+        for (const btn of this.shapeBtns) {
+            const active = btn.dataset.shapeKind === this.state.shapeKind;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
         }
 
         this._renderTrays();

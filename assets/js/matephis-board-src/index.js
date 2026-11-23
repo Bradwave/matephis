@@ -5,6 +5,7 @@
 import { HistoryStack } from './ink/history.js';
 import { InkSurface } from './ink/surface.js';
 import { InputController } from './ink/input.js';
+import { LassoController } from './ink/lasso.js';
 import { BoardScene } from './model/scene.js';
 import { BoardStorage } from './model/storage.js';
 import { BoardToolbar } from './ui/toolbar.js';
@@ -53,6 +54,7 @@ async function initMatephisBoard() {
     let perfHud = null;
     let pinnedStrip = null;
     let toolbar = null;
+    let lasso = null;
     let optionsMenu = null;
     let futureMenus = null;
     let quickMenu = null;
@@ -94,6 +96,7 @@ async function initMatephisBoard() {
             scene.camera.scale = targetCamera.scale;
         }
         if (changed || targetCamera) {
+            if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
             if (pinnedStrip) pinnedStrip.render();
@@ -112,6 +115,20 @@ async function initMatephisBoard() {
         onCameraChange: (cam) => {
             if (toolbar) toolbar.updateZoom(cam);
             storage.scheduleSave(scene, 500);
+        },
+    });
+
+    lasso = new LassoController({
+        scene,
+        history: historyProxy,
+        surface,
+        onSceneMutated: () => {
+            if (pinnedStrip) pinnedStrip.syncIfShowingPage(scene.currentPage.id);
+            syncUI();
+            storage.scheduleSave(scene);
+        },
+        onSelectionChange: (count) => {
+            if (toolbar) toolbar.setLassoSelectionCount(count);
         },
     });
 
@@ -172,6 +189,7 @@ async function initMatephisBoard() {
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
                 historyProxy.clearAll();
+                if (lasso) lasso.clearSelection();
                 pinnedStrip.close();
                 surface.renderCommittedNow();
                 syncUI();
@@ -193,6 +211,7 @@ async function initMatephisBoard() {
                 widgets: prevWidgets,
                 connectors: prevConnectors,
             });
+            if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
@@ -202,6 +221,7 @@ async function initMatephisBoard() {
             const deletedId = scene.currentPage.id;
             if (scene.deleteCurrentPage()) {
                 pageHistories.delete(deletedId);
+                if (lasso) lasso.clearSelection();
                 if (surface.overviewMode) {
                     surface.overviewMode = false;
                     surface.savedCamera = null;
@@ -225,9 +245,18 @@ async function initMatephisBoard() {
             storage.saveSettings(scene.settings);
             optionsMenu.syncFromState();
         },
-        onToolChange: () => { /* input reads state on demand */ },
+        onToolChange: (toolState) => {
+            if (toolState.tool !== 'lasso' && lasso) lasso.clearSelection();
+        },
+        onLassoAction: (action, toolState) => {
+            if (!lasso) return;
+            if (action === 'duplicate') lasso.duplicateSelection();
+            else if (action === 'recolor') lasso.recolorSelection(toolState.penColor);
+            else if (action === 'delete') lasso.deleteSelection();
+        },
         onUndo: () => {
             if (historyProxy.undo(scene.currentPage)) {
+                if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -236,6 +265,7 @@ async function initMatephisBoard() {
         },
         onRedo: () => {
             if (historyProxy.redo(scene.currentPage)) {
+                if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -297,6 +327,7 @@ async function initMatephisBoard() {
                 overlay.setOverviewMode(false);
             }
             scene.addPage(true);
+            if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
             pinnedStrip.render();
@@ -315,6 +346,7 @@ async function initMatephisBoard() {
         scene,
         history: historyProxy,
         overlay,
+        lasso,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
             const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover || quickMenu.isOpen);
@@ -360,12 +392,14 @@ async function initMatephisBoard() {
             e.preventDefault();
             if (e.shiftKey) {
                 if (historyProxy.redo(scene.currentPage)) {
+                    if (lasso) lasso.syncWithScene();
                     surface.renderCommittedNow();
                     pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                     syncUI();
                     storage.scheduleSave(scene);
                 }
             } else if (historyProxy.undo(scene.currentPage)) {
+                if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -376,6 +410,7 @@ async function initMatephisBoard() {
         if (mod && e.key.toLowerCase() === 'y') {
             e.preventDefault();
             if (historyProxy.redo(scene.currentPage)) {
+                if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -396,6 +431,14 @@ async function initMatephisBoard() {
             return;
         }
 
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (toolbar.getToolState().tool === 'lasso' && lasso && lasso.hasSelection) {
+                e.preventDefault();
+                lasso.deleteSelection();
+            }
+            return;
+        }
+
         switch (e.key.toLowerCase()) {
             case 'p': toolbar.selectTool('pen'); break;
             case 'e': toolbar.selectTool('eraser', true); break;
@@ -411,6 +454,7 @@ async function initMatephisBoard() {
                 futureMenus.hideAll();
                 toolbar.setActiveFuturePopover(null);
                 toolbar.anchorPopover(null);
+                if (lasso && lasso.hasSelection) lasso.clearSelection();
                 if (surface.overviewMode) {
                     surface.exitOverview();
                     syncUI();

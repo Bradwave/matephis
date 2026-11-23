@@ -278,6 +278,8 @@ export class InkSurface {
 
         // Active-layer transient state
         this.activeStroke = null;
+        this.activeShape = null;
+        this.lassoOverlay = null; // { selectedStrokes, selectionBBox, marquee, drag }
         this.eraserCursor = null; // { x, y, radius } in world coords
         this.laserPoints = [];    // [{ x, y, t }]
         this.laserRaf = null;
@@ -746,7 +748,7 @@ export class InkSurface {
     }
 
     /**
-     * Render only the lightweight active layer (current stroke, eraser ring, laser).
+     * Render only the lightweight active layer (current stroke, shape preview, lasso, eraser ring, laser).
      */
     renderActiveNow() {
         const ctx = this.activeCtx;
@@ -763,6 +765,18 @@ export class InkSurface {
             ctx.translate(-cam.x, -cam.y);
             drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
             ctx.restore();
+        }
+
+        if (this.activeShape) {
+            ctx.save();
+            ctx.scale(cam.scale, cam.scale);
+            ctx.translate(-cam.x, -cam.y);
+            drawStroke(ctx, this.activeShape, this.theme, { cache: false });
+            ctx.restore();
+        }
+
+        if (this.lassoOverlay) {
+            this._drawLassoOverlay(ctx, cam, this.lassoOverlay);
         }
 
         if (this.eraserCursor) {
@@ -784,6 +798,85 @@ export class InkSurface {
         }
 
         ctx.restore();
+    }
+
+    _drawLassoOverlay(ctx, cam, state) {
+        const isDark = this.theme === 'dark';
+        const accent = isDark ? '#ff523d' : '#B01A00';
+        const fillTint = isDark ? 'rgba(255, 82, 61, 0.09)' : 'rgba(176, 26, 0, 0.06)';
+
+        if (state.marquee) {
+            const m = state.marquee;
+            ctx.save();
+            ctx.strokeStyle = accent;
+            ctx.fillStyle = fillTint;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 4]);
+            if (m.kind === 'rect') {
+                const minX = Math.min(m.start.x, m.end.x);
+                const minY = Math.min(m.start.y, m.end.y);
+                const maxX = Math.max(m.start.x, m.end.x);
+                const maxY = Math.max(m.start.y, m.end.y);
+                const tl = worldToScreen(minX, minY, cam);
+                const br = worldToScreen(maxX, maxY, cam);
+                ctx.fillRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+                ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+            } else if (m.kind === 'lasso' && m.points && m.points.length >= 2) {
+                ctx.beginPath();
+                const s0 = worldToScreen(m.points[0].x, m.points[0].y, cam);
+                ctx.moveTo(s0.x, s0.y);
+                for (let i = 1; i < m.points.length; i++) {
+                    const si = worldToScreen(m.points[i].x, m.points[i].y, cam);
+                    ctx.lineTo(si.x, si.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        if (state.selectionBBox) {
+            const bb = state.selectionBBox;
+            const dx = state.drag ? state.drag.dx : 0;
+            const dy = state.drag ? state.drag.dy : 0;
+
+            if (state.drag && (dx !== 0 || dy !== 0) && state.selectedStrokes && state.selectedStrokes.length > 0) {
+                ctx.save();
+                ctx.scale(cam.scale, cam.scale);
+                ctx.translate(-cam.x + dx, -cam.y + dy);
+                ctx.globalAlpha = 0.72;
+                for (let i = 0; i < state.selectedStrokes.length; i++) {
+                    drawStroke(ctx, state.selectedStrokes[i], this.theme, { cache: true });
+                }
+                ctx.restore();
+            }
+
+            const tl = worldToScreen(bb.minX + dx, bb.minY + dy, cam);
+            const br = worldToScreen(bb.maxX + dx, bb.maxY + dy, cam);
+            const padPx = 4;
+            const x = tl.x - padPx;
+            const y = tl.y - padPx;
+            const w = (br.x - tl.x) + padPx * 2;
+            const h = (br.y - tl.y) + padPx * 2;
+
+            ctx.save();
+            ctx.fillStyle = fillTint;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+
+            // Corner handles indicate draggable selection box
+            const hs = 5;
+            ctx.fillStyle = accent;
+            for (const [cx, cy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) {
+                ctx.fillRect(cx - hs * 0.5, cy - hs * 0.5, hs, hs);
+            }
+            ctx.restore();
+        }
     }
 
     _drawLaserTrail(ctx, cam) {
@@ -858,6 +951,16 @@ export class InkSurface {
 
     setActiveStroke(stroke) {
         this.activeStroke = stroke;
+        this.renderActiveNow();
+    }
+
+    setActiveShape(stroke) {
+        this.activeShape = stroke;
+        this.renderActiveNow();
+    }
+
+    setLassoOverlay(state) {
+        this.lassoOverlay = state;
         this.renderActiveNow();
     }
 
