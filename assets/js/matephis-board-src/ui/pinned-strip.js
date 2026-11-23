@@ -233,7 +233,7 @@ export class PinnedStrip {
         }
 
         this.side = side === 'left' ? 'left' : 'top';
-        const isBlankWithPrev = this.scene.strokes.length === 0 && this.scene.currentPageIndex > 0;
+        const isBlankWithPrev = this.scene.isPageEmpty() && this.scene.currentPageIndex > 0;
         const targetPage = isBlankWithPrev
             ? this.scene.getPage(this.scene.currentPageIndex - 1)
             : this.scene.currentPage;
@@ -332,7 +332,8 @@ export class PinnedStrip {
             info.page.strokes,
             this.stripCamera,
             this.surface.theme,
-            this.scene.settings.showCropMarks
+            this.scene.settings.showCropMarks,
+            info.page.background
         );
     }
 

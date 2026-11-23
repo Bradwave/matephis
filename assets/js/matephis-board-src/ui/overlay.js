@@ -1,0 +1,108 @@
+/**
+ * World-space DOM/SVG overlay for Matephis Board widgets and explanation connectors.
+ *
+ * Layering inside `.board-stage`:
+ *   z-index 0: bgCanvas        (opaque page fill, grid/dots/ruled pattern, A4 borders)
+ *   z-index 1: overlay         (world-space widgets — bodies are write-through `pointer-events: none`)
+ *   z-index 2: committedCanvas (transparent ink layer — renders ink ABOVE widgets)
+ *   z-index 3: activeCanvas    (desynchronized in-flight stroke / lasso / shape / laser)
+ *   z-index 4: topOverlay      (screen-space connector badges & active widget edit chrome)
+ *
+ * Because committedCanvas and activeCanvas both carry `pointer-events: none`,
+ * explicit interactive controls inside widgets (sliders, switches, "Mostra soluzione",
+ * corner edit handle) stay immediately clickable while the graph/diagram body remains
+ * write-through for drawing and 2-finger pan/zoom.
+ */
+
+export const OVERLAY_PX_PER_MM = 4;
+
+const INTERACTIVE_SELECTOR = [
+    '.board-overlay-interactive',
+    '.board-widget-handle',
+    '.board-widget-chrome',
+    '.board-connector',
+    '.board-widget.is-editing',
+    '.board-widget.is-canvas-interactive',
+    '.board-widget:not(.is-controls-locked) input',
+    '.board-widget:not(.is-controls-locked) button',
+    '.board-widget:not(.is-controls-locked) select',
+    '.board-widget:not(.is-controls-locked) textarea',
+    '.board-widget:not(.is-controls-locked) summary',
+    '.board-widget:not(.is-controls-locked) [data-board-interactive]',
+    '.board-widget:not(.is-controls-locked) .matephis-slider',
+    '.board-widget:not(.is-controls-locked) .matephis-controls',
+    '.board-widget:not(.is-controls-locked) .circuit-switch',
+].join(', ');
+
+export class BoardOverlay {
+    constructor(stageEl) {
+        this.stageEl = stageEl;
+        this._cameraListeners = new Set();
+
+        // Layer 1: world-space widgets (sits below ink canvases)
+        this.el = document.createElement('div');
+        this.el.className = 'board-overlay';
+
+        this.worldEl = document.createElement('div');
+        this.worldEl.className = 'board-overlay-world';
+
+        this.widgetsLayer = document.createElement('div');
+        this.widgetsLayer.className = 'board-overlay-widgets';
+
+        this.worldEl.appendChild(this.widgetsLayer);
+        this.el.appendChild(this.worldEl);
+
+        // Layer 4: screen-space overlay above ink (connector badges, edit chrome)
+        this.topEl = document.createElement('div');
+        this.topEl.className = 'board-overlay-top';
+
+        this.connectorsLayer = document.createElement('div');
+        this.connectorsLayer.className = 'board-overlay-connectors';
+
+        this.chromeLayer = document.createElement('div');
+        this.chromeLayer.className = 'board-overlay-chrome';
+
+        this.topEl.append(this.connectorsLayer, this.chromeLayer);
+
+        this.stageEl.append(this.el, this.topEl);
+    }
+
+    /**
+     * Sync world-space CSS transform with the board camera.
+     * World (wx, wy) mm maps to element CSS (wx * OVERLAY_PX_PER_MM, wy * OVERLAY_PX_PER_MM) px.
+     */
+    syncCamera(cam) {
+        if (!cam) return;
+        const k = cam.scale / OVERLAY_PX_PER_MM;
+        const tx = -cam.x * cam.scale;
+        const ty = -cam.y * cam.scale;
+        this.worldEl.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(${k.toFixed(5)})`;
+
+        for (const fn of this._cameraListeners) {
+            fn(cam);
+        }
+    }
+
+    /**
+     * Register a lightweight callback invoked whenever camera transform updates
+     * (used by screen-space connector badges & edit handles).
+     */
+    onCameraSync(fn) {
+        this._cameraListeners.add(fn);
+        return () => this._cameraListeners.delete(fn);
+    }
+
+    setOverviewMode(active) {
+        this.stageEl.classList.toggle('is-overview', Boolean(active));
+    }
+
+    /**
+     * Returns true if `target` is a live interactive control inside the overlay
+     * that should handle a single-pointer event instead of starting a drawing stroke.
+     */
+    isInteractiveTarget(target) {
+        if (!target || typeof target.closest !== 'function') return false;
+        if (this.stageEl.classList.contains('is-overview')) return false;
+        return Boolean(target.closest(INTERACTIVE_SELECTOR));
+    }
+}

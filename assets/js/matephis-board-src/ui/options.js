@@ -11,6 +11,7 @@ export class OptionsMenu {
         getTheme,
         onToggleTheme,
         onSettingChange,
+        onPageBackgroundChange = null,
         onExportJSON,
         onImportJSON,
         onClearBoard,
@@ -21,6 +22,7 @@ export class OptionsMenu {
         this.getTheme = getTheme;
         this.onToggleTheme = onToggleTheme;
         this.onSettingChange = onSettingChange;
+        this.onPageBackgroundChange = onPageBackgroundChange;
         this.onExportJSON = onExportJSON;
         this.onImportJSON = onImportJSON;
         this.onClearBoard = onClearBoard;
@@ -99,11 +101,11 @@ export class OptionsMenu {
                 </div>
                 <div class="board-opt-bg-row">
                     <span>Sfondo pagina</span>
-                    <div class="board-bg-seg">
-                        <button type="button" class="board-bg-btn active">Vuoto</button>
-                        <button type="button" class="board-bg-btn is-stub">Quadretti</button>
-                        <button type="button" class="board-bg-btn is-stub">Puntini</button>
-                        <button type="button" class="board-bg-btn is-stub">Righe</button>
+                    <div class="board-bg-seg" data-page-bg>
+                        <button type="button" class="board-bg-btn" data-bg="blank">Vuoto</button>
+                        <button type="button" class="board-bg-btn" data-bg="grid">Quadretti</button>
+                        <button type="button" class="board-bg-btn" data-bg="dots">Puntini</button>
+                        <button type="button" class="board-bg-btn" data-bg="ruled">Righe</button>
                     </div>
                 </div>
             </div>
@@ -164,6 +166,15 @@ export class OptionsMenu {
             }
         }
 
+        for (const btn of this.el.querySelectorAll('[data-page-bg] [data-bg]')) {
+            btn.addEventListener('click', () => {
+                const bg = btn.dataset.bg;
+                this.scene.pageBackground = bg;
+                this._syncPageBackground();
+                if (this.onPageBackgroundChange) this.onPageBackgroundChange(bg);
+            });
+        }
+
         const slider = this.el.querySelector('[data-opt="palmThreshold"]');
         const sliderVal = this.el.querySelector('[data-opt-val="palmThreshold"]');
         slider.addEventListener('input', () => {
@@ -222,6 +233,15 @@ export class OptionsMenu {
         }
     }
 
+    _syncPageBackground() {
+        const current = this.scene.pageBackground || 'blank';
+        for (const btn of this.el.querySelectorAll('[data-page-bg] [data-bg]')) {
+            const on = btn.dataset.bg === current;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', String(on));
+        }
+    }
+
     _syncPalmSliderVisibility() {
         const wrap = this.el.querySelector('[data-opt-wrap="palmThreshold"]');
         wrap.hidden = !this.scene.settings.palmErase;
@@ -237,6 +257,7 @@ export class OptionsMenu {
         this.el.querySelector('[data-opt-val="palmThreshold"]').textContent = `${th} px`;
         this._syncPalmSliderVisibility();
         this._syncSegments();
+        this._syncPageBackground();
         if (this.deletePageBtn) {
             this.deletePageBtn.disabled = this.scene.pageCount <= 1;
         }

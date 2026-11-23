@@ -1,6 +1,6 @@
 /**
  * Multi-page board document model, camera state, settings, and compact .mboard.json codec.
- * Each page has its own unbounded landscape-A4 canvas (strokes + camera).
+ * Each page has its own unbounded landscape-A4 canvas (strokes, widgets, connectors, background, camera).
  */
 
 import {
@@ -11,6 +11,8 @@ import {
     createInitialCamera,
 } from '../ink/geometry.js';
 import { createStroke, decodeStroke, encodeStroke } from '../ink/stroke.js';
+
+export const PAGE_BACKGROUNDS = ['blank', 'grid', 'dots', 'ruled'];
 
 export const DEFAULT_SETTINGS = {
     showCropMarks: true, // controls A4 page borders & corner marks
@@ -29,9 +31,62 @@ export const DEFAULT_SETTINGS = {
 };
 
 let pageCounter = 1;
+let widgetCounter = 1;
+let connectorCounter = 1;
 
 function nextPageId() {
     return `p${Date.now().toString(36)}_${(pageCounter++).toString(36)}`;
+}
+
+export function nextWidgetId() {
+    return `w${Date.now().toString(36)}_${(widgetCounter++).toString(36)}`;
+}
+
+export function nextConnectorId() {
+    return `c${Date.now().toString(36)}_${(connectorCounter++).toString(36)}`;
+}
+
+function normalizeBackground(bg) {
+    return PAGE_BACKGROUNDS.includes(bg) ? bg : 'blank';
+}
+
+function normalizeWidget(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    return {
+        id: raw.id || nextWidgetId(),
+        kind: String(raw.kind || 'plot'),
+        x: Number(raw.x) || 0,
+        y: Number(raw.y) || 0,
+        w: Math.max(20, Number(raw.w) || 120),
+        h: Math.max(16, Number(raw.h) || 85),
+        lockedControls: Boolean(raw.lockedControls),
+        data: raw.data && typeof raw.data === 'object' ? JSON.parse(JSON.stringify(raw.data)) : {},
+    };
+}
+
+function normalizeConnector(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const series = raw.series === 'num' ? 'num' : 'alpha';
+    return {
+        id: raw.id || nextConnectorId(),
+        pairId: String(raw.pairId || raw.id || nextConnectorId()),
+        series,
+        label: String(raw.label || (series === 'num' ? '1' : 'A')),
+        x: Number(raw.x) || 0,
+        y: Number(raw.y) || 0,
+        color: typeof raw.color === 'number' ? raw.color : 1,
+    };
+}
+
+function alphaLabelFromIndex(n) {
+    // 0 -> A, 25 -> Z, 26 -> AA, ...
+    let idx = n;
+    let out = '';
+    while (idx >= 0) {
+        out = String.fromCharCode(65 + (idx % 26)) + out;
+        idx = Math.floor(idx / 26) - 1;
+    }
+    return out;
 }
 
 export class BoardScene {
@@ -48,10 +103,13 @@ export class BoardScene {
         this.currentPageIndex = 0;
     }
 
-    _createPage(viewportW = this.viewportW, viewportH = this.viewportH) {
+    _createPage(viewportW = this.viewportW, viewportH = this.viewportH, background = 'blank') {
         return {
             id: nextPageId(),
+            background: normalizeBackground(background),
             strokes: [],
+            widgets: [],
+            connectors: [],
             camera: createInitialCamera(viewportW, viewportH),
         };
     }
@@ -68,6 +126,30 @@ export class BoardScene {
         this.currentPage.strokes = list;
     }
 
+    get widgets() {
+        return this.currentPage.widgets;
+    }
+
+    set widgets(list) {
+        this.currentPage.widgets = list;
+    }
+
+    get connectors() {
+        return this.currentPage.connectors;
+    }
+
+    set connectors(list) {
+        this.currentPage.connectors = list;
+    }
+
+    get pageBackground() {
+        return this.currentPage.background || 'blank';
+    }
+
+    set pageBackground(bg) {
+        this.currentPage.background = normalizeBackground(bg);
+    }
+
     get camera() {
         return this.currentPage.camera;
     }
@@ -80,8 +162,48 @@ export class BoardScene {
         return this.pages[index] || null;
     }
 
+    isPageEmpty(pageIndex = this.currentPageIndex) {
+        const page = this.pages[pageIndex];
+        if (!page) return true;
+        return page.strokes.length === 0
+            && page.widgets.length === 0
+            && page.connectors.length === 0;
+    }
+
+    findMatchingConnectors(pairId) {
+        const matches = [];
+        for (let i = 0; i < this.pages.length; i++) {
+            const page = this.pages[i];
+            for (let j = 0; j < page.connectors.length; j++) {
+                const c = page.connectors[j];
+                if (c.pairId === pairId) {
+                    matches.push({ pageIndex: i, pageId: page.id, connector: c });
+                }
+            }
+        }
+        return matches;
+    }
+
+    getNextConnectorLabel(series = 'alpha') {
+        const used = new Set();
+        for (const page of this.pages) {
+            for (const c of page.connectors) {
+                if (c.series === series) used.add(c.label);
+            }
+        }
+        if (series === 'num') {
+            let n = 1;
+            while (used.has(String(n))) n++;
+            return String(n);
+        }
+        let i = 0;
+        while (used.has(alphaLabelFromIndex(i))) i++;
+        return alphaLabelFromIndex(i);
+    }
+
     addPage(switchToNew = true) {
-        const page = this._createPage(this.viewportW, this.viewportH);
+        const bg = this.currentPage ? this.currentPage.background : 'blank';
+        const page = this._createPage(this.viewportW, this.viewportH, bg);
         const insertIdx = this.currentPageIndex + 1;
         this.pages.splice(insertIdx, 0, page);
         if (switchToNew) {
@@ -128,7 +250,7 @@ export class BoardScene {
 
     getFootprint(pageIndex = this.currentPageIndex) {
         const page = this.pages[pageIndex] || this.currentPage;
-        return computeA4Footprint(page.strokes);
+        return computeA4Footprint(page.strokes, page.widgets, page.connectors);
     }
 
     getPointCount(pageIndex = this.currentPageIndex) {
@@ -142,22 +264,54 @@ export class BoardScene {
 
     toJSON() {
         return {
-            v: 1,
+            v: 2,
             id: this.id,
             title: this.title,
             createdAt: this.createdAt,
             updatedAt: Math.floor(Date.now() / 1000),
             geometry: { tile: 'A4-landscape', w: A4_W, h: A4_H },
             currentPageIndex: this.currentPageIndex,
-            pages: this.pages.map((page) => ({
-                id: page.id,
-                camera: {
-                    x: Math.round(page.camera.x * 10) / 10,
-                    y: Math.round(page.camera.y * 10) / 10,
-                    scale: Math.round(page.camera.scale * 1000) / 1000,
-                },
-                strokes: page.strokes.map(encodeStroke),
-            })),
+            pages: this.pages.map((page) => {
+                const out = {
+                    id: page.id,
+                    camera: {
+                        x: Math.round(page.camera.x * 10) / 10,
+                        y: Math.round(page.camera.y * 10) / 10,
+                        scale: Math.round(page.camera.scale * 1000) / 1000,
+                    },
+                    strokes: page.strokes.map(encodeStroke),
+                };
+                if (page.background && page.background !== 'blank') {
+                    out.bg = page.background;
+                }
+                if (page.widgets && page.widgets.length > 0) {
+                    out.widgets = page.widgets.map((w) => {
+                        const item = {
+                            id: w.id,
+                            kind: w.kind,
+                            x: Math.round(w.x * 10) / 10,
+                            y: Math.round(w.y * 10) / 10,
+                            w: Math.round(w.w * 10) / 10,
+                            h: Math.round(w.h * 10) / 10,
+                            data: w.data || {},
+                        };
+                        if (w.lockedControls) item.lockedControls = true;
+                        return item;
+                    });
+                }
+                if (page.connectors && page.connectors.length > 0) {
+                    out.connectors = page.connectors.map((c) => ({
+                        id: c.id,
+                        pairId: c.pairId,
+                        series: c.series,
+                        label: c.label,
+                        x: Math.round(c.x * 10) / 10,
+                        y: Math.round(c.y * 10) / 10,
+                        color: c.color,
+                    }));
+                }
+                return out;
+            }),
         };
     }
 
@@ -183,8 +337,11 @@ export class BoardScene {
                 initCam.baseScale = baseScale;
                 return {
                     id: rawPage.id || nextPageId(),
+                    background: normalizeBackground(rawPage.bg || rawPage.background),
                     camera: initCam,
                     strokes: Array.isArray(rawPage.strokes) ? rawPage.strokes.map(decodeStroke) : [],
+                    widgets: Array.isArray(rawPage.widgets) ? rawPage.widgets.map(normalizeWidget).filter(Boolean) : [],
+                    connectors: Array.isArray(rawPage.connectors) ? rawPage.connectors.map(normalizeConnector).filter(Boolean) : [],
                 };
             });
             const idx = Number(data.currentPageIndex) || 0;
@@ -192,9 +349,11 @@ export class BoardScene {
             return true;
         }
 
-        // Backwards-compatible fallback for early single-page JSON
-        const page = this._createPage(this.viewportW, this.viewportH);
+        // Fallback for minimal single-page JSON
+        const page = this._createPage(this.viewportW, this.viewportH, data.bg || data.background);
         page.strokes = Array.isArray(data.strokes) ? data.strokes.map(decodeStroke) : [];
+        page.widgets = Array.isArray(data.widgets) ? data.widgets.map(normalizeWidget).filter(Boolean) : [];
+        page.connectors = Array.isArray(data.connectors) ? data.connectors.map(normalizeConnector).filter(Boolean) : [];
         if (data.camera && typeof data.camera.x === 'number' && typeof data.camera.y === 'number') {
             page.camera.x = data.camera.x;
             page.camera.y = data.camera.y;

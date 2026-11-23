@@ -1,5 +1,5 @@
 /**
- * Matephis Board (/board/) — Phase 1 entry point.
+ * Matephis Board (/board/) — Entry point.
  */
 
 import { HistoryStack } from './ink/history.js';
@@ -13,6 +13,8 @@ import { FutureMenus } from './ui/future-menus.js';
 import { PinnedStrip } from './ui/pinned-strip.js';
 import { PerfHud } from './ui/perf-hud.js';
 import { QuickMenu } from './ui/quick-menu.js';
+import { BoardOverlay } from './ui/overlay.js';
+import { EngineLoader } from './ui/engine-loader.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -38,12 +40,15 @@ async function initMatephisBoard() {
         get canUndo() { return getCurrentHistory().canUndo; },
         get canRedo() { return getCurrentHistory().canRedo; },
         push(cmd) { getCurrentHistory().push(cmd); },
-        undo(strokes) { return getCurrentHistory().undo(strokes); },
-        redo(strokes) { return getCurrentHistory().redo(strokes); },
+        undo(target = scene.currentPage) { return getCurrentHistory().undo(target); },
+        redo(target = scene.currentPage) { return getCurrentHistory().redo(target); },
         clearAll() { pageHistories.clear(); },
     };
 
     const getTheme = () => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+    const overlay = new BoardOverlay(canvasHost);
+    const engineLoader = new EngineLoader();
 
     let perfHud = null;
     let pinnedStrip = null;
@@ -80,6 +85,7 @@ async function initMatephisBoard() {
         if (surface.overviewMode) {
             surface.overviewMode = false;
             surface.savedCamera = null;
+            overlay.setOverviewMode(false);
         }
         const changed = scene.goToPage(targetIndex);
         if (targetCamera) {
@@ -93,11 +99,13 @@ async function initMatephisBoard() {
             if (pinnedStrip) pinnedStrip.render();
             syncUI();
             storage.scheduleSave(scene, 400);
+            engineLoader.ensureForPage(scene.currentPage);
         }
     };
 
     const surface = new InkSurface(canvasHost, {
         scene,
+        overlay,
         onPerfSample: ({ committedRedrawMs }) => {
             if (perfHud) perfHud.recordCommittedRedraw(committedRedrawMs);
         },
@@ -155,6 +163,11 @@ async function initMatephisBoard() {
                 if (toolbar) toolbar.relayout();
             }
         },
+        onPageBackgroundChange: () => {
+            surface.requestCommittedRedraw();
+            pinnedStrip.syncIfShowingPage(scene.currentPage.id);
+            storage.scheduleSave(scene);
+        },
         onExportJSON: () => storage.exportJSONFile(scene),
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
@@ -163,13 +176,23 @@ async function initMatephisBoard() {
                 surface.renderCommittedNow();
                 syncUI();
                 storage.saveBoardNow(scene);
+                engineLoader.ensureForPage(scene.currentPage);
             }
         },
         onClearBoard: () => {
-            if (scene.strokes.length === 0) return;
-            const prev = scene.strokes.slice();
+            if (scene.isPageEmpty()) return;
+            const prevStrokes = scene.strokes.slice();
+            const prevWidgets = scene.widgets.slice();
+            const prevConnectors = scene.connectors.slice();
             scene.strokes.length = 0;
-            historyProxy.push({ type: 'clear', strokes: prev });
+            scene.widgets.length = 0;
+            scene.connectors.length = 0;
+            historyProxy.push({
+                type: 'clear',
+                strokes: prevStrokes,
+                widgets: prevWidgets,
+                connectors: prevConnectors,
+            });
             surface.renderCommittedNow();
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
@@ -182,6 +205,7 @@ async function initMatephisBoard() {
                 if (surface.overviewMode) {
                     surface.overviewMode = false;
                     surface.savedCamera = null;
+                    overlay.setOverviewMode(false);
                 }
                 surface.renderCommittedNow();
                 pinnedStrip.render();
@@ -203,7 +227,7 @@ async function initMatephisBoard() {
         },
         onToolChange: () => { /* input reads state on demand */ },
         onUndo: () => {
-            if (historyProxy.undo(scene.strokes)) {
+            if (historyProxy.undo(scene.currentPage)) {
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -211,7 +235,7 @@ async function initMatephisBoard() {
             }
         },
         onRedo: () => {
-            if (historyProxy.redo(scene.strokes)) {
+            if (historyProxy.redo(scene.currentPage)) {
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -270,6 +294,7 @@ async function initMatephisBoard() {
             if (surface.overviewMode) {
                 surface.overviewMode = false;
                 surface.savedCamera = null;
+                overlay.setOverviewMode(false);
             }
             scene.addPage(true);
             surface.renderCommittedNow();
@@ -289,6 +314,7 @@ async function initMatephisBoard() {
     new InputController(surface, {
         scene,
         history: historyProxy,
+        overlay,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
             const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover || quickMenu.isOpen);
@@ -333,13 +359,13 @@ async function initMatephisBoard() {
         if (mod && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             if (e.shiftKey) {
-                if (historyProxy.redo(scene.strokes)) {
+                if (historyProxy.redo(scene.currentPage)) {
                     surface.renderCommittedNow();
                     pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                     syncUI();
                     storage.scheduleSave(scene);
                 }
-            } else if (historyProxy.undo(scene.strokes)) {
+            } else if (historyProxy.undo(scene.currentPage)) {
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -349,7 +375,7 @@ async function initMatephisBoard() {
         }
         if (mod && e.key.toLowerCase() === 'y') {
             e.preventDefault();
-            if (historyProxy.redo(scene.strokes)) {
+            if (historyProxy.redo(scene.currentPage)) {
                 surface.renderCommittedNow();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
@@ -413,6 +439,7 @@ async function initMatephisBoard() {
     if (saved) {
         scene.loadJSON(saved);
         surface.renderCommittedNow();
+        engineLoader.ensureForPage(scene.currentPage);
     }
     syncUI();
 }

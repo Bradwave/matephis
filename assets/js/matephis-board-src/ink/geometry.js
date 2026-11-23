@@ -283,10 +283,10 @@ export function eraseCircleFromStroke(points, cx, cy, r, minPieceLength = 0.25) 
 }
 
 /**
- * Computes occupied landscape A4 tile footprint from all strokes.
+ * Computes occupied landscape A4 tile footprint from strokes, widgets, and connectors.
  * Always includes at least tile (0, 0).
  */
-export function computeA4Footprint(strokes) {
+export function computeA4Footprint(strokes = [], widgets = [], connectors = []) {
     let minCol = 0;
     let maxCol = 0;
     let minRow = 0;
@@ -297,19 +297,19 @@ export function computeA4Footprint(strokes) {
     let contentMinY = Infinity;
     let contentMaxX = -Infinity;
     let contentMaxY = -Infinity;
+    let hasContent = false;
 
-    for (let i = 0; i < strokes.length; i++) {
-        const bb = strokes[i].bbox;
-        if (!bb) continue;
-        if (bb.minX < contentMinX) contentMinX = bb.minX;
-        if (bb.minY < contentMinY) contentMinY = bb.minY;
-        if (bb.maxX > contentMaxX) contentMaxX = bb.maxX;
-        if (bb.maxY > contentMaxY) contentMaxY = bb.maxY;
+    const includeBox = (x0, y0, x1, y1) => {
+        hasContent = true;
+        if (x0 < contentMinX) contentMinX = x0;
+        if (y0 < contentMinY) contentMinY = y0;
+        if (x1 > contentMaxX) contentMaxX = x1;
+        if (y1 > contentMaxY) contentMaxY = y1;
 
-        const c0 = Math.floor(bb.minX / A4_W);
-        const c1 = Math.floor(bb.maxX / A4_W);
-        const r0 = Math.floor(bb.minY / A4_H);
-        const r1 = Math.floor(bb.maxY / A4_H);
+        const c0 = Math.floor(x0 / A4_W);
+        const c1 = Math.floor(x1 / A4_W);
+        const r0 = Math.floor(y0 / A4_H);
+        const r1 = Math.floor(y1 / A4_H);
 
         if (c0 < minCol) minCol = c0;
         if (c1 > maxCol) maxCol = c1;
@@ -321,6 +321,25 @@ export function computeA4Footprint(strokes) {
                 occupied.add(`${c},${r}`);
             }
         }
+    };
+
+    for (let i = 0; i < strokes.length; i++) {
+        const bb = strokes[i].bbox;
+        if (!bb) continue;
+        includeBox(bb.minX, bb.minY, bb.maxX, bb.maxY);
+    }
+
+    for (let i = 0; i < widgets.length; i++) {
+        const w = widgets[i];
+        if (!w || typeof w.x !== 'number' || typeof w.y !== 'number') continue;
+        includeBox(w.x, w.y, w.x + (w.w || 0), w.y + (w.h || 0));
+    }
+
+    for (let i = 0; i < connectors.length; i++) {
+        const c = connectors[i];
+        if (!c || typeof c.x !== 'number' || typeof c.y !== 'number') continue;
+        const pad = 4;
+        includeBox(c.x - pad, c.y - pad, c.x + pad, c.y + pad);
     }
 
     const cols = maxCol - minCol + 1;
@@ -345,7 +364,7 @@ export function computeA4Footprint(strokes) {
             maxX: (maxCol + 1) * A4_W,
             maxY: (maxRow + 1) * A4_H,
         },
-        contentBounds: strokes.length > 0
+        contentBounds: hasContent
             ? { minX: contentMinX, minY: contentMinY, maxX: contentMaxX, maxY: contentMaxY }
             : { minX: 0, minY: 0, maxX: A4_W, maxY: A4_H },
     };

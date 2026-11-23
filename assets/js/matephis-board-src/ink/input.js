@@ -29,6 +29,7 @@ export class InputController {
     constructor(surface, {
         scene,
         history,
+        overlay = null,
         getToolState,
         onCanvasTouch = null,
         onSceneMutated = null,
@@ -40,6 +41,7 @@ export class InputController {
         this.surface = surface;
         this.scene = scene;
         this.history = history;
+        this.overlay = overlay;
         this.getToolState = getToolState;
         this.onCanvasTouch = onCanvasTouch;
         this.onSceneMutated = onSceneMutated;
@@ -49,7 +51,7 @@ export class InputController {
         this.onTwoFingerTap = onTwoFingerTap;
         this.tapCandidate = null;
 
-        this.el = surface.activeCanvas;
+        this.el = surface.container;
         this.pointers = new Map(); // pointerId -> { sx, sy, type, w, h }
         this.mode = 'idle';        // 'idle' | 'draw' | 'erase' | 'laser' | 'pan' | 'pinch'
         this.activePointerId = null;
@@ -125,6 +127,9 @@ export class InputController {
     _onPointerDown(e) {
         this.lastPointerType = e.pointerType;
         if (e.button === 2) return; // right-click: handled by contextmenu (quick menu)
+        if (this.pointers.size === 0 && this.overlay && this.overlay.isInteractiveTarget(e.target)) {
+            return;
+        }
         e.preventDefault();
         try { this.el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
 

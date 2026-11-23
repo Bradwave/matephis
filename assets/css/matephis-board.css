@@ -37,6 +37,7 @@ body.board-body {
     width: 100%;
     height: 100%;
     touch-action: none;
+    cursor: crosshair;
 }
 
 .board-canvas {
@@ -44,16 +45,108 @@ body.board-body {
     inset: 0;
     display: block;
     touch-action: none;
-}
-
-.board-canvas-committed {
-    z-index: 1;
     pointer-events: none;
 }
 
-.board-canvas-active {
+.board-canvas-bg {
+    z-index: 0;
+}
+
+.board-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.board-overlay-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+    pointer-events: none;
+}
+
+.board-overlay-widgets {
+    position: relative;
+    pointer-events: none;
+}
+
+.board-canvas-committed {
     z-index: 2;
-    cursor: crosshair;
+}
+
+.board-canvas-active {
+    z-index: 3;
+}
+
+.board-overlay-top {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.board-overlay-connectors,
+.board-overlay-chrome {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* Zone-based pass-through for widgets: bodies stay write-through by default,
+   explicit controls remain immediately interactive, and Overview disables all overlay hits. */
+.board-widget {
+    position: absolute;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.board-widget-body {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.board-widget.is-editing,
+.board-widget.is-canvas-interactive,
+.board-widget.is-canvas-interactive .board-widget-body {
+    pointer-events: auto;
+    cursor: default;
+}
+
+.board-widget:not(.is-controls-locked) input,
+.board-widget:not(.is-controls-locked) button,
+.board-widget:not(.is-controls-locked) select,
+.board-widget:not(.is-controls-locked) textarea,
+.board-widget:not(.is-controls-locked) summary,
+.board-widget:not(.is-controls-locked) [data-board-interactive],
+.board-widget:not(.is-controls-locked) .matephis-slider,
+.board-widget:not(.is-controls-locked) .matephis-controls,
+.board-widget:not(.is-controls-locked) .circuit-switch,
+.board-widget-handle,
+.board-widget-chrome,
+.board-connector,
+.board-overlay-interactive {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.board-widget.is-controls-locked input,
+.board-widget.is-controls-locked button,
+.board-widget.is-controls-locked select,
+.board-widget.is-controls-locked textarea,
+.board-widget.is-controls-locked summary,
+.board-widget.is-controls-locked [data-board-interactive] {
+    pointer-events: none !important;
+}
+
+.board-stage.is-overview .board-overlay *,
+.board-stage.is-overview .board-overlay-top * {
+    pointer-events: none !important;
 }
 
 
