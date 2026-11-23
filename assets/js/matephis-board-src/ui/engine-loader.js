@@ -186,6 +186,19 @@ export class EngineLoader {
     }
 
     /**
+     * Preload engines referenced inside an exercise HTML fragment.
+     */
+    async ensureForExerciseHtml(html) {
+        if (!html || typeof html !== 'string') return;
+        const tasks = [];
+        if (/language-matephis|matephis-plot/.test(html)) tasks.push(this.loadEngine('plot'));
+        if (/language-physics|matephis-physics/.test(html)) tasks.push(this.loadEngine('physics'));
+        if (/language-sets|matephis-sets/.test(html)) tasks.push(this.loadEngine('sets'));
+        if (/language-circuit|matephis-circuit/.test(html)) tasks.push(this.loadEngine('circuit'));
+        if (tasks.length > 0) await Promise.allSettled(tasks);
+    }
+
+    /**
      * Preload only the engines / MathJax required by widgets on `page`.
      */
     async ensureForPage(page) {
@@ -194,6 +207,14 @@ export class EngineLoader {
         const tasks = [];
         for (const kind of kinds) {
             if (ENGINE_SPECS[kind]) tasks.push(this.loadEngine(kind));
+        }
+        for (const w of page.widgets) {
+            if ((w.kind === 'physics' && w.data && w.data.graphs) || (w.kind === 'sets' && w.data && w.data.plot)) {
+                tasks.push(this.loadEngine('plot'));
+            }
+            if (w.kind === 'exercise' && w.data && w.data.html) {
+                tasks.push(this.ensureForExerciseHtml(w.data.html));
+            }
         }
         if (kinds.has('exercise') || kinds.has('plot') || kinds.has('physics') || kinds.has('sets')) {
             tasks.push(this.loadMathJax());

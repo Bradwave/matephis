@@ -19,6 +19,7 @@ export const OVERLAY_PX_PER_MM = 4;
 const INTERACTIVE_SELECTOR = [
     '.board-overlay-interactive',
     '.board-widget-handle',
+    '.board-widget-resize',
     '.board-widget-chrome',
     '.board-connector',
     '.board-widget.is-editing',
@@ -31,7 +32,17 @@ const INTERACTIVE_SELECTOR = [
     '.board-widget:not(.is-controls-locked) [data-board-interactive]',
     '.board-widget:not(.is-controls-locked) .matephis-slider',
     '.board-widget:not(.is-controls-locked) .matephis-controls',
-    '.board-widget:not(.is-controls-locked) .circuit-switch',
+    '.board-widget:not(.is-controls-locked) .matephis-plot-controls',
+    '.board-widget:not(.is-controls-locked) .matephis-plot-play-btn',
+    '.board-widget:not(.is-controls-locked) .matephis-plot-btn',
+    '.board-widget:not(.is-controls-locked) .matephis-physics-button',
+    '.board-widget:not(.is-controls-locked) .matephis-physics-speed-btn',
+    '.board-widget:not(.is-controls-locked) .mp-draggable',
+    '.board-widget:not(.is-controls-locked) .mp-clickable',
+    '.board-widget:not(.is-controls-locked) .mps-draggable',
+    '.board-widget:not(.is-controls-locked) .matephis-circuit-switch',
+    '.board-widget:not(.is-controls-locked) .matephis-circuit-comp',
+    '.board-widget:not(.is-controls-locked) .board-widget-sol-toggle',
 ].join(', ');
 
 export class BoardOverlay {

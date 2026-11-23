@@ -586,9 +586,9 @@ export class BoardToolbar {
         const items = [
             { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: false },
             { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: false },
-            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: true },
-            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: true },
-            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: true },
+            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: false },
+            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: false },
+            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: false },
         ];
         const grid = document.createElement('div');
         grid.className = 'board-insert-grid';
