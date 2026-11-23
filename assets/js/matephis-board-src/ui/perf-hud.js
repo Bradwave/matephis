@@ -1,7 +1,7 @@
 /**
  * Toggleable Performance & Input Telemetry HUD for school smartboard testing.
  * Displays live FPS, input->paint ms, committed redraw ms, stroke/point counts,
- * estimated JSON KB, live PointerEvent telemetry (pointerType, width x height,
+ * estimated JSON KB, exact board file size raw / gzip-compressed, live PointerEvent telemetry (pointerType, width x height,
  * touch count, coalesced count), and a 200-stroke stress test button.
  */
 
@@ -36,6 +36,7 @@ export class PerfHud {
                 <div>Punti: <strong data-hud="points">0</strong></div>
                 <div>JSON: <strong data-hud="kb">0 KB</strong></div>
                 <div>Ptr: <strong data-hud="ptr">--</strong></div>
+                <div class="board-hud-wide" title="Intera lavagna (tutte le pagine): JSON salvato / compresso gzip">File: <strong data-hud="file">--</strong></div>
                 <div class="board-hud-wide">Area: <strong data-hud="area">--</strong></div>
             </div>
         `;
@@ -99,6 +100,37 @@ export class PerfHud {
         this.fields.points.textContent = String(points);
         this.fields.kb.textContent = `${(estBytes / 1024).toFixed(1)} KB`;
         this.fields.dpr.textContent = `${dpr}×`;
+        this._scheduleFileSize();
+    }
+
+    /**
+     * Exact size of the whole board file (all pages), raw JSON and gzip-compressed.
+     * Debounced and only while the HUD is visible: stringifying a big board costs a few ms.
+     */
+    _scheduleFileSize() {
+        clearTimeout(this._fileTimer);
+        this._fileTimer = setTimeout(() => this._measureFileSize(), 800);
+    }
+
+    async _measureFileSize() {
+        if (!this.visible) return;
+        const json = JSON.stringify(this.scene.toJSON());
+        const bytes = new TextEncoder().encode(json);
+        const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+        let text = kb(bytes.length);
+        if (typeof CompressionStream === 'function') {
+            try {
+                const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+                const gz = await new Response(stream).arrayBuffer();
+                const ratio = bytes.length / Math.max(1, gz.byteLength);
+                text += ` · gzip ${kb(gz.byteLength)} (÷${ratio.toFixed(1)})`;
+            } catch (_) {
+                text += ' · gzip n/d';
+            }
+        } else {
+            text += ' · gzip n/d';
+        }
+        if (this.visible) this.fields.file.textContent = text;
     }
 
     _startLoop() {
