@@ -1,9 +1,10 @@
 /**
  * Canvas Options popover menu (theme, A4 crop marks, pen-only, palm-to-erase + sensitivity,
- * 1x DPR fast mode, Perf/Input HUD, export/import .mboard.json, clear board).
+ * 1x DPR fast mode, Perf/Input HUD, export/import .mboard.json / .svg / .pdf, clear board).
  */
 
 import { BoardIcons } from './icons.js';
+import { extractBoardDataFromSVG } from '../export/svg-export.js';
 
 export class OptionsMenu {
     constructor(hostEl, {
@@ -14,6 +15,8 @@ export class OptionsMenu {
         onPageBackgroundChange = null,
         onExportJSON,
         onImportJSON,
+        onExportSVG = null,
+        onExportPDF = null,
         onClearBoard,
         onDeletePage,
     }) {
@@ -25,6 +28,8 @@ export class OptionsMenu {
         this.onPageBackgroundChange = onPageBackgroundChange;
         this.onExportJSON = onExportJSON;
         this.onImportJSON = onImportJSON;
+        this.onExportSVG = onExportSVG;
+        this.onExportPDF = onExportPDF;
         this.onClearBoard = onClearBoard;
         this.onDeletePage = onDeletePage;
 
@@ -113,13 +118,13 @@ export class OptionsMenu {
                 <button type="button" class="board-action-btn" data-action="export">
                     ${BoardIcons.download}<span>Esporta JSON</span>
                 </button>
-                <button type="button" class="board-action-btn" data-action="import">
-                    ${BoardIcons.upload}<span>Importa JSON</span>
+                <button type="button" class="board-action-btn" data-action="import" title="Importa .mboard.json o .svg">
+                    ${BoardIcons.upload}<span>Importa</span>
                 </button>
-                <button type="button" class="board-action-btn is-stub" title="Esporta SVG con metadati modificabili (in arrivo)">
+                <button type="button" class="board-action-btn" data-action="export-svg" title="Esporta SVG con metadati modificabili">
                     ${BoardIcons.download}<span>Esporta SVG</span>
                 </button>
-                <button type="button" class="board-action-btn is-stub" title="Esporta PDF vettoriale (in arrivo)">
+                <button type="button" class="board-action-btn" data-action="export-pdf" title="Esporta PDF vettoriale">
                     ${BoardIcons.download}<span>Esporta PDF</span>
                 </button>
                 <button type="button" class="board-action-btn is-danger" data-action="clear">
@@ -129,7 +134,7 @@ export class OptionsMenu {
                     ${BoardIcons.close}<span>Elimina pagina</span>
                 </button>
             </div>
-            <input type="file" accept=".json,.mboard.json" class="board-file-input" hidden />
+            <input type="file" accept=".json,.mboard.json,.svg" class="board-file-input" hidden />
         `;
 
         this.fileInput = this.el.querySelector('.board-file-input');
@@ -189,6 +194,16 @@ export class OptionsMenu {
             this.hide();
         });
 
+        this.el.querySelector('[data-action="export-svg"]').addEventListener('click', () => {
+            if (this.onExportSVG) this.onExportSVG();
+            this.hide();
+        });
+
+        this.el.querySelector('[data-action="export-pdf"]').addEventListener('click', () => {
+            if (this.onExportPDF) this.onExportPDF();
+            this.hide();
+        });
+
         this.el.querySelector('[data-action="import"]').addEventListener('click', () => {
             this.fileInput.value = '';
             this.fileInput.click();
@@ -200,11 +215,17 @@ export class OptionsMenu {
             const reader = new FileReader();
             reader.onload = () => {
                 try {
-                    const parsed = JSON.parse(String(reader.result));
-                    if (this.onImportJSON) this.onImportJSON(parsed);
-                    this.hide();
+                    const text = String(reader.result || '');
+                    const isSvg = (file.name && file.name.toLowerCase().endsWith('.svg'))
+                        || file.type === 'image/svg+xml'
+                        || text.trimStart().startsWith('<');
+                    const parsed = isSvg ? extractBoardDataFromSVG(text) : JSON.parse(text);
+                    if (parsed && this.onImportJSON) {
+                        this.onImportJSON(parsed);
+                        this.hide();
+                    }
                 } catch (_) {
-                    // ignore invalid JSON
+                    // ignore invalid JSON/SVG
                 }
             };
             reader.readAsText(file);
