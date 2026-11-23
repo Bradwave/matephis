@@ -1,8 +1,12 @@
 /**
- * Quick menu: a ring of one-tap actions that opens where the teacher taps with two fingers,
- * so changing colour or tool never means walking to the rail.
+ * Quick menu: a 3×3 square of one-tap actions that opens where the teacher taps with two
+ * fingers (or two-finger clicks / right-clicks with a trackpad or mouse), so changing colour
+ * or tool never means walking to the rail.
  *
- * Ring (clockwise from the top): 5 quick colours, eraser, undo, "move the bar here".
+ *   ink    red     blue
+ *   undo   style   green
+ *   bar    eraser  orange
+ *
  * Centre: line style — each tap cycles solid → dashed → dotted.
  * Colours, eraser and "move the bar" close the menu; undo and the style button keep it open
  * so they can be tapped repeatedly. Tapping anywhere else closes it.
@@ -63,8 +67,11 @@ export class QuickMenu {
         });
         slots.push(this.eraserBtn, this.undoBtn, this.sideBtn);
 
+        // [row, column] of each slot, in the order pushed above.
+        const cells = [[1, 1], [1, 2], [1, 3], [2, 3], [3, 3], [3, 2], [2, 1], [3, 1]];
         slots.forEach((btn, i) => {
-            btn.style.setProperty('--a', `${(i * 360) / slots.length - 90}deg`);
+            btn.style.gridRow = String(cells[i][0]);
+            btn.style.gridColumn = String(cells[i][1]);
             this.el.appendChild(btn);
         });
 
@@ -73,6 +80,8 @@ export class QuickMenu {
             this._render();
         });
         this.styleBtn.classList.add('is-center');
+        this.styleBtn.style.gridRow = '2';
+        this.styleBtn.style.gridColumn = '2';
         this.el.appendChild(this.styleBtn);
 
         hostEl.appendChild(this.el);

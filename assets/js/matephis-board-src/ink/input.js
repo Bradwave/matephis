@@ -71,7 +71,14 @@ export class InputController {
         this.el.addEventListener('pointerup', (e) => this._onPointerUp(e));
         this.el.addEventListener('pointercancel', (e) => this._onPointerUp(e));
         this.el.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
-        this.el.addEventListener('contextmenu', (e) => e.preventDefault());
+        this.el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            // Trackpad two-finger click / right-click opens the quick menu. Touch long-presses
+            // also fire contextmenu on some systems: ignore those (no press-and-hold menu).
+            if (this.lastPointerType !== 'mouse' || !this.onTwoFingerTap) return;
+            if (this.scene.settings.quickMenu === false || this.surface.overviewMode) return;
+            this.onTwoFingerTap(e.clientX, e.clientY);
+        });
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !this._isTypingTarget(e.target)) {
@@ -116,7 +123,8 @@ export class InputController {
     }
 
     _onPointerDown(e) {
-        if (e.button === 2) return; // ignore right-click
+        this.lastPointerType = e.pointerType;
+        if (e.button === 2) return; // right-click: handled by contextmenu (quick menu)
         e.preventDefault();
         try { this.el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
 

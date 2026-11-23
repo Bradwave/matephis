@@ -499,16 +499,17 @@ body.board-body {
     display: none;
 }
 
-/* Quick menu: ring of one-tap actions opened by a two-finger tap (ui/quick-menu.js) */
+/* Quick menu: 3×3 square of one-tap actions (ui/quick-menu.js) */
 .board-quick-menu {
-    --qr: calc(var(--bu) * 1.6);
     position: fixed;
     left: 0;
     top: 0;
     z-index: 45;
-    width: calc(var(--qr) * 2 + var(--bu) + 8px);
-    height: calc(var(--qr) * 2 + var(--bu) + 8px);
-    border-radius: 50%;
+    display: grid;
+    grid-template-columns: repeat(3, var(--bu));
+    grid-template-rows: repeat(3, var(--bu));
+    gap: 2px;
+    padding: 4px;
     background: var(--bg);
     border: 1px solid var(--border);
     box-shadow: var(--chrome-shadow);
@@ -520,36 +521,26 @@ body.board-body {
 }
 
 @keyframes board-quick-in {
-    from { transform: scale(0.85); opacity: 0; }
+    from { transform: scale(0.9); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
 
 .board-quick-item {
     appearance: none;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: var(--bu);
-    height: var(--bu);
-    margin: calc(var(--bu) * -0.5) 0 0 calc(var(--bu) * -0.5);
-    transform: rotate(var(--a, 0deg)) translate(var(--qr)) rotate(calc(-1 * var(--a, 0deg)));
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: var(--bu);
+    height: var(--bu);
     padding: 0;
     border: 1px solid transparent;
-    border-radius: 50%;
     background: transparent;
     color: var(--text);
     cursor: pointer;
 }
 
 .board-quick-item.is-center {
-    transform: none;
-    width: calc(var(--bu) * 1.2);
-    height: calc(var(--bu) * 1.2);
-    margin: calc(var(--bu) * -0.6) 0 0 calc(var(--bu) * -0.6);
-    border-color: var(--border);
+    background: var(--bg2);
 }
 
 .board-quick-item svg {
@@ -565,6 +556,7 @@ body.board-body {
 
 .board-quick-item:hover:not(:disabled) {
     background: var(--bg2);
+    color: var(--accent);
 }
 
 .board-quick-item.active {
@@ -580,6 +572,53 @@ body.board-body {
 .board-quick-item:disabled {
     opacity: 0.28;
     cursor: default;
+}
+
+/* Side tab: small handle on the edge opposite the rail; tap to bring the rail there */
+.board-side-tab {
+    display: none;
+}
+
+.is-rail .board-side-tab {
+    appearance: none;
+    position: fixed;
+    z-index: 40;
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 8vh);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: max(44px, calc(var(--bu) * 0.8));
+    height: calc(var(--bu) * 2);
+    padding: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: var(--chrome-shadow);
+    color: var(--secondary-text);
+    cursor: pointer;
+}
+
+.is-rail .board-side-tab svg {
+    width: calc(var(--bu) * 0.45);
+    height: calc(var(--bu) * 0.45);
+}
+
+.is-rail .board-side-tab:hover {
+    color: var(--accent);
+    background: var(--bg2);
+}
+
+.is-rail.is-side-right .board-side-tab {
+    left: max(0px, env(safe-area-inset-left));
+    border-left: none;
+}
+
+.is-rail.is-side-right.has-pin-left .board-side-tab {
+    left: var(--board-pin-left, 0px);
+}
+
+.is-rail.is-side-left .board-side-tab {
+    right: max(0px, env(safe-area-inset-right));
+    border-right: none;
 }
 
 .is-bar.is-minimal .board-rail-group.is-sys {

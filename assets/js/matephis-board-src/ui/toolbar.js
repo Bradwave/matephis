@@ -28,6 +28,9 @@ import { BoardIcons } from './icons.js';
 import { clearFloating, placeFloating } from './floating.js';
 
 const INSERT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-160h160v-80H520v-160h-80v160H280v80h160v160ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>';
+const SIDE_TAB_ICON = (edge) => (edge === 'left'
+    ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M19 12H9M13 8l-4 4 4 4"/></svg>'
+    : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 4v16M5 12h10M11 8l4 4-4 4"/></svg>');
 const MINIMIZE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>';
 const EXPAND_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
 
@@ -229,6 +232,12 @@ export class BoardToolbar {
         this.minimalBtn.setAttribute('aria-label', this.minimalBtn.title);
         this.minimalBtn.setAttribute('aria-pressed', String(this.minimal));
 
+        // Tab on the opposite edge: one tap brings the rail to that side.
+        const other = this.side === 'right' ? 'left' : 'right';
+        this.sideTabEl.innerHTML = SIDE_TAB_ICON(other);
+        this.sideTabEl.title = other === 'left' ? 'Porta qui la barra (sinistra)' : 'Porta qui la barra (destra)';
+        this.sideTabEl.setAttribute('aria-label', this.sideTabEl.title);
+
         this.railEl.setAttribute('aria-orientation', mode === 'rail' ? 'vertical' : 'horizontal');
         this._placeTray();
         this._placePopover();
@@ -396,7 +405,17 @@ export class BoardToolbar {
         const historyGroup = this._makeGroup('is-history', this.undoBtn, this.redoBtn);
 
         this.railEl.append(sysGroup, toolsGroup, colorsGroup, historyGroup);
-        this.chromeEl.append(this.navEl, this.railEl);
+        this.sideTabEl = document.createElement('button');
+        this.sideTabEl.type = 'button';
+        this.sideTabEl.className = 'board-side-tab';
+        this.sideTabEl.addEventListener('pointerdown', stop);
+        this.sideTabEl.addEventListener('click', () => {
+            this.closeTrays();
+            this._closePopovers();
+            this.setSide(this.side === 'right' ? 'left' : 'right');
+        });
+
+        this.chromeEl.append(this.navEl, this.railEl, this.sideTabEl);
         this.hostEl.appendChild(this.chromeEl);
 
         // ---------- Trays (fixed, anchored to their trigger) ----------
