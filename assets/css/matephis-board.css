@@ -1510,3 +1510,10 @@ body.board-body {
     font-size: 0.96em;
     color: var(--title);
 }
+
+/* === Track 2A: Lasso & Shapes === */
+
+.board-tray-btn:disabled {
+    opacity: 0.32;
+    cursor: default;
+}
