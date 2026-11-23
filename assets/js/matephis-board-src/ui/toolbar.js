@@ -670,11 +670,11 @@ export class BoardToolbar {
 
     _buildEraserTray() {
         const tray = document.createElement('div');
-        tray.className = 'board-tray board-eraser-tray';
+        tray.className = 'board-tray board-stack-tray board-eraser-tray';
         tray.hidden = true;
 
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-tray-group';
+        sizesWrap.className = 'board-stack-section';
         this.eraserSizeBtns = [];
         for (let i = 0; i < ERASER_SIZES.length; i++) {
             const sz = ERASER_SIZES[i];
@@ -696,7 +696,7 @@ export class BoardToolbar {
         }
 
         const modeWrap = document.createElement('div');
-        modeWrap.className = 'board-tray-group';
+        modeWrap.className = 'board-stack-section';
         this.eraserModeBtns = [];
         for (const m of [
             { id: 'partial', label: 'Parziale' },
@@ -717,17 +717,17 @@ export class BoardToolbar {
             modeWrap.appendChild(btn);
         }
 
-        tray.append(sizesWrap, this._makeDivider(), modeWrap);
+        tray.append(sizesWrap, modeWrap);
         return tray;
     }
 
     _buildHighlighterTray() {
         const tray = document.createElement('div');
-        tray.className = 'board-tray board-highlighter-tray';
+        tray.className = 'board-tray board-stack-tray board-highlighter-tray';
         tray.hidden = true;
 
         const colorsWrap = document.createElement('div');
-        colorsWrap.className = 'board-quick-colors';
+        colorsWrap.className = 'board-stack-section';
         this.hlSwatchBtns = [];
         for (const c of HIGHLIGHTER_COLORS) {
             const btn = this._makeColorDot(c.id, c.name, () => {
@@ -741,7 +741,7 @@ export class BoardToolbar {
         }
 
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-tray-group';
+        sizesWrap.className = 'board-stack-section';
         this.hlSizeBtns = [];
         for (let i = 0; i < HIGHLIGHTER_SIZES.length; i++) {
             const sz = HIGHLIGHTER_SIZES[i];
@@ -762,7 +762,7 @@ export class BoardToolbar {
             sizesWrap.appendChild(btn);
         }
 
-        tray.append(colorsWrap, this._makeDivider(), sizesWrap);
+        tray.append(colorsWrap, sizesWrap);
         return tray;
     }
 
@@ -771,15 +771,14 @@ export class BoardToolbar {
      */
     _buildLassoTray() {
         const tray = document.createElement('div');
-        tray.className = 'board-tray board-lasso-tray';
+        tray.className = 'board-tray board-stack-tray board-lasso-tray';
         tray.hidden = true;
         tray.innerHTML = `
-            <div class="board-tray-group">
+            <div class="board-stack-section">
                 <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Lazo</button>
                 <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Rettangolo</button>
             </div>
-            <span class="board-dock-sep"></span>
-            <div class="board-tray-group">
+            <div class="board-stack-section">
                 <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Duplica</button>
                 <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Ricolora</button>
                 <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Elimina</button>

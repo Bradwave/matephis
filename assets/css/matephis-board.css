@@ -493,6 +493,35 @@ body.board-body {
     padding-top: 3px;
 }
 
+/* Eraser / highlighter / lasso trays: the same stacked-panel idea, one row per setting.
+ * Each row's buttons share its width equally; the widest row sets the panel width. */
+.board-stack-tray {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    padding: 4px;
+    min-width: calc(var(--bu) * 4 + 14px);
+}
+
+.board-stack-section {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 2px;
+}
+
+.board-stack-section > .board-tray-btn,
+.board-stack-section > .board-quick-dot {
+    width: auto;
+    min-width: var(--bu);
+}
+
+.board-stack-section + .board-stack-section {
+    border-top: 1px solid var(--border);
+    margin-top: 3px;
+    padding-top: 3px;
+}
+
 /* Essential toolbar: pen + quick colours, eraser, undo/redo and the toggle back */
 .is-minimal .board-nav,
 .is-minimal .board-rail .board-full-only {
