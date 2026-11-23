@@ -19,6 +19,15 @@ import { drawStroke } from './stroke.js';
 
 const LASER_LIFETIME_MS = 1250;
 
+// Image-based pan/zoom (setting `fastPan`): while fingers move, the last sharp picture of
+// the board is moved/scaled instead of redrawing every stroke each frame.
+const GESTURE_DIM = 0.85;          // ink opacity while moving (reads as "moving", hides softness)
+const SNAP_MARGIN = 0.15;          // extra picture around the screen so a pan rarely shows an edge
+const REFRESH_ZOOM_RATIO = 1.2;    // re-render a sharp picture once zoom drifts more than this
+const REFRESH_MIN_MS = 150;        // ...but at most this often,
+const REFRESH_COST_FACTOR = 8;     // ...and spaced by 8× the measured redraw cost on heavy pages
+const SETTLE_MS = 120;             // soft → sharp fade when the gesture ends
+
 /**
  * Shared helper: draws faint landscape A4 borders + subtle corner ticks.
  */
@@ -161,6 +170,12 @@ export class InkSurface {
         this._committedDirty = true;
         this._rafPending = false;
 
+        // Image-based pan/zoom state
+        this.gesture = null;      // { lastRefresh, refreshTimer } while a pan/zoom gesture runs
+        this.snap = null;         // { canvas, cam, margin, cssW, cssH }: picture moved during it
+        this._snapCanvases = [document.createElement('canvas'), document.createElement('canvas')];
+        this._settleRaf = null;
+
         this._createCanvases();
         this.resize();
     }
@@ -217,7 +232,10 @@ export class InkSurface {
             this._rafPending = true;
             requestAnimationFrame(() => {
                 this._rafPending = false;
-                if (this._committedDirty) {
+                if (!this._committedDirty) return;
+                if (this.gesture && this.snap) {
+                    this._gestureFrame();
+                } else {
                     this.renderCommittedNow();
                 }
             });
@@ -229,25 +247,196 @@ export class InkSurface {
     }
 
     renderCommittedNow() {
+        this._cancelSettle();
         this._committedDirty = false;
+        const t0 = performance.now();
+        this._renderSceneTo(this.committedCtx, this.width, this.height, this.dpr, this.scene.camera);
+        // A full redraw during a gesture (undo, resize...) becomes the new picture to move.
+        if (this.gesture) this._snapFromCommitted();
+        this.lastCommittedRedrawMs = performance.now() - t0;
+        if (this.onPerfSample) {
+            this.onPerfSample({ committedRedrawMs: this.lastCommittedRedrawMs });
+        }
+    }
+
+    /**
+     * Draw only a just-finished pen stroke on top of the committed layer instead of redrawing
+     * every stroke. Falls back to a full redraw when the layer is not up to date or the stroke
+     * is a highlighter (those sit underneath the ink).
+     */
+    appendStroke(stroke) {
+        if (stroke.tool === 'highlighter' || this._committedDirty || this.overviewMode
+            || this.gesture || this._settleRaf) {
+            this.renderCommittedNow();
+            return;
+        }
         const t0 = performance.now();
         const ctx = this.committedCtx;
         const cam = this.scene.camera;
-        const dpr = this.dpr;
+        ctx.save();
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        ctx.scale(cam.scale, cam.scale);
+        ctx.translate(-cam.x, -cam.y);
+        drawStroke(ctx, stroke, this.theme);
+        ctx.restore();
+        this.lastCommittedRedrawMs = performance.now() - t0;
+        if (this.onPerfSample) {
+            this.onPerfSample({ committedRedrawMs: this.lastCommittedRedrawMs });
+        }
+    }
 
+    // ---------- Image-based pan / zoom ----------
+
+    /** Start of a pan / pinch / wheel gesture. Re-entrant: a running gesture continues. */
+    beginGesture() {
+        if (this.scene.settings.fastPan === false || this.overviewMode || this.cameraAnim) return;
+        if (this.gesture) return;
+        if (this._committedDirty) this.renderCommittedNow();
+        this._cancelSettle();
+        this.gesture = { lastRefresh: performance.now(), refreshTimer: null };
+        this._snapFromCommitted();
+    }
+
+    /** End of the gesture: one sharp redraw, faded in while the ink returns to full strength. */
+    endGesture() {
+        const g = this.gesture;
+        if (!g) return;
+        clearTimeout(g.refreshTimer);
+        this.gesture = null;
+        if (!this.snap) {
+            this.renderCommittedNow();
+            return;
+        }
+
+        const t0 = performance.now();
+        const sharp = this._renderPicture(0);
+        this.lastCommittedRedrawMs = performance.now() - t0;
+        if (this.onPerfSample) this.onPerfSample({ committedRedrawMs: this.lastCommittedRedrawMs });
+        this._committedDirty = false;
+
+        const ctx = this.committedCtx;
+        const start = performance.now();
+        const step = (now) => {
+            const t = clamp((now - start) / SETTLE_MS, 0, 1);
+            this._drawSnap(GESTURE_DIM + (1 - GESTURE_DIM) * t);
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalAlpha = t;
+            ctx.drawImage(sharp.canvas, 0, 0);
+            ctx.restore();
+            if (t < 1) {
+                this._settleRaf = requestAnimationFrame(step);
+            } else {
+                this._settleRaf = null;
+            }
+        };
+        this._settleRaf = requestAnimationFrame(step);
+    }
+
+    _cancelSettle() {
+        if (this._settleRaf) {
+            cancelAnimationFrame(this._settleRaf);
+            this._settleRaf = null;
+        }
+    }
+
+    _gestureFrame() {
+        this._committedDirty = false;
+        const uncovered = this._drawSnap(GESTURE_DIM);
+        const g = this.gesture;
+        const ratio = this.scene.camera.scale / this.snap.cam.scale;
+        const stale = uncovered || ratio > REFRESH_ZOOM_RATIO || ratio < 1 / REFRESH_ZOOM_RATIO;
+        if (!stale) return;
+
+        // Adaptive refresh: heavy pages refresh less often so the gesture stays smooth.
+        const interval = Math.max(REFRESH_MIN_MS, this.lastCommittedRedrawMs * REFRESH_COST_FACTOR);
+        const wait = g.lastRefresh + interval - performance.now();
+        if (wait <= 0) {
+            const t0 = performance.now();
+            this.snap = this._renderPicture(SNAP_MARGIN);
+            this.lastCommittedRedrawMs = performance.now() - t0;
+            if (this.onPerfSample) this.onPerfSample({ committedRedrawMs: this.lastCommittedRedrawMs });
+            g.lastRefresh = performance.now();
+            this._drawSnap(GESTURE_DIM);
+        } else if (!g.refreshTimer) {
+            // Fingers may stop moving while still down: refresh anyway once allowed.
+            g.refreshTimer = setTimeout(() => {
+                if (this.gesture !== g) return;
+                g.refreshTimer = null;
+                this.requestCommittedRedraw();
+            }, wait);
+        }
+    }
+
+    /** Draw the gesture picture under the current camera. Returns true if an edge shows. */
+    _drawSnap(alpha) {
+        const snap = this.snap;
+        const cam = this.scene.camera;
+        const ctx = this.committedCtx;
+        const k = cam.scale / snap.cam.scale;
+        const dx = -snap.margin * k + (snap.cam.x - cam.x) * cam.scale;
+        const dy = -snap.margin * k + (snap.cam.y - cam.y) * cam.scale;
+        const dw = (snap.cssW + snap.margin * 2) * k;
+        const dh = (snap.cssH + snap.margin * 2) * k;
+
+        ctx.save();
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        ctx.fillStyle = this._getBgColor();
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.globalAlpha = alpha;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'medium';
+        ctx.drawImage(snap.canvas, dx, dy, dw, dh);
+        ctx.restore();
+
+        return dx > 0.5 || dy > 0.5 || dx + dw < this.width - 0.5 || dy + dh < this.height - 0.5;
+    }
+
+    /** Cheap picture at gesture start: a copy of what is on screen now. */
+    _snapFromCommitted() {
+        const canvas = this._takeSnapCanvas();
+        canvas.width = this.committedCanvas.width;
+        canvas.height = this.committedCanvas.height;
+        canvas.getContext('2d', { alpha: false }).drawImage(this.committedCanvas, 0, 0);
+        this.snap = { canvas, cam: { ...this.scene.camera }, margin: 0, cssW: this.width, cssH: this.height };
+    }
+
+    /** Full sharp render of the current camera into a spare canvas, with `marginRatio` around. */
+    _renderPicture(marginRatio) {
+        const cam = this.scene.camera;
+        const margin = Math.round(Math.max(this.width, this.height) * marginRatio);
+        const cssW = this.width;
+        const cssH = this.height;
+        const canvas = this._takeSnapCanvas();
+        const pxW = Math.round((cssW + margin * 2) * this.dpr);
+        const pxH = Math.round((cssH + margin * 2) * this.dpr);
+        if (canvas.width !== pxW) canvas.width = pxW;
+        if (canvas.height !== pxH) canvas.height = pxH;
+        const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
+        this._renderSceneTo(canvas.getContext('2d', { alpha: false }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted);
+        return { canvas, cam: { ...cam }, margin, cssW, cssH };
+    }
+
+    /** The snapshot canvas not currently shown (two are reused, no per-frame allocation). */
+    _takeSnapCanvas() {
+        const [a, b] = this._snapCanvases;
+        return this.snap && this.snap.canvas === a ? b : a;
+    }
+
+    _renderSceneTo(ctx, width, height, dpr, cam) {
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         // Clear background
         ctx.fillStyle = this._getBgColor();
-        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillRect(0, 0, width, height);
 
         // World viewport culling box
         const viewBox = {
             minX: cam.x - 10,
             minY: cam.y - 10,
-            maxX: cam.x + this.width / cam.scale + 10,
-            maxY: cam.y + this.height / cam.scale + 10,
+            maxX: cam.x + width / cam.scale + 10,
+            maxY: cam.y + height / cam.scale + 10,
         };
 
         // Faint A4 corner crop marks (or full overview A4 grid)
@@ -287,11 +476,6 @@ export class InkSurface {
         }
 
         ctx.restore();
-
-        this.lastCommittedRedrawMs = performance.now() - t0;
-        if (this.onPerfSample) {
-            this.onPerfSample({ committedRedrawMs: this.lastCommittedRedrawMs });
-        }
     }
 
     /**
@@ -372,7 +556,7 @@ export class InkSurface {
             ctx.save();
             ctx.scale(cam.scale, cam.scale);
             ctx.translate(-cam.x, -cam.y);
-            drawStroke(ctx, this.activeStroke, this.theme);
+            drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
             ctx.restore();
         }
 

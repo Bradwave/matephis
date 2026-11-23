@@ -263,6 +263,7 @@ export class InputController {
     }
 
     _startPan(pointerId, sx, sy) {
+        this.surface.beginGesture();
         this.mode = 'pan';
         this.activePointerId = pointerId;
         this.panAnchor = {
@@ -276,6 +277,7 @@ export class InputController {
     _startPinch() {
         const pts = Array.from(this.pointers.values());
         if (pts.length < 2) return;
+        this.surface.beginGesture();
         this.mode = 'pinch';
         this.activePointerId = null;
         const midX = (pts[0].sx + pts[1].sx) * 0.5;
@@ -445,6 +447,7 @@ export class InputController {
                 this._resolveTap();
                 this.pinchAnchor = null;
                 this.mode = 'idle';
+                this.surface.endGesture();
             }
             return;
         }
@@ -455,6 +458,8 @@ export class InputController {
             this._commitDraw();
         } else if (this.mode === 'erase') {
             this._finishErase();
+        } else if (this.mode === 'pan') {
+            this.surface.endGesture();
         }
 
         this.mode = 'idle';
@@ -486,7 +491,7 @@ export class InputController {
 
         this.scene.strokes.push(stroke);
         this.history.push({ type: 'add', stroke });
-        this.surface.renderCommittedNow();
+        this.surface.appendStroke(stroke);
         if (this.onSceneMutated) this.onSceneMutated();
     }
 
@@ -507,6 +512,11 @@ export class InputController {
     _onWheel(e) {
         if (this.surface.overviewMode) return;
         e.preventDefault();
+
+        // Wheel / trackpad scrolling has no start or end event: the gesture ends after a pause.
+        this.surface.beginGesture();
+        clearTimeout(this.wheelEndTimer);
+        this.wheelEndTimer = setTimeout(() => this.surface.endGesture(), 140);
 
         const { sx, sy } = this._getLocalPoint(e);
         if (e.ctrlKey || e.metaKey) {

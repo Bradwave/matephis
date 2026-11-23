@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS = {
     toolbarSide: 'right',   // rail side: 'right' | 'left'
     toolbarMinimal: false,  // essential toolbar: pen, quick colours, eraser, undo/redo
     quickMenu: true,        // two-finger tap opens the quick menu where you tap
+    fastPan: true,          // pan/zoom moves a picture of the board, sharp redraw at the end
 };
 
 let pageCounter = 1;
