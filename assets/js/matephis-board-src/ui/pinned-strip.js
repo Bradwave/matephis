@@ -85,6 +85,7 @@ export class PinnedStrip {
 
         this._ro = new ResizeObserver(() => {
             if (this.active) this.render();
+            this._publishInset();
         });
         this._ro.observe(this.el);
     }
@@ -154,19 +155,40 @@ export class PinnedStrip {
         e.preventDefault();
         e.stopPropagation();
         if (this.side === 'top') {
-            const minH = Math.max(96, Math.round(window.innerHeight * 0.12));
+            // Never smaller than the control bar + resize band it hosts on its lower edge.
+            const minH = Math.max(96, Math.round(window.innerHeight * 0.12), this._controlsExtent('height'));
             const maxH = Math.round(window.innerHeight * 0.68);
             const nextH = clamp(this.resizeDrag.startH + (e.clientY - this.resizeDrag.startY), minH, maxH);
             this.topHeightPx = Math.round(nextH);
             this.el.style.height = `${this.topHeightPx}px`;
         } else {
-            const minW = Math.max(150, Math.round(window.innerWidth * 0.14));
+            const minW = Math.max(150, Math.round(window.innerWidth * 0.14), this._controlsExtent('width'));
             const maxW = Math.round(window.innerWidth * 0.65);
             const nextW = clamp(this.resizeDrag.startW + (e.clientX - this.resizeDrag.startX), minW, maxW);
             this.leftWidthPx = Math.round(nextW);
             this.el.style.width = `${this.leftWidthPx}px`;
         }
         this.render();
+    }
+
+    /** Space the strip's own controls need along `dim`, so they always fit inside it. */
+    _controlsExtent(dim) {
+        const bar = this.el.querySelector('.board-pinned-bar').getBoundingClientRect();
+        const band = this.resizerEl.getBoundingClientRect();
+        return dim === 'height'
+            ? Math.ceil(bar.height + band.height + 16)
+            : Math.ceil(bar.width + band.width + 16);
+    }
+
+    /**
+     * Publish the left strip's width on the board root so chrome on the left edge
+     * (the tool rail when swapped to the left) can sit beside it instead of over it.
+     */
+    _publishInset() {
+        const pinnedLeft = this.active && this.side === 'left' && !this.el.hidden;
+        this.hostEl.classList.toggle('has-pin-left', pinnedLeft);
+        const w = pinnedLeft ? Math.round(this.el.getBoundingClientRect().width) : 0;
+        this.hostEl.style.setProperty('--board-pin-left', `${w}px`);
     }
 
     _onResizeUp(e) {
@@ -227,6 +249,7 @@ export class PinnedStrip {
         this.el.classList.toggle('is-left', this.side === 'left');
         this._applyStoredSize();
         this.el.hidden = false;
+        this._publishInset();
 
         this._fitWorldRectInStrip(refCam.x, refCam.y, visibleW, visibleH);
         this.render();
@@ -457,5 +480,6 @@ export class PinnedStrip {
         this.pinnedPageId = null;
         this.pointers.clear();
         this.el.hidden = true;
+        this._publishInset();
     }
 }

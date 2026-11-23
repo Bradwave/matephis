@@ -58,10 +58,54 @@ export class OptionsMenu {
                     <span>Modalità veloce (1× DPR)</span>
                     <input type="checkbox" data-opt="lowDpr" />
                 </label>
+                <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
+                    <span>Pan e zoom fluidi</span>
+                    <input type="checkbox" data-opt="fastPan" />
+                </label>
+                <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
+                <div class="board-opt-bg-row">
+                    <span>Effetto durante pan e zoom</span>
+                    <div class="board-bg-seg" data-seg="gestureEffect">
+                        <button type="button" class="board-bg-btn" data-val="dim">Attenuato</button>
+                        <button type="button" class="board-bg-btn" data-val="pixel">Pixel</button>
+                    </div>
+                </div>
+                <label class="board-opt-row">
+                    <span>Menu rapido (tocco con due dita)</span>
+                    <input type="checkbox" data-opt="quickMenu" />
+                </label>
                 <label class="board-opt-row">
                     <span>HUD prestazioni e input</span>
                     <input type="checkbox" data-opt="showHud" />
                 </label>
+                <div class="board-opt-bg-row">
+                    <span>Dimensione interfaccia</span>
+                    <div class="board-bg-seg" data-seg="uiSize">
+                        <button type="button" class="board-bg-btn" data-val="s">Piccola</button>
+                        <button type="button" class="board-bg-btn" data-val="m">Normale</button>
+                        <button type="button" class="board-bg-btn" data-val="l">Grande</button>
+                    </div>
+                    <span>Barra strumenti</span>
+                    <div class="board-bg-seg" data-seg="toolbarLayout">
+                        <button type="button" class="board-bg-btn" data-val="auto" title="Laterale sugli schermi touch, in basso con il mouse">Auto</button>
+                        <button type="button" class="board-bg-btn" data-val="rail">Laterale</button>
+                        <button type="button" class="board-bg-btn" data-val="bar">In basso</button>
+                    </div>
+                    <span>Lato barra laterale</span>
+                    <div class="board-bg-seg" data-seg="toolbarSide">
+                        <button type="button" class="board-bg-btn" data-val="left">Sinistra</button>
+                        <button type="button" class="board-bg-btn" data-val="right">Destra</button>
+                    </div>
+                </div>
+                <div class="board-opt-bg-row">
+                    <span>Sfondo pagina</span>
+                    <div class="board-bg-seg">
+                        <button type="button" class="board-bg-btn active">Vuoto</button>
+                        <button type="button" class="board-bg-btn is-stub">Quadretti</button>
+                        <button type="button" class="board-bg-btn is-stub">Puntini</button>
+                        <button type="button" class="board-bg-btn is-stub">Righe</button>
+                    </div>
+                </div>
             </div>
             <div class="board-options-actions">
                 <button type="button" class="board-action-btn" data-action="export">
@@ -69,6 +113,12 @@ export class OptionsMenu {
                 </button>
                 <button type="button" class="board-action-btn" data-action="import">
                     ${BoardIcons.upload}<span>Importa JSON</span>
+                </button>
+                <button type="button" class="board-action-btn is-stub" title="Esporta SVG con metadati modificabili (in arrivo)">
+                    ${BoardIcons.download}<span>Esporta SVG</span>
+                </button>
+                <button type="button" class="board-action-btn is-stub" title="Esporta PDF vettoriale (in arrivo)">
+                    ${BoardIcons.download}<span>Esporta PDF</span>
                 </button>
                 <button type="button" class="board-action-btn is-danger" data-action="clear">
                     ${BoardIcons.delete}<span>Pulisci pagina</span>
@@ -94,13 +144,24 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
                 this._syncPalmSliderVisibility();
                 if (this.onSettingChange) this.onSettingChange(key, cb.checked);
             });
+        }
+
+        for (const seg of this.el.querySelectorAll('[data-seg]')) {
+            const key = seg.dataset.seg;
+            for (const btn of seg.querySelectorAll('[data-val]')) {
+                btn.addEventListener('click', () => {
+                    this.scene.settings[key] = btn.dataset.val;
+                    this._syncSegments();
+                    if (this.onSettingChange) this.onSettingChange(key, btn.dataset.val);
+                });
+            }
         }
 
         const slider = this.el.querySelector('[data-opt="palmThreshold"]');
@@ -150,6 +211,17 @@ export class OptionsMenu {
         });
     }
 
+    _syncSegments() {
+        for (const seg of this.el.querySelectorAll('[data-seg]')) {
+            const value = String(this.scene.settings[seg.dataset.seg]);
+            for (const btn of seg.querySelectorAll('[data-val]')) {
+                const on = btn.dataset.val === value;
+                btn.classList.toggle('active', on);
+                btn.setAttribute('aria-pressed', String(on));
+            }
+        }
+    }
+
     _syncPalmSliderVisibility() {
         const wrap = this.el.querySelector('[data-opt-wrap="palmThreshold"]');
         wrap.hidden = !this.scene.settings.palmErase;
@@ -157,13 +229,14 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;
         this.el.querySelector('[data-opt="palmThreshold"]').value = String(th);
         this.el.querySelector('[data-opt-val="palmThreshold"]').textContent = `${th} px`;
         this._syncPalmSliderVisibility();
+        this._syncSegments();
         if (this.deletePageBtn) {
             this.deletePageBtn.disabled = this.scene.pageCount <= 1;
         }

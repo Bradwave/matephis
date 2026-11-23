@@ -1,7 +1,7 @@
 /**
  * Toggleable Performance & Input Telemetry HUD for school smartboard testing.
  * Displays live FPS, input->paint ms, committed redraw ms, stroke/point counts,
- * estimated JSON KB, live PointerEvent telemetry (pointerType, width x height,
+ * estimated JSON KB, exact board file size raw / gzip-compressed, live PointerEvent telemetry (pointerType, width x height,
  * touch count, coalesced count), and a 200-stroke stress test button.
  */
 
@@ -36,6 +36,7 @@ export class PerfHud {
                 <div>Punti: <strong data-hud="points">0</strong></div>
                 <div>JSON: <strong data-hud="kb">0 KB</strong></div>
                 <div>Ptr: <strong data-hud="ptr">--</strong></div>
+                <div class="board-hud-wide" title="Intera lavagna (tutte le pagine): JSON salvato / compresso gzip">File: <button type="button" class="board-hud-file-btn">Calcola</button> <strong data-hud="file"></strong></div>
                 <div class="board-hud-wide">Area: <strong data-hud="area">--</strong></div>
             </div>
         `;
@@ -44,6 +45,11 @@ export class PerfHud {
         for (const el of this.el.querySelectorAll('[data-hud]')) {
             this.fields[el.dataset.hud] = el;
         }
+
+        this.el.querySelector('.board-hud-file-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._measureFileSize();
+        });
 
         this.el.querySelector('.board-hud-stress').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -99,6 +105,55 @@ export class PerfHud {
         this.fields.points.textContent = String(points);
         this.fields.kb.textContent = `${(estBytes / 1024).toFixed(1)} KB`;
         this.fields.dpr.textContent = `${dpr}×`;
+        // The measured file size is now out of date: dim it until "Calcola" is pressed again.
+        this.fields.file.classList.add('is-stale');
+    }
+
+    /*
+     * Exact size of the whole board file (all pages), raw JSON and gzip-compressed, on demand
+     * ("Calcola"). The JSON is built on the main thread (a few ms); compression runs in a
+     * worker so it never blocks drawing.
+     */
+
+    _getGzipWorker() {
+        if (this._gzipWorker !== undefined) return this._gzipWorker;
+        this._gzipWorker = null;
+        if (typeof Worker !== 'function' || typeof CompressionStream !== 'function') return null;
+        try {
+            const src = `onmessage = async (e) => {
+                try {
+                    const s = new Blob([e.data]).stream().pipeThrough(new CompressionStream('gzip'));
+                    postMessage((await new Response(s).arrayBuffer()).byteLength);
+                } catch (_) { postMessage(-1); }
+            };`;
+            this._gzipWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        } catch (_) {
+            this._gzipWorker = null;
+        }
+        return this._gzipWorker;
+    }
+
+    _measureFileSize() {
+        if (!this.visible) return;
+        const bytes = new TextEncoder().encode(JSON.stringify(this.scene.toJSON()));
+        const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+        const raw = kb(bytes.length);
+        this.fields.file.classList.remove('is-stale');
+        this.fields.file.textContent = `${raw} · gzip …`;
+        const worker = this._getGzipWorker();
+        if (!worker) {
+            this.fields.file.textContent = `${raw} · gzip n/d`;
+            return;
+        }
+        const rawLen = bytes.length;
+        worker.onmessage = (e) => {
+            if (!this.visible) return;
+            const gz = e.data;
+            this.fields.file.textContent = gz > 0
+                ? `${raw} · gzip ${kb(gz)} (÷${(rawLen / gz).toFixed(1)})`
+                : `${raw} · gzip n/d`;
+        };
+        worker.postMessage(bytes.buffer, [bytes.buffer]);
     }
 
     _startLoop() {

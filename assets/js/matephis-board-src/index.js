@@ -9,8 +9,10 @@ import { BoardScene } from './model/scene.js';
 import { BoardStorage } from './model/storage.js';
 import { BoardToolbar } from './ui/toolbar.js';
 import { OptionsMenu } from './ui/options.js';
+import { FutureMenus } from './ui/future-menus.js';
 import { PinnedStrip } from './ui/pinned-strip.js';
 import { PerfHud } from './ui/perf-hud.js';
+import { QuickMenu } from './ui/quick-menu.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -47,6 +49,9 @@ async function initMatephisBoard() {
     let pinnedStrip = null;
     let toolbar = null;
     let optionsMenu = null;
+    let futureMenus = null;
+    let quickMenu = null;
+    let lastDismissAt = 0;
 
     const applyTheme = (nextTheme) => {
         const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -146,6 +151,9 @@ async function initMatephisBoard() {
                 perfHud.setVisible(value);
                 perfHud.refreshSceneStats(surface.dpr);
             }
+            if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide' || key === 'toolbarMinimal') {
+                if (toolbar) toolbar.relayout();
+            }
         },
         onExportJSON: () => storage.exportJSONFile(scene),
         onImportJSON: (data) => {
@@ -183,8 +191,16 @@ async function initMatephisBoard() {
         },
     });
 
+    futureMenus = new FutureMenus(root);
+
     toolbar = new BoardToolbar(root, {
         getTheme,
+        getSettings: () => scene.settings,
+        onSettingChange: (key, value) => {
+            scene.settings[key] = value;
+            storage.saveSettings(scene.settings);
+            optionsMenu.syncFromState();
+        },
         onToolChange: () => { /* input reads state on demand */ },
         onUndo: () => {
             if (historyProxy.undo(scene.strokes)) {
@@ -208,10 +224,35 @@ async function initMatephisBoard() {
             surface.toggleOverview();
             syncUI();
         },
-        onToggleTheme: (nextTheme) => applyTheme(nextTheme),
         onToggleOptions: (force) => {
-            if (force === false) optionsMenu.hide();
-            else optionsMenu.toggle();
+            if (force === false) {
+                if (optionsMenu.open) {
+                    optionsMenu.hide();
+                    toolbar.anchorPopover(null);
+                }
+            } else {
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
+                optionsMenu.toggle();
+                toolbar.anchorPopover(optionsMenu.open ? optionsMenu.el : null, 'options');
+            }
+        },
+        onToggleFuturePopover: (name) => {
+            if (optionsMenu.open) {
+                optionsMenu.hide();
+                toolbar.anchorPopover(null);
+            }
+            if (!name) {
+                if (futureMenus.activePopover) {
+                    futureMenus.hideAll();
+                    toolbar.anchorPopover(null);
+                }
+                toolbar.setActiveFuturePopover(null);
+            } else {
+                const opened = futureMenus.toggle(name);
+                toolbar.setActiveFuturePopover(opened);
+                toolbar.anchorPopover(opened ? futureMenus.popovers[opened] : null, opened);
+            }
         },
         onResetZoom: () => {
             const baseScale = scene.camera.baseScale;
@@ -239,13 +280,28 @@ async function initMatephisBoard() {
         },
     });
 
+    quickMenu = new QuickMenu(root, {
+        toolbar,
+        getTheme,
+        onUndo: () => toolbar.onUndo && toolbar.onUndo(),
+    });
+
     new InputController(surface, {
         scene,
         history: historyProxy,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
+            const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover || quickMenu.isOpen);
+            quickMenu.hide();
             toolbar.closeTrays();
             optionsMenu.hide();
+            futureMenus.hideAll();
+            toolbar.setActiveFuturePopover(null);
+            toolbar.anchorPopover(null);
+            // The second finger of a two-finger tap that closed a menu must not draw either.
+            const now = performance.now();
+            if (hadPopover) lastDismissAt = now;
+            return hadPopover || now - lastDismissAt < 200;
         },
         onSceneMutated: () => {
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
@@ -258,6 +314,14 @@ async function initMatephisBoard() {
         },
         onOverviewPick: () => syncUI(),
         onTelemetry: (info) => perfHud.recordTelemetry(info),
+        onTwoFingerTap: (x, y) => {
+            toolbar.closeTrays();
+            optionsMenu.hide();
+            futureMenus.hideAll();
+            toolbar.setActiveFuturePopover(null);
+            toolbar.anchorPopover(null);
+            quickMenu.open(x, y);
+        },
     });
 
     // Keyboard shortcuts
@@ -318,6 +382,9 @@ async function initMatephisBoard() {
             case 'escape':
                 toolbar.closeTrays();
                 optionsMenu.hide();
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
+                toolbar.anchorPopover(null);
                 if (surface.overviewMode) {
                     surface.exitOverview();
                     syncUI();
@@ -331,6 +398,7 @@ async function initMatephisBoard() {
         surface.resize();
         pinnedStrip.render();
         toolbar.updateZoom(scene.camera);
+        toolbar.relayout();
         perfHud.refreshSceneStats(surface.dpr);
     });
     ro.observe(canvasHost);

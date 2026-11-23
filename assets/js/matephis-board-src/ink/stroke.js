@@ -103,10 +103,90 @@ export function decodeStroke(raw) {
 }
 
 /**
- * Draw a single stroke in world coordinates (ctx must already have camera transform applied).
- * Uses quadratic midpoint smoothing so fast handwriting looks crisp without jagged corners.
+ * In-memory outline cache: the smoothed path of each committed stroke is built once and
+ * reused on every redraw. Keyed by stroke object; rebuilt if its points array is replaced
+ * or grows. Never serialized (file size unchanged).
  */
-export function drawStroke(ctx, stroke, theme = 'light') {
+const pathCache = new WeakMap();
+const HAS_PATH2D = typeof Path2D === 'function';
+
+/**
+ * Trace the stroke's smoothed outline into `sink` (a 2D context or a Path2D).
+ * Uses corner-aware quadratic midpoint smoothing so fast handwriting looks crisp.
+ */
+function traceStroke(sink, pts, width) {
+    if (pts.length === 1) {
+        sink.moveTo(pts[0].x + width * 0.5, pts[0].y);
+        sink.arc(pts[0].x, pts[0].y, width * 0.5, 0, Math.PI * 2);
+        return;
+    }
+
+    sink.moveTo(pts[0].x, pts[0].y);
+
+    if (pts.length === 2) {
+        sink.lineTo(pts[1].x, pts[1].y);
+        return;
+    }
+
+    // Corner-aware clamped quadratic smoothing:
+    // - Sharp turns (> ~41°, cos < 0.75) hit the exact vertex so letters like "t", "v", "z", "7"
+    //   stay razor-sharp even after RDP simplification (zero extra points needed).
+    // - Gentle curves smooth smoothly with tangent pull clamped to <= 2.2 mm so long straight
+    //   segments never warp into wide arcs.
+    const SHARP_COS_THRESHOLD = 0.75;
+    const MAX_PULL_MM = 2.2;
+
+    for (let i = 1; i < pts.length - 1; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const next = pts[i + 1];
+
+        const ax = curr.x - prev.x;
+        const ay = curr.y - prev.y;
+        const bx = next.x - curr.x;
+        const by = next.y - curr.y;
+        const lenA = Math.hypot(ax, ay);
+        const lenB = Math.hypot(bx, by);
+
+        if (lenA < 1e-4 || lenB < 1e-4) {
+            sink.lineTo(curr.x, curr.y);
+            continue;
+        }
+
+        const cosTheta = (ax * bx + ay * by) / (lenA * lenB);
+        if (cosTheta < SHARP_COS_THRESHOLD) {
+            sink.lineTo(curr.x, curr.y);
+        } else {
+            const pull = Math.min(lenA * 0.45, lenB * 0.45, MAX_PULL_MM);
+            const inX = curr.x - (ax / lenA) * pull;
+            const inY = curr.y - (ay / lenA) * pull;
+            const outX = curr.x + (bx / lenB) * pull;
+            const outY = curr.y + (by / lenB) * pull;
+            sink.lineTo(inX, inY);
+            sink.quadraticCurveTo(curr.x, curr.y, outX, outY);
+        }
+    }
+    const last = pts[pts.length - 1];
+    sink.lineTo(last.x, last.y);
+}
+
+function getCachedPath(stroke) {
+    const pts = stroke.points;
+    const hit = pathCache.get(stroke);
+    if (hit && hit.points === pts && hit.length === pts.length && hit.width === stroke.width) {
+        return hit.path;
+    }
+    const path = new Path2D();
+    traceStroke(path, pts, stroke.width);
+    pathCache.set(stroke, { points: pts, length: pts.length, width: stroke.width, path });
+    return path;
+}
+
+/**
+ * Draw a single stroke in world coordinates (ctx must already have camera transform applied).
+ * `cache: false` for the in-flight stroke, whose points change on every move.
+ */
+export function drawStroke(ctx, stroke, theme = 'light', { cache = true } = {}) {
     const pts = stroke.points;
     if (!pts || pts.length === 0) return;
 
@@ -128,62 +208,16 @@ export function drawStroke(ctx, stroke, theme = 'light') {
         ctx.setLineDash([]);
     }
 
-    if (pts.length === 1) {
-        ctx.beginPath();
-        ctx.arc(pts[0].x, pts[0].y, width * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        return;
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-
-    if (pts.length === 2) {
-        ctx.lineTo(pts[1].x, pts[1].y);
+    const isDot = pts.length === 1;
+    if (cache && HAS_PATH2D) {
+        const path = getCachedPath(stroke);
+        if (isDot) ctx.fill(path);
+        else ctx.stroke(path);
     } else {
-        // Corner-aware clamped quadratic smoothing:
-        // - Sharp turns (> ~41°, cos < 0.75) hit the exact vertex so letters like "t", "v", "z", "7"
-        //   stay razor-sharp even after RDP simplification (zero extra points needed).
-        // - Gentle curves smooth smoothly with tangent pull clamped to <= 2.2 mm so long straight
-        //   segments never warp into wide arcs.
-        const SHARP_COS_THRESHOLD = 0.75;
-        const MAX_PULL_MM = 2.2;
-
-        for (let i = 1; i < pts.length - 1; i++) {
-            const prev = pts[i - 1];
-            const curr = pts[i];
-            const next = pts[i + 1];
-
-            const ax = curr.x - prev.x;
-            const ay = curr.y - prev.y;
-            const bx = next.x - curr.x;
-            const by = next.y - curr.y;
-            const lenA = Math.hypot(ax, ay);
-            const lenB = Math.hypot(bx, by);
-
-            if (lenA < 1e-4 || lenB < 1e-4) {
-                ctx.lineTo(curr.x, curr.y);
-                continue;
-            }
-
-            const cosTheta = (ax * bx + ay * by) / (lenA * lenB);
-            if (cosTheta < SHARP_COS_THRESHOLD) {
-                ctx.lineTo(curr.x, curr.y);
-            } else {
-                const pull = Math.min(lenA * 0.45, lenB * 0.45, MAX_PULL_MM);
-                const inX = curr.x - (ax / lenA) * pull;
-                const inY = curr.y - (ay / lenA) * pull;
-                const outX = curr.x + (bx / lenB) * pull;
-                const outY = curr.y + (by / lenB) * pull;
-                ctx.lineTo(inX, inY);
-                ctx.quadraticCurveTo(curr.x, curr.y, outX, outY);
-            }
-        }
-        const last = pts[pts.length - 1];
-        ctx.lineTo(last.x, last.y);
+        ctx.beginPath();
+        traceStroke(ctx, pts, width);
+        if (isDot) ctx.fill();
+        else ctx.stroke();
     }
-
-    ctx.stroke();
     ctx.restore();
 }

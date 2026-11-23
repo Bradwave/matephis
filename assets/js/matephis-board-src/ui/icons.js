@@ -6,6 +6,15 @@ import pen from './icons/pen.svg';
 import eraser from './icons/eraser.svg';
 import highlighter from './icons/highlighter.svg';
 import laser from './icons/laser.svg';
+import lasso from './icons/lasso.svg';
+import shapes from './icons/shapes.svg';
+import connector from './icons/connector.svg';
+import axes from './icons/axes.svg';
+import diagram from './icons/diagram.svg';
+import exercise from './icons/exercise.svg';
+import cloud from './icons/cloud.svg';
+import qr from './icons/qr.svg';
+import search from './icons/search.svg';
 import undo from './icons/undo.svg';
 import redo from './icons/redo.svg';
 import more from './icons/more.svg';
@@ -30,6 +39,15 @@ export const BoardIcons = {
     eraser,
     highlighter,
     laser,
+    lasso,
+    shapes,
+    connector,
+    axes,
+    diagram,
+    exercise,
+    cloud,
+    qr,
+    search,
     undo,
     redo,
     more,

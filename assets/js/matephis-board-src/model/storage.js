@@ -57,7 +57,11 @@ export class BoardStorage {
             try {
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const req = tx.objectStore(STORE_NAME).get(CURRENT_KEY);
-                req.onsuccess = () => resolve(req.result || null);
+                req.onsuccess = () => {
+                    const raw = req.result;
+                    if (typeof raw !== 'string') return resolve(raw || null);
+                    try { resolve(JSON.parse(raw)); } catch (_) { resolve(null); }
+                };
                 req.onerror = () => resolve(null);
             } catch (_) {
                 resolve(null);
@@ -70,9 +74,13 @@ export class BoardStorage {
             clearTimeout(this._saveTimer);
             this._saveTimer = null;
         }
+        if (this._idleId && typeof cancelIdleCallback === 'function') cancelIdleCallback(this._idleId);
+        this._idleId = null;
         const db = await this._dbPromise;
         if (!db) return;
-        const payload = scene.toJSON();
+        // Stored as one JSON string: cloning a string into IndexedDB is ~free, while cloning
+        // the object tree of a big board blocked the page for several ms on every save.
+        const payload = JSON.stringify(scene.toJSON());
         return new Promise((resolve) => {
             try {
                 const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -85,12 +93,25 @@ export class BoardStorage {
         });
     }
 
+    /**
+     * Autosave after a pause, in an idle moment (not while the next stroke is being drawn).
+     * Closing or hiding the page still saves immediately (see index.js).
+     */
     scheduleSave(scene, delayMs = 300) {
         if (this._saveTimer) clearTimeout(this._saveTimer);
+        if (this._idleId && typeof cancelIdleCallback === 'function') cancelIdleCallback(this._idleId);
+        this._idleId = null;
         this._saveTimer = setTimeout(() => {
             this._saveTimer = null;
-            this.saveBoardNow(scene);
-        }, delayMs);
+            if (typeof requestIdleCallback === 'function') {
+                this._idleId = requestIdleCallback(() => {
+                    this._idleId = null;
+                    this.saveBoardNow(scene);
+                }, { timeout: 2000 });
+            } else {
+                this.saveBoardNow(scene);
+            }
+        }, Math.max(delayMs, 800));
     }
 
     exportJSONFile(scene) {

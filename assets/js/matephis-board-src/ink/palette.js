@@ -41,10 +41,10 @@ export const HIGHLIGHTER_SIZES = [
 ];
 
 export const ERASER_SIZES = [
-    { id: 'xs', label: 'Fine',   radius: 3.0 },
-    { id: 'sm', label: 'Media',  radius: 6.5 },
-    { id: 'md', label: 'Grande', radius: 12.5 },
-    { id: 'lg', label: 'Ampia',  radius: 22.0 },
+    { id: 'xs', label: 'Precisa', radius: 1.0 },
+    { id: 'sm', label: 'Fine',    radius: 3.0 },
+    { id: 'md', label: 'Media',   radius: 7.0 },
+    { id: 'lg', label: 'Ampia',   radius: 15.0 },
 ];
 
 export const PEN_STYLES = [
