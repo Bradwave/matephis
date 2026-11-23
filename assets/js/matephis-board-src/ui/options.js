@@ -62,6 +62,14 @@ export class OptionsMenu {
                     <span>Pan e zoom fluidi</span>
                     <input type="checkbox" data-opt="fastPan" />
                 </label>
+                <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
+                <div class="board-opt-bg-row">
+                    <span>Effetto durante pan e zoom</span>
+                    <div class="board-bg-seg" data-seg="gestureEffect">
+                        <button type="button" class="board-bg-btn" data-val="dim">Attenuato</button>
+                        <button type="button" class="board-bg-btn" data-val="pixel">Pixel</button>
+                    </div>
+                </div>
                 <label class="board-opt-row">
                     <span>Menu rapido (tocco con due dita)</span>
                     <input type="checkbox" data-opt="quickMenu" />
