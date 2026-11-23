@@ -27,7 +27,8 @@ const REFRESH_ZOOM_RATIO = 1.2;    // re-render a sharp picture once zoom drifts
 const REFRESH_MIN_MS = 150;        // ...but at most this often,
 const REFRESH_COST_FACTOR = 8;     // ...and spaced by 8× the measured redraw cost on heavy pages
 const SETTLE_MS = 120;             // soft → sharp fade when the gesture ends
-const PIXEL_BLOCK_PX = 10;         // EXPERIMENT: block size of the pixelated gesture effect
+const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
+const PIXEL_SETTLE_MS = 160;       // EXPERIMENT: blocks shrink to sharp over this time
 
 /**
  * Shared helper: draws faint landscape A4 borders + subtle corner ticks.
@@ -317,6 +318,25 @@ export class InkSurface {
 
         const ctx = this.committedCtx;
         const start = performance.now();
+        // EXPERIMENT (pixelated gesture): blocks shrink step by step instead of a fade.
+        if (this.scene.settings.gestureEffect === 'pixel') {
+            const pixelStep = (now) => {
+                const t = clamp((now - start) / PIXEL_SETTLE_MS, 0, 1);
+                const block = Math.round(PIXEL_BLOCK_PX * (1 - t));
+                ctx.save();
+                ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+                if (block <= 1) {
+                    ctx.drawImage(sharp.canvas, 0, 0, this.width, this.height);
+                } else {
+                    this._drawPixelated(ctx, sharp.canvas, 0, 0, this.width, this.height, block);
+                }
+                ctx.restore();
+                this._settleRaf = t < 1 ? requestAnimationFrame(pixelStep) : null;
+            };
+            this._settleRaf = requestAnimationFrame(pixelStep);
+            return;
+        }
+
         const step = (now) => {
             const t = clamp((now - start) / SETTLE_MS, 0, 1);
             this._drawSnap(GESTURE_DIM + (1 - GESTURE_DIM) * t);
@@ -400,24 +420,25 @@ export class InkSurface {
     }
 
     // ---- EXPERIMENT: pixelated gesture (setting gestureEffect: 'pixel'). Delete this
-    // ---- method, the `if` in _drawSnap, PIXEL_BLOCK_PX and the Options row to remove it.
+    // ---- method, the `if` blocks in _drawSnap and endGesture, PIXEL_BLOCK_PX,
+    // ---- PIXEL_SETTLE_MS, the gestureEffect setting and the Options row to remove it.
     /** Draw `img` as big square blocks: shrink into a tiny canvas, enlarge without smoothing. */
-    _drawPixelated(ctx, img, dx, dy, dw, dh) {
-        const tw = Math.max(1, Math.ceil(this.width / PIXEL_BLOCK_PX));
-        const th = Math.max(1, Math.ceil(this.height / PIXEL_BLOCK_PX));
+    _drawPixelated(ctx, img, dx, dy, dw, dh, block = PIXEL_BLOCK_PX) {
+        const tw = Math.max(1, Math.ceil(this.width / block));
+        const th = Math.max(1, Math.ceil(this.height / block));
         if (!this._pixelCanvas) this._pixelCanvas = document.createElement('canvas');
         const tiny = this._pixelCanvas;
         if (tiny.width !== tw) tiny.width = tw;
         if (tiny.height !== th) tiny.height = th;
         const tctx = tiny.getContext('2d', { alpha: false });
-        const f = 1 / PIXEL_BLOCK_PX;
+        const f = 1 / block;
         tctx.fillStyle = this._getBgColor();
         tctx.fillRect(0, 0, tw, th);
         tctx.imageSmoothingEnabled = true;
         tctx.imageSmoothingQuality = 'high';  // average each block instead of sampling one pixel
         tctx.drawImage(img, dx * f, dy * f, dw * f, dh * f);
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(tiny, 0, 0, tw * PIXEL_BLOCK_PX, th * PIXEL_BLOCK_PX);
+        ctx.drawImage(tiny, 0, 0, tw * block, th * block);
     }
 
     /** Cheap picture at gesture start: a copy of what is on screen now. */
