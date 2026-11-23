@@ -1517,3 +1517,156 @@ body.board-body {
     opacity: 0.32;
     cursor: default;
 }
+
+/* === Track 2B: Explanation Connectors === */
+
+.board-connector {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 28px;
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 2px solid var(--conn-color, var(--accent));
+    color: var(--conn-color, var(--accent));
+    font-family: var(--font-plot);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    box-sizing: border-box;
+}
+
+.board-connector.is-unpaired {
+    border-style: dashed;
+}
+
+.board-connector.is-pending,
+.board-connector.is-selected {
+    outline: 2px solid var(--conn-color, var(--accent));
+    outline-offset: 2px;
+}
+
+.board-connector-label {
+    pointer-events: none;
+}
+
+.board-connector-del {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 17px;
+    height: 17px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.board-connector:hover .board-connector-del,
+.board-connector.is-selected .board-connector-del {
+    display: inline-flex;
+}
+
+.board-connector-del:hover {
+    background: #b01a00;
+    border-color: #b01a00;
+    color: #ffffff;
+}
+
+.board-connector-ring {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 2.5px solid var(--conn-color, var(--accent));
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.board-connector-chip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    pointer-events: auto;
+    white-space: nowrap;
+}
+
+.board-connector-chip-label {
+    font-family: var(--font-plot);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--title);
+    padding: 0 4px;
+}
+
+.board-connector-chip-btn {
+    appearance: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.board-connector-chip-btn:hover {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-connector-chip-btn.is-danger {
+    color: var(--accent);
+}
+
+.board-connector-chip-btn.is-danger:hover {
+    background: #b01a00;
+    border-color: #b01a00;
+    color: #ffffff;
+}
+
+.board-connectors-open {
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.board-connector-open-btn {
+    border-color: var(--conn-color, var(--border));
+    color: var(--conn-color, var(--title));
+    min-width: calc(var(--bu) * 0.72);
+}
+
+.board-connector-open-btn.active {
+    background: var(--conn-color, var(--title));
+    border-color: var(--conn-color, var(--title));
+    color: var(--bg);
+}

@@ -39,6 +39,7 @@ export class InputController {
         onOverviewPick = null,
         onTelemetry = null,
         onTwoFingerTap = null,
+        onConnectorPlace = null,
     }) {
         this.surface = surface;
         this.scene = scene;
@@ -52,6 +53,7 @@ export class InputController {
         this.onOverviewPick = onOverviewPick;
         this.onTelemetry = onTelemetry;
         this.onTwoFingerTap = onTwoFingerTap;
+        this.onConnectorPlace = onConnectorPlace;
         this.tapCandidate = null;
 
         this.el = surface.container;
@@ -238,6 +240,9 @@ export class InputController {
             this._startShape(e, sx, sy, toolState);
         } else if (toolState.tool === 'lasso' && this.lasso) {
             this._startLasso(e, sx, sy, toolState);
+        } else if (toolState.tool === 'connector') {
+            const pt = screenToWorld(sx, sy, this.scene.camera);
+            if (this.onConnectorPlace) this.onConnectorPlace(pt.x, pt.y);
         } else {
             this._startDraw(e, sx, sy, toolState);
         }

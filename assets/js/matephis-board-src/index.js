@@ -16,6 +16,7 @@ import { PerfHud } from './ui/perf-hud.js';
 import { QuickMenu } from './ui/quick-menu.js';
 import { BoardOverlay } from './ui/overlay.js';
 import { EngineLoader } from './ui/engine-loader.js';
+import { ConnectorManager } from './ui/connectors.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -58,6 +59,7 @@ async function initMatephisBoard() {
     let optionsMenu = null;
     let futureMenus = null;
     let quickMenu = null;
+    let connectorManager = null;
     let lastDismissAt = 0;
 
     const applyTheme = (nextTheme) => {
@@ -66,6 +68,7 @@ async function initMatephisBoard() {
         try { localStorage.setItem('matephis_theme', theme); } catch (_) { /* ignore */ }
         window.dispatchEvent(new CustomEvent('matephis-theme-change', { detail: { theme } }));
         surface.setTheme(theme);
+        if (connectorManager) connectorManager.setTheme(theme);
         if (pinnedStrip) pinnedStrip.render();
         if (toolbar) toolbar.render();
         if (optionsMenu) optionsMenu.syncFromState();
@@ -99,6 +102,7 @@ async function initMatephisBoard() {
             if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
+            if (connectorManager) connectorManager.syncFromScene();
             if (pinnedStrip) pinnedStrip.render();
             syncUI();
             storage.scheduleSave(scene, 400);
@@ -192,6 +196,7 @@ async function initMatephisBoard() {
                 if (lasso) lasso.clearSelection();
                 pinnedStrip.close();
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 syncUI();
                 storage.saveBoardNow(scene);
                 engineLoader.ensureForPage(scene.currentPage);
@@ -213,6 +218,7 @@ async function initMatephisBoard() {
             });
             if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
+            if (connectorManager) connectorManager.syncFromScene();
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
             storage.scheduleSave(scene);
@@ -228,6 +234,7 @@ async function initMatephisBoard() {
                     overlay.setOverviewMode(false);
                 }
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 pinnedStrip.render();
                 syncUI();
                 storage.saveBoardNow(scene);
@@ -236,6 +243,26 @@ async function initMatephisBoard() {
     });
 
     futureMenus = new FutureMenus(root);
+
+    connectorManager = new ConnectorManager({
+        scene,
+        history: historyProxy,
+        overlay,
+        surface,
+        getTheme,
+        getToolState: () => (toolbar ? toolbar.getToolState() : {}),
+        onSwitchToPage: (pageIndex, targetCam) => switchToPage(pageIndex, targetCam),
+        onSceneMutated: () => {
+            pinnedStrip.syncIfShowingPage(scene.currentPage.id);
+            syncUI();
+            storage.scheduleSave(scene);
+        },
+        onStateChange: ({ mode, pendingPair, openConnectors, activateTool }) => {
+            if (toolbar) {
+                toolbar.setConnectorState({ mode, pendingPair, openConnectors, activateTool });
+            }
+        },
+    });
 
     toolbar = new BoardToolbar(root, {
         getTheme,
@@ -247,6 +274,9 @@ async function initMatephisBoard() {
         },
         onToolChange: (toolState) => {
             if (toolState.tool !== 'lasso' && lasso) lasso.clearSelection();
+            if (toolState.tool === 'connector' && toolState.connectorMode === 'new' && connectorManager) {
+                connectorManager.clearPending();
+            }
         },
         onLassoAction: (action, toolState) => {
             if (!lasso) return;
@@ -254,10 +284,14 @@ async function initMatephisBoard() {
             else if (action === 'recolor') lasso.recolorSelection(toolState.penColor);
             else if (action === 'delete') lasso.deleteSelection();
         },
+        onSelectOpenConnector: (pair) => {
+            if (connectorManager) connectorManager.armPair(pair, { activateTool: true });
+        },
         onUndo: () => {
             if (historyProxy.undo(scene.currentPage)) {
                 if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
@@ -267,6 +301,7 @@ async function initMatephisBoard() {
             if (historyProxy.redo(scene.currentPage)) {
                 if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
@@ -330,6 +365,7 @@ async function initMatephisBoard() {
             if (lasso) lasso.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
+            if (connectorManager) connectorManager.syncFromScene();
             pinnedStrip.render();
             syncUI();
             storage.saveBoardNow(scene);
@@ -356,10 +392,14 @@ async function initMatephisBoard() {
             futureMenus.hideAll();
             toolbar.setActiveFuturePopover(null);
             toolbar.anchorPopover(null);
+            if (connectorManager) connectorManager.clearSelection();
             // The second finger of a two-finger tap that closed a menu must not draw either.
             const now = performance.now();
             if (hadPopover) lastDismissAt = now;
             return hadPopover || now - lastDismissAt < 200;
+        },
+        onConnectorPlace: (wx, wy) => {
+            if (connectorManager) connectorManager.handlePlaceAt(wx, wy);
         },
         onSceneMutated: () => {
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
@@ -394,6 +434,7 @@ async function initMatephisBoard() {
                 if (historyProxy.redo(scene.currentPage)) {
                     if (lasso) lasso.syncWithScene();
                     surface.renderCommittedNow();
+                    if (connectorManager) connectorManager.syncFromScene();
                     pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                     syncUI();
                     storage.scheduleSave(scene);
@@ -401,6 +442,7 @@ async function initMatephisBoard() {
             } else if (historyProxy.undo(scene.currentPage)) {
                 if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
@@ -412,6 +454,7 @@ async function initMatephisBoard() {
             if (historyProxy.redo(scene.currentPage)) {
                 if (lasso) lasso.syncWithScene();
                 surface.renderCommittedNow();
+                if (connectorManager) connectorManager.syncFromScene();
                 pinnedStrip.syncIfShowingPage(scene.currentPage.id);
                 syncUI();
                 storage.scheduleSave(scene);
@@ -455,6 +498,7 @@ async function initMatephisBoard() {
                 toolbar.setActiveFuturePopover(null);
                 toolbar.anchorPopover(null);
                 if (lasso && lasso.hasSelection) lasso.clearSelection();
+                if (connectorManager) connectorManager.clearSelection();
                 if (surface.overviewMode) {
                     surface.exitOverview();
                     syncUI();
@@ -485,6 +529,7 @@ async function initMatephisBoard() {
         surface.renderCommittedNow();
         engineLoader.ensureForPage(scene.currentPage);
     }
+    if (connectorManager) connectorManager.syncFromScene();
     syncUI();
 }
 

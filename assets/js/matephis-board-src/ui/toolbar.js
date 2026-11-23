@@ -52,6 +52,7 @@ export class BoardToolbar {
         onPrevPage,
         onNextPage,
         onAddPage,
+        onSelectOpenConnector = null,
     }) {
         this.hostEl = hostEl;
         this.getTheme = getTheme;
@@ -70,9 +71,10 @@ export class BoardToolbar {
         this.onPrevPage = onPrevPage;
         this.onNextPage = onNextPage;
         this.onAddPage = onAddPage;
+        this.onSelectOpenConnector = onSelectOpenConnector;
 
         this.state = {
-            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser' | 'lasso' | 'shape'
+            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser' | 'lasso' | 'shape' | 'connector'
             penColor: 0,
             penWidth: PEN_SIZES[1].width,
             penStyle: 'solid',     // 'solid' | 'dashed' | 'dotted'
@@ -82,8 +84,13 @@ export class BoardToolbar {
             highlighterWidth: HIGHLIGHTER_SIZES[1].width,
             lassoMode: 'lasso',    // 'lasso' | 'rect'
             shapeKind: 'line',     // 'line' | 'arrow' | 'rect' | 'ellipse' | 'triangle'
+            connectorSeries: 'alpha', // 'alpha' | 'num'
+            connectorMode: 'new',     // 'new' | 'link'
         };
         this._lassoSelectionCount = 0;
+        this.connectorPendingLabel = null;
+        this.connectorPendingPairId = null;
+        this.connectorOpenPairs = [];
 
         this.layout = 'bar';  // 'rail' | 'bar'
         this.side = 'right';  // rail side: 'right' | 'left'
@@ -115,6 +122,7 @@ export class BoardToolbar {
             || this.activeFuturePopover === 'diagrams'
             || this.activeFuturePopover === 'exercises';
         this.insertBtn.classList.toggle('active', this.state.tool === 'shape'
+            || this.state.tool === 'connector'
             || insertOpen || this.openTray === 'insert'
             || this.openTray === 'shapes' || this.openTray === 'connectors');
         this.cloudBtn.classList.toggle('active', this.activeFuturePopover === 'cloud');
@@ -127,6 +135,28 @@ export class BoardToolbar {
         for (const btn of this.lassoActionBtns) {
             btn.disabled = this._lassoSelectionCount === 0;
         }
+    }
+
+    setConnectorState({ mode = null, pendingPair = null, openConnectors = null, activateTool = false } = {}) {
+        if (mode === 'new' || mode === 'link') {
+            this.state.connectorMode = mode;
+        }
+        this.connectorPendingLabel = pendingPair ? pendingPair.label : null;
+        this.connectorPendingPairId = pendingPair ? pendingPair.pairId : null;
+        if (Array.isArray(openConnectors)) {
+            this.connectorOpenPairs = openConnectors;
+        }
+        if (activateTool) {
+            this.state.tool = 'connector';
+            if (pendingPair && (pendingPair.series === 'alpha' || pendingPair.series === 'num')) {
+                this.state.connectorSeries = pendingPair.series;
+            }
+            this._closePopovers();
+            this.render();
+            if (this.onToolChange) this.onToolChange(this.state);
+            return;
+        }
+        this.render();
     }
 
     /** Trigger element a popover should be anchored to. */
@@ -190,6 +220,8 @@ export class BoardToolbar {
         this.state.tool = tool;
         if (openTray && (tool === 'pen' || tool === 'eraser' || tool === 'highlighter' || tool === 'lasso')) {
             this.openTray = tool;
+        } else if (openTray && tool === 'connector') {
+            this.openTray = 'connectors';
         } else {
             this.openTray = null;
         }
@@ -553,7 +585,7 @@ export class BoardToolbar {
         tray.hidden = true;
         const items = [
             { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: false },
-            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: true },
+            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: false },
             { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: true },
             { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: true },
             { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: true },
@@ -574,9 +606,11 @@ export class BoardToolbar {
                     this.render();
                     if (this.onToolChange) this.onToolChange(this.state);
                 } else if (it.id === 'connectors') {
-                    this.openTray = it.id;
+                    this.state.tool = 'connector';
+                    this.openTray = 'connectors';
                     this._closePopovers();
                     this.render();
+                    if (this.onToolChange) this.onToolChange(this.state);
                 } else {
                     this.openTray = null;
                     this.render();
@@ -904,7 +938,7 @@ export class BoardToolbar {
     }
 
     /**
-     * Phase 2 stub tray: Letter / Number explanation connectors.
+     * Letter / Number explanation connectors tray.
      */
     _buildConnectorsTray() {
         const tray = document.createElement('div');
@@ -912,15 +946,44 @@ export class BoardToolbar {
         tray.hidden = true;
         tray.innerHTML = `
             <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica lettere (A, B, C…)">A, B…</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica numeri (1, 2, 3…)">1, 2…</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="alpha" title="Codifica lettere (A, B, C…)">A, B…</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="num" title="Codifica numeri (1, 2, 3…)">1, 2…</button>
             </div>
             <span class="board-dock-sep"></span>
             <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Nuovo</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Collega</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-mode="new" title="Piazza il primo segnaposto di una nuova coppia">Nuovo</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-mode="link" title="Collega al segnaposto aperto">Collega</button>
             </div>
+            <div class="board-tray-group board-connectors-open" hidden></div>
         `;
+
+        this.connSeriesBtns = Array.from(tray.querySelectorAll('[data-conn-series]'));
+        for (const btn of this.connSeriesBtns) {
+            btn.addEventListener('click', () => {
+                this.state.connectorSeries = btn.dataset.connSeries === 'num' ? 'num' : 'alpha';
+                this.state.tool = 'connector';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+        }
+
+        this.connModeBtns = Array.from(tray.querySelectorAll('[data-conn-mode]'));
+        for (const btn of this.connModeBtns) {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.connMode === 'link' ? 'link' : 'new';
+                this.state.connectorMode = mode;
+                this.state.tool = 'connector';
+                if (mode === 'new') {
+                    this.connectorPendingLabel = null;
+                    this.connectorPendingPairId = null;
+                }
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+        }
+
+        this.connLinkBtn = tray.querySelector('[data-conn-mode="link"]');
+        this.connOpenWrap = tray.querySelector('.board-connectors-open');
         return tray;
     }
 
@@ -997,6 +1060,45 @@ export class BoardToolbar {
             const active = btn.dataset.shapeKind === this.state.shapeKind;
             btn.classList.toggle('active', active);
             btn.setAttribute('aria-pressed', String(active));
+        }
+        if (this.connSeriesBtns) {
+            for (const btn of this.connSeriesBtns) {
+                btn.classList.toggle('active', btn.dataset.connSeries === this.state.connectorSeries);
+            }
+        }
+        if (this.connModeBtns) {
+            for (const btn of this.connModeBtns) {
+                btn.classList.toggle('active', btn.dataset.connMode === this.state.connectorMode);
+            }
+        }
+        if (this.connLinkBtn) {
+            this.connLinkBtn.textContent = this.connectorPendingLabel
+                ? `Collega (${this.connectorPendingLabel})`
+                : 'Collega';
+        }
+        if (this.connOpenWrap) {
+            const openPairs = this.connectorOpenPairs || [];
+            this.connOpenWrap.innerHTML = '';
+            if (openPairs.length > 0) {
+                this.connOpenWrap.hidden = false;
+                for (const pair of openPairs) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'board-tray-btn board-tray-text-btn board-connector-open-btn';
+                    if (this.connectorPendingPairId === pair.pairId && this.state.connectorMode === 'link') {
+                        btn.classList.add('active');
+                    }
+                    btn.textContent = pair.label;
+                    btn.title = `Collega a ${pair.label} (pagina ${pair.pageIndex + 1})`;
+                    btn.style.setProperty('--conn-color', resolveInkColor(pair.color, theme));
+                    btn.addEventListener('click', () => {
+                        if (this.onSelectOpenConnector) this.onSelectOpenConnector(pair);
+                    });
+                    this.connOpenWrap.appendChild(btn);
+                }
+            } else {
+                this.connOpenWrap.hidden = true;
+            }
         }
 
         this._renderTrays();
