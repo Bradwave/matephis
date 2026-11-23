@@ -669,3 +669,344 @@ body.board-body {
 .board-hud-wide {
     grid-column: 1 / -1;
 }
+
+/* --- Stub / Placeholder UI styling (buttons & menus awaiting Phase 2 / 4 logic) --- */
+
+.is-stub {
+    opacity: 0.42;
+}
+
+.board-tool-btn.is-stub {
+    opacity: 0.46;
+}
+
+.board-tool-btn.is-stub:hover,
+.board-tool-btn.is-stub.active {
+    opacity: 0.78;
+}
+
+.board-tray-btn.is-stub,
+.board-action-btn.is-stub,
+.board-bg-btn.is-stub,
+.board-chip.is-stub,
+.board-engine-card.is-stub,
+.board-tab-btn.is-stub {
+    cursor: default;
+}
+
+.board-popover-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.board-stub-tag,
+.board-cloud-status {
+    font-family: var(--font-plot);
+    font-size: 9.5px;
+    font-weight: 400;
+    color: var(--secondary-text);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+}
+
+.board-cloud-status::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--secondary-text);
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+/* Options menu: page background selector */
+
+.board-opt-bg-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--secondary-text);
+}
+
+.board-bg-seg {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+}
+
+.board-bg-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    height: 26px;
+    padding: 0 4px;
+    cursor: pointer;
+}
+
+.board-bg-btn.active {
+    background: var(--title);
+    color: var(--bg);
+    border-color: var(--title);
+}
+
+/* Future popovers: Plot/Axes, Diagrams, Exercises, Cloud Session */
+
+.board-plot-popover,
+.board-diagrams-popover,
+.board-cloud-popover {
+    width: min(320px, calc(100vw - 20px));
+}
+
+.board-exercises-popover {
+    width: min(360px, calc(100vw - 20px));
+}
+
+.board-tab-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.board-tab-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    height: 28px;
+    padding: 0 8px;
+}
+
+.board-tab-btn.active {
+    background: var(--title);
+    color: var(--bg);
+    border-color: var(--title);
+}
+
+.board-limits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.board-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-family: var(--font-plot);
+    font-size: 10px;
+    color: var(--secondary-text);
+}
+
+.board-field input {
+    width: 100%;
+    height: 28px;
+    padding: 0 6px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-plot);
+    font-size: 12px;
+    outline: none;
+}
+
+.board-field-full {
+    margin-bottom: 8px;
+}
+
+.board-engine-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.board-engine-card {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 9px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    text-align: left;
+    font-family: var(--font);
+}
+
+.board-engine-card strong {
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.board-engine-card span {
+    font-family: var(--font-plot);
+    font-size: 10px;
+    color: var(--secondary-text);
+}
+
+.board-chip-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.board-micro-label {
+    font-family: var(--font-plot);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--secondary-text);
+}
+
+.board-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.board-chip {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11.5px;
+    padding: 3px 8px;
+}
+
+.board-search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    color: var(--secondary-text);
+}
+
+.board-search-box svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.board-search-box input {
+    border: none;
+    background: transparent;
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+}
+
+.board-ex-preview {
+    padding: 8px 9px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+}
+
+.board-ex-preview-meta {
+    font-family: var(--font-plot);
+    font-size: 10px;
+    color: var(--secondary-text);
+    margin-bottom: 3px;
+}
+
+.board-ex-preview-body {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.35;
+}
+
+.board-popover-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.board-inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+.board-action-primary {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-action-full {
+    grid-column: 1 / -1;
+}
+
+.board-qr-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+}
+
+.board-qr-icon {
+    width: 58px;
+    height: 58px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--title);
+}
+
+.board-qr-icon svg {
+    width: 44px;
+    height: 44px;
+}
+
+.board-qr-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11.5px;
+    color: var(--secondary-text);
+    line-height: 1.3;
+}
+
+.board-qr-meta strong {
+    color: var(--title);
+    font-size: 12.5px;
+}
+
+.board-qr-code {
+    font-family: var(--font-plot);
+    font-size: 11px;
+    color: var(--title);
+}

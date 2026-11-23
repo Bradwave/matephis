@@ -1,10 +1,11 @@
 /**
- * Bottom-centered Matephis-styled dock with:
- * - Always-visible: Page nav (< 1/N > +) | Pen + 5 minimal color dots | Eraser | Undo/Redo | Pin Top & Left + A4 Overview (1x1) + Zoom pill | Expand (...)
- * - Contextual trays (Pen, Eraser, Highlighter) matching the exact height, borderless-until-active
- *   button grammar, dividers, and minimal 12px color dots of the bottom bar
- * - Horizontal dock expansion revealing Highlighter, Laser, Theme, and Canvas Options
- * - Zero top-corner UI chrome: entire top viewport stays pure canvas
+ * Bottom-centered Matephis-styled dock with the complete Phase 1–4 UI shell:
+ * - Always-visible: Page nav (< 1/N > +) | Pen + 5 minimal color dots | Eraser | Lasso (stub) |
+ *   Undo/Redo | Pin Top & Left + A4 Overview (1x1) + Zoom % | Expand (...)
+ * - Contextual single-row trays matching the exact bottom bar grammar:
+ *   Pen, Eraser, Highlighter (working) + Lasso, Shapes, Connectors (stub UI)
+ * - Horizontal dock expansion revealing Highlighter, Laser, Shapes (stub), Connectors (stub) |
+ *   Plot/Axes (stub), Diagrams (stub), Exercises (stub) | Cloud Session (stub) | Theme, Options
  */
 
 import {
@@ -29,6 +30,7 @@ export class BoardToolbar {
         onToggleOverview,
         onToggleTheme,
         onToggleOptions,
+        onToggleFuturePopover,
         onResetZoom,
         onPrevPage,
         onNextPage,
@@ -44,6 +46,7 @@ export class BoardToolbar {
         this.onToggleOverview = onToggleOverview;
         this.onToggleTheme = onToggleTheme;
         this.onToggleOptions = onToggleOptions;
+        this.onToggleFuturePopover = onToggleFuturePopover;
         this.onResetZoom = onResetZoom;
         this.onPrevPage = onPrevPage;
         this.onNextPage = onNextPage;
@@ -61,7 +64,8 @@ export class BoardToolbar {
         };
 
         this.expanded = false;
-        this.openTray = null; // null | 'pen' | 'eraser' | 'highlighter'
+        this.openTray = null; // null | 'pen' | 'eraser' | 'highlighter' | 'lasso' | 'shapes' | 'connectors'
+        this.activeFuturePopover = null; // null | 'plot' | 'diagrams' | 'exercises' | 'cloud'
         this.overviewActive = false;
 
         this._buildDOM();
@@ -77,6 +81,14 @@ export class BoardToolbar {
             this.openTray = null;
             this._renderTrays();
         }
+    }
+
+    setActiveFuturePopover(name) {
+        this.activeFuturePopover = name || null;
+        this.plotBtn.classList.toggle('active', this.activeFuturePopover === 'plot');
+        this.diagramsBtn.classList.toggle('active', this.activeFuturePopover === 'diagrams');
+        this.exercisesBtn.classList.toggle('active', this.activeFuturePopover === 'exercises');
+        this.cloudBtn.classList.toggle('active', this.activeFuturePopover === 'cloud');
     }
 
     setHistoryState(canUndo, canRedo) {
@@ -118,28 +130,38 @@ export class BoardToolbar {
         } else {
             this.openTray = null;
         }
+        this._closePopovers();
         this.render();
         if (this.onToolChange) this.onToolChange(this.state);
     }
 
     _buildDOM() {
-        // Bottom dock wrapper (contextual trays directly above + horizontal dock bar)
         this.dockWrap = document.createElement('div');
         this.dockWrap.className = 'board-dock-wrap';
         this.dockWrap.addEventListener('pointerdown', (e) => e.stopPropagation());
 
+        // Single-row contextual trays above dock
         this.penTray = this._buildPenTray();
         this.eraserTray = this._buildEraserTray();
         this.highlighterTray = this._buildHighlighterTray();
-        this.dockWrap.appendChild(this.penTray);
-        this.dockWrap.appendChild(this.eraserTray);
-        this.dockWrap.appendChild(this.highlighterTray);
+        this.lassoTray = this._buildLassoTray();
+        this.shapesTray = this._buildShapesTray();
+        this.connectorsTray = this._buildConnectorsTray();
+
+        this.dockWrap.append(
+            this.penTray,
+            this.eraserTray,
+            this.highlighterTray,
+            this.lassoTray,
+            this.shapesTray,
+            this.connectorsTray
+        );
 
         // Main horizontal dock bar
         this.dock = document.createElement('div');
         this.dock.className = 'board-dock';
 
-        // Compact Page Switcher inside bottom dock (< 1/N > +)
+        // Compact Page Switcher (< 1/N > +)
         this.pageNavEl = document.createElement('div');
         this.pageNavEl.className = 'board-page-nav';
         this.pageNavEl.setAttribute('aria-label', 'Navigazione pagine');
@@ -154,15 +176,9 @@ export class BoardToolbar {
         this.addPageBtn = this.pageNavEl.querySelector('.board-page-add');
         this.pageIndicatorEl = this.pageNavEl.querySelector('.board-page-indicator');
 
-        this.prevPageBtn.addEventListener('click', () => {
-            if (this.onPrevPage) this.onPrevPage();
-        });
-        this.nextPageBtn.addEventListener('click', () => {
-            if (this.onNextPage) this.onNextPage();
-        });
-        this.addPageBtn.addEventListener('click', () => {
-            if (this.onAddPage) this.onAddPage();
-        });
+        this.prevPageBtn.addEventListener('click', () => { if (this.onPrevPage) this.onPrevPage(); });
+        this.nextPageBtn.addEventListener('click', () => { if (this.onNextPage) this.onNextPage(); });
+        this.addPageBtn.addEventListener('click', () => { if (this.onAddPage) this.onAddPage(); });
 
         this.penBtn = this._makeToolBtn('Penna (P) — stile, spessore e colori', BoardIcons.pen, () => {
             if (this.state.tool === 'pen') {
@@ -171,7 +187,7 @@ export class BoardToolbar {
                 this.state.tool = 'pen';
                 this.openTray = 'pen';
             }
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             this.render();
             if (this.onToolChange) this.onToolChange(this.state);
         });
@@ -185,7 +201,7 @@ export class BoardToolbar {
                 this.state.penColor = c.id;
                 this.state.tool = 'pen';
                 this.openTray = null;
-                this._closeOptionsIfOpen();
+                this._closePopovers();
                 this.render();
                 if (this.onToolChange) this.onToolChange(this.state);
             });
@@ -193,7 +209,6 @@ export class BoardToolbar {
             this.quickColorsEl.appendChild(btn);
         }
 
-        // Eraser — immediately opens size/mode bar on selection
         this.eraserBtn = this._makeToolBtn('Gomma (E)', BoardIcons.eraser, () => {
             if (this.state.tool === 'eraser') {
                 this.openTray = this.openTray === 'eraser' ? null : 'eraser';
@@ -201,10 +216,17 @@ export class BoardToolbar {
                 this.state.tool = 'eraser';
                 this.openTray = 'eraser';
             }
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             this.render();
             if (this.onToolChange) this.onToolChange(this.state);
         });
+
+        // Select / Lasso (Phase 2 stub — opens tray for styling preview)
+        this.lassoBtn = this._makeToolBtn('Selezione lazo (in arrivo)', BoardIcons.lasso, () => {
+            this.openTray = this.openTray === 'lasso' ? null : 'lasso';
+            this._closePopovers();
+            this.render();
+        }, true);
 
         this.undoBtn = this._makeToolBtn('Annulla (Ctrl+Z)', BoardIcons.undo, () => {
             if (this.onUndo) this.onUndo();
@@ -213,15 +235,15 @@ export class BoardToolbar {
             if (this.onRedo) this.onRedo();
         });
 
-        // Spatial view controls — ALWAYS visible on dock: Pin Top, Pin Left, A4 Overview (1x1), conditional Zoom reset
+        // Spatial view controls — ALWAYS visible
         this.pinTopBtn = this._makeToolBtn('Fissa in alto e scorri sotto', BoardIcons.pinTop, () => {
             this.closeTrays();
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             if (this.onPinTop) this.onPinTop();
         });
         this.pinLeftBtn = this._makeToolBtn('Fissa a sinistra e scorri a destra', BoardIcons.pinLeft, () => {
             this.closeTrays();
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             if (this.onPinLeft) this.onPinLeft();
         });
 
@@ -232,7 +254,7 @@ export class BoardToolbar {
         this.footprintBtn.title = 'Vista generale (O) — 1×1 A4';
         this.footprintBtn.addEventListener('click', () => {
             this.closeTrays();
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             if (this.onToggleOverview) this.onToggleOverview();
         });
 
@@ -245,7 +267,7 @@ export class BoardToolbar {
             if (this.onResetZoom) this.onResetZoom();
         });
 
-        // Horizontal expandable drawer for secondary tools
+        // Horizontal expandable drawer for secondary tools, Matephis inserts & cloud sync
         this.extraGroup = document.createElement('div');
         this.extraGroup.className = 'board-dock-extra';
         this.extraGroup.hidden = true;
@@ -257,7 +279,7 @@ export class BoardToolbar {
                 this.state.tool = 'highlighter';
                 this.openTray = 'highlighter';
             }
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             this.render();
             if (this.onToolChange) this.onToolChange(this.state);
         });
@@ -265,11 +287,46 @@ export class BoardToolbar {
         this.laserBtn = this._makeToolBtn('Puntatore laser (L)', BoardIcons.laser, () => {
             this.state.tool = 'laser';
             this.openTray = null;
-            this._closeOptionsIfOpen();
+            this._closePopovers();
             this.render();
             if (this.onToolChange) this.onToolChange(this.state);
         });
 
+        this.shapesBtn = this._makeToolBtn('Forme geometriche (in arrivo)', BoardIcons.shapes, () => {
+            this.openTray = this.openTray === 'shapes' ? null : 'shapes';
+            this._closePopovers();
+            this.render();
+        }, true);
+
+        this.connectorsBtn = this._makeToolBtn('Connettori spiegazione A/1 (in arrivo)', BoardIcons.connector, () => {
+            this.openTray = this.openTray === 'connectors' ? null : 'connectors';
+            this._closePopovers();
+            this.render();
+        }, true);
+
+        // Matephis content insert buttons (Phase 2 stubs opening preview popovers)
+        this.plotBtn = this._makeToolBtn('Assi cartesiani e grafici Matephis (in arrivo)', BoardIcons.axes, () => {
+            this.closeTrays();
+            if (this.onToggleFuturePopover) this.onToggleFuturePopover('plot');
+        }, true);
+
+        this.diagramsBtn = this._makeToolBtn('Diagrammi Matephis: fisica, insiemi, circuiti (in arrivo)', BoardIcons.diagram, () => {
+            this.closeTrays();
+            if (this.onToggleFuturePopover) this.onToggleFuturePopover('diagrams');
+        }, true);
+
+        this.exercisesBtn = this._makeToolBtn('Inserisci esercizio da Matephis (in arrivo)', BoardIcons.exercise, () => {
+            this.closeTrays();
+            if (this.onToggleFuturePopover) this.onToggleFuturePopover('exercises');
+        }, true);
+
+        // Cloud session & QR sync (Phase 4 stub opening preview popover)
+        this.cloudBtn = this._makeToolBtn('Sessione cloud QR / R2 (in arrivo)', BoardIcons.cloud, () => {
+            this.closeTrays();
+            if (this.onToggleFuturePopover) this.onToggleFuturePopover('cloud');
+        }, true);
+
+        // Workspace controls (working)
         this.themeBtn = this._makeToolBtn('Cambia tema chiaro/scuro', BoardIcons.moon, () => {
             if (this.onToggleTheme) {
                 this.onToggleTheme(this.getTheme() === 'dark' ? 'light' : 'dark');
@@ -278,6 +335,7 @@ export class BoardToolbar {
 
         this.optionsBtn = this._makeToolBtn('Opzioni lavagna', BoardIcons.tune, () => {
             this.closeTrays();
+            if (this.onToggleFuturePopover) this.onToggleFuturePopover(null);
             if (this.onToggleOptions) this.onToggleOptions();
         });
 
@@ -285,6 +343,14 @@ export class BoardToolbar {
             this._makeDivider(),
             this.highlighterBtn,
             this.laserBtn,
+            this.shapesBtn,
+            this.connectorsBtn,
+            this._makeDivider(),
+            this.plotBtn,
+            this.diagramsBtn,
+            this.exercisesBtn,
+            this._makeDivider(),
+            this.cloudBtn,
             this._makeDivider(),
             this.themeBtn,
             this.optionsBtn
@@ -298,8 +364,10 @@ export class BoardToolbar {
             this.expandBtn.title = this.expanded ? 'Comprimi barra' : 'Mostra altri strumenti';
             this.expandBtn.classList.toggle('is-expanded', this.expanded);
             if (!this.expanded) {
-                if (this.openTray === 'highlighter') this.closeTrays();
-                this._closeOptionsIfOpen();
+                if (this.openTray === 'highlighter' || this.openTray === 'shapes' || this.openTray === 'connectors') {
+                    this.closeTrays();
+                }
+                this._closePopovers();
             }
         });
 
@@ -310,6 +378,7 @@ export class BoardToolbar {
             this.quickColorsEl,
             this._makeDivider(),
             this.eraserBtn,
+            this.lassoBtn,
             this._makeDivider(),
             this.undoBtn,
             this.redoBtn,
@@ -327,14 +396,15 @@ export class BoardToolbar {
         this.hostEl.appendChild(this.dockWrap);
     }
 
-    _closeOptionsIfOpen() {
+    _closePopovers() {
         if (this.onToggleOptions) this.onToggleOptions(false);
+        if (this.onToggleFuturePopover) this.onToggleFuturePopover(null);
     }
 
-    _makeToolBtn(title, iconSvg, onClick) {
+    _makeToolBtn(title, iconSvg, onClick, isStub = false) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'board-tool-btn';
+        btn.className = isStub ? 'board-tool-btn is-stub' : 'board-tool-btn';
         btn.title = title;
         btn.setAttribute('aria-label', title);
         btn.innerHTML = iconSvg;
@@ -359,16 +429,11 @@ export class BoardToolbar {
         return sep;
     }
 
-    /**
-     * Pen tray — matches the exact single-row height, dividers, borderless buttons,
-     * and minimal 12px color dots of the bottom bar.
-     */
     _buildPenTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-pen-tray';
         tray.hidden = true;
 
-        // Extended + primary 10 colors in the exact same minimal dot style as the dock
         const colorsWrap = document.createElement('div');
         colorsWrap.className = 'board-quick-colors';
         this.penTraySwatches = [];
@@ -385,7 +450,6 @@ export class BoardToolbar {
             colorsWrap.appendChild(btn);
         }
 
-        // 3 stroke styles (solid, dashed, dotted)
         const stylesWrap = document.createElement('div');
         stylesWrap.className = 'board-tray-group';
         this.styleBtns = [];
@@ -411,7 +475,6 @@ export class BoardToolbar {
             stylesWrap.appendChild(btn);
         }
 
-        // 4 world stroke sizes
         const sizesWrap = document.createElement('div');
         sizesWrap.className = 'board-tray-group';
         this.penSizeBtns = [];
@@ -438,9 +501,6 @@ export class BoardToolbar {
         return tray;
     }
 
-    /**
-     * Eraser tray — exact same single-row height & minimal style as the bottom bar.
-     */
     _buildEraserTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-eraser-tray';
@@ -494,9 +554,6 @@ export class BoardToolbar {
         return tray;
     }
 
-    /**
-     * Highlighter tray — exact same single-row height & minimal color dots as the bottom bar.
-     */
     _buildHighlighterTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-highlighter-tray';
@@ -542,10 +599,89 @@ export class BoardToolbar {
         return tray;
     }
 
+    /**
+     * Phase 2 stub tray: Lasso / Rectangle selection & actions.
+     */
+    _buildLassoTray() {
+        const tray = document.createElement('div');
+        tray.className = 'board-tray board-lasso-tray';
+        tray.hidden = true;
+        tray.innerHTML = `
+            <div class="board-tray-group">
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Lazo</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Rettangolo</button>
+            </div>
+            <span class="board-dock-sep"></span>
+            <div class="board-tray-group">
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Duplica</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Ricolora</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Elimina</button>
+            </div>
+        `;
+        return tray;
+    }
+
+    /**
+     * Phase 2 stub tray: Basic geometry shapes (no hold-to-snap).
+     */
+    _buildShapesTray() {
+        const tray = document.createElement('div');
+        tray.className = 'board-tray board-shapes-tray';
+        tray.hidden = true;
+        tray.innerHTML = `
+            <div class="board-tray-group">
+                <button type="button" class="board-tray-btn is-stub" title="Linea (in arrivo)">
+                    <svg viewBox="0 0 20 20" width="17" height="17"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </button>
+                <button type="button" class="board-tray-btn is-stub" title="Vettore / Freccia (in arrivo)">
+                    <svg viewBox="0 0 20 20" width="17" height="17"><line x1="3" y1="17" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="9,4 16,4 16,11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button type="button" class="board-tray-btn is-stub" title="Rettangolo (in arrivo)">
+                    <svg viewBox="0 0 20 20" width="17" height="17"><rect x="3" y="4.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                </button>
+                <button type="button" class="board-tray-btn is-stub" title="Cerchio / Ellisse (in arrivo)">
+                    <svg viewBox="0 0 20 20" width="17" height="17"><circle cx="10" cy="10" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                </button>
+                <button type="button" class="board-tray-btn is-stub" title="Triangolo (in arrivo)">
+                    <svg viewBox="0 0 20 20" width="17" height="17"><polygon points="10,3.5 17,16.5 3,16.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+        `;
+        return tray;
+    }
+
+    /**
+     * Phase 2 stub tray: Letter / Number explanation connectors.
+     */
+    _buildConnectorsTray() {
+        const tray = document.createElement('div');
+        tray.className = 'board-tray board-connectors-tray';
+        tray.hidden = true;
+        tray.innerHTML = `
+            <div class="board-tray-group">
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica lettere (A, B, C…)">A, B…</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica numeri (1, 2, 3…)">1, 2…</button>
+            </div>
+            <span class="board-dock-sep"></span>
+            <div class="board-tray-group">
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Nuovo</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Collega</button>
+            </div>
+        `;
+        return tray;
+    }
+
     _renderTrays() {
         this.penTray.hidden = this.openTray !== 'pen';
         this.eraserTray.hidden = this.openTray !== 'eraser';
         this.highlighterTray.hidden = this.openTray !== 'highlighter';
+        this.lassoTray.hidden = this.openTray !== 'lasso';
+        this.shapesTray.hidden = this.openTray !== 'shapes';
+        this.connectorsTray.hidden = this.openTray !== 'connectors';
+
+        this.lassoBtn.classList.toggle('active', this.openTray === 'lasso');
+        this.shapesBtn.classList.toggle('active', this.openTray === 'shapes');
+        this.connectorsBtn.classList.toggle('active', this.openTray === 'connectors');
     }
 
     render() {

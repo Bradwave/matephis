@@ -9,6 +9,7 @@ import { BoardScene } from './model/scene.js';
 import { BoardStorage } from './model/storage.js';
 import { BoardToolbar } from './ui/toolbar.js';
 import { OptionsMenu } from './ui/options.js';
+import { FutureMenus } from './ui/future-menus.js';
 import { PinnedStrip } from './ui/pinned-strip.js';
 import { PerfHud } from './ui/perf-hud.js';
 
@@ -47,6 +48,7 @@ async function initMatephisBoard() {
     let pinnedStrip = null;
     let toolbar = null;
     let optionsMenu = null;
+    let futureMenus = null;
 
     const applyTheme = (nextTheme) => {
         const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -183,6 +185,8 @@ async function initMatephisBoard() {
         },
     });
 
+    futureMenus = new FutureMenus(root);
+
     toolbar = new BoardToolbar(root, {
         getTheme,
         onToolChange: () => { /* input reads state on demand */ },
@@ -211,7 +215,21 @@ async function initMatephisBoard() {
         onToggleTheme: (nextTheme) => applyTheme(nextTheme),
         onToggleOptions: (force) => {
             if (force === false) optionsMenu.hide();
-            else optionsMenu.toggle();
+            else {
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
+                optionsMenu.toggle();
+            }
+        },
+        onToggleFuturePopover: (name) => {
+            optionsMenu.hide();
+            if (!name) {
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
+            } else {
+                const opened = futureMenus.toggle(name);
+                toolbar.setActiveFuturePopover(opened);
+            }
         },
         onResetZoom: () => {
             const baseScale = scene.camera.baseScale;
@@ -244,8 +262,12 @@ async function initMatephisBoard() {
         history: historyProxy,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
+            const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover);
             toolbar.closeTrays();
             optionsMenu.hide();
+            futureMenus.hideAll();
+            toolbar.setActiveFuturePopover(null);
+            return hadPopover;
         },
         onSceneMutated: () => {
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
@@ -318,6 +340,8 @@ async function initMatephisBoard() {
             case 'escape':
                 toolbar.closeTrays();
                 optionsMenu.hide();
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
                 if (surface.overviewMode) {
                     surface.exitOverview();
                     syncUI();

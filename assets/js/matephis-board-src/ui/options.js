@@ -62,6 +62,15 @@ export class OptionsMenu {
                     <span>HUD prestazioni e input</span>
                     <input type="checkbox" data-opt="showHud" />
                 </label>
+                <div class="board-opt-bg-row">
+                    <span>Sfondo pagina</span>
+                    <div class="board-bg-seg">
+                        <button type="button" class="board-bg-btn active">Vuoto</button>
+                        <button type="button" class="board-bg-btn is-stub">Quadretti</button>
+                        <button type="button" class="board-bg-btn is-stub">Puntini</button>
+                        <button type="button" class="board-bg-btn is-stub">Righe</button>
+                    </div>
+                </div>
             </div>
             <div class="board-options-actions">
                 <button type="button" class="board-action-btn" data-action="export">
@@ -69,6 +78,12 @@ export class OptionsMenu {
                 </button>
                 <button type="button" class="board-action-btn" data-action="import">
                     ${BoardIcons.upload}<span>Importa JSON</span>
+                </button>
+                <button type="button" class="board-action-btn is-stub" title="Esporta SVG con metadati modificabili (in arrivo)">
+                    ${BoardIcons.download}<span>Esporta SVG</span>
+                </button>
+                <button type="button" class="board-action-btn is-stub" title="Esporta PDF vettoriale (in arrivo)">
+                    ${BoardIcons.download}<span>Esporta PDF</span>
                 </button>
                 <button type="button" class="board-action-btn is-danger" data-action="clear">
                     ${BoardIcons.delete}<span>Pulisci pagina</span>

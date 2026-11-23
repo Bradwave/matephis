@@ -130,8 +130,11 @@ export class InputController {
             return;
         }
 
-        // Notify toolbar to auto-dismiss open trays
-        if (this.onCanvasTouch) this.onCanvasTouch();
+        // Notify toolbar/popovers to auto-dismiss; swallow tap if a popover was dismissed
+        if (this.onCanvasTouch && this.onCanvasTouch() === true) {
+            this.pointers.delete(e.pointerId);
+            return;
+        }
 
         // Check palm-to-erase immediately
         if (this._isPalm(e) || (this.scene.settings.palmErase && this.pointers.size >= 3 && e.pointerType === 'touch')) {
