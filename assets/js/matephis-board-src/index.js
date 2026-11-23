@@ -19,6 +19,8 @@ import { EngineLoader } from './ui/engine-loader.js';
 import { ConnectorManager } from './ui/connectors.js';
 import { ExercisePicker } from './ui/exercise-picker.js';
 import { WidgetManager } from './ui/widgets.js';
+import { downloadPageSVG } from './export/svg-export.js';
+import { exportSceneToPDF } from './export/pdf-export.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -213,6 +215,17 @@ async function initMatephisBoard() {
             storage.scheduleSave(scene);
         },
         onExportJSON: () => storage.exportJSONFile(scene),
+        onExportSVG: () => downloadPageSVG(scene, {
+            pageIndex: scene.currentPageIndex,
+            theme: getTheme(),
+            overlay,
+            widgetManager,
+        }),
+        onExportPDF: () => exportSceneToPDF(scene, {
+            theme: getTheme(),
+            overlay,
+            widgetManager,
+        }),
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
                 historyProxy.clearAll();

@@ -220,6 +220,11 @@ export class WidgetManager {
         this._renderChrome();
     }
 
+    getElement(id) {
+        const entry = this.mounted.get(id);
+        return entry ? entry.el : null;
+    }
+
     setTheme(_theme) {
         // Engines listen to `matephis-theme-change` on window; circuit & exercise use CSS tokens.
         this._updateWidgetClasses();
