@@ -626,7 +626,7 @@ function rewriteUrlsInElement(rootEl, noteUrl, baseurl) {
 }
 
 function directChildrenByTag(el, tagLower) {
-    return (el.children || []).filter((c) => c.tagName && c.tagName.toLowerCase() === tagLower);
+    return Array.from(el.children || []).filter((c) => c.tagName && c.tagName.toLowerCase() === tagLower);
 }
 
 function getLiStemHtml(liEl) {

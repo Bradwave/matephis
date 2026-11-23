@@ -260,10 +260,19 @@ export class WidgetManager {
                 this._applyGeometry(w, entry);
                 if (entry.signature !== sig) {
                     entry.signature = sig;
+                    entry.lastWidthMm = w.w;
                     this._unmountInstances(entry);
                     this._mountEngine(w, entry);
-                } else if (w.kind === 'exercise') {
-                    this._syncExerciseSolutionUI(w, entry);
+                } else {
+                    if (w.w !== entry.lastWidthMm) {
+                        entry.lastWidthMm = w.w;
+                        if (entry.instance && typeof entry.instance.resize === 'function') {
+                            try { entry.instance.resize(Math.round(w.w * OVERLAY_PX_PER_MM)); } catch (_) { /* ignore */ }
+                        }
+                    }
+                    if (w.kind === 'exercise') {
+                        this._syncExerciseSolutionUI(w, entry);
+                    }
                 }
             }
         }
@@ -323,6 +332,7 @@ export class WidgetManager {
             instance: null,
             embeddedInstances: [],
             signature: widgetSignature(w),
+            lastWidthMm: w.w,
             mountSeq: 0,
         };
         this._applyGeometry(w, entry);
@@ -392,6 +402,7 @@ export class WidgetManager {
                 width: pxWidth,
             });
             entry.instance = inst || null;
+            entry.lastWidthMm = w.w;
         } catch (err) {
             if (seq !== entry.mountSeq) return;
             body.innerHTML = `<div class="board-widget-error">Errore widget: ${String(err && err.message ? err.message : err)}</div>`;
@@ -592,6 +603,7 @@ export class WidgetManager {
             }
             entry.widget.w = Math.max(50, Math.round((drag.origW + dw) * 10) / 10);
             entry.widget.h = Math.max(32, Math.round((drag.origH + dh) * 10) / 10);
+            entry.lastWidthMm = entry.widget.w;
             this._applyGeometry(entry.widget, entry);
             if (entry.instance && typeof entry.instance.resize === 'function') {
                 try { entry.instance.resize(Math.round(entry.widget.w * OVERLAY_PX_PER_MM)); } catch (_) { /* ignore */ }
@@ -604,6 +616,7 @@ export class WidgetManager {
             const cur = drag;
             drag = null;
             if (entry && cur.moved) {
+                entry.lastWidthMm = entry.widget.w;
                 if (entry.instance && typeof entry.instance.resize === 'function') {
                     try { entry.instance.resize(Math.round(entry.widget.w * OVERLAY_PX_PER_MM)); } catch (_) { /* ignore */ }
                 }

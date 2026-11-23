@@ -12,6 +12,7 @@ import {
     exportPageToSVG,
     extractBoardDataFromSVG,
     parseColorWithAlpha,
+    cloneStyledWidgetSVG,
 } from '../assets/js/matephis-board-src/export/svg-export.js';
 import {
     PDF_A4_W,
@@ -234,6 +235,161 @@ describe('SVG vector export & metadata round-trip (svg-export.js)', () => {
         expect(extractBoardDataFromSVG('')).toBeNull();
         expect(extractBoardDataFromSVG('<svg></svg>')).toBeNull();
         expect(extractBoardDataFromSVG('<svg><metadata id="matephis-board-data">{bad json</metadata></svg>')).toBeNull();
+    });
+
+    it('inlines computed presentation styles onto cloned widget <svg> nodes when window.getComputedStyle is present', () => {
+        const prevWindow = globalThis.window;
+        try {
+            function makeMockSvgNode(tagName, attrs = {}, children = []) {
+                const styleMap = {};
+                const node = {
+                    nodeType: 1,
+                    tagName: tagName.toUpperCase(),
+                    _attrs: { ...attrs },
+                    children,
+                    style: {
+                        setProperty(k, v) { styleMap[k] = String(v); },
+                        getPropertyValue(k) { return styleMap[k] || ''; },
+                    },
+                    getAttribute(k) { return Object.prototype.hasOwnProperty.call(this._attrs, k) ? this._attrs[k] : null; },
+                    setAttribute(k, v) { this._attrs[k] = String(v); },
+                    closest: (sel) => (sel.includes('.matephis-plot-container') ? containerNode : null),
+                    cloneNode(deep) {
+                        const clonedChildren = deep ? this.children.map((c) => c.cloneNode(true)) : [];
+                        return makeMockSvgNode(this.tagName, this._attrs, clonedChildren);
+                    },
+                    get outerHTML() {
+                        const styleEntries = Object.entries(styleMap).map(([k, v]) => `${k}: ${v}`).join('; ');
+                        const allAttrs = { ...this._attrs };
+                        if (styleEntries) allAttrs.style = styleEntries;
+                        const attrStr = Object.entries(allAttrs).map(([k, v]) => ` ${k}="${v}"`).join('');
+                        const inner = this.children.map((c) => c.outerHTML).join('');
+                        return `<${this.tagName.toLowerCase()}${attrStr}>${inner}</${this.tagName.toLowerCase()}>`;
+                    },
+                };
+                return node;
+            }
+
+            const containerNode = { tagName: 'DIV', _class: 'matephis-plot-container' };
+            const wireLine = makeMockSvgNode('line', { class: 'matephis-circuit-wire', x1: '0', y1: '0', x2: '100', y2: '0' });
+            const labelText = makeMockSvgNode('text', { class: 'matephis-circuit-label', x: '20', y: '20' });
+            const hiddenGroup = makeMockSvgNode('g', { class: 'hidden-layer' });
+            const svgNode = makeMockSvgNode('svg', { viewBox: '0 0 200 120' }, [wireLine, labelText, hiddenGroup]);
+
+            globalThis.window = {
+                getComputedStyle(el) {
+                    if (el === containerNode) return { backgroundColor: 'rgb(18, 18, 18)' };
+                    if (el === wireLine) {
+                        return {
+                            fill: 'none',
+                            fillOpacity: '1',
+                            stroke: 'rgb(226, 232, 240)',
+                            strokeWidth: '2px',
+                            strokeOpacity: '1',
+                            strokeDasharray: 'none',
+                            strokeLinecap: 'square',
+                            strokeLinejoin: 'miter',
+                            opacity: '1',
+                            visibility: 'visible',
+                            display: 'inline',
+                        };
+                    }
+                    if (el === labelText) {
+                        return {
+                            fill: 'rgb(201, 203, 207)',
+                            fillOpacity: '1',
+                            stroke: 'none',
+                            strokeWidth: '1px',
+                            strokeOpacity: '1',
+                            strokeDasharray: 'none',
+                            opacity: '1',
+                            visibility: 'visible',
+                            display: 'inline',
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            fontWeight: '400',
+                        };
+                    }
+                    if (el === hiddenGroup) {
+                        return { display: 'none', visibility: 'hidden', opacity: '1' };
+                    }
+                    return {
+                        backgroundColor: 'rgba(0, 0, 0, 0)',
+                        fill: 'rgb(0, 0, 0)',
+                        stroke: 'none',
+                        opacity: '1',
+                        visibility: 'visible',
+                        display: 'block',
+                        fontFamily: 'sans-serif',
+                        fontSize: '12px',
+                        fontWeight: '400',
+                    };
+                },
+            };
+
+            const cloned = cloneStyledWidgetSVG(svgNode);
+            expect(cloned).not.toBe(svgNode);
+            expect(cloned.style.getPropertyValue('background-color')).toBe('rgb(18, 18, 18)');
+            expect(cloned.children[0].style.getPropertyValue('fill')).toBe('none');
+            expect(cloned.children[0].style.getPropertyValue('stroke')).toBe('rgb(226, 232, 240)');
+            expect(cloned.children[0].style.getPropertyValue('stroke-width')).toBe('2px');
+            expect(cloned.children[1].style.getPropertyValue('fill')).toBe('rgb(201, 203, 207)');
+            expect(cloned.children[1].style.getPropertyValue('stroke')).toBe('none');
+            expect(cloned.children[1].style.getPropertyValue('font-size')).toBe('14px');
+            expect(cloned.children[2].style.getPropertyValue('display')).toBe('none');
+            expect(cloned.children[2].style.getPropertyValue('visibility')).toBe('hidden');
+            // Original node should remain untouched
+            expect(wireLine.style.getPropertyValue('stroke')).toBe('');
+
+            const scene = new BoardScene(1280, 720);
+            scene.widgets.push({ id: 'w_circ', kind: 'circuit', x: 10, y: 10, w: 120, h: 80, data: {} });
+            const svgOut = exportPageToSVG(scene, {
+                theme: 'dark',
+                widgetElements: new Map([['w_circ', { querySelector: () => null, querySelectorAll: () => [svgNode] }]]),
+            });
+            expect(svgOut).toContain('stroke: rgb(226, 232, 240)');
+            expect(svgOut).toContain('fill: none');
+            expect(svgOut).toContain('font-size: 14px');
+        } finally {
+            globalThis.window = prevWindow;
+        }
+    });
+
+    it('wraps foreignObject body unless the root element itself declares xmlns=', () => {
+        const scene = new BoardScene(1280, 720);
+        scene.widgets.push(
+            { id: 'w_nested_ns', kind: 'exercise', x: 10, y: 10, w: 100, h: 60, data: {} },
+            { id: 'w_root_ns', kind: 'exercise', x: 120, y: 10, w: 100, h: 60, data: {} }
+        );
+        const svgOut = exportPageToSVG(scene, {
+            widgetElements: new Map([
+                ['w_nested_ns', { outerHTML: '<div><svg xmlns="http://www.w3.org/2000/svg"></svg></div>', querySelector: () => null }],
+                ['w_root_ns', { outerHTML: '<div xmlns="http://www.w3.org/1999/xhtml"><p>OK</p></div>', querySelector: () => null }],
+            ]),
+        });
+        expect(svgOut).toContain('<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;overflow:hidden;font-family:\'Noto Sans\',sans-serif;color:#18181b;background:#ffffff;"><div><svg xmlns="http://www.w3.org/2000/svg"></svg></div></div>');
+        expect(svgOut).toContain('<foreignObject x="120" y="10" width="100" height="60"><div xmlns="http://www.w3.org/1999/xhtml"><p>OK</p></div></foreignObject>');
+    });
+
+    it('renders preset name instead of [object Object] when widget.data.preset is an object in SVG and PDF', () => {
+        const scene = new BoardScene(1280, 720);
+        scene.widgets.push({
+            id: 'w_incline',
+            kind: 'physics',
+            x: 20,
+            y: 20,
+            w: 140,
+            h: 90,
+            data: { preset: { name: 'incline', with: { angle: 30, mu: 0.25 } } },
+        });
+
+        const svgOut = exportPageToSVG(scene, { theme: 'light' });
+        expect(svgOut).toContain('physics: incline');
+        expect(svgOut).not.toContain('[object Object]');
+
+        const pdfText = latin1Decode(generatePDFBytes(scene, { theme: 'light' }));
+        expect(pdfText).toContain('(physics: incline) Tj');
+        expect(pdfText).not.toContain('[object Object]');
     });
 });
 

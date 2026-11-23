@@ -223,6 +223,123 @@ function findWidgetElement(widget, options) {
     return null;
 }
 
+const SVG_STYLE_PROPS = [
+    ['fill', 'fill'],
+    ['fill-opacity', 'fillOpacity'],
+    ['stroke', 'stroke'],
+    ['stroke-width', 'strokeWidth'],
+    ['stroke-opacity', 'strokeOpacity'],
+    ['stroke-dasharray', 'strokeDasharray'],
+    ['stroke-linecap', 'strokeLinecap'],
+    ['stroke-linejoin', 'strokeLinejoin'],
+    ['opacity', 'opacity'],
+    ['color', 'color'],
+    ['visibility', 'visibility'],
+    ['display', 'display'],
+];
+
+const SVG_TEXT_STYLE_PROPS = [
+    ['font-family', 'fontFamily'],
+    ['font-size', 'fontSize'],
+    ['font-weight', 'fontWeight'],
+];
+
+function isTransparentColor(val) {
+    if (!val) return true;
+    const s = String(val).trim().toLowerCase();
+    return s === 'transparent' || s === 'rgba(0, 0, 0, 0)' || s === 'rgba(0,0,0,0)';
+}
+
+function applyInlineStyle(el, cssProp, camelProp, value) {
+    if (!value) return;
+    if (el.style && typeof el.style.setProperty === 'function') {
+        el.style.setProperty(cssProp, value);
+        return;
+    }
+    if (el.style && typeof el.style === 'object') {
+        el.style[camelProp] = value;
+    }
+    if (typeof el.setAttribute === 'function') {
+        const prev = el.getAttribute('style') || '';
+        const cleaned = prev
+            .split(';')
+            .map((part) => part.trim())
+            .filter((part) => part && !part.toLowerCase().startsWith(`${cssProp}:`));
+        cleaned.push(`${cssProp}:${value}`);
+        el.setAttribute('style', `${cleaned.join(';')};`);
+    }
+}
+
+/**
+ * Clone a live widget `<svg>` and, when `window.getComputedStyle` is available,
+ * inline computed presentation styles onto the cloned subtree so CSS-styled
+ * diagrams (`MatephisCircuit`) and dark-mode widgets render faithfully in
+ * standalone `.svg` exports and PDF `data:image/svg+xml` rasterizations.
+ */
+export function cloneStyledWidgetSVG(svgEl) {
+    if (!svgEl || typeof svgEl.cloneNode !== 'function') return svgEl;
+    const clone = svgEl.cloneNode(true);
+    if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') {
+        return clone;
+    }
+
+    const walk = (srcNode, dstNode, isRoot = false, parentHidden = false) => {
+        if (!srcNode || !dstNode) return;
+        const cs = window.getComputedStyle(srcNode);
+        let nodeHidden = parentHidden;
+        if (cs) {
+            const tag = srcNode.tagName ? String(srcNode.tagName).toLowerCase() : '';
+            if (cs.visibility && cs.visibility !== 'visible') nodeHidden = true;
+            for (let i = 0; i < SVG_STYLE_PROPS.length; i++) {
+                const [cssProp, camelProp] = SVG_STYLE_PROPS[i];
+                const val = cs[camelProp];
+                if (!val) continue;
+                if (cssProp === 'display' && val !== 'none') continue;
+                if (cssProp === 'visibility' && val === 'visible' && !parentHidden) continue;
+                if (cssProp === 'stroke-dasharray' && val === 'none') continue;
+                if ((cssProp === 'opacity' || cssProp === 'fill-opacity' || cssProp === 'stroke-opacity') && val === '1') {
+                    continue;
+                }
+                applyInlineStyle(dstNode, cssProp, camelProp, val);
+            }
+            if (tag === 'svg' || tag === 'g' || tag === 'text' || tag === 'tspan' || tag === 'textpath') {
+                for (let i = 0; i < SVG_TEXT_STYLE_PROPS.length; i++) {
+                    const [cssProp, camelProp] = SVG_TEXT_STYLE_PROPS[i];
+                    const val = cs[camelProp];
+                    if (val) applyInlineStyle(dstNode, cssProp, camelProp, val);
+                }
+            }
+            if (isRoot) {
+                let bg = cs.backgroundColor;
+                if (isTransparentColor(bg) && typeof srcNode.closest === 'function') {
+                    const container = srcNode.closest('.matephis-plot-container, .matephis-circuit-container');
+                    if (container) {
+                        const containerCs = window.getComputedStyle(container);
+                        if (containerCs && !isTransparentColor(containerCs.backgroundColor)) {
+                            bg = containerCs.backgroundColor;
+                        }
+                    }
+                }
+                if (!isTransparentColor(bg)) {
+                    applyInlineStyle(dstNode, 'background-color', 'backgroundColor', bg);
+                }
+            }
+        }
+
+        const srcKids = srcNode.children;
+        const dstKids = dstNode.children;
+        if (srcKids && dstKids) {
+            const len = Math.min(srcKids.length, dstKids.length);
+            for (let i = 0; i < len; i++) {
+                walk(srcKids[i], dstKids[i], false, nodeHidden);
+            }
+        }
+    };
+
+    walk(svgEl, clone, true, false);
+    return clone;
+}
+
 function serializeNode(node) {
     if (!node) return '';
     if (typeof XMLSerializer === 'function') {
@@ -252,7 +369,8 @@ function renderWidgetSVG(widget, options, theme) {
                 if (typeof svgEl.closest === 'function' && svgEl.closest('.mjx-container, .board-widget-handle, .board-widget-chrome')) {
                     continue;
                 }
-                const rawSvg = serializeNode(svgEl);
+                const styledSvg = cloneStyledWidgetSVG(svgEl);
+                const rawSvg = serializeNode(styledSvg);
                 if (rawSvg && rawSvg.includes('<svg')) {
                     const innerMatch = rawSvg.match(/^<svg\b([^>]*)>([\s\S]*)<\/svg>$/i);
                     if (innerMatch) {
@@ -278,7 +396,7 @@ function renderWidgetSVG(widget, options, theme) {
 
         const serializedBody = serializeNode(body);
         if (serializedBody) {
-            const xhtml = serializedBody.includes('xmlns=')
+            const xhtml = /^<[a-zA-Z0-9:-]+[^>]*\sxmlns=/.test(serializedBody)
                 ? serializedBody
                 : `<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;overflow:hidden;font-family:'Noto Sans',sans-serif;color:${textFill};background:${cardBg};">${serializedBody}</div>`;
             return `<g class="board-widget-embed" data-widget-id="${escapeXml(widget.id)}" data-widget-kind="${escapeXml(widget.kind)}">`
@@ -289,7 +407,9 @@ function renderWidgetSVG(widget, options, theme) {
     }
 
     // Headless / fallback placeholder frame
-    const summary = (widget.data && (widget.data.title || widget.data.fn || widget.data.preset || widget.data.slug)) || '';
+    const rawPreset = widget.data && widget.data.preset;
+    const presetName = rawPreset && typeof rawPreset === 'object' ? (rawPreset.name || '') : rawPreset;
+    const summary = (widget.data && (widget.data.title || widget.data.fn || presetName || widget.data.slug)) || '';
     const label = summary ? `${widget.kind}: ${String(summary).slice(0, 40)}` : String(widget.kind || 'widget');
     return `<g class="board-widget-placeholder" data-widget-id="${escapeXml(widget.id)}" data-widget-kind="${escapeXml(widget.kind)}">`
         + `<rect x="${fmt(widget.x)}" y="${fmt(widget.y)}" width="${fmt(widget.w)}" height="${fmt(widget.h)}" rx="2" fill="${cardBg}" stroke="${cardBorder}" stroke-width="0.45" />`

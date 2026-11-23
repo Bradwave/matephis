@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { createStroke } from '../assets/js/matephis-board-src/ink/stroke.js';
 import { HistoryStack } from '../assets/js/matephis-board-src/ink/history.js';
 import {
@@ -6,6 +6,7 @@ import {
     nextWidgetId,
     nextConnectorId,
 } from '../assets/js/matephis-board-src/model/scene.js';
+import { WidgetManager } from '../assets/js/matephis-board-src/ui/widgets.js';
 
 describe('Board Phase 2 foundation — scene v2 schema & footprint', () => {
     it('serializes and restores v2 pages with widgets, connectors, and backgrounds compactly', () => {
@@ -194,5 +195,83 @@ describe('Board Phase 2 foundation — page-wide HistoryStack commands', () => {
         // Redo all the way through
         while (history.canRedo) history.redo(page);
         expect(scene.isPageEmpty()).toBe(true);
+    });
+});
+
+describe('WidgetManager resize undo/redo sync (widgets.js)', () => {
+    const prevDoc = globalThis.document;
+    afterEach(() => { globalThis.document = prevDoc; });
+
+    it('calls entry.instance.resize() in syncFromScene() when widget width changes via undo/redo', async () => {
+        function makeEl(tag = 'div') {
+            return {
+                tagName: tag.toUpperCase(),
+                className: '',
+                dataset: {},
+                style: {},
+                children: [],
+                classList: { toggle() {}, add() {}, remove() {} },
+                setAttribute() {},
+                addEventListener() {},
+                append(...kids) { this.children.push(...kids); },
+                appendChild(c) { this.children.push(c); return c; },
+                removeChild(c) {
+                    const idx = this.children.indexOf(c);
+                    if (idx !== -1) this.children.splice(idx, 1);
+                },
+                set innerHTML(_) { this.children = []; },
+            };
+        }
+        globalThis.document = { createElement: (t) => makeEl(t) };
+
+        const resizeCalls = [];
+        const fakeEngine = {
+            render(_body, _cfg, opts) {
+                return {
+                    resize(px) { resizeCalls.push(px); },
+                    destroy() {},
+                    initialWidth: opts.width,
+                };
+            },
+        };
+        const scene = new BoardScene(1280, 720);
+        const history = new HistoryStack();
+        const overlay = {
+            widgetsLayer: makeEl('div'),
+            chromeLayer: makeEl('div'),
+            onCameraSync: () => () => {},
+        };
+        const wm = new WidgetManager(overlay, {
+            scene,
+            history,
+            surface: { width: 1280, height: 720 },
+            engineLoader: {
+                loadEngine: async () => fakeEngine,
+                ensureForPage: () => {},
+            },
+        });
+
+        const w = wm.insertWidget('plot', { fn: 'sin(x)' }, { w: 120, h: 80 });
+        await new Promise((r) => setTimeout(r, 0));
+        expect(resizeCalls).toEqual([]);
+
+        // Simulate resize commit + undo + redo
+        w.w = 180;
+        history.push({ type: 'widget-update', id: w.id, prev: { w: 120, h: 80 }, next: { w: 180, h: 80 } });
+        wm.syncFromScene();
+        expect(resizeCalls).toEqual([720]);
+
+        history.undo(scene.currentPage);
+        wm.syncFromScene();
+        expect(resizeCalls).toEqual([720, 480]);
+
+        history.redo(scene.currentPage);
+        wm.syncFromScene();
+        expect(resizeCalls).toEqual([720, 480, 720]);
+
+        // Unchanged width move should not trigger resize
+        w.x += 10;
+        wm.syncFromScene();
+        expect(resizeCalls).toEqual([720, 480, 720]);
     });
 });

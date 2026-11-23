@@ -8,7 +8,7 @@
 import { A4_W, A4_H, bboxIntersects, computeA4Footprint } from '../ink/geometry.js';
 import { resolveInkColor } from '../ink/palette.js';
 import { traceStrokeCommands } from '../ink/stroke.js';
-import { parseColorWithAlpha } from './svg-export.js';
+import { parseColorWithAlpha, cloneStyledWidgetSVG } from './svg-export.js';
 
 export const MM_TO_PT = 72 / 25.4;
 export const PDF_A4_W = 841.89;
@@ -258,7 +258,9 @@ export function generatePDFBytes(scene, options = {}) {
                     const fillStr = isDark ? '0.11 0.11 0.12 rg' : '1 1 1 rg';
                     const strokeStr = isDark ? '0.24 0.24 0.26 RG' : '0.83 0.83 0.85 RG';
                     const textStr = isDark ? '0.7 0.7 0.74 rg' : '0.35 0.35 0.38 rg';
-                    const summary = (w.data && (w.data.title || w.data.fn || w.data.preset || w.data.slug)) || '';
+                    const rawPreset = w.data && w.data.preset;
+                    const presetName = rawPreset && typeof rawPreset === 'object' ? (rawPreset.name || '') : rawPreset;
+                    const summary = (w.data && (w.data.title || w.data.fn || presetName || w.data.slug)) || '';
                     const label = summary ? `${w.kind}: ${String(summary).slice(0, 36)}` : String(w.kind || 'widget');
                     ops.push(`${fillStr} ${strokeStr} 0.8 w ${fmt(xPt)} ${fmt(yBotPt)} ${fmt(wPt)} ${fmt(hPt)} re B`);
                     ops.push(`BT /F1 9 Tf ${textStr} ${fmt(xPt + 10)} ${fmt(yBotPt + hPt - 16)} Td (${escapePdfString(label)}) Tj ET`);
@@ -479,7 +481,7 @@ async function rasterizeWidgetElement(el, widget, dpi = 150, theme = 'light') {
             if (typeof svgEl.closest === 'function' && svgEl.closest('.mjx-container, .board-widget-handle, .board-widget-chrome')) {
                 continue;
             }
-            const clone = svgEl.cloneNode(true);
+            const clone = cloneStyledWidgetSVG(svgEl);
             clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             if (!clone.getAttribute('width')) clone.setAttribute('width', String(widthPx));
             if (!clone.getAttribute('height')) clone.setAttribute('height', String(heightPx));

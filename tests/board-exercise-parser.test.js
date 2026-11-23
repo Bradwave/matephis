@@ -240,6 +240,83 @@ describe('Exercise Picker — HTML extraction & URL rewriting (pure Node)', () =
         expect(res.noteTitle).toBe('Injected Note');
         expect(res.match.text).toBe('Esercizio test');
     });
+
+    it('handles non-Array HTMLCollection-like children without .filter/.map on nested <ol> extraction (2.7)', () => {
+        function htmlCollectionOf(arr) {
+            const col = {
+                length: arr.length,
+                [Symbol.iterator]: function* () {
+                    for (let i = 0; i < arr.length; i++) yield arr[i];
+                },
+            };
+            for (let i = 0; i < arr.length; i++) col[i] = arr[i];
+            // Explicitly lacks .filter / .map / .find like browser HTMLCollection
+            return col;
+        }
+
+        function makeDomNode(tagName, { text = '', html = '', attrs = {}, childNodes = [], children = [] } = {}) {
+            const node = {
+                nodeType: 1,
+                tagName: tagName.toUpperCase(),
+                textContent: text,
+                innerHTML: html,
+                outerHTML: `<${tagName.toLowerCase()}>${html || text}</${tagName.toLowerCase()}>`,
+                childNodes: htmlCollectionOf(childNodes),
+                children: htmlCollectionOf(children),
+                getAttribute: (k) => (Object.prototype.hasOwnProperty.call(attrs, k) ? attrs[k] : null),
+                setAttribute: (k, v) => { attrs[k] = String(v); },
+                removeAttribute: (k) => { delete attrs[k]; },
+                querySelector: () => null,
+                querySelectorAll: () => htmlCollectionOf([]),
+                cloneNode() { return node; },
+            };
+            return node;
+        }
+
+        const subLis = Array.from({ length: 7 }, (_, idx) => makeDomNode('li', {
+            text: `Sub ${idx + 1}`,
+            html: idx === 6 ? 'Limite 2.7' : `Sub ${idx + 1}`,
+        }));
+        const nestedOl = makeDomNode('ol', {
+            text: subLis.map((n) => n.textContent).join(' '),
+            children: subLis,
+            childNodes: subLis,
+        });
+        const stemText = { nodeType: 3, data: 'Calcola i seguenti limiti:', textContent: 'Calcola i seguenti limiti:' };
+        const li1 = makeDomNode('li', { text: 'Primo', html: 'Primo' });
+        const li2 = makeDomNode('li', {
+            text: 'Calcola i seguenti limiti: Limite 2.7',
+            html: 'Calcola i seguenti limiti:<ol>...</ol>',
+            childNodes: [stemText, nestedOl],
+            children: [nestedOl],
+        });
+        const topOl = makeDomNode('ol', { children: [li1, li2], childNodes: [li1, li2] });
+        const h2 = makeDomNode('h2', { text: 'Quesiti' });
+        const body = makeDomNode('body', { children: [h2, topOl], childNodes: [h2, topOl] });
+
+        class BrowserLikeParser {
+            parseFromString() {
+                return {
+                    querySelector: (sel) => (sel === 'h1' ? { textContent: 'Esercizi sui limiti' } : null),
+                    body,
+                };
+            }
+        }
+
+        const res = extractExercisesFromHtml('<html></html>', {
+            noteUrl: '/notes/esercizi-limiti',
+            itemNumber: 2,
+            subItemNumber: 7,
+            DOMParserImpl: BrowserLikeParser,
+        });
+        expect(res.match).not.toBeNull();
+        expect(res.match.itemNumber).toBe(2);
+        expect(res.match.subItemNumber).toBe(7);
+        expect(res.match.label).toBe('#2.7');
+        expect(res.match.html).toContain('Calcola i seguenti limiti:');
+        expect(res.match.html).toContain('2.7)');
+        expect(res.match.html).toContain('Limite 2.7');
+    });
 });
 
 describe('Matephis Widgets — preset JSON & quick plot config validation (zero engine warnings)', () => {
