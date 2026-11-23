@@ -401,7 +401,7 @@ describe('Track 2A — InputController dispatch for shape & lasso', () => {
 });
 
 describe('Track 2A — BoardToolbar Lasso & Shapes wiring (no leftover Track 2A stubs)', () => {
-    it('wires lassoTray, shapesTray, and insertTray shapes without .is-stub while preserving 2B/2C/Phase4 stubs', async () => {
+    it('wires lassoTray, shapesTray, and insertTray shapes without .is-stub while preserving Phase 4 cloud stub', async () => {
         const fs = await import('node:fs');
         const path = await import('node:path');
         const toolbarSrc = fs.readFileSync(
@@ -424,11 +424,11 @@ describe('Track 2A — BoardToolbar Lasso & Shapes wiring (no leftover Track 2A 
         expect(toolbarSrc).not.toContain('Triangolo (in arrivo)');
         expect(toolbarSrc).toContain("{ id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: false }");
 
-        // Verify Tracks 2B/2C/Phase4 stubs remain untouched
-        expect(toolbarSrc).toContain("{ id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: true }");
-        expect(toolbarSrc).toContain("{ id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: true }");
-        expect(toolbarSrc).toContain("{ id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: true }");
-        expect(toolbarSrc).toContain("{ id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: true }");
+        // Verify integrated Tracks 2B/2C insert items are live and Phase 4 cloud stub remains
+        expect(toolbarSrc).toContain("{ id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: false }");
+        expect(toolbarSrc).toContain("{ id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: false }");
+        expect(toolbarSrc).toContain("{ id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: false }");
+        expect(toolbarSrc).toContain("{ id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: false }");
         expect(toolbarSrc).toContain("Sessione cloud QR / R2 (in arrivo)");
     });
 });

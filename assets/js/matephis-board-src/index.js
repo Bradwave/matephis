@@ -325,6 +325,7 @@ async function initMatephisBoard() {
         },
         onToolChange: (toolState) => {
             if (toolState.tool !== 'lasso' && lasso) lasso.clearSelection();
+            if (toolState.tool !== 'connector' && connectorManager) connectorManager.clearSelection();
             if (toolState.tool === 'connector' && toolState.connectorMode === 'new' && connectorManager) {
                 connectorManager.clearPending();
             }
