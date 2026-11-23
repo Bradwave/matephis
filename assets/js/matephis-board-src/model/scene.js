@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = {
     toolbarLayout: 'auto',  // 'auto' | 'rail' | 'bar'
     toolbarSide: 'right',   // rail side: 'right' | 'left'
     toolbarMinimal: false,  // essential toolbar: pen, quick colours, eraser, undo/redo
+    quickMenu: true,        // two-finger tap opens the quick menu where you tap
 };
 
 let pageCounter = 1;

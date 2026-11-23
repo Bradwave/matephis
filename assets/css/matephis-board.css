@@ -164,10 +164,6 @@ body.board-body {
     order: 9;
 }
 
-.is-bar .board-swap-btn {
-    display: none;
-}
-
 /* "rail" layout (touch / smartboard): vertical 2-column rail on the teacher's side,
  * in the lower part of the screen; navigation pill bottom-centre. */
 
@@ -501,6 +497,89 @@ body.board-body {
 .is-minimal .board-nav,
 .is-minimal .board-rail .board-full-only {
     display: none;
+}
+
+/* Quick menu: ring of one-tap actions opened by a two-finger tap (ui/quick-menu.js) */
+.board-quick-menu {
+    --qr: calc(var(--bu) * 1.6);
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 45;
+    width: calc(var(--qr) * 2 + var(--bu) + 8px);
+    height: calc(var(--qr) * 2 + var(--bu) + 8px);
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: var(--chrome-shadow);
+    animation: board-quick-in 0.12s ease-out;
+}
+
+.board-quick-menu[hidden] {
+    display: none;
+}
+
+@keyframes board-quick-in {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.board-quick-item {
+    appearance: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--bu);
+    height: var(--bu);
+    margin: calc(var(--bu) * -0.5) 0 0 calc(var(--bu) * -0.5);
+    transform: rotate(var(--a, 0deg)) translate(var(--qr)) rotate(calc(-1 * var(--a, 0deg)));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.board-quick-item.is-center {
+    transform: none;
+    width: calc(var(--bu) * 1.2);
+    height: calc(var(--bu) * 1.2);
+    margin: calc(var(--bu) * -0.6) 0 0 calc(var(--bu) * -0.6);
+    border-color: var(--border);
+}
+
+.board-quick-item svg {
+    width: calc(var(--bu) * 0.5);
+    height: calc(var(--bu) * 0.5);
+    display: block;
+}
+
+.board-quick-item .board-style-svg {
+    width: calc(var(--bu) * 0.7);
+    height: calc(var(--bu) * 0.3);
+}
+
+.board-quick-item:hover:not(:disabled) {
+    background: var(--bg2);
+}
+
+.board-quick-item.active {
+    background: var(--title);
+    color: var(--bg);
+    border-color: var(--title);
+}
+
+.board-quick-item.active .board-quick-dot-fill {
+    box-shadow: 0 0 0 2px var(--bg);
+}
+
+.board-quick-item:disabled {
+    opacity: 0.28;
+    cursor: default;
 }
 
 .is-bar.is-minimal .board-rail-group.is-sys {

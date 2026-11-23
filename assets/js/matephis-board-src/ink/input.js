@@ -19,6 +19,11 @@ import { createStroke, refreshStrokeBBox } from './stroke.js';
 import { EraseGesture } from './eraser.js';
 
 const GESTURE_CANCEL_MS = 95;
+// Two-finger tap (opens the quick menu): both fingers down and up quickly, barely moving.
+const TAP_MAX_MS = 350;
+const TAP_MAX_MOVE_PX = 14;
+// A first-finger dot committed just before the second finger landed is undone on a tap.
+const TAP_DOT_MS = 250;
 
 export class InputController {
     constructor(surface, {
@@ -30,6 +35,7 @@ export class InputController {
         onCameraChange = null,
         onOverviewPick = null,
         onTelemetry = null,
+        onTwoFingerTap = null,
     }) {
         this.surface = surface;
         this.scene = scene;
@@ -40,6 +46,8 @@ export class InputController {
         this.onCameraChange = onCameraChange;
         this.onOverviewPick = onOverviewPick;
         this.onTelemetry = onTelemetry;
+        this.onTwoFingerTap = onTwoFingerTap;
+        this.tapCandidate = null;
 
         this.el = surface.activeCanvas;
         this.pointers = new Map(); // pointerId -> { sx, sy, type, w, h }
@@ -148,19 +156,26 @@ export class InputController {
         // Transition to 2-finger pan/pinch-zoom
         if (this.pointers.size === 2 && !this.palmActive) {
             // Cancel accidental micro-dot if 2nd finger landed right after 1st
-            if (this.mode === 'draw' && performance.now() - this.strokeStartTime < GESTURE_CANCEL_MS) {
+            const sinceFirst = performance.now() - this.strokeStartTime;
+            let committedDot = false;
+            if (this.mode === 'draw' && sinceFirst < GESTURE_CANCEL_MS) {
                 this._cancelUncommittedDraw();
             } else if (this.mode === 'draw') {
+                committedDot = sinceFirst < TAP_DOT_MS;
                 this._commitDraw();
             } else if (this.mode === 'erase') {
                 this._finishErase();
             }
             this._startPinch();
+            this._startTapCandidate(committedDot);
             this._emitTelemetry(e, 1);
             return;
         }
 
-        if (this.pointers.size > 2) return;
+        if (this.pointers.size > 2) {
+            this.tapCandidate = null;
+            return;
+        }
 
         // Space + drag or middle-mouse button pans on desktop
         if (this.spaceHeld || e.button === 1) {
@@ -267,6 +282,50 @@ export class InputController {
         };
     }
 
+    _startTapCandidate(committedDot) {
+        const starts = new Map();
+        for (const [id, p] of this.pointers) starts.set(id, { sx: p.sx, sy: p.sy });
+        const cam = this.scene.camera;
+        this.tapCandidate = {
+            t0: performance.now(),
+            starts,
+            moved: false,
+            committedDot,
+            camera: { x: cam.x, y: cam.y, scale: cam.scale },
+        };
+    }
+
+    _trackTapMove(pointerId, sx, sy) {
+        const tc = this.tapCandidate;
+        if (!tc || tc.moved) return;
+        const st = tc.starts.get(pointerId);
+        if (st && Math.hypot(sx - st.sx, sy - st.sy) > TAP_MAX_MOVE_PX) tc.moved = true;
+    }
+
+    /** On the first finger lift of a pinch: was it a two-finger tap? */
+    _resolveTap() {
+        const tc = this.tapCandidate;
+        this.tapCandidate = null;
+        if (!tc || tc.moved || !this.onTwoFingerTap) return;
+        if (performance.now() - tc.t0 > TAP_MAX_MS) return;
+        if (this.scene.settings.quickMenu === false) return;
+
+        // Undo the tiny pinch drift and any dot the first finger left behind.
+        Object.assign(this.scene.camera, tc.camera);
+        if (tc.committedDot && this.history.undo(this.scene.strokes)) {
+            if (this.onSceneMutated) this.onSceneMutated();
+        }
+        this.surface.requestCommittedRedraw();
+        this.surface.renderActiveNow();
+        if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+
+        const pts = [...tc.starts.values()];
+        const rect = this.el.getBoundingClientRect();
+        const x = rect.left + (pts[0].sx + pts[1].sx) / 2;
+        const y = rect.top + (pts[0].sy + pts[1].sy) / 2;
+        this.onTwoFingerTap(x, y);
+    }
+
     _onPointerMove(e) {
         if (!this.pointers.has(e.pointerId)) return;
         e.preventDefault();
@@ -277,6 +336,7 @@ export class InputController {
         rec.sy = sy;
         rec.w = e.width || 0;
         rec.h = e.height || 0;
+        if (this.mode === 'pinch') this._trackTapMove(e.pointerId, sx, sy);
 
         // Mid-stroke palm detection upgrade (if touch blooms into palm)
         if (this.mode === 'draw' && this._isPalm(e) && performance.now() - this.strokeStartTime < 140) {
@@ -374,6 +434,7 @@ export class InputController {
 
         if (this.mode === 'pinch') {
             if (this.pointers.size < 2) {
+                this._resolveTap();
                 this.pinchAnchor = null;
                 this.mode = 'idle';
             }

@@ -12,6 +12,7 @@ import { OptionsMenu } from './ui/options.js';
 import { FutureMenus } from './ui/future-menus.js';
 import { PinnedStrip } from './ui/pinned-strip.js';
 import { PerfHud } from './ui/perf-hud.js';
+import { QuickMenu } from './ui/quick-menu.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -49,6 +50,8 @@ async function initMatephisBoard() {
     let toolbar = null;
     let optionsMenu = null;
     let futureMenus = null;
+    let quickMenu = null;
+    let lastDismissAt = 0;
 
     const applyTheme = (nextTheme) => {
         const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -277,18 +280,28 @@ async function initMatephisBoard() {
         },
     });
 
+    quickMenu = new QuickMenu(root, {
+        toolbar,
+        getTheme,
+        onUndo: () => toolbar.onUndo && toolbar.onUndo(),
+    });
+
     new InputController(surface, {
         scene,
         history: historyProxy,
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
-            const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover);
+            const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover || quickMenu.isOpen);
+            quickMenu.hide();
             toolbar.closeTrays();
             optionsMenu.hide();
             futureMenus.hideAll();
             toolbar.setActiveFuturePopover(null);
             toolbar.anchorPopover(null);
-            return hadPopover;
+            // The second finger of a two-finger tap that closed a menu must not draw either.
+            const now = performance.now();
+            if (hadPopover) lastDismissAt = now;
+            return hadPopover || now - lastDismissAt < 200;
         },
         onSceneMutated: () => {
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
@@ -301,6 +314,14 @@ async function initMatephisBoard() {
         },
         onOverviewPick: () => syncUI(),
         onTelemetry: (info) => perfHud.recordTelemetry(info),
+        onTwoFingerTap: (x, y) => {
+            toolbar.closeTrays();
+            optionsMenu.hide();
+            futureMenus.hideAll();
+            toolbar.setActiveFuturePopover(null);
+            toolbar.anchorPopover(null);
+            quickMenu.open(x, y);
+        },
     });
 
     // Keyboard shortcuts

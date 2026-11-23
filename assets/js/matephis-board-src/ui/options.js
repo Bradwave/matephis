@@ -59,6 +59,10 @@ export class OptionsMenu {
                     <input type="checkbox" data-opt="lowDpr" />
                 </label>
                 <label class="board-opt-row">
+                    <span>Menu rapido (tocco con due dita)</span>
+                    <input type="checkbox" data-opt="quickMenu" />
+                </label>
+                <label class="board-opt-row">
                     <span>HUD prestazioni e input</span>
                     <input type="checkbox" data-opt="showHud" />
                 </label>
@@ -128,7 +132,7 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'lowDpr', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
@@ -213,7 +217,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;

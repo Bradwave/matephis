@@ -1,10 +1,10 @@
 /**
  * Matephis Board chrome: two groups that are laid out per device.
  *
- * - Tool rail (`.board-rail`): Minimal toggle, Options + side swap | Pen, Highlighter, Eraser, Lasso, Laser,
+ * - Tool rail (`.board-rail`): Minimal toggle, Options | Pen, Highlighter, Eraser, Lasso, Laser,
  *   Insert (+) | 5 quick colours | Undo / Redo.
  *   On touch screens ("rail" layout) it is a 2-column vertical rail on the side where the
- *   teacher stands (right by default, swappable), low enough to reach on a wall board.
+ *   teacher stands (right by default; moved from the quick menu or Options), low enough to reach on a wall board.
  *   With a mouse ("bar" layout) the same groups form one horizontal bottom bar.
  * - Navigation pill (`.board-nav`): pages ‹ 1/N › + | zoom % | overview footprint | Pin | Cloud.
  *   Bottom-centre in the rail layout, part of the single bottom bar in the bar layout.
@@ -30,7 +30,6 @@ import { clearFloating, placeFloating } from './floating.js';
 const INSERT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-160h160v-80H520v-160h-80v160H280v80h160v160ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>';
 const MINIMIZE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>';
 const EXPAND_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
-const SWAP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M280-160 80-360l200-200 56 57-103 103h287v80H233l103 103-56 57Zm400-240-56-57 103-103H440v-80h287L624-743l56-57 200 200-200 200Z"/></svg>';
 
 export class BoardToolbar {
     constructor(hostEl, {
@@ -182,6 +181,24 @@ export class BoardToolbar {
         if (this.onToolChange) this.onToolChange(this.state);
     }
 
+    /** Quick-menu actions (two-finger tap). */
+    setPenColor(id) {
+        this.state.penColor = id;
+        this.selectTool('pen');
+    }
+
+    cyclePenStyle() {
+        const ids = PEN_STYLES.map((s) => s.id);
+        this.state.penStyle = ids[(ids.indexOf(this.state.penStyle) + 1) % ids.length];
+        this.selectTool('pen');
+    }
+
+    /** Move the side rail to 'left' or 'right' (only meaningful in the rail layout). */
+    setSide(side) {
+        if (this.onSettingChange) this.onSettingChange('toolbarSide', side);
+        this.relayout();
+    }
+
     /**
      * Re-read layout settings and viewport, then re-place whatever is open.
      * Called on construction, on resize and when a layout setting changes.
@@ -309,23 +326,16 @@ export class BoardToolbar {
         this.railEl.setAttribute('role', 'toolbar');
         this.railEl.setAttribute('aria-label', 'Strumenti');
 
-        // System group: options + side swap (top of the rail: least used)
+        // System group: minimal toggle + options (top of the rail: least used)
         this.optionsBtn = this._makeToolBtn('Opzioni lavagna', BoardIcons.tune, () => {
             this.closeTrays();
             if (this.onToggleFuturePopover) this.onToggleFuturePopover(null);
             if (this.onToggleOptions) this.onToggleOptions();
         });
-        this.swapBtn = this._makeToolBtn('Sposta la barra sull\'altro lato', SWAP_ICON, () => {
-            const next = this.side === 'right' ? 'left' : 'right';
-            if (this.onSettingChange) this.onSettingChange('toolbarSide', next);
-            this.relayout();
-        });
-        this.swapBtn.classList.add('board-swap-btn');
         this.minimalBtn = this._makeToolBtn('', MINIMIZE_ICON, () => this.setMinimal(!this.minimal));
         this.minimalBtn.classList.add('board-minimal-btn');
         this.optionsBtn.classList.add('board-full-only');
-        this.swapBtn.classList.add('board-full-only');
-        const sysGroup = this._makeGroup('is-sys', this.minimalBtn, this.optionsBtn, this.swapBtn);
+        const sysGroup = this._makeGroup('is-sys', this.minimalBtn, this.optionsBtn);
 
         // Drawing tools
         this.penBtn = this._makeToolBtn('Penna (P) — stile, spessore e colori', BoardIcons.pen, () => {
