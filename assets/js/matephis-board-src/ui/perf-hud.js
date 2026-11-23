@@ -105,32 +105,51 @@ export class PerfHud {
 
     /**
      * Exact size of the whole board file (all pages), raw JSON and gzip-compressed.
-     * Debounced and only while the HUD is visible: stringifying a big board costs a few ms.
+     * Debounced, only while the HUD is visible. The JSON is built on the main thread
+     * (a few ms) but compression runs in a worker so it never blocks drawing.
      */
     _scheduleFileSize() {
         clearTimeout(this._fileTimer);
-        this._fileTimer = setTimeout(() => this._measureFileSize(), 800);
+        this._fileTimer = setTimeout(() => this._measureFileSize(), 1500);
     }
 
-    async _measureFileSize() {
-        if (!this.visible) return;
-        const json = JSON.stringify(this.scene.toJSON());
-        const bytes = new TextEncoder().encode(json);
-        const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
-        let text = kb(bytes.length);
-        if (typeof CompressionStream === 'function') {
-            try {
-                const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
-                const gz = await new Response(stream).arrayBuffer();
-                const ratio = bytes.length / Math.max(1, gz.byteLength);
-                text += ` · gzip ${kb(gz.byteLength)} (÷${ratio.toFixed(1)})`;
-            } catch (_) {
-                text += ' · gzip n/d';
-            }
-        } else {
-            text += ' · gzip n/d';
+    _getGzipWorker() {
+        if (this._gzipWorker !== undefined) return this._gzipWorker;
+        this._gzipWorker = null;
+        if (typeof Worker !== 'function' || typeof CompressionStream !== 'function') return null;
+        try {
+            const src = `onmessage = async (e) => {
+                try {
+                    const s = new Blob([e.data]).stream().pipeThrough(new CompressionStream('gzip'));
+                    postMessage((await new Response(s).arrayBuffer()).byteLength);
+                } catch (_) { postMessage(-1); }
+            };`;
+            this._gzipWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        } catch (_) {
+            this._gzipWorker = null;
         }
-        if (this.visible) this.fields.file.textContent = text;
+        return this._gzipWorker;
+    }
+
+    _measureFileSize() {
+        if (!this.visible) return;
+        const bytes = new TextEncoder().encode(JSON.stringify(this.scene.toJSON()));
+        const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+        const raw = kb(bytes.length);
+        const worker = this._getGzipWorker();
+        if (!worker) {
+            this.fields.file.textContent = `${raw} · gzip n/d`;
+            return;
+        }
+        const rawLen = bytes.length;
+        worker.onmessage = (e) => {
+            if (!this.visible) return;
+            const gz = e.data;
+            this.fields.file.textContent = gz > 0
+                ? `${raw} · gzip ${kb(gz)} (÷${(rawLen / gz).toFixed(1)})`
+                : `${raw} · gzip n/d`;
+        };
+        worker.postMessage(bytes.buffer, [bytes.buffer]);
     }
 
     _startLoop() {

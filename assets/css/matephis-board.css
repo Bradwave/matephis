@@ -1002,7 +1002,9 @@ body.board-body {
     top: max(12px, env(safe-area-inset-top));
     left: max(12px, env(safe-area-inset-left));
     z-index: 35;
-    width: 248px;
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
     padding: 7px 9px;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -1054,6 +1056,12 @@ body.board-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2px 6px;
+    white-space: nowrap;
+}
+
+.board-hud-grid > div {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .board-hud-wide {

@@ -74,7 +74,7 @@ export class BoardToolbar {
             penColor: 0,
             penWidth: PEN_SIZES[1].width,
             penStyle: 'solid',     // 'solid' | 'dashed' | 'dotted'
-            eraserRadius: ERASER_SIZES[1].radius,
+            eraserRadius: ERASER_SIZES[2].radius,
             eraserMode: 'partial', // 'partial' | 'stroke'
             highlighterColor: HIGHLIGHTER_COLORS[0].id,
             highlighterWidth: HIGHLIGHTER_SIZES[1].width,
@@ -683,7 +683,7 @@ export class BoardToolbar {
             btn.className = 'board-tray-btn';
             btn.title = `Gomma ${sz.label}`;
             btn.dataset.eraserRadius = String(sz.radius);
-            const dotPx = 6 + i * 3.5;
+            const dotPx = 3 + i * 4.5;
             btn.innerHTML = `<span class="board-eraser-dot" style="--d:${(dotPx / 34).toFixed(3)};"></span>`;
             btn.addEventListener('click', () => {
                 this.state.eraserRadius = sz.radius;
