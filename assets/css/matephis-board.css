@@ -1510,3 +1510,411 @@ body.board-body {
     font-size: 0.96em;
     color: var(--title);
 }
+
+
+/* === Track 2C: Widgets & Exercise Picker === */
+
+.board-widget:not(.is-controls-locked) .matephis-plot-controls,
+.board-widget:not(.is-controls-locked) .matephis-plot-play-btn,
+.board-widget:not(.is-controls-locked) .matephis-plot-btn,
+.board-widget:not(.is-controls-locked) .matephis-physics-button,
+.board-widget:not(.is-controls-locked) .matephis-physics-speed-btn,
+.board-widget:not(.is-controls-locked) .mp-draggable,
+.board-widget:not(.is-controls-locked) .mp-clickable,
+.board-widget:not(.is-controls-locked) .mps-draggable,
+.board-widget:not(.is-controls-locked) .matephis-circuit-switch,
+.board-widget:not(.is-controls-locked) .matephis-circuit-comp,
+.board-widget:not(.is-controls-locked) .board-widget-sol-toggle,
+.board-widget-resize {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.board-widget.is-controls-locked .matephis-slider,
+.board-widget.is-controls-locked .matephis-controls,
+.board-widget.is-controls-locked .matephis-plot-controls,
+.board-widget.is-controls-locked .matephis-plot-play-btn,
+.board-widget.is-controls-locked .matephis-plot-btn,
+.board-widget.is-controls-locked .matephis-physics-button,
+.board-widget.is-controls-locked .matephis-physics-speed-btn,
+.board-widget.is-controls-locked .mp-draggable,
+.board-widget.is-controls-locked .mp-clickable,
+.board-widget.is-controls-locked .mps-draggable,
+.board-widget.is-controls-locked .matephis-circuit-switch,
+.board-widget.is-controls-locked .matephis-circuit-comp,
+.board-widget.is-controls-locked .board-widget-sol-toggle {
+    pointer-events: none !important;
+}
+
+.board-widget .matephis-plot-container,
+.board-widget .matephis-circuit-container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+}
+
+/* Dark-mode overrides for MatephisCircuit inside board widgets */
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-wire,
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-comp {
+    stroke: var(--plot-axis, #e2e8f0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-comp-fill {
+    fill: var(--bg, #121212);
+    stroke: var(--plot-axis, #e2e8f0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-label {
+    fill: var(--plot-text, #c9cbcf);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-caption {
+    color: var(--secondary-text, #8e95a0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-switch:hover {
+    stroke: var(--accent, #ff523d);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container circle[fill="#333"] {
+    fill: var(--plot-axis, #e2e8f0);
+}
+
+/* Widget card frame, corner handle & resize grip */
+.board-widget {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .board-widget {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.board-widget.is-editing {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    cursor: move;
+}
+
+.board-widget.is-canvas-interactive {
+    outline: 1px dashed var(--title);
+    outline-offset: 1px;
+}
+
+.board-widget-body {
+    overflow: hidden;
+    padding: 6px;
+    box-sizing: border-box;
+    background: var(--bg);
+}
+
+.board-widget.is-editing .board-widget-body,
+.board-widget.is-canvas-interactive .board-widget-body {
+    overflow: auto;
+}
+
+.board-widget-loading,
+.board-widget-error {
+    padding: 12px;
+    font-family: var(--font-plot);
+    font-size: 13px;
+    color: var(--secondary-text);
+}
+
+.board-widget-error {
+    color: var(--accent);
+}
+
+.board-widget-handle {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--secondary-text);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    z-index: 2;
+}
+
+.board-widget-handle svg {
+    width: 15px;
+    height: 15px;
+}
+
+.board-widget-handle:hover,
+.board-widget.is-editing .board-widget-handle {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.board-widget-resize {
+    display: none;
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    cursor: nwse-resize;
+    z-index: 3;
+}
+
+.board-widget.is-editing .board-widget-resize {
+    display: block;
+}
+
+/* Screen-space Widget Edit Chrome */
+.board-widget-chrome {
+    position: fixed;
+    z-index: 44;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--bu-font);
+}
+
+.board-widget-chrome-bar {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+}
+
+.board-widget-chrome-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: max(2em, calc(var(--bu) * 0.7));
+    padding: 0 0.55em;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.88em;
+    cursor: pointer;
+}
+
+.board-widget-chrome-btn svg {
+    width: 1.15em;
+    height: 1.15em;
+}
+
+.board-widget-chrome-btn:hover {
+    border-color: var(--title);
+    color: var(--title);
+}
+
+.board-widget-chrome-btn.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-widget-chrome-btn.is-danger {
+    color: var(--accent);
+}
+
+.board-widget-chrome-btn.is-danger:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.board-widget-chrome-btn.is-drag {
+    cursor: grab;
+}
+
+.board-widget-json-editor {
+    width: min(26em, calc(100vw - 24px));
+    padding: 0.65em;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+}
+
+.board-widget-json-editor textarea,
+.board-json-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5em;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-code, monospace);
+    font-size: 0.85em;
+    line-height: 1.35;
+    resize: vertical;
+    outline: none;
+}
+
+.board-widget-json-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4em;
+}
+
+.board-widget-json-err,
+.board-popover-error {
+    font-family: var(--font-plot);
+    font-size: 0.82em;
+    color: var(--accent);
+    margin-bottom: 0.4em;
+}
+
+/* Exercise widget card & solution toggle */
+.board-widget-exercise {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--text);
+}
+
+.board-widget-ex-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+}
+
+.board-widget-ex-meta {
+    font-family: var(--font-plot);
+    font-size: 11.5px;
+    color: var(--secondary-text);
+}
+
+.board-widget-sol-toggle {
+    appearance: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 11.5px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+
+.board-widget-sol-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.board-widget-ex-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 6px auto;
+}
+
+.board-widget-ex-content p:first-child {
+    margin-top: 0;
+}
+
+.board-widget-ex-content p:last-child {
+    margin-bottom: 0;
+}
+
+.board-widget-exercise.is-solution-hidden .solution-text,
+.board-widget-exercise.is-solution-hidden .hint-text,
+.board-ex-preview.is-solution-hidden .solution-text,
+.board-ex-preview.is-solution-hidden .hint-text {
+    filter: blur(5px);
+    opacity: 0.28;
+}
+
+.board-widget-exercise:not(.is-solution-hidden) .solution-text,
+.board-widget-exercise:not(.is-solution-hidden) .hint-text,
+.board-ex-preview:not(.is-solution-hidden) .solution-text,
+.board-ex-preview:not(.is-solution-hidden) .hint-text {
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+/* Interactive chips, engine cards & Exercise Picker preview */
+.board-engine-card:not(.is-stub),
+.board-chip:not(.is-stub),
+.board-tab-btn:not(.is-stub) {
+    cursor: pointer;
+}
+
+.board-engine-card:not(.is-stub):hover,
+.board-chip:not(.is-stub):hover {
+    border-color: var(--title);
+    color: var(--title);
+}
+
+.board-engine-card.active,
+.board-chip.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-engine-card.active span {
+    color: var(--bg);
+    opacity: 0.8;
+}
+
+.board-diagram-editor {
+    margin-top: 0.65em;
+    padding-top: 0.65em;
+    border-top: 1px solid var(--border);
+}
+
+.board-ex-notes-row,
+.board-ex-items-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+    margin-bottom: 0.55em;
+}
+
+.board-ex-items-row {
+    max-height: 6.2em;
+    overflow-y: auto;
+}
+
+.board-ex-preview {
+    max-height: 44vh;
+    overflow-y: auto;
+}
+
+.board-ex-preview-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.45em auto;
+}
+
+.board-ex-stem {
+    font-weight: 500;
+    margin-bottom: 0.4em;
+    color: var(--title);
+}
+
+.board-ex-subnum {
+    font-family: var(--font-plot);
+    font-weight: 700;
+    margin-right: 0.3em;
+}

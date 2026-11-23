@@ -538,19 +538,19 @@ export class BoardToolbar {
         tray.className = 'board-tray board-insert-tray';
         tray.hidden = true;
         const items = [
-            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes },
-            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector },
-            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes },
-            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram },
-            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise },
+            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: true },
+            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: true },
+            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: false },
+            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: false },
+            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: false },
         ];
         const grid = document.createElement('div');
         grid.className = 'board-insert-grid';
         for (const it of items) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-insert-item is-stub';
-            btn.title = `${it.label} (in arrivo)`;
+            btn.className = it.stub ? 'board-insert-item is-stub' : 'board-insert-item';
+            btn.title = it.stub ? `${it.label} (in arrivo)` : it.label;
             btn.innerHTML = `${it.icon}<span>${it.label}</span>`;
             btn.addEventListener('click', () => {
                 if (it.id === 'shapes' || it.id === 'connectors') {
