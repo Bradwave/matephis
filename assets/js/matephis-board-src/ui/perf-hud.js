@@ -36,7 +36,7 @@ export class PerfHud {
                 <div>Punti: <strong data-hud="points">0</strong></div>
                 <div>JSON: <strong data-hud="kb">0 KB</strong></div>
                 <div>Ptr: <strong data-hud="ptr">--</strong></div>
-                <div class="board-hud-wide" title="Intera lavagna (tutte le pagine): JSON salvato / compresso gzip">File: <strong data-hud="file">--</strong></div>
+                <div class="board-hud-wide" title="Intera lavagna (tutte le pagine): JSON salvato / compresso gzip">File: <button type="button" class="board-hud-file-btn">Calcola</button> <strong data-hud="file"></strong></div>
                 <div class="board-hud-wide">Area: <strong data-hud="area">--</strong></div>
             </div>
         `;
@@ -45,6 +45,11 @@ export class PerfHud {
         for (const el of this.el.querySelectorAll('[data-hud]')) {
             this.fields[el.dataset.hud] = el;
         }
+
+        this.el.querySelector('.board-hud-file-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._measureFileSize();
+        });
 
         this.el.querySelector('.board-hud-stress').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -100,18 +105,15 @@ export class PerfHud {
         this.fields.points.textContent = String(points);
         this.fields.kb.textContent = `${(estBytes / 1024).toFixed(1)} KB`;
         this.fields.dpr.textContent = `${dpr}×`;
-        this._scheduleFileSize();
+        // The measured file size is now out of date: dim it until "Calcola" is pressed again.
+        this.fields.file.classList.add('is-stale');
     }
 
-    /**
-     * Exact size of the whole board file (all pages), raw JSON and gzip-compressed.
-     * Debounced, only while the HUD is visible. The JSON is built on the main thread
-     * (a few ms) but compression runs in a worker so it never blocks drawing.
+    /*
+     * Exact size of the whole board file (all pages), raw JSON and gzip-compressed, on demand
+     * ("Calcola"). The JSON is built on the main thread (a few ms); compression runs in a
+     * worker so it never blocks drawing.
      */
-    _scheduleFileSize() {
-        clearTimeout(this._fileTimer);
-        this._fileTimer = setTimeout(() => this._measureFileSize(), 1500);
-    }
 
     _getGzipWorker() {
         if (this._gzipWorker !== undefined) return this._gzipWorker;
@@ -136,6 +138,8 @@ export class PerfHud {
         const bytes = new TextEncoder().encode(JSON.stringify(this.scene.toJSON()));
         const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
         const raw = kb(bytes.length);
+        this.fields.file.classList.remove('is-stale');
+        this.fields.file.textContent = `${raw} · gzip …`;
         const worker = this._getGzipWorker();
         if (!worker) {
             this.fields.file.textContent = `${raw} · gzip n/d`;
