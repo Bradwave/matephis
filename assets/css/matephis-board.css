@@ -464,6 +464,52 @@ body.board-body {
     display: none;
 }
 
+/* Pen tray: compact stacked panel (colours 5×2, sizes, styles), not one long strip */
+.board-pen-tray {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    padding: 4px;
+}
+
+.board-pen-section {
+    display: grid;
+    grid-template-columns: repeat(5, var(--bu));
+    gap: 2px;
+}
+
+.board-pen-section.is-sizes {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.board-pen-section.is-styles {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.board-pen-section.is-sizes .board-tray-btn,
+.board-pen-section.is-styles .board-tray-btn {
+    width: auto;
+}
+
+.board-pen-section + .board-pen-section {
+    border-top: 1px solid var(--border);
+    margin-top: 3px;
+    padding-top: 3px;
+}
+
+/* Essential toolbar: pen + quick colours, eraser, undo/redo and the toggle back */
+.is-minimal .board-nav,
+.is-minimal .board-rail .board-full-only {
+    display: none;
+}
+
+.is-bar.is-minimal .board-rail-group.is-sys {
+    order: -1;
+    padding-left: 0;
+    margin-left: 0;
+    border-left: none;
+}
+
 .board-insert-grid {
     display: grid;
     grid-template-columns: repeat(3, calc(var(--bu) * 2.1));

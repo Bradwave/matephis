@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
     uiSize: 'm',            // 's' | 'm' | 'l' — multiplier on the auto-sized --bu token
     toolbarLayout: 'auto',  // 'auto' | 'rail' | 'bar'
     toolbarSide: 'right',   // rail side: 'right' | 'left'
+    toolbarMinimal: false,  // essential toolbar: pen, quick colours, eraser, undo/redo
 };
 
 let pageCounter = 1;

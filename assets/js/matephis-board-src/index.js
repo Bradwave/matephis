@@ -148,7 +148,7 @@ async function initMatephisBoard() {
                 perfHud.setVisible(value);
                 perfHud.refreshSceneStats(surface.dpr);
             }
-            if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide') {
+            if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide' || key === 'toolbarMinimal') {
                 if (toolbar) toolbar.relayout();
             }
         },

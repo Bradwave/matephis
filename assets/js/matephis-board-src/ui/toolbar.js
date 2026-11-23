@@ -1,7 +1,7 @@
 /**
  * Matephis Board chrome: two groups that are laid out per device.
  *
- * - Tool rail (`.board-rail`): Options + side swap | Pen, Highlighter, Eraser, Lasso, Laser,
+ * - Tool rail (`.board-rail`): Minimal toggle, Options + side swap | Pen, Highlighter, Eraser, Lasso, Laser,
  *   Insert (+) | 5 quick colours | Undo / Redo.
  *   On touch screens ("rail" layout) it is a 2-column vertical rail on the side where the
  *   teacher stands (right by default, swappable), low enough to reach on a wall board.
@@ -9,6 +9,7 @@
  * - Navigation pill (`.board-nav`): pages ‹ 1/N › + | zoom % | overview footprint | Pin | Cloud.
  *   Bottom-centre in the rail layout, part of the single bottom bar in the bar layout.
  *
+ * Minimal mode (`toolbarMinimal`) keeps only pen, quick colours, eraser and undo/redo.
  * Trays (pen, eraser, highlighter, lasso, shapes, connectors, insert, pin) and the popovers
  * opened from the chrome are placed next to their trigger by `placeFloating()`.
  * Every size derives from the `--bu` CSS token (see matephis-board.css).
@@ -27,6 +28,8 @@ import { BoardIcons } from './icons.js';
 import { clearFloating, placeFloating } from './floating.js';
 
 const INSERT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-160h160v-80H520v-160h-80v160H280v80h160v160ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>';
+const MINIMIZE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>';
+const EXPAND_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
 const SWAP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M280-160 80-360l200-200 56 57-103 103h287v80H233l103 103-56 57Zm400-240-56-57 103-103H440v-80h287L624-743l56-57 200 200-200 200Z"/></svg>';
 
 export class BoardToolbar {
@@ -200,9 +203,34 @@ export class BoardToolbar {
         root.classList.toggle('is-side-right', this.side === 'right');
         root.dataset.uiSize = s.uiSize === 's' || s.uiSize === 'l' ? s.uiSize : 'm';
 
+        this.minimal = !!s.toolbarMinimal;
+        root.classList.toggle('is-minimal', this.minimal);
+        this.minimalBtn.innerHTML = this.minimal ? EXPAND_ICON : MINIMIZE_ICON;
+        this.minimalBtn.title = this.minimal
+            ? 'Mostra la barra completa'
+            : 'Barra essenziale: solo penna, colori, gomma e annulla';
+        this.minimalBtn.setAttribute('aria-label', this.minimalBtn.title);
+        this.minimalBtn.setAttribute('aria-pressed', String(this.minimal));
+
         this.railEl.setAttribute('aria-orientation', mode === 'rail' ? 'vertical' : 'horizontal');
         this._placeTray();
         this._placePopover();
+    }
+
+    /**
+     * Essential toolbar: pen + quick colours, eraser, undo/redo and the toggle back.
+     * Leaving a tool that is hidden in this mode falls back to the pen.
+     */
+    setMinimal(on) {
+        if (on && this.state.tool !== 'pen' && this.state.tool !== 'eraser') {
+            this.state.tool = 'pen';
+            if (this.onToolChange) this.onToolChange(this.state);
+        }
+        this.openTray = null;
+        this._closePopovers();
+        if (this.onSettingChange) this.onSettingChange('toolbarMinimal', !!on);
+        this.render();
+        this.relayout();
     }
 
     _buildDOM() {
@@ -293,7 +321,11 @@ export class BoardToolbar {
             this.relayout();
         });
         this.swapBtn.classList.add('board-swap-btn');
-        const sysGroup = this._makeGroup('is-sys', this.optionsBtn, this.swapBtn);
+        this.minimalBtn = this._makeToolBtn('', MINIMIZE_ICON, () => this.setMinimal(!this.minimal));
+        this.minimalBtn.classList.add('board-minimal-btn');
+        this.optionsBtn.classList.add('board-full-only');
+        this.swapBtn.classList.add('board-full-only');
+        const sysGroup = this._makeGroup('is-sys', this.minimalBtn, this.optionsBtn, this.swapBtn);
 
         // Drawing tools
         this.penBtn = this._makeToolBtn('Penna (P) — stile, spessore e colori', BoardIcons.pen, () => {
@@ -319,6 +351,9 @@ export class BoardToolbar {
             this._toggleTray('insert');
         });
         this.insertBtn.setAttribute('aria-haspopup', 'true');
+        for (const btn of [this.highlighterBtn, this.lassoBtn, this.laserBtn, this.insertBtn]) {
+            btn.classList.add('board-full-only');
+        }
         const toolsGroup = this._makeGroup('is-tools',
             this.penBtn, this.highlighterBtn,
             this.eraserBtn, this.lassoBtn,
@@ -536,12 +571,13 @@ export class BoardToolbar {
         tray.className = 'board-tray board-pen-tray';
         tray.hidden = true;
 
+        // Compact panel (colours 5×2, sizes, styles stacked) instead of one long strip,
+        // so every option stays within a short reach of the pen button.
         const colorsWrap = document.createElement('div');
-        colorsWrap.className = 'board-quick-colors';
+        colorsWrap.className = 'board-pen-section is-colors';
         this.penTraySwatches = [];
         for (let i = 0; i < PEN_COLORS.length; i++) {
             const c = PEN_COLORS[i];
-            if (i === 5) colorsWrap.appendChild(this._makeDivider());
             const btn = this._makeColorDot(c.id, c.name, () => {
                 this.state.penColor = c.id;
                 this.state.tool = 'pen';
@@ -553,7 +589,7 @@ export class BoardToolbar {
         }
 
         const stylesWrap = document.createElement('div');
-        stylesWrap.className = 'board-tray-group';
+        stylesWrap.className = 'board-pen-section is-styles';
         this.styleBtns = [];
         for (const st of PEN_STYLES) {
             const btn = document.createElement('button');
@@ -578,7 +614,7 @@ export class BoardToolbar {
         }
 
         const sizesWrap = document.createElement('div');
-        sizesWrap.className = 'board-tray-group';
+        sizesWrap.className = 'board-pen-section is-sizes';
         this.penSizeBtns = [];
         for (let i = 0; i < PEN_SIZES.length; i++) {
             const sz = PEN_SIZES[i];
@@ -599,7 +635,7 @@ export class BoardToolbar {
             sizesWrap.appendChild(btn);
         }
 
-        tray.append(stylesWrap, this._makeDivider(), colorsWrap, this._makeDivider(), sizesWrap);
+        tray.append(colorsWrap, sizesWrap, stylesWrap);
         return tray;
     }
 
