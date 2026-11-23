@@ -19,6 +19,9 @@ export const DEFAULT_SETTINGS = {
     palmThreshold: 42,
     lowDpr: false,
     showHud: false,
+    uiSize: 'm',            // 's' | 'm' | 'l' — multiplier on the auto-sized --bu token
+    toolbarLayout: 'auto',  // 'auto' | 'rail' | 'bar'
+    toolbarSide: 'right',   // rail side: 'right' | 'left'
 };
 
 let pageCounter = 1;

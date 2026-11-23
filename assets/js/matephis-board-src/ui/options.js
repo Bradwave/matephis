@@ -63,6 +63,25 @@ export class OptionsMenu {
                     <input type="checkbox" data-opt="showHud" />
                 </label>
                 <div class="board-opt-bg-row">
+                    <span>Dimensione interfaccia</span>
+                    <div class="board-bg-seg" data-seg="uiSize">
+                        <button type="button" class="board-bg-btn" data-val="s">Piccola</button>
+                        <button type="button" class="board-bg-btn" data-val="m">Normale</button>
+                        <button type="button" class="board-bg-btn" data-val="l">Grande</button>
+                    </div>
+                    <span>Barra strumenti</span>
+                    <div class="board-bg-seg" data-seg="toolbarLayout">
+                        <button type="button" class="board-bg-btn" data-val="auto" title="Laterale sugli schermi touch, in basso con il mouse">Auto</button>
+                        <button type="button" class="board-bg-btn" data-val="rail">Laterale</button>
+                        <button type="button" class="board-bg-btn" data-val="bar">In basso</button>
+                    </div>
+                    <span>Lato barra laterale</span>
+                    <div class="board-bg-seg" data-seg="toolbarSide">
+                        <button type="button" class="board-bg-btn" data-val="left">Sinistra</button>
+                        <button type="button" class="board-bg-btn" data-val="right">Destra</button>
+                    </div>
+                </div>
+                <div class="board-opt-bg-row">
                     <span>Sfondo pagina</span>
                     <div class="board-bg-seg">
                         <button type="button" class="board-bg-btn active">Vuoto</button>
@@ -118,6 +137,17 @@ export class OptionsMenu {
             });
         }
 
+        for (const seg of this.el.querySelectorAll('[data-seg]')) {
+            const key = seg.dataset.seg;
+            for (const btn of seg.querySelectorAll('[data-val]')) {
+                btn.addEventListener('click', () => {
+                    this.scene.settings[key] = btn.dataset.val;
+                    this._syncSegments();
+                    if (this.onSettingChange) this.onSettingChange(key, btn.dataset.val);
+                });
+            }
+        }
+
         const slider = this.el.querySelector('[data-opt="palmThreshold"]');
         const sliderVal = this.el.querySelector('[data-opt-val="palmThreshold"]');
         slider.addEventListener('input', () => {
@@ -165,6 +195,17 @@ export class OptionsMenu {
         });
     }
 
+    _syncSegments() {
+        for (const seg of this.el.querySelectorAll('[data-seg]')) {
+            const value = String(this.scene.settings[seg.dataset.seg]);
+            for (const btn of seg.querySelectorAll('[data-val]')) {
+                const on = btn.dataset.val === value;
+                btn.classList.toggle('active', on);
+                btn.setAttribute('aria-pressed', String(on));
+            }
+        }
+    }
+
     _syncPalmSliderVisibility() {
         const wrap = this.el.querySelector('[data-opt-wrap="palmThreshold"]');
         wrap.hidden = !this.scene.settings.palmErase;
@@ -179,6 +220,7 @@ export class OptionsMenu {
         this.el.querySelector('[data-opt="palmThreshold"]').value = String(th);
         this.el.querySelector('[data-opt-val="palmThreshold"]').textContent = `${th} px`;
         this._syncPalmSliderVisibility();
+        this._syncSegments();
         if (this.deletePageBtn) {
             this.deletePageBtn.disabled = this.scene.pageCount <= 1;
         }

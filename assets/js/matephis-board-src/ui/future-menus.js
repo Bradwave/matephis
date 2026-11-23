@@ -137,7 +137,7 @@ export class FutureMenus {
 
     _buildExercisesPopover() {
         const el = document.createElement('div');
-        el.className = 'board-popover board-exercises-popover';
+        el.className = 'board-popover board-sheet board-exercises-popover';
         el.hidden = true;
         el.innerHTML = `
             <div class="board-popover-title">

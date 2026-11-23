@@ -148,6 +148,9 @@ async function initMatephisBoard() {
                 perfHud.setVisible(value);
                 perfHud.refreshSceneStats(surface.dpr);
             }
+            if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide') {
+                if (toolbar) toolbar.relayout();
+            }
         },
         onExportJSON: () => storage.exportJSONFile(scene),
         onImportJSON: (data) => {
@@ -189,6 +192,12 @@ async function initMatephisBoard() {
 
     toolbar = new BoardToolbar(root, {
         getTheme,
+        getSettings: () => scene.settings,
+        onSettingChange: (key, value) => {
+            scene.settings[key] = value;
+            storage.saveSettings(scene.settings);
+            optionsMenu.syncFromState();
+        },
         onToolChange: () => { /* input reads state on demand */ },
         onUndo: () => {
             if (historyProxy.undo(scene.strokes)) {
@@ -212,23 +221,34 @@ async function initMatephisBoard() {
             surface.toggleOverview();
             syncUI();
         },
-        onToggleTheme: (nextTheme) => applyTheme(nextTheme),
         onToggleOptions: (force) => {
-            if (force === false) optionsMenu.hide();
-            else {
+            if (force === false) {
+                if (optionsMenu.open) {
+                    optionsMenu.hide();
+                    toolbar.anchorPopover(null);
+                }
+            } else {
                 futureMenus.hideAll();
                 toolbar.setActiveFuturePopover(null);
                 optionsMenu.toggle();
+                toolbar.anchorPopover(optionsMenu.open ? optionsMenu.el : null, 'options');
             }
         },
         onToggleFuturePopover: (name) => {
-            optionsMenu.hide();
+            if (optionsMenu.open) {
+                optionsMenu.hide();
+                toolbar.anchorPopover(null);
+            }
             if (!name) {
-                futureMenus.hideAll();
+                if (futureMenus.activePopover) {
+                    futureMenus.hideAll();
+                    toolbar.anchorPopover(null);
+                }
                 toolbar.setActiveFuturePopover(null);
             } else {
                 const opened = futureMenus.toggle(name);
                 toolbar.setActiveFuturePopover(opened);
+                toolbar.anchorPopover(opened ? futureMenus.popovers[opened] : null, opened);
             }
         },
         onResetZoom: () => {
@@ -267,6 +287,7 @@ async function initMatephisBoard() {
             optionsMenu.hide();
             futureMenus.hideAll();
             toolbar.setActiveFuturePopover(null);
+            toolbar.anchorPopover(null);
             return hadPopover;
         },
         onSceneMutated: () => {
@@ -342,6 +363,7 @@ async function initMatephisBoard() {
                 optionsMenu.hide();
                 futureMenus.hideAll();
                 toolbar.setActiveFuturePopover(null);
+                toolbar.anchorPopover(null);
                 if (surface.overviewMode) {
                     surface.exitOverview();
                     syncUI();
@@ -355,6 +377,7 @@ async function initMatephisBoard() {
         surface.resize();
         pinnedStrip.render();
         toolbar.updateZoom(scene.camera);
+        toolbar.relayout();
         perfHud.refreshSceneStats(surface.dpr);
     });
     ro.observe(canvasHost);
