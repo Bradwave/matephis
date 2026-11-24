@@ -12,14 +12,14 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 
   if content.include?('language-physics') || content.include?('matephis-physics') || content =~ /```\s*physics/
     doc.data['physics'] = true
-    # Physics graphs are drawn by the plot engine
-    doc.data['plot'] = true if content =~ /"graphs"\s*:/
+    # The physics bundle uses the plot engine's modules (matephis-plot-src/shared.js)
+    doc.data['plot'] = true
   end
 
   if content.include?('language-sets') || content.include?('matephis-sets') || content =~ /```\s*sets/
     doc.data['sets'] = true
-    # Graphs beside a sets diagram are drawn by the plot engine
-    doc.data['plot'] = true if content =~ /"plot"\s*:\s*\{/
+    # The sets bundle uses the plot engine's modules (matephis-plot-src/shared.js)
+    doc.data['plot'] = true
   end
 
   if content.include?('language-slides') || content.include?('matephis-slides') || content =~ /```\s*slides/
