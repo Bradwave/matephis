@@ -17,8 +17,10 @@ import { renderPageToContext } from '../ink/surface.js';
 import { BoardIcons } from './icons.js';
 
 export class PinnedStrip {
-    constructor(hostEl, { surface, scene, onJumpToPage = null }) {
+    constructor(hostEl, { surface, scene, onJumpToPage = null, getWidgetPictures = null }) {
         this.hostEl = hostEl;
+        // Widgets are live DOM on the board; here they are drawn as static pictures.
+        this.getWidgetPictures = getWidgetPictures;
         this.surface = surface;
         this.scene = scene;
         this.onJumpToPage = onJumpToPage;
@@ -333,7 +335,8 @@ export class PinnedStrip {
             this.stripCamera,
             this.surface.theme,
             this.scene.settings.showCropMarks,
-            info.page.background
+            info.page.background,
+            this.getWidgetPictures ? this.getWidgetPictures(info.page) : null
         );
     }
 

@@ -285,8 +285,64 @@ export class BoardToolbar {
         this.sideTabEl.setAttribute('aria-label', this.sideTabEl.title);
 
         this.railEl.setAttribute('aria-orientation', mode === 'rail' ? 'vertical' : 'horizontal');
+        this._markLineStarts();
         this._placeTray();
         this._placePopover();
+    }
+
+    /**
+     * In the wrapped bar, hide the separator of a group (or a nav divider) that
+     * starts or ends a row: a separator belongs between two things on the same row.
+     */
+    _markLineStarts() {
+        if (!this.chromeEl) return;
+        const groups = Array.from(this.railEl.children).filter((el) => el.classList.contains('board-rail-group'));
+        const dividers = Array.from(this.navEl.querySelectorAll('.board-dock-sep'));
+        for (const el of [...groups, ...dividers]) {
+            el.classList.remove('is-line-start', 'is-line-edge');
+        }
+        this.chromeEl.classList.remove('is-wrapped');
+        if (this.layout !== 'bar') {
+            this.hostEl.style.removeProperty('--board-bar-h');
+            return;
+        }
+
+        // Too wide for one row? Then undo/redo moves up next to the navigation, and tools,
+        // colours and the system buttons fill the next row: two rows instead of three.
+        const parts = [this.navEl, ...groups].filter((el) => el.offsetParent !== null);
+        const cs = getComputedStyle(this.chromeEl);
+        const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2;
+        const maxW = Math.min(window.innerWidth - 24, parseFloat(cs.maxWidth) || Infinity) - pad;
+        const oneRow = parts.reduce((sum, el) => {
+            const m = getComputedStyle(el);
+            return sum + el.getBoundingClientRect().width + parseFloat(m.marginLeft) + parseFloat(m.marginRight) + 2;
+        }, 0);
+        this.chromeEl.classList.toggle('is-wrapped', oneRow > maxW);
+        // Side sheets stop above the bar, however many rows it has.
+        this.hostEl.style.setProperty('--board-bar-h', `${Math.ceil(this.chromeEl.getBoundingClientRect().height)}px`);
+
+        // Everything that sits in the bar's rows, with its box.
+        const items = [this.navEl, ...groups]
+            .filter((el) => el.offsetParent !== null)
+            .map((el) => ({ el, r: el.getBoundingClientRect() }));
+        const sameRow = (a, b) => Math.abs(a.top - b.top) < 4 || (a.top < b.bottom - 4 && b.top < a.bottom - 4);
+        for (const it of items) {
+            if (!it.el.classList.contains('board-rail-group')) continue;
+            const hasLeftNeighbour = items.some((o) => o !== it && sameRow(o.r, it.r) && o.r.right <= it.r.left + 1);
+            if (!hasLeftNeighbour) it.el.classList.add('is-line-start');
+        }
+
+        // Nav dividers: hidden when first or last on their row inside the nav.
+        const navKids = Array.from(this.navEl.children)
+            .filter((el) => el.offsetParent !== null)
+            .map((el) => ({ el, r: el.getBoundingClientRect() }));
+        for (const d of navKids) {
+            if (!d.el.classList.contains('board-dock-sep')) continue;
+            const row = navKids.filter((o) => o !== d && !o.el.classList.contains('board-dock-sep') && sameRow(o.r, d.r));
+            const left = row.some((o) => o.r.right <= d.r.left + 1);
+            const right = row.some((o) => o.r.left >= d.r.right - 1);
+            if (!left || !right) d.el.classList.add('is-line-edge');
+        }
     }
 
     /**
@@ -389,7 +445,7 @@ export class BoardToolbar {
         });
         this.minimalBtn = this._makeToolBtn('', MINIMIZE_ICON, () => this.setMinimal(!this.minimal));
         this.minimalBtn.classList.add('board-minimal-btn');
-        this.optionsBtn.classList.add('board-full-only');
+        // Options stay in the compact bar too: settings must be reachable in every layout.
         const sysGroup = this._makeGroup('is-sys', this.minimalBtn, this.optionsBtn);
 
         // Drawing tools
@@ -463,6 +519,14 @@ export class BoardToolbar {
 
         this.chromeEl.append(this.navEl, this.railEl, this.sideTabEl);
         this.hostEl.appendChild(this.chromeEl);
+        // Rows change when the bar wraps differently (resize, minimal mode, UI size).
+        if (typeof ResizeObserver === 'function') {
+            let raf = 0;
+            new ResizeObserver(() => {
+                cancelAnimationFrame(raf);
+                raf = requestAnimationFrame(() => this._markLineStarts());
+            }).observe(this.chromeEl);
+        }
 
         // ---------- Trays (fixed, anchored to their trigger) ----------
         this.penTray = this._buildPenTray();

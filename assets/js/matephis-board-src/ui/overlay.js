@@ -18,11 +18,10 @@ export const OVERLAY_PX_PER_MM = 4;
 
 const INTERACTIVE_SELECTOR = [
     '.board-overlay-interactive',
-    '.board-widget-handle',
+    '.board-widget-grip',
     '.board-widget-resize',
     '.board-widget-chrome',
     '.board-connector',
-    '.board-widget.is-editing',
     '.board-widget.is-canvas-interactive',
     '.board-widget:not(.is-controls-locked) input',
     '.board-widget:not(.is-controls-locked) button',
@@ -88,6 +87,11 @@ export class BoardOverlay {
         const tx = -cam.x * cam.scale;
         const ty = -cam.y * cam.scale;
         this.worldEl.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(${k.toFixed(5)})`;
+        // Widget grips and handles keep a constant on-screen size at any zoom.
+        if (Math.abs(k - (this._lastK || 0)) > 1e-6) {
+            this._lastK = k;
+            this.worldEl.style.setProperty('--ov-inv', (1 / k).toFixed(5));
+        }
 
         for (const fn of this._cameraListeners) {
             fn(cam);
@@ -101,6 +105,30 @@ export class BoardOverlay {
     onCameraSync(fn) {
         this._cameraListeners.add(fn);
         return () => this._cameraListeners.delete(fn);
+    }
+
+    /**
+     * Pan/zoom gesture state, mirroring the ink's image-based gesture: the world layer
+     * becomes a cached GPU picture (`will-change: transform`) moved without re-rendering,
+     * dimmed like the ink in the fade effect; it is re-rendered sharp when the gesture ends.
+     */
+    setGesture(active, effect = null, dim = 0.6, { hideWidgets = false } = {}) {
+        this.stageEl.classList.toggle('is-gesturing', Boolean(active));
+        // Pixel effect: the widgets are drawn (pixelated) into the ink picture instead.
+        this.stageEl.classList.toggle('is-widgets-pictured', Boolean(active && hideWidgets));
+        if (active) {
+            this.setGestureAlpha(effect === 'pixel' ? 1 : dim);
+        } else if (effect === null) {
+            this.setGestureAlpha(1);
+        }
+    }
+
+    setGestureAlpha(alpha) {
+        const a = Math.max(0, Math.min(1, Number(alpha)));
+        if (this._gestureAlpha === a) return;
+        this._gestureAlpha = a;
+        if (a >= 1) this.stageEl.style.removeProperty('--gesture-alpha');
+        else this.stageEl.style.setProperty('--gesture-alpha', a.toFixed(3));
     }
 
     setOverviewMode(active) {

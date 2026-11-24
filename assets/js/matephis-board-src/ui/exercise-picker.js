@@ -1029,7 +1029,12 @@ export class ExercisePicker {
         const url = this._url(noteUrl);
         if (this._noteCache.has(url)) return this._noteCache.get(url);
         if (!this.fetchImpl) return '';
-        const res = await this.fetchImpl(url);
+        let res = await this.fetchImpl(url);
+        // Plain static servers do not map extensionless permalinks (/notes/x) to x.html.
+        if (res && res.status === 404 && !/\.html?$/.test(url.split(/[?#]/)[0])) {
+            const alt = await this.fetchImpl(`${url.split(/[?#]/)[0].replace(/\/$/, '')}.html`);
+            if (alt && alt.ok) res = alt;
+        }
         if (!res || !res.ok) throw new Error(`Impossibile caricare la nota (${res ? res.status : 'network'})`);
         const html = await res.text();
         this._noteCache.set(url, html);

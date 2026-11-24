@@ -20,7 +20,7 @@ const LASER_LIFETIME_MS = 1250;
 
 // Image-based pan/zoom (setting `fastPan`): while fingers move, the last sharp picture of
 // the board is moved/scaled instead of redrawing every stroke each frame.
-const GESTURE_DIM = 0.85;          // ink opacity while moving (reads as "moving", hides softness)
+const GESTURE_DIM = 0.6;           // ink and widget opacity while moving (reads as "moving", hides softness)
 const SNAP_MARGIN = 0.15;          // extra picture around the screen so a pan rarely shows an edge
 const REFRESH_ZOOM_RATIO = 1.2;    // re-render a sharp picture once zoom drifts more than this
 const REFRESH_MIN_MS = 150;        // ...but at most this often,
@@ -206,6 +206,15 @@ export function drawPageBackground(ctx, cam, viewBox, background = 'blank', them
  * Shared vector renderer for rendering any page's strokes into a target canvas
  * (reused by PinnedStrip for crisp zoomable/pannable vector previews).
  */
+/** Draw widget pictures ({x, y, w, h, canvas} in mm) in world coordinates. */
+export function drawWidgetPictures(ctx, pictures, viewBox = null) {
+    for (const p of pictures || []) {
+        if (!p || !p.canvas) continue;
+        if (viewBox && (p.x > viewBox.maxX || p.y > viewBox.maxY || p.x + p.w < viewBox.minX || p.y + p.h < viewBox.minY)) continue;
+        ctx.drawImage(p.canvas, p.x, p.y, p.w, p.h);
+    }
+}
+
 export function renderPageToContext(
     ctx,
     width,
@@ -215,7 +224,8 @@ export function renderPageToContext(
     cam,
     theme = 'light',
     showBorders = true,
-    background = 'blank'
+    background = 'blank',
+    pictures = null
 ) {
     ctx.save();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -241,6 +251,9 @@ export function renderPageToContext(
     ctx.save();
     ctx.scale(cam.scale, cam.scale);
     ctx.translate(-cam.x, -cam.y);
+
+    // Widgets as static pictures, under the ink
+    if (pictures) drawWidgetPictures(ctx, pictures, viewBox);
 
     for (let i = 0; i < strokes.length; i++) {
         const s = strokes[i];
@@ -431,7 +444,15 @@ export class InkSurface {
         if (this._committedDirty) this.renderCommittedNow();
         this._cancelSettle();
         this.gesture = { lastRefresh: performance.now(), refreshTimer: null };
+        // Widgets get the same treatment as the ink. Fade: the overlay moves as a cached
+        // GPU picture, dimmed like the ink. Pixel: the widgets' pictures are drawn into the
+        // ink picture (so they pixelate with it) and the live overlay is hidden meanwhile.
+        const effect = this.scene.settings.gestureEffect;
+        this._gesturePictures = effect === 'pixel' && this.getWidgetPictures ? this.getWidgetPictures() : null;
         this._snapFromCommitted();
+        if (this.overlay) {
+            this.overlay.setGesture(true, effect, GESTURE_DIM, { hideWidgets: Boolean(this._gesturePictures && this._gesturePictures.length) });
+        }
     }
 
     /** End of the gesture: one sharp redraw, faded in while the ink returns to full strength. */
@@ -441,6 +462,7 @@ export class InkSurface {
         clearTimeout(g.refreshTimer);
         this.gesture = null;
         if (!this.snap) {
+            if (this.overlay) this.overlay.setGesture(false);
             this.renderCommittedNow();
             return;
         }
@@ -456,6 +478,8 @@ export class InkSurface {
         this._renderBackground(this.scene.camera);
         // EXPERIMENT (pixelated gesture): blocks shrink step by step instead of a fade.
         if (this.scene.settings.gestureEffect === 'pixel') {
+            const hadPictures = Boolean(this._gesturePictures);
+            if (this.overlay && !hadPictures) this.overlay.setGesture(false);
             const pixelStep = (now) => {
                 const t = clamp((now - start) / PIXEL_SETTLE_MS, 0, 1);
                 const block = Math.round(PIXEL_BLOCK_PX * (1 - t));
@@ -468,14 +492,23 @@ export class InkSurface {
                     this._drawPixelated(ctx, sharp.canvas, 0, 0, this.width, this.height, block);
                 }
                 ctx.restore();
-                this._settleRaf = t < 1 ? requestAnimationFrame(pixelStep) : null;
+                if (t < 1) {
+                    this._settleRaf = requestAnimationFrame(pixelStep);
+                } else {
+                    this._settleRaf = null;
+                    // Sharp: the live widgets come back and the ink layer drops their pictures.
+                    this._endWidgetPictures();
+                }
             };
             this._settleRaf = requestAnimationFrame(pixelStep);
             return;
         }
 
+        // Widgets are re-rendered sharp now; their dimming fades out with the ink's.
+        if (this.overlay) this.overlay.setGesture(false, 'fade');
         const step = (now) => {
             const t = clamp((now - start) / SETTLE_MS, 0, 1);
+            if (this.overlay) this.overlay.setGestureAlpha(t < 1 ? GESTURE_DIM + (1 - GESTURE_DIM) * t : 1);
             this._drawSnap(GESTURE_DIM * (1 - t));
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -491,7 +524,20 @@ export class InkSurface {
         this._settleRaf = requestAnimationFrame(step);
     }
 
+    /** Leave the pixelated-widgets state: live overlay back, ink layer without pictures. */
+    _endWidgetPictures() {
+        if (!this._gesturePictures) return;
+        this._gesturePictures = null;
+        if (this.overlay) this.overlay.setGesture(false);
+        this._renderInkTo(this.committedCtx, this.width, this.height, this.dpr, this.scene.camera);
+    }
+
     _cancelSettle() {
+        if (this.overlay && !this.gesture) this.overlay.setGestureAlpha(1);
+        if (!this.gesture && this._gesturePictures) {
+            this._gesturePictures = null;
+            if (this.overlay) this.overlay.setGesture(false);
+        }
         if (this._settleRaf) {
             cancelAnimationFrame(this._settleRaf);
             this._settleRaf = null;
@@ -579,6 +625,11 @@ export class InkSurface {
 
     /** Cheap picture at gesture start: a copy of the transparent ink layer on screen now. */
     _snapFromCommitted() {
+        // Pixelated gesture with widgets: the picture to move must contain them too.
+        if (this._gesturePictures) {
+            this.snap = this._renderPicture(SNAP_MARGIN);
+            return;
+        }
         const canvas = this._takeSnapCanvas();
         canvas.width = this.committedCanvas.width;
         canvas.height = this.committedCanvas.height;
@@ -600,7 +651,7 @@ export class InkSurface {
         if (canvas.width !== pxW) canvas.width = pxW;
         if (canvas.height !== pxH) canvas.height = pxH;
         const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
-        this._renderInkTo(canvas.getContext('2d', { alpha: true }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted);
+        this._renderInkTo(canvas.getContext('2d', { alpha: true }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted, this._gesturePictures);
         return { canvas, cam: { ...cam }, margin, cssW, cssH };
     }
 
@@ -640,7 +691,7 @@ export class InkSurface {
         ctx.restore();
     }
 
-    _renderInkTo(ctx, width, height, dpr, cam) {
+    _renderInkTo(ctx, width, height, dpr, cam, pictures = null) {
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
@@ -657,6 +708,9 @@ export class InkSurface {
         ctx.save();
         ctx.scale(cam.scale, cam.scale);
         ctx.translate(-cam.x, -cam.y);
+
+        // Widget pictures under the ink (only in pictures of a pixelated gesture)
+        if (pictures) drawWidgetPictures(ctx, pictures, viewBox);
 
         const strokes = this.scene.strokes;
         // Pass 1: Highlighters (underlay so ink remains crisp on top in light & dark mode)

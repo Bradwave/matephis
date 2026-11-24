@@ -19,6 +19,7 @@ import { EngineLoader } from './ui/engine-loader.js';
 import { ConnectorManager } from './ui/connectors.js';
 import { ExercisePicker } from './ui/exercise-picker.js';
 import { WidgetManager } from './ui/widgets.js';
+import { WidgetPictureCache } from './ui/widget-pictures.js';
 import { downloadPageSVG } from './export/svg-export.js';
 import { exportSceneToPDF } from './export/pdf-export.js';
 
@@ -154,6 +155,15 @@ async function initMatephisBoard() {
             syncUI();
             storage.scheduleSave(scene);
         },
+        onWidgetVisualChange: (widget) => widgetPictures.touch(widget),
+        onEditWidget: (widget) => {
+            if (!futureMenus || !toolbar) return;
+            optionsMenu.hide();
+            toolbar.closeTrays();
+            const name = futureMenus.openEditor(widget);
+            toolbar.setActiveFuturePopover(name);
+            toolbar.anchorPopover(name ? futureMenus.popovers[name] : null, name);
+        },
     });
 
     const exercisePicker = new ExercisePicker({
@@ -174,9 +184,21 @@ async function initMatephisBoard() {
         },
     });
 
+    // Static widget pictures: the pinned strip and the pixelated pan/zoom draw these.
+    const widgetPictures = new WidgetPictureCache({
+        engineLoader,
+        getTheme,
+        getMountedElement: (id) => (widgetManager ? widgetManager.getElement(id) : null),
+        onUpdate: () => {
+            if (pinnedStrip && pinnedStrip.active) pinnedStrip.render();
+        },
+    });
+    surface.getWidgetPictures = () => widgetPictures.picturesFor(scene.widgets);
+
     pinnedStrip = new PinnedStrip(root, {
         surface,
         scene,
+        getWidgetPictures: (page) => widgetPictures.availableFor(page.widgets || []),
         onJumpToPage: (pageIndex, targetCam) => {
             if (pageIndex !== scene.currentPageIndex) {
                 switchToPage(pageIndex, targetCam);
@@ -287,6 +309,8 @@ async function initMatephisBoard() {
         onInsertPlot: (cfg) => widgetManager.insertWidget('plot', cfg),
         onInsertDiagram: (kind, cfg) => widgetManager.insertWidget(kind, cfg),
         onInsertExercise: (payload) => widgetManager.insertWidget('exercise', payload),
+        onUpdateWidget: (id, data) => widgetManager.updateWidgetData(id, data),
+        getWidget: (id) => widgetManager.getWidget(id),
         onClose: () => {
             if (toolbar) {
                 toolbar.setActiveFuturePopover(null);

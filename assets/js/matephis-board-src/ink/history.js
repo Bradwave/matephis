@@ -29,6 +29,20 @@ function translateStrokes(strokes, idSet, dx, dy) {
     }
 }
 
+/** A widget moved together with the ink written on it (`sign` -1 undoes it). */
+function moveWidget(widgets, strokes, cmd, sign) {
+    const dx = cmd.dx * sign;
+    const dy = cmd.dy * sign;
+    const w = widgets.find((item) => item.id === cmd.id);
+    if (w) {
+        w.x = Math.round((w.x + dx) * 10) / 10;
+        w.y = Math.round((w.y + dy) * 10) / 10;
+    }
+    if (Array.isArray(cmd.strokeIds) && cmd.strokeIds.length) {
+        translateStrokes(strokes, new Set(cmd.strokeIds), dx, dy);
+    }
+}
+
 export class HistoryStack {
     constructor(maxDepth = 150) {
         this.maxDepth = maxDepth;
@@ -129,6 +143,10 @@ export class HistoryStack {
             if (w && cmd.next) Object.assign(w, cmd.next);
             return;
         }
+        if (cmd.type === 'widget-move' && widgets) {
+            moveWidget(widgets, strokes, cmd, 1);
+            return;
+        }
         if (cmd.type === 'connector-add' && connectors) {
             connectors.push(cmd.connector);
             return;
@@ -210,6 +228,10 @@ export class HistoryStack {
         if (cmd.type === 'widget-update' && widgets) {
             const w = widgets.find((item) => item.id === cmd.id);
             if (w && cmd.prev) Object.assign(w, cmd.prev);
+            return;
+        }
+        if (cmd.type === 'widget-move' && widgets) {
+            moveWidget(widgets, strokes, cmd, -1);
             return;
         }
         if (cmd.type === 'connector-add' && connectors) {

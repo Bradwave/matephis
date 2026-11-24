@@ -442,7 +442,7 @@ describe('Track 2B — ConnectorManager overlay & lifecycle', () => {
             const cSame2 = mgr.handlePlaceAt(140, 110);
             expect(mgr.jumpToTwin(cSame1)).toBe(true);
             expect(animateCalls).toHaveLength(1);
-            expect(animateCalls[0].ms).toBe(220);
+            expect(animateCalls[0].ms).toBe(1); // instant jump: no UI animations on the board
 
             // 5. Undo clears stale pendingPair on syncFromScene
             const cOpen = mgr.handlePlaceAt(30, 30);

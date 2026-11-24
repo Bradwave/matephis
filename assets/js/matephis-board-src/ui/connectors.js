@@ -13,8 +13,7 @@ import { nextConnectorId } from '../model/scene.js';
 
 const DRAG_THRESHOLD_PX = 4;
 const LONG_PRESS_MS = 420;
-const JUMP_ANIM_MS = 220;
-const HIGHLIGHT_MS = 950;
+const HIGHLIGHT_MS = 1400;
 
 let pairCounter = 1;
 
@@ -584,7 +583,8 @@ export class ConnectorManager {
     }
 
     /**
-     * Smoothly pan (or switch pages) to the matching twin and pulse a highlight ring.
+     * Jump (or switch pages) to the matching twin and mark it with a static ring.
+     * No camera glide: the board has no UI animations.
      */
     jumpToTwin(connector) {
         const twin = findTwinConnector(this.scene, connector);
@@ -605,7 +605,8 @@ export class ConnectorManager {
             }
             this.highlightConnector(twin.connector.id);
         } else if (this.surface && typeof this.surface.animateCameraTo === 'function') {
-            this.surface.animateCameraTo(targetCam, JUMP_ANIM_MS, () => {
+            // A one-frame "animation" is an instant jump that still redraws everything.
+            this.surface.animateCameraTo(targetCam, 1, () => {
                 if (!this._destroyed) this.highlightConnector(twin.connector.id);
             });
         } else {
@@ -617,8 +618,8 @@ export class ConnectorManager {
     }
 
     /**
-     * Display a JS-timed highlight ring around `connectorId` (works even though
-     * matephis-board.css disables CSS animations/transitions inside .board-root).
+     * Mark `connectorId` with a static square ring for a moment (no animation):
+     * after a jump the eye finds the twin, then the ring goes away.
      */
     highlightConnector(connectorId, durationMs = HIGHLIGHT_MS) {
         if (this._destroyed || !this.overlay || !this.overlay.connectorsLayer) return;
@@ -633,42 +634,12 @@ export class ConnectorManager {
         el.style.setProperty('--conn-color', resolveInkColor(c.color, this.getTheme()));
         this.overlay.connectorsLayer.appendChild(el);
 
-        const state = {
-            el,
-            connectorId,
-            rafId: null,
-            timerId: null,
-        };
+        const state = { el, connectorId, rafId: null, timerId: null };
         this._ringState = state;
         this._positionRing(el, c, this.scene.camera);
-
-        const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        const step = () => {
-            if (this._ringState !== state || this._destroyed) return;
-            const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-            const progress = Math.min(1, (now - t0) / durationMs);
-            // Two crisp pulse waves expanding outward
-            const wave = (progress * 2) % 1;
-            const scale = 0.9 + wave * 1.4;
-            const opacity = (1 - progress * 0.25) * (1 - wave * 0.85);
-            el.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
-            el.style.opacity = opacity.toFixed(3);
-
-            if (progress < 1) {
-                state.rafId = typeof requestAnimationFrame === 'function'
-                    ? requestAnimationFrame(step)
-                    : null;
-            } else {
-                this._clearHighlight();
-            }
-        };
-
-        if (typeof requestAnimationFrame === 'function') {
-            state.rafId = requestAnimationFrame(step);
-        }
         state.timerId = setTimeout(() => {
             if (this._ringState === state) this._clearHighlight();
-        }, durationMs + 50);
+        }, durationMs);
     }
 
     deleteConnector(connectorId) {
