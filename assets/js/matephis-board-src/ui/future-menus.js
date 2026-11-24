@@ -15,8 +15,20 @@ import {
     ENGINE_STARTER_CONFIGS,
     createQuickPlotConfig,
 } from './widgets.js';
-import { PHYSICS_PRESET_SECTIONS } from './physics-presets.js';
-import { SETS_PRESET_SECTIONS } from './sets-presets.js';
+
+/**
+ * The physics and sets presets (about 30 KB) load on their own, after start-up: only the
+ * diagram editor needs them. index.js starts the load when the board is idle.
+ */
+let presetsPromise = null;
+export function loadPresets() {
+    if (!presetsPromise) {
+        presetsPromise = Promise.all([import('./physics-presets.js'), import('./sets-presets.js')])
+            .then(([p, s]) => ({ physics: p.PHYSICS_PRESET_SECTIONS, sets: s.SETS_PRESET_SECTIONS }))
+            .catch((err) => { presetsPromise = null; throw err; });
+    }
+    return presetsPromise;
+}
 import {
     MAX_PLOT_FNS,
     PLOT_PALETTE_IDS,
@@ -682,8 +694,18 @@ export class FutureMenus {
         const previewBox = el.querySelector('[data-diag-preview]');
         const errBox = el.querySelector('.board-popover-error');
 
-        const catalog = { physics: PHYSICS_PRESET_SECTIONS, sets: SETS_PRESET_SECTIONS };
+        const catalog = { physics: [], sets: [] };
+        let ready = false;
         const st = { kind: 'physics', section: {}, selected: {}, editId: null, showJson: false };
+        // The presets arrive after start-up; opened before that, the editor waits for them
+        const whenReady = () => loadPresets().then((c) => {
+            catalog.physics = c.physics;
+            catalog.sets = c.sets;
+            ready = true;
+            if (!el.hidden) render();
+        }, () => {
+            if (!el.hidden) { itemsEl.textContent = 'Impossibile caricare i diagrammi: controlla la connessione.'; }
+        });
 
         const currentSection = () => {
             const sections = catalog[st.kind];
@@ -703,6 +725,7 @@ export class FutureMenus {
                 if (st.showJson) {
                     try { cfg = JSON.parse(jsonArea.value); } catch (_) { return; }
                 } else {
+                    if (!ready) return;
                     cfg = currentItem().data;
                 }
                 this._renderPreview('diagram', previewBox, st.kind, cfg);
@@ -723,6 +746,13 @@ export class FutureMenus {
             itemsEl.hidden = st.showJson;
             insertBtn.querySelector('span').textContent = st.editId ? 'Sostituisci' : 'Inserisci';
 
+            insertBtn.disabled = !ready && !st.showJson;
+            if (!st.showJson && !ready) {
+                sectionsRow.innerHTML = '';
+                itemsEl.textContent = 'Caricamento…';
+                whenReady();
+                return;
+            }
             if (!st.showJson) {
                 const sec = currentSection();
                 const item = currentItem();
@@ -773,7 +803,7 @@ export class FutureMenus {
 
         jsonToggle.addEventListener('click', () => {
             st.showJson = !st.showJson;
-            if (st.showJson) jsonArea.value = JSON.stringify(currentItem().data, null, 2);
+            if (st.showJson) jsonArea.value = ready ? JSON.stringify(currentItem().data, null, 2) : '';
             render();
         });
 
@@ -789,6 +819,7 @@ export class FutureMenus {
                     return;
                 }
             } else {
+                if (!ready) return;
                 data = cloneJson(currentItem().data);
             }
             if (st.editId) {

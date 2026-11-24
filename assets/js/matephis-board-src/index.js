@@ -10,7 +10,7 @@ import { BoardScene } from './model/scene.js';
 import { BoardStorage } from './model/storage.js';
 import { BoardToolbar } from './ui/toolbar.js';
 import { OptionsMenu } from './ui/options.js';
-import { FutureMenus } from './ui/future-menus.js';
+import { FutureMenus, loadPresets } from './ui/future-menus.js';
 import { PinnedStrip } from './ui/pinned-strip.js';
 import { PerfHud } from './ui/perf-hud.js';
 import { QuickMenu } from './ui/quick-menu.js';
@@ -21,7 +21,6 @@ import { ExercisePicker } from './ui/exercise-picker.js';
 import { WidgetManager } from './ui/widgets.js';
 import { WidgetPictureCache } from './ui/widget-pictures.js';
 import { downloadPageSVG } from './export/svg-export.js';
-import { exportSceneToPDF } from './export/pdf-export.js';
 
 async function initMatephisBoard() {
     const root = document.getElementById('matephis-board');
@@ -267,11 +266,12 @@ async function initMatephisBoard() {
             overlay,
             widgetManager,
         }),
-        onExportPDF: () => exportSceneToPDF(scene, {
+        // PDF export (about 11 KB) loads when it is asked for
+        onExportPDF: () => import('./export/pdf-export.js').then(({ exportSceneToPDF }) => exportSceneToPDF(scene, {
             theme: getTheme(),
             overlay,
             widgetManager,
-        }),
+        })),
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
                 historyProxy.clearAll();
@@ -526,6 +526,10 @@ async function initMatephisBoard() {
             quickMenu.open(x, y);
         },
     });
+
+    // Presets for the diagram editor: fetched once the board is idle, off the start-up path
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    idle(() => { loadPresets().catch(() => { /* retried when the editor opens */ }); });
 
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
