@@ -52,3 +52,5 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
+      - name: Typeset maths
+        run: node tools/mathjax/prerender.mjs _site
