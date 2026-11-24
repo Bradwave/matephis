@@ -37,9 +37,23 @@ export const PointerMixin = {
         return !!this.config.interactive;
     },
 
+    /**
+     * The SVG's box on screen. During a drag or pan it is read once and reused: reading it
+     * right after a redraw forces the browser to lay out the page again, on every move.
+     * A scroll in the meantime reads it again.
+     */
+    _svgRect() {
+        if (!this._mouse && !this._touch) return this.svg.getBoundingClientRect();
+        if (!this._rectCache || this._rectScroll !== lastScrollTime) {
+            this._rectCache = this.svg.getBoundingClientRect();
+            this._rectScroll = lastScrollTime;
+        }
+        return this._rectCache;
+    },
+
     /** Client coordinates -> SVG user units (robust to CSS scaling). */
     _toSvg(clientX, clientY) {
-        const rect = this.svg.getBoundingClientRect();
+        const rect = this._svgRect();
         const sx = rect.width ? this.width / rect.width : 1;
         const sy = rect.height ? this.height / rect.height : 1;
         return { x: (clientX - rect.left) * sx, y: (clientY - rect.top) * sy };
@@ -334,6 +348,7 @@ export const PointerMixin = {
     // =====================================================================
 
     _onPointerDown(e) {
+        this._rectCache = null;
         if (e.pointerType === 'touch' || e.button > 0) return;
         const { x, y } = this._toSvg(e.clientX, e.clientY);
         this._wheelActive = true;
@@ -373,7 +388,7 @@ export const PointerMixin = {
             if (!m.moved && Math.hypot(e.clientX - m.sx, e.clientY - m.sy) < 3) return;
             m.moved = true;
             this.wrapper.classList.add('matephis-dragging');
-            const scale = this.width / (this.svg.getBoundingClientRect().width || this.width);
+            const scale = this.width / (this._svgRect().width || this.width);
             this._updateRange((e.clientX - m.lastX) * scale, (e.clientY - m.lastY) * scale);
             m.lastX = e.clientX;
             m.lastY = e.clientY;
@@ -464,6 +479,7 @@ export const PointerMixin = {
     },
 
     _onTouchStart(e) {
+        this._rectCache = null;
         const fullscreen = !!this.inLightbox;
         if (!fullscreen && Date.now() - lastScrollTime < SCROLL_GUARD_MS) return; // momentum scroll
 
@@ -551,7 +567,7 @@ export const PointerMixin = {
 
         if (tt.mode === 'pan') {
             if (e.cancelable) e.preventDefault();
-            const scale = this.width / (this.svg.getBoundingClientRect().width || this.width);
+            const scale = this.width / (this._svgRect().width || this.width);
             this._updateRange((t.clientX - tt.lastX) * scale, (t.clientY - tt.lastY) * scale);
             tt.lastX = t.clientX;
             tt.lastY = t.clientY;

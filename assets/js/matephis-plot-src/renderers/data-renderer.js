@@ -8,6 +8,7 @@
 import { SVG_NS } from './svg-factory.js';
 import { sampleCurve, polylinesToPath } from './curve-sampler.js';
 import { sampleImplicit } from './implicit-sampler.js';
+import { SampleCache } from './sample-cache.js';
 import { hasMathJax } from './mathjax-bridge.js';
 
 const TAU = 2 * Math.PI;
@@ -93,6 +94,11 @@ export const DataMixin = {
     _drawData(cs) {
         const data = this.config.data || [];
         const legendItems = [];
+        // Sampled curves are reused when nothing they read changed (renderers/sample-cache.js)
+        if (!this._samples) this._samples = new SampleCache();
+        const cfg = this.config;
+        this._samples.begin(JSON.stringify([cs.width, cs.height, cs.padL, cs.padR, cs.padT, cs.padB,
+            cs.xMin, cs.xMax, cs.yMin, cs.yMax, cs.xScale, cs.yScale, cfg.sampleStep, cfg.sampleTolerance, cfg.implicitResolution]));
         this._riemannValueCount = 0;
 
         data.forEach((item, idx) => {
@@ -244,11 +250,12 @@ export const DataMixin = {
                 };
             }
 
-            const lines = sampleCurve({
+            const what = JSON.stringify(['fn', item.fn, item.param, complex, isParam, task.derivative, u0, u1, domain]);
+            const lines = this._samples.get(what, [f], this.params, this.resolvedPoints, () => sampleCurve({
                 point, t0: u0, t1: u1, view: cs.viewRect,
                 steps: this._sampleSteps(curveLike ? 1.5 : 1),
                 tolerance: this.config.sampleTolerance || 0.3,
-            });
+            }));
             this._path(lines, task.color, task.width, task.dash, task.opacity);
 
             if (!task.derivative) {
@@ -280,13 +287,14 @@ export const DataMixin = {
         const fy = this.compiler.fn(String(item.parametric[1]), [pv], { exclude: pv, complex: false });
         const [t0, t1] = this._curveRange(item);
 
-        const lines = sampleCurve({
+        const what = JSON.stringify(['parametric', item.parametric, pv, t0, t1]);
+        const lines = this._samples.get(what, [fx, fy], this.params, this.resolvedPoints, () => sampleCurve({
             point: (t) => {
                 const x = fx(t), y = fy(t);
                 return (isFinite(x) && isFinite(y)) ? [cs.mapX(x), cs.mapY(y)] : null;
             },
             t0, t1, view: cs.viewRect, steps: this._sampleSteps(1.5),
-        });
+        }));
         this._path(lines, color, width, dash, item.opacity);
         this.plotData.push({ type: 'curve', index: idx, lines });
         return lastPoint(lines, cs.viewRect);
@@ -320,13 +328,14 @@ export const DataMixin = {
         const f = this.compiler.fn(String(expr), POLAR_VARS, { complex: false });
         const [t0, t1] = this._curveRange(item);
 
-        const lines = sampleCurve({
+        const what = JSON.stringify(['polar', String(expr), t0, t1]);
+        const lines = this._samples.get(what, [f], this.params, this.resolvedPoints, () => sampleCurve({
             point: (t) => {
                 const r = f(t, t, t, t);
                 return isFinite(r) ? [cs.mapX(r * Math.cos(t)), cs.mapY(r * Math.sin(t))] : null;
             },
             t0, t1, view: cs.viewRect, steps: this._sampleSteps(2),
-        });
+        }));
         this._path(lines, color, width, dash, item.opacity);
         this.plotData.push({ type: 'curve', index: idx, lines });
         return lastPoint(lines, cs.viewRect);
@@ -339,14 +348,14 @@ export const DataMixin = {
     _drawImplicit(st) {
         const { item, idx, cs, color, width, dash } = st;
         const F = this.compiler.fn(item.implicit, ['x', 'y'], { complex: false });
-        const lines = sampleImplicit({
+        const lines = this._samples.get(JSON.stringify(['implicit', item.implicit]), [F], this.params, this.resolvedPoints, () => sampleImplicit({
             // Sampled in the axes' linear space, so log axes work too
             f: (u, v) => F(cs.fromLinX(u), cs.fromLinY(v)),
             xMin: cs._lx0, xMax: cs._lx1, yMin: cs._ly0, yMax: cs._ly1,
             mapX: (u) => cs.mapX(cs.fromLinX(u)), mapY: (v) => cs.mapY(cs.fromLinY(v)),
             pxWidth: cs.plotW, pxHeight: cs.plotH,
             cellPx: this.config.implicitResolution || 4,
-        });
+        }));
         this._path(lines, color, width, dash, item.opacity);
         this.plotData.push({ type: 'implicit', index: idx, lines });
 
