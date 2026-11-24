@@ -120,6 +120,8 @@ exclude:
   - package-lock.json
   - node_modules
   - tests
+  - tools
+  - reviews
   - assets/js/matephis-plot-src
   - assets/js/matephis-physics-src
   - assets/js/matephis-board-src
