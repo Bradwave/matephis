@@ -760,12 +760,13 @@ body.board-body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: max(44px, calc(var(--bu) * 0.8));
-    height: calc(var(--bu) * 2);
+    width: max(36px, calc(var(--bu) * 0.66));
+    height: calc(var(--bu) * 2.25);
     padding: 0;
     background: var(--bg);
     border: 1px solid var(--border);
-    box-shadow: var(--chrome-shadow);
+    /* Shadow only on the side facing the board: the tab comes out of the screen edge. */
+    --side-tab-shadow: rgba(0, 0, 0, 0.13);
     color: var(--secondary-text);
     cursor: pointer;
 }
@@ -783,6 +784,11 @@ body.board-body {
 .is-rail.is-side-right .board-side-tab {
     left: max(0px, env(safe-area-inset-left));
     border-left: none;
+    box-shadow: 8px 0 18px -8px var(--side-tab-shadow);
+}
+
+[data-theme="dark"] .is-rail .board-side-tab {
+    --side-tab-shadow: rgba(0, 0, 0, 0.6);
 }
 
 .is-rail.is-side-right.has-pin-left .board-side-tab {
@@ -792,6 +798,7 @@ body.board-body {
 .is-rail.is-side-left .board-side-tab {
     right: max(0px, env(safe-area-inset-right));
     border-right: none;
+    box-shadow: -8px 0 18px -8px var(--side-tab-shadow);
 }
 
 .is-bar.is-minimal .board-rail-group.is-sys {
