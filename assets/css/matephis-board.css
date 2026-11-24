@@ -3159,3 +3159,14 @@ body.board-body {
     box-shadow: inset 0 0 0 1px var(--title);
     border-color: var(--title);
 }
+
+/* Full screen toggle: first item of the Options menu */
+.board-fullscreen-btn {
+    width: 100%;
+    justify-content: flex-start;
+    margin-bottom: 0.6em;
+}
+
+.board-fullscreen-btn[hidden] {
+    display: none;
+}

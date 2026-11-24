@@ -40,6 +40,7 @@ export class OptionsMenu {
         this.el.hidden = true;
         this.el.innerHTML = `
             <div class="board-popover-title">Opzioni lavagna</div>
+            <button type="button" class="board-action-btn board-fullscreen-btn" data-fullscreen hidden></button>
             <div class="board-options-list">
                 <label class="board-opt-row">
                     <span>Tema scuro</span>
@@ -142,9 +143,44 @@ export class OptionsMenu {
         `;
 
         this.fileInput = this.el.querySelector('.board-file-input');
+        this._bindFullscreen();
         this._bindEvents();
         this.syncFromState();
         this.hostEl.appendChild(this.el);
+    }
+
+    /**
+     * Full screen on/off, for browsers without their own control (smartboards).
+     * Hidden where the Fullscreen API is missing (e.g. iPhone Safari).
+     */
+    _bindFullscreen() {
+        const btn = this.el.querySelector('[data-fullscreen]');
+        const doc = typeof document !== 'undefined' ? document : null;
+        const root = doc && doc.documentElement;
+        if (!btn || !root) return;
+        const request = root.requestFullscreen || root.webkitRequestFullscreen;
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+        const current = () => doc.fullscreenElement || doc.webkitFullscreenElement || null;
+        if (!request || !exit) return;
+
+        const sync = () => {
+            const on = Boolean(current());
+            btn.innerHTML = on
+                ? `${BoardIcons.fullscreenExit}<span>Esci da schermo intero</span>`
+                : `${BoardIcons.fullscreen}<span>Schermo intero</span>`;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', String(on));
+        };
+        btn.hidden = false;
+        btn.addEventListener('click', () => {
+            try {
+                const res = current() ? exit.call(doc) : request.call(root, { navigationUI: 'hide' });
+                if (res && typeof res.catch === 'function') res.catch(() => { /* refused by the browser */ });
+            } catch (_) { /* refused by the browser */ }
+        });
+        doc.addEventListener('fullscreenchange', sync);
+        doc.addEventListener('webkitfullscreenchange', sync);
+        sync();
     }
 
     _bindEvents() {

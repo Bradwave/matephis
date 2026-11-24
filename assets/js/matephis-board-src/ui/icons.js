@@ -40,6 +40,8 @@ import interact from './icons/interact.svg';
 import code from './icons/code.svg';
 import remove from './icons/remove.svg';
 import link from './icons/link.svg';
+import fullscreen from './icons/fullscreen.svg';
+import fullscreenExit from './icons/fullscreen-exit.svg';
 
 export const BoardIcons = {
     pen,
@@ -81,4 +83,6 @@ export const BoardIcons = {
     code,
     remove,
     link,
+    fullscreen,
+    fullscreenExit,
 };
