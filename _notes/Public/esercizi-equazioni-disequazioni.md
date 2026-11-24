@@ -1,5 +1,5 @@
 ---
-title: Esercizi sulle equazioni e sulle disequazioni
+title: Esercizi su equazioni e disequazioni
 feed: show
 plot: true
 tags:

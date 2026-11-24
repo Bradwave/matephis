@@ -1,0 +1,26 @@
+---
+permalink: /exercises-manifest.json
+---
+[
+{%- assign first = true -%}
+{%- for note in site.notes -%}
+  {%- assign is_ex = false -%}
+  {%- if note.tags contains 'esercizi' or note.path contains 'esercizi-' -%}
+    {%- assign is_ex = true -%}
+  {%- endif -%}
+  {%- if note.path contains 'scala-difficolt' or note.path contains 'soluzioni-' or note.path contains 'facsimile-' -%}
+    {%- assign is_ex = false -%}
+  {%- endif -%}
+  {%- if is_ex -%}
+    {%- unless first -%},{%- endunless -%}
+    {%- assign first = false -%}
+    {%- capture full_url -%}{{ site.baseurl }}{{ note.url }}{%- endcapture -%}
+    {
+      "title": {{ note.title | strip_html | jsonify }},
+      "slug": {{ note.url | split: '/' | last | jsonify }},
+      "url": {{ full_url | jsonify }},
+      "tags": {% if note.tags %}{{ note.tags | jsonify }}{% else %}[]{% endif %}
+    }
+  {%- endif -%}
+{%- endfor -%}
+]

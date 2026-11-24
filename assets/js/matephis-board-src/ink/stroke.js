@@ -110,11 +110,16 @@ export function decodeStroke(raw) {
 const pathCache = new WeakMap();
 const HAS_PATH2D = typeof Path2D === 'function';
 
+export const SHARP_COS_THRESHOLD = 0.75;
+export const MAX_PULL_MM = 2.2;
+
 /**
  * Trace the stroke's smoothed outline into `sink` (a 2D context or a Path2D).
  * Uses corner-aware quadratic midpoint smoothing so fast handwriting looks crisp.
  */
-function traceStroke(sink, pts, width) {
+export function traceStroke(sink, pts, width) {
+    if (!pts || pts.length === 0) return;
+
     if (pts.length === 1) {
         sink.moveTo(pts[0].x + width * 0.5, pts[0].y);
         sink.arc(pts[0].x, pts[0].y, width * 0.5, 0, Math.PI * 2);
@@ -133,9 +138,6 @@ function traceStroke(sink, pts, width) {
     //   stay razor-sharp even after RDP simplification (zero extra points needed).
     // - Gentle curves smooth smoothly with tangent pull clamped to <= 2.2 mm so long straight
     //   segments never warp into wide arcs.
-    const SHARP_COS_THRESHOLD = 0.75;
-    const MAX_PULL_MM = 2.2;
-
     for (let i = 1; i < pts.length - 1; i++) {
         const prev = pts[i - 1];
         const curr = pts[i];
@@ -168,6 +170,58 @@ function traceStroke(sink, pts, width) {
     }
     const last = pts[pts.length - 1];
     sink.lineTo(last.x, last.y);
+}
+
+/**
+ * Pure path-command generator sharing exact corner-aware quadratic smoothing with `traceStroke`.
+ * Returns an array of `{ type: 'M'|'L', x, y }`, `{ type: 'Q', cx, cy, x, y }`,
+ * or `{ type: 'CIRCLE', cx, cy, r }`.
+ */
+export function traceStrokeCommands(pts, width = 0.45) {
+    if (!pts || pts.length === 0) return [];
+    const cmds = [];
+    traceStroke({
+        moveTo(x, y) { cmds.push({ type: 'M', x, y }); },
+        lineTo(x, y) { cmds.push({ type: 'L', x, y }); },
+        quadraticCurveTo(cx, cy, x, y) { cmds.push({ type: 'Q', cx, cy, x, y }); },
+        arc(cx, cy, r) {
+            if (cmds.length === 1 && cmds[0].type === 'M') {
+                cmds[0] = { type: 'CIRCLE', cx, cy, r };
+            } else {
+                cmds.push({ type: 'CIRCLE', cx, cy, r });
+            }
+        },
+    }, pts, width);
+    return cmds;
+}
+
+/**
+ * Convert a stroke (or point array) to an SVG `d` path string.
+ */
+export function strokeToSVGPath(stroke, precision = 3) {
+    const pts = Array.isArray(stroke) ? stroke : (stroke && stroke.points);
+    const width = Array.isArray(stroke) ? 0.45 : (stroke && stroke.width) || 0.45;
+    const cmds = traceStrokeCommands(pts, width);
+    if (cmds.length === 0) return '';
+    const f = (n) => {
+        const s = Number(n).toFixed(precision);
+        return s.replace(/\.?0+$/, '') || '0';
+    };
+    const parts = new Array(cmds.length);
+    for (let i = 0; i < cmds.length; i++) {
+        const c = cmds[i];
+        if (c.type === 'M') parts[i] = `M ${f(c.x)} ${f(c.y)}`;
+        else if (c.type === 'L') parts[i] = `L ${f(c.x)} ${f(c.y)}`;
+        else if (c.type === 'Q') parts[i] = `Q ${f(c.cx)} ${f(c.cy)} ${f(c.x)} ${f(c.y)}`;
+        else if (c.type === 'CIRCLE') {
+            const x0 = f(c.cx + c.r);
+            const x1 = f(c.cx - c.r);
+            const cy = f(c.cy);
+            const r = f(c.r);
+            parts[i] = `M ${x0} ${cy} A ${r} ${r} 0 1 0 ${x1} ${cy} A ${r} ${r} 0 1 0 ${x0} ${cy} Z`;
+        }
+    }
+    return parts.join(' ');
 }
 
 function getCachedPath(stroke) {
