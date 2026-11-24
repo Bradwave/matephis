@@ -19,6 +19,11 @@
 import { MatephisIcons } from './icons.js';
 import { typesetElements } from '../renderers/mathjax-bridge.js';
 
+/** An animation step is due this much before its time (frames arrive with a little jitter). */
+const ANIM_SLACK_MS = 2;
+/** A frame later than this is a pause (a stall, a hidden tab), not a slow device: the animation goes on from now. */
+const ANIM_MAX_GAP_MS = 1000;
+
 /** "2*PI" -> "2π", "PI/16" -> "π/16" for slider bound labels. */
 function prettyBound(src, value) {
     if (typeof src === 'string' && /pi/i.test(src)) {
@@ -345,25 +350,44 @@ export class SliderManager {
                     const interval = 1000 / (p.fps || 60);
                     let lastTime = 0;
 
+                    // Steps follow the clock, not the frames: `speed` per 1/fps s whatever the
+                    // device manages, so the animation lasts as long on a slow board as on a
+                    // fast laptop. Frames a little early (16.6 ms for 16.7) no longer skip a
+                    // step, and a slow frame takes the steps it missed (the values stay on the
+                    // same grid: min + k·speed).
+                    const step = (v) => {
+                        const lo = parseFloat(input.min), hi = parseFloat(input.max);
+                        v += speed * anim.dir;
+                        if (p.loop === 'bounce') {
+                            if (v > hi) { v = hi; anim.dir = -1; }
+                            if (v < lo) { v = lo; anim.dir = 1; }
+                        } else if (v > hi + 1e-12) {
+                            v = lo;
+                        }
+                        // Rounding prevents float drift (0.30000000000000004)
+                        return round(v);
+                    };
+                    this._watchVisibility();
                     const loop = (timestamp) => {
                         if (!anim.playing) return;
+                        // Off screen (scrolled away, or outside the board's view): hold still
+                        // and go on from the same value when it is seen again
+                        if (this._offscreen) {
+                            lastTime = timestamp;
+                            anim.frame = requestAnimationFrame(loop);
+                            return;
+                        }
                         if (!lastTime) lastTime = timestamp;
-                        if (timestamp - lastTime >= interval) {
-                            const lo = parseFloat(input.min), hi = parseFloat(input.max);
-                            let v = params[key] / scale + speed * anim.dir;
-                            if (p.loop === 'bounce') {
-                                if (v > hi) { v = hi; anim.dir = -1; }
-                                if (v < lo) { v = lo; anim.dir = 1; }
-                            } else if (v > hi + 1e-12) {
-                                v = lo;
-                            }
-                            // Rounding prevents float drift (0.30000000000000004)
-                            v = round(v);
+                        if (timestamp - lastTime > ANIM_MAX_GAP_MS) lastTime = timestamp - interval;
+                        const due = Math.floor((timestamp - lastTime + ANIM_SLACK_MS) / interval);
+                        if (due >= 1) {
+                            let v = params[key] / scale;
+                            for (let k = 0; k < due; k++) v = step(v);
                             params[key] = v * scale;
                             sync(v);
                             this.updateAllBounds();
                             this.plot.draw();
-                            lastTime = timestamp;
+                            lastTime += due * interval;
                         }
                         anim.frame = requestAnimationFrame(loop);
                     };
@@ -435,9 +459,22 @@ export class SliderManager {
         tight.forEach(m => m.controls.classList.add('stacked'));
     }
 
+    /** Tracks whether the plot is on screen, for animations (started with the first one). */
+    _watchVisibility() {
+        if (this._visibility || typeof IntersectionObserver === 'undefined') return;
+        const el = this.plot.wrapper || this.controls;
+        if (!el) return;
+        this._visibility = new IntersectionObserver((entries) => {
+            const e = entries[entries.length - 1];
+            this._offscreen = !e.isIntersecting;
+        });
+        this._visibility.observe(el);
+    }
+
     destroy() {
         this.animations.forEach(a => a.stop());
         this.animations.clear();
+        if (this._visibility) { this._visibility.disconnect(); this._visibility = null; }
         if (this._observed) {
             panelObserver().unobserve(this.controls);
             panels.delete(this.controls);

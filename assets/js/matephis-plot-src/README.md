@@ -85,6 +85,12 @@ Pure modules (parser, samplers, coordinate system) have no DOM dependency and ar
 - **Geometry cache.** Every line-like item stores its screen polylines in `plotData`
   (snapping, selection, slopes); draggable things are registered in `handles`.
 - **Redraws are coalesced** with `requestDraw()` (one per animation frame).
+- **Sampled curves are cached between draws** (`renderers/sample-cache.js`), keyed on the visible
+  window and size, the item's settings and the values of the parameters and points its
+  expressions read (found in the generated code). Moving one slider resamples only the curves
+  that use it; a redraw with nothing changed resamples nothing.
+- **Slider animations follow the clock**, not the frame rate: `speed` per 1/fps s on any device,
+  values on the grid min + k·speed; they pause while the plot is off screen.
 
 ## Adding an icon
 
