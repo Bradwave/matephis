@@ -67,6 +67,7 @@ async function initMatephisBoard() {
     let connectorManager = null;
     let widgetManager = null;
     let lastDismissAt = 0;
+    let syncPictureNeeds = () => {}; // set once the picture cache exists
 
     const applyTheme = (nextTheme) => {
         const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -115,6 +116,7 @@ async function initMatephisBoard() {
             syncUI();
             storage.scheduleSave(scene, 400);
             engineLoader.ensureForPage(scene.currentPage);
+            syncPictureNeeds();
         }
     };
 
@@ -185,9 +187,20 @@ async function initMatephisBoard() {
     });
 
     // Static widget pictures: the pinned strip and the pixelated pan/zoom draw these.
+    // Which widgets need a picture: the current page's with the pixel effect, the pinned page's.
+    const pictureNeeds = () => {
+        const ids = new Set();
+        if (scene.settings.gestureEffect === 'pixel' && scene.settings.fastPan !== false) {
+            for (const w of scene.widgets) ids.add(w.id);
+        }
+        const pinned = pinnedStrip ? pinnedStrip.pinnedPage() : null;
+        if (pinned) for (const w of pinned.widgets || []) ids.add(w.id);
+        return ids;
+    };
     const widgetPictures = new WidgetPictureCache({
         engineLoader,
         getTheme,
+        isWanted: (id) => pictureNeeds().has(id),
         getMountedElement: (id) => (widgetManager ? widgetManager.getElement(id) : null),
         onUpdate: () => {
             if (pinnedStrip && pinnedStrip.active) pinnedStrip.render();
@@ -195,11 +208,20 @@ async function initMatephisBoard() {
     });
     surface.getWidgetPictures = () => widgetPictures.picturesFor(scene.widgets);
     surface.getConnectorShapes = () => (connectorManager ? connectorManager.shapesForPicture() : []);
+    // Free pictures nobody needs and prepare the ones that will be: after a page switch,
+    // a pin change or a change of the pan/zoom effect.
+    syncPictureNeeds = () => {
+        widgetPictures.retain(pictureNeeds());
+        if (scene.settings.gestureEffect === 'pixel' && scene.settings.fastPan !== false) {
+            for (const w of scene.widgets) widgetPictures.request(w);
+        }
+    };
 
     pinnedStrip = new PinnedStrip(root, {
         surface,
         scene,
         getWidgetPictures: (page) => widgetPictures.availableFor(page.widgets || []),
+        onPinChange: () => syncPictureNeeds(),
         onJumpToPage: (pageIndex, targetCam) => {
             if (pageIndex !== scene.currentPageIndex) {
                 switchToPage(pageIndex, targetCam);
@@ -215,6 +237,7 @@ async function initMatephisBoard() {
         onToggleTheme: (nextTheme) => applyTheme(nextTheme),
         onSettingChange: (key, value) => {
             storage.saveSettings(scene.settings);
+            if (key === 'gestureEffect' || key === 'fastPan') syncPictureNeeds();
             if (key === 'showCropMarks') {
                 surface.requestCommittedRedraw();
                 pinnedStrip.render();

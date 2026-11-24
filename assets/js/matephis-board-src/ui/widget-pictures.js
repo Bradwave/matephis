@@ -55,11 +55,14 @@ function wrapLines(ctx, text, maxW) {
 }
 
 export class WidgetPictureCache {
-    constructor({ engineLoader, getTheme, getMountedElement, onUpdate = null }) {
+    constructor({ engineLoader, getTheme, getMountedElement, onUpdate = null, isWanted = null }) {
         this.engineLoader = engineLoader;
         this.getTheme = getTheme || (() => 'light');
         this.getMountedElement = getMountedElement || (() => null);
         this.onUpdate = onUpdate;
+        // Pictures cost memory (~3 MB per large widget): only widgets someone will draw
+        // (pixel effect on the current page, the pinned page) get one.
+        this.isWanted = isWanted || (() => true);
         this.entries = new Map(); // widgetId -> { sig, canvas, building, liveAt }
         this._offscreen = null;
     }
@@ -99,6 +102,7 @@ export class WidgetPictureCache {
      * still for a moment, so a running animation does not re-picture every frame.
      */
     touch(widget) {
+        if (!this.isWanted(widget.id)) return;
         let e = this.entries.get(widget.id);
         if (!e) {
             this.request(widget);
@@ -134,6 +138,16 @@ export class WidgetPictureCache {
         const promise = new Promise((resolve) => idle(() => run().then(resolve)));
         e.building = promise;
         e.buildingSig = sig;
+    }
+
+    /** Drop every picture whose widget is not in `ids` (a Set): frees their bitmaps. */
+    retain(ids) {
+        for (const [id, e] of this.entries) {
+            if (ids.has(id)) continue;
+            clearTimeout(e.touchTimer);
+            e.canvas = null;
+            this.entries.delete(id);
+        }
     }
 
     forget(id) {

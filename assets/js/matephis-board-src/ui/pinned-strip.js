@@ -23,10 +23,11 @@ const STRIP_WHEEL_END_MS = 160;
 import { BoardIcons } from './icons.js';
 
 export class PinnedStrip {
-    constructor(hostEl, { surface, scene, onJumpToPage = null, getWidgetPictures = null }) {
+    constructor(hostEl, { surface, scene, onJumpToPage = null, getWidgetPictures = null, onPinChange = null }) {
         this.hostEl = hostEl;
         // Widgets are live DOM on the board; here they are drawn as static pictures.
         this.getWidgetPictures = getWidgetPictures;
+        this.onPinChange = onPinChange; // the pinned page changed (or the strip closed)
         this.surface = surface;
         this.scene = scene;
         this.onJumpToPage = onJumpToPage;
@@ -209,6 +210,13 @@ export class PinnedStrip {
         return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
     }
 
+    /** The pinned page, or null when nothing is pinned. */
+    pinnedPage() {
+        if (!this.active) return null;
+        const info = this._getPinnedPageInfo();
+        return info ? info.page : null;
+    }
+
     _getPinnedPageInfo() {
         if (!this.pinnedPageId) return null;
         const idx = this.scene.pages.findIndex((p) => p.id === this.pinnedPageId);
@@ -248,6 +256,7 @@ export class PinnedStrip {
 
         this.pinnedPageId = targetPage.id;
         this.active = true;
+        if (this.onPinChange) this.onPinChange();
 
         const refCam = { ...targetPage.camera };
         const visibleW = this.surface.width / refCam.scale;
@@ -288,6 +297,7 @@ export class PinnedStrip {
         if (!targetPage) return;
 
         this.pinnedPageId = targetPage.id;
+        if (this.onPinChange) this.onPinChange();
         const refCam = targetPage.camera;
         const visibleW = this.surface.width / refCam.scale;
         const visibleH = this.surface.height / refCam.scale;
@@ -298,6 +308,7 @@ export class PinnedStrip {
     refreshFromCurrent() {
         if (!this.active) return;
         this.pinnedPageId = this.scene.currentPage.id;
+        if (this.onPinChange) this.onPinChange();
         const currCam = this.scene.camera;
         const visibleW = this.surface.width / currCam.scale;
         const visibleH = this.surface.height / currCam.scale;
@@ -601,6 +612,7 @@ export class PinnedStrip {
     close() {
         this.active = false;
         this.pinnedPageId = null;
+        if (this.onPinChange) this.onPinChange();
         this.pointers.clear();
         this.el.hidden = true;
         this._publishInset();

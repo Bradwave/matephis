@@ -128,3 +128,18 @@ describe('Widget move carries the ink written on it', () => {
         expect(page.strokes[0].points[0]).toEqual({ x: 40, y: 25 });
     });
 });
+
+describe('Widget pictures are built only when wanted', () => {
+    it('ignores changes of unwanted widgets and frees pictures nobody needs', async () => {
+        const { WidgetPictureCache } = await import('../assets/js/matephis-board-src/ui/widget-pictures.js');
+        const wanted = new Set(['w1']);
+        const cache = new WidgetPictureCache({ engineLoader: null, isWanted: (id) => wanted.has(id) });
+        cache.touch({ id: 'w2', kind: 'plot', w: 100, data: {} });
+        expect(cache.entries.has('w2')).toBe(false);
+
+        cache.entries.set('w1', { sig: 's', canvas: {}, touchTimer: null });
+        cache.entries.set('w3', { sig: 's', canvas: {}, touchTimer: null });
+        cache.retain(new Set(['w1']));
+        expect([...cache.entries.keys()]).toEqual(['w1']);
+    });
+});
