@@ -2,15 +2,14 @@
  * Popovers for Matephis Board features:
  * - Quick Cartesian Axes / Matephis Plot
  * - Matephis Diagrams (physics and sets presets by topic; circuits hidden for now)
- * - Exercise Picker (search + topic/section browse + live MathJax preview)
+ * - Exercise sheet (tap-only: subject → topic → note → section → number, live preview)
  * - Cloud Session & QR Sync (Phase 4 stub)
  */
 
 import { BoardIcons } from './icons.js';
 import {
-    DEFAULT_TOPICS,
-    DEFAULT_SECTIONS,
     hydrateEmbeddedEngines,
+    shortNoteTitle,
 } from './exercise-picker.js';
 import {
     ENGINE_STARTER_CONFIGS,
@@ -61,16 +60,7 @@ export class FutureMenus {
         this.onClose = onClose;
 
         this.activePopover = null; // null | 'plot' | 'diagrams' | 'exercises' | 'cloud'
-        this._exState = {
-            topic: null,
-            section: null,
-            noteUrl: null,
-            currentResult: null,
-            selectedItem: null,
-            previewInstances: [],
-            searchSeq: 0,
-            topicsEnriched: false,
-        };
+        this._exState = { previewInstances: [] }; // replaced by the exercise sheet's state
 
         this.popovers = {
             plot: this._buildPlotPopover(),
@@ -100,8 +90,8 @@ export class FutureMenus {
         for (const [key, el] of Object.entries(this.popovers)) {
             el.hidden = key !== this.activePopover;
         }
-        if (this.activePopover === 'exercises') {
-            this._openExercisesPopover();
+        if (this.activePopover === 'exercises' && this._exerciseSheet) {
+            this._exerciseSheet.open();
         }
         // Opened from the toolbar: a new item, not the last edited one.
         if (this.activePopover === 'plot' && this._plotEditor) this._plotEditor.reset();
@@ -160,6 +150,28 @@ export class FutureMenus {
             box.appendChild(msg);
         } finally {
             box.classList.remove('is-loading');
+        }
+    }
+
+    /** In a scrolling tab row, bring the active tab into view (no page scroll). */
+    _revealActiveTab(row) {
+        if (!row) return;
+        // A fade marks the side where more tabs are hidden.
+        const syncFade = () => {
+            row.classList.toggle('has-more-left', row.scrollLeft > 2);
+            row.classList.toggle('has-more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+        };
+        if (!row.dataset.fadeBound) {
+            row.dataset.fadeBound = '1';
+            row.addEventListener('scroll', syncFade, { passive: true });
+        }
+        requestAnimationFrame(syncFade);
+        const active = row.querySelector('.active');
+        if (!active) return;
+        const left = active.offsetLeft - row.offsetLeft;
+        if (left < row.scrollLeft) row.scrollLeft = left - 8;
+        else if (left + active.offsetWidth > row.scrollLeft + row.clientWidth) {
+            row.scrollLeft = left + active.offsetWidth - row.clientWidth + 8;
         }
     }
 
@@ -726,6 +738,7 @@ export class FutureMenus {
                     });
                     sectionsRow.appendChild(b);
                 }
+                this._revealActiveTab(sectionsRow);
                 itemsEl.innerHTML = '';
                 for (const it of sec.items) {
                     const b = document.createElement('button');
@@ -736,7 +749,8 @@ export class FutureMenus {
                     name.textContent = it.label;
                     const sliders = document.createElement('span');
                     sliders.className = 'board-preset-sliders';
-                    sliders.textContent = presetSliderLabels(it.data).join(' · ');
+                    // Physics quantities (m, α, v₀) say something; sets parameters (x, p) do not.
+                    sliders.textContent = st.kind === 'physics' ? presetSliderLabels(it.data).join(' · ') : '';
                     b.append(name, sliders);
                     b.addEventListener('click', () => {
                         st.selected[st.kind] = it.id;
@@ -822,37 +836,49 @@ export class FutureMenus {
     }
 
     // =========================================================================
-    // 3. Exercise Picker Side Sheet
+    // 3. Exercise sheet: tap-only path subject → topic → note → section → number,
+    //    live preview with ◀ ▶ to step through, remembers where you were.
     // =========================================================================
 
     _buildExercisesPopover() {
         const el = document.createElement('div');
-        el.className = 'board-popover board-sheet board-exercises-popover';
+        el.className = 'board-popover board-sheet board-editor-sheet board-exercises-popover';
         el.hidden = true;
         el.innerHTML = `
             <div class="board-popover-title">
-                <span>Inserisci esercizio</span>
+                <span>Esercizi</span>
+                <div class="board-seg-row board-seg-compact" data-ex-subjects></div>
             </div>
-            <div class="board-search-box">
-                ${BoardIcons.search}
-                <input type="text" data-ex-search placeholder="dinamica quesiti 4 · limiti 2.7 · parole..." />
-            </div>
-            <div class="board-chip-section">
-                <div class="board-micro-label">Argomento</div>
-                <div class="board-chip-row" data-ex-topics>
-                    ${DEFAULT_TOPICS.map((t) => `<button type="button" class="board-chip" data-topic="${t.toLowerCase()}">${t}</button>`).join('')}
+            <div class="board-sheet-scroll">
+                <button type="button" class="board-ex-crumb" data-ex-crumb hidden></button>
+                <div class="board-chip-section board-ex-topics-wrap">
+                    <div class="board-micro-label">Argomento</div>
+                    <div class="board-ex-topic-grid" data-ex-topics></div>
                 </div>
-            </div>
-            <div class="board-chip-section">
-                <div class="board-micro-label">Sezione</div>
-                <div class="board-chip-row" data-ex-sections>
-                    ${DEFAULT_SECTIONS.map((s) => `<button type="button" class="board-chip" data-section="${s.toLowerCase()}">${s}</button>`).join('')}
+                <div class="board-chip-section board-ex-notes-wrap" data-ex-notes-wrap hidden>
+                    <div class="board-micro-label">Nota</div>
+                    <div class="board-preset-list board-ex-note-list" data-ex-notes></div>
                 </div>
+                <div class="board-chip-section" data-ex-sections-wrap hidden>
+                    <div class="board-micro-label">Sezione</div>
+                    <div class="board-seg-row board-ex-sections" data-ex-sections></div>
+                </div>
+                <div class="board-chip-section" data-ex-items-wrap hidden>
+                    <div class="board-micro-label">Esercizio</div>
+                    <div class="board-ex-number-grid" data-ex-items></div>
+                    <div class="board-ex-sub" data-ex-subs-wrap hidden>
+                        <div class="board-micro-label">Parte</div>
+                        <div class="board-ex-number-grid is-sub" data-ex-subs></div>
+                    </div>
+                </div>
+                <div class="board-ex-status" data-ex-status></div>
             </div>
-            <div class="board-ex-notes-row" data-ex-notes hidden></div>
-            <div class="board-ex-items-row" data-ex-items hidden></div>
-            <div class="board-ex-preview">
-                <div class="board-ex-preview-meta">Seleziona un argomento o cerca un esercizio…</div>
+            <div class="board-preview board-ex-preview" data-ex-preview>
+                <div class="board-ex-preview-head">
+                    <button type="button" class="board-stepper-btn" data-ex-prev aria-label="Esercizio precedente">${BoardIcons.chevronLeft}</button>
+                    <div class="board-ex-preview-meta">Scegli un argomento</div>
+                    <button type="button" class="board-stepper-btn" data-ex-next aria-label="Esercizio successivo">${BoardIcons.chevronRight}</button>
+                </div>
                 <div class="board-ex-preview-body"></div>
             </div>
             <div class="board-popover-footer">
@@ -860,52 +886,263 @@ export class FutureMenus {
                     <input type="checkbox" data-ex-hide-sol checked />
                     <span>Nascondi soluzione</span>
                 </label>
+                <span class="board-footer-spacer"></span>
+                <button type="button" class="board-action-btn" data-ex-cancel>Annulla</button>
                 <button type="button" class="board-action-btn board-action-primary" data-ex-insert disabled>
                     ${BoardIcons.add}<span>Inserisci</span>
                 </button>
             </div>
         `;
 
-        const searchInput = el.querySelector('[data-ex-search]');
-        const topicsRow = el.querySelector('[data-ex-topics]');
-        const sectionsRow = el.querySelector('[data-ex-sections]');
-        const hideSolCheck = el.querySelector('[data-ex-hide-sol]');
-        const insertBtn = el.querySelector('[data-ex-insert]');
-        const previewEl = el.querySelector('.board-ex-preview');
+        const q = (sel) => el.querySelector(sel);
+        const subjectsRow = q('[data-ex-subjects]');
+        const topicsEl = q('[data-ex-topics]');
+        const notesWrap = q('[data-ex-notes-wrap]');
+        const notesEl = q('[data-ex-notes]');
+        const sectionsWrap = q('[data-ex-sections-wrap]');
+        const sectionsEl = q('[data-ex-sections]');
+        const itemsWrap = q('[data-ex-items-wrap]');
+        const itemsEl = q('[data-ex-items]');
+        const subsWrap = q('[data-ex-subs-wrap]');
+        const subsEl = q('[data-ex-subs]');
+        const statusEl = q('[data-ex-status]');
+        const crumbEl = q('[data-ex-crumb]');
+        const previewEl = q('[data-ex-preview]');
+        const metaEl = q('.board-ex-preview-meta');
+        const bodyEl = q('.board-ex-preview-body');
+        const prevBtn = q('[data-ex-prev]');
+        const nextBtn = q('[data-ex-next]');
+        const hideSolCheck = q('[data-ex-hide-sol]');
+        const insertBtn = q('[data-ex-insert]');
 
-        let debounceTimer = null;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            this._exState.noteUrl = null;
-            debounceTimer = setTimeout(() => this._runExerciseSearch(), 170);
-        });
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                clearTimeout(debounceTimer);
-                this._exState.noteUrl = null;
-                this._runExerciseSearch();
+        const POS_KEY = 'matephis_board_exercise_pos';
+        const st = this._exState = {
+            catalog: null,
+            subject: null,
+            topic: null,
+            note: null,        // { slug, title, url }
+            parsed: null,      // { noteTitle, items }
+            section: null,
+            item: null,        // selected exercise (top-level or a part)
+            loadSeq: 0,
+            previewInstances: [],
+        };
+
+        const savePos = () => {
+            try {
+                localStorage.setItem(POS_KEY, JSON.stringify({
+                    subject: st.subject,
+                    topic: st.topic,
+                    note: st.note ? st.note.slug : null,
+                    section: st.section,
+                    item: st.item ? [st.item.itemNumber, st.item.subItemNumber] : null,
+                }));
+            } catch (_) { /* private mode: no memory */ }
+        };
+        const loadPos = () => {
+            try { return JSON.parse(localStorage.getItem(POS_KEY) || 'null'); } catch (_) { return null; }
+        };
+
+        const subjectObj = () => (st.catalog || []).find((s) => s.subject === st.subject) || null;
+        const topicObj = () => {
+            const s = subjectObj();
+            return s ? s.topics.find((t) => t.label === st.topic) || null : null;
+        };
+        const sectionsOf = () => {
+            const out = [];
+            for (const it of (st.parsed && st.parsed.items) || []) if (!out.includes(it.section)) out.push(it.section);
+            return out;
+        };
+        const topItems = () => ((st.parsed && st.parsed.items) || [])
+            .filter((it) => it.section === st.section && it.subItemNumber === null);
+        const partsOf = (num) => ((st.parsed && st.parsed.items) || [])
+            .filter((it) => it.section === st.section && it.itemNumber === num && it.subItemNumber !== null);
+        /** Every selectable exercise in order (parts after their parent), for ◀ ▶. */
+        const sequence = () => {
+            const seq = [];
+            for (const it of topItems()) {
+                seq.push(it);
+                seq.push(...partsOf(it.itemNumber));
             }
+            return seq;
+        };
+
+        const button = (cls, text, active, onClick, title = '') => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = `${cls}${active ? ' active' : ''}`;
+            b.textContent = text;
+            if (title) b.title = title;
+            b.addEventListener('click', onClick);
+            return b;
+        };
+
+        // Narrow screens: once a note is open, topic and note fold into one line
+        // (tap it to choose again), so the preview gets the room.
+        crumbEl.addEventListener('click', () => {
+            st.unfolded = true;
+            render();
         });
 
-        topicsRow.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-topic]');
-            if (!btn) return;
-            const next = btn.dataset.topic;
-            this._exState.topic = this._exState.topic === next ? null : next;
-            this._exState.noteUrl = null;
-            this._syncExChipState();
-            this._runExerciseSearch();
-        });
+        const render = () => {
+            el.classList.toggle('is-folded', Boolean(st.note) && !st.unfolded);
+            crumbEl.hidden = !st.note;
+            crumbEl.textContent = st.note ? `${st.subject} › ${st.topic || ''} › ${shortNoteTitle(st.note.title)}` : '';
+            // Subjects
+            subjectsRow.innerHTML = '';
+            for (const s of st.catalog || []) {
+                subjectsRow.appendChild(button('board-seg-btn', s.subject, s.subject === st.subject, () => {
+                    if (st.subject === s.subject) return;
+                    st.subject = s.subject;
+                    st.topic = null;
+                    selectNote(null);
+                }));
+            }
+            // Topics
+            topicsEl.innerHTML = '';
+            const subj = subjectObj();
+            for (const t of subj ? subj.topics : []) {
+                topicsEl.appendChild(button('board-ex-topic', t.label, t.label === st.topic, () => {
+                    st.topic = t.label;
+                    selectNote(t.notes.length === 1 ? t.notes[0] : (t.notes.find((n) => st.note && n.slug === st.note.slug) || null));
+                }));
+            }
+            // Notes (only when a topic has several)
+            const topic = topicObj();
+            notesWrap.hidden = !topic || topic.notes.length < 2;
+            notesEl.innerHTML = '';
+            if (topic && topic.notes.length > 1) {
+                for (const n of topic.notes) {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = `board-preset-row${st.note && st.note.slug === n.slug ? ' active' : ''}`;
+                    const name = document.createElement('span');
+                    name.className = 'board-preset-name';
+                    name.textContent = shortNoteTitle(n.title);
+                    b.appendChild(name);
+                    b.addEventListener('click', () => selectNote(n));
+                    notesEl.appendChild(b);
+                }
+            }
+            // Sections
+            const sections = sectionsOf();
+            sectionsWrap.hidden = sections.length < 2;
+            sectionsEl.innerHTML = '';
+            for (const sec of sections) {
+                sectionsEl.appendChild(button('board-seg-btn', sec, sec === st.section, () => {
+                    st.section = sec;
+                    const first = topItems()[0] || null;
+                    selectItem(first);
+                }));
+            }
+            this._revealActiveTab(sectionsEl);
+            // Numbers
+            const tops = topItems();
+            itemsWrap.hidden = tops.length === 0;
+            itemsEl.innerHTML = '';
+            for (const it of tops) {
+                const isActive = st.item && st.item.itemNumber === it.itemNumber;
+                const b = button('board-ex-num', String(it.itemNumber), isActive, () => selectItem(it),
+                    [it.subsection, it.difficulty].filter(Boolean).join(' · '));
+                if (it.difficulty) {
+                    const d = document.createElement('span');
+                    d.className = 'board-ex-diff';
+                    d.textContent = it.difficulty;
+                    b.appendChild(d);
+                }
+                if (partsOf(it.itemNumber).length) b.classList.add('has-parts');
+                itemsEl.appendChild(b);
+            }
+            // Parts of the selected exercise
+            const parts = st.item ? partsOf(st.item.itemNumber) : [];
+            subsWrap.hidden = parts.length === 0;
+            subsEl.innerHTML = '';
+            if (parts.length) {
+                const parent = tops.find((t) => t.itemNumber === st.item.itemNumber);
+                subsEl.appendChild(button('board-ex-num is-all', 'Tutto', st.item === parent, () => selectItem(parent)));
+                for (const p of parts) {
+                    subsEl.appendChild(button('board-ex-num', `${p.itemNumber}.${p.subItemNumber}`, st.item === p, () => selectItem(p)));
+                }
+            }
+            // Step buttons
+            const seq = sequence();
+            const idx = st.item ? seq.indexOf(st.item) : -1;
+            prevBtn.disabled = idx <= 0;
+            nextBtn.disabled = idx === -1 || idx >= seq.length - 1;
+            insertBtn.disabled = !st.item;
+        };
 
-        sectionsRow.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-section]');
-            if (!btn) return;
-            const next = btn.dataset.section;
-            this._exState.section = this._exState.section === next ? null : next;
-            this._syncExChipState();
-            this._runExerciseSearch();
-        });
+        const showPreview = async () => {
+            this._clearPreviewInstances();
+            const it = st.item;
+            if (!it) {
+                metaEl.textContent = st.note ? '' : 'Scegli un argomento';
+                bodyEl.innerHTML = '';
+                return;
+            }
+            metaEl.textContent = [shortNoteTitle(st.parsed.noteTitle), it.section, it.subsection, it.label].filter(Boolean).join(' · ');
+            bodyEl.innerHTML = it.html;
+            previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
+            bodyEl.scrollTop = 0;
+            previewEl.scrollTop = 0;
+            if (this.engineLoader) {
+                const shown = it;
+                try {
+                    const insts = await hydrateEmbeddedEngines(bodyEl, this.engineLoader);
+                    if (st.item !== shown) { insts.forEach((i) => i && i.destroy && i.destroy()); return; }
+                    st.previewInstances.push(...insts);
+                } catch (_) { /* ignore */ }
+                try { await this.engineLoader.typeset([bodyEl]); } catch (_) { /* ignore */ }
+            }
+        };
+
+        const selectItem = (it) => {
+            st.item = it || null;
+            savePos();
+            render();
+            showPreview();
+        };
+
+        const selectNote = async (note, restore = null) => {
+            st.note = note;
+            st.unfolded = false;
+            st.parsed = null;
+            st.section = null;
+            st.item = null;
+            statusEl.textContent = '';
+            render();
+            showPreview();
+            if (!note || !this.exercisePicker) { savePos(); return; }
+            const seq = ++st.loadSeq;
+            statusEl.textContent = 'Caricamento…';
+            try {
+                const parsed = await this.exercisePicker.loadNote(note);
+                if (seq !== st.loadSeq) return;
+                st.parsed = parsed;
+                statusEl.textContent = parsed.items.length ? '' : 'Nessun esercizio numerato in questa nota.';
+                const sections = sectionsOf();
+                st.section = restore && sections.includes(restore.section) ? restore.section : (sections[0] || null);
+                let item = topItems()[0] || null;
+                if (restore && Array.isArray(restore.item)) {
+                    const [n, sub] = restore.item;
+                    item = sequence().find((x) => x.itemNumber === n && x.subItemNumber === sub) || item;
+                }
+                selectItem(item);
+            } catch (err) {
+                if (seq !== st.loadSeq) return;
+                statusEl.textContent = String(err && err.message ? err.message : err);
+                render();
+            }
+        };
+
+        const step = (dir) => {
+            const seq = sequence();
+            const idx = seq.indexOf(st.item);
+            const next = seq[idx + dir];
+            if (next) selectItem(next);
+        };
+        prevBtn.addEventListener('click', () => step(-1));
+        nextBtn.addEventListener('click', () => step(1));
 
         hideSolCheck.addEventListener('change', () => {
             previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
@@ -913,189 +1150,60 @@ export class FutureMenus {
         previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
 
         insertBtn.addEventListener('click', () => {
-            const item = this._exState.selectedItem;
-            const res = this._exState.currentResult;
-            if (!item || !res || !res.activeNote) return;
-            if (this.onInsertExercise) {
-                this.onInsertExercise({
-                    noteTitle: res.extracted ? res.extracted.noteTitle : res.activeNote.title,
-                    noteUrl: res.activeNote.url,
-                    section: item.section,
-                    subsection: item.subsection || '',
-                    label: item.label,
-                    difficulty: item.difficulty || '',
-                    hasSolution: Boolean(item.hasSolution),
-                    hideSolution: Boolean(hideSolCheck.checked),
-                    html: item.html,
-                });
-            }
+            const it = st.item;
+            if (!it || !st.note || !this.onInsertExercise) return;
+            this.onInsertExercise({
+                noteTitle: st.parsed ? st.parsed.noteTitle : st.note.title,
+                noteUrl: st.note.url,
+                section: it.section,
+                subsection: it.subsection || '',
+                label: it.label,
+                difficulty: it.difficulty || '',
+                hasSolution: Boolean(it.hasSolution),
+                hideSolution: Boolean(hideSolCheck.checked),
+                html: it.html,
+            });
+            // Next time the panel opens on the following exercise: lessons go in order.
+            const seq = sequence();
+            const after = seq[seq.indexOf(it) + 1];
+            if (after) { st.item = after; savePos(); render(); }
             this._closeMenu();
         });
+        q('[data-ex-cancel]').addEventListener('click', () => this._closeMenu());
 
+        this._exerciseSheet = {
+            open: async () => {
+                if (!this.exercisePicker) return;
+                if (!st.catalog) {
+                    statusEl.textContent = 'Caricamento…';
+                    st.catalog = await this.exercisePicker.loadCatalog();
+                    statusEl.textContent = st.catalog.length ? '' : 'Nessuna nota di esercizi trovata.';
+                    // Back where the panel was left (or the first subject).
+                    const pos = loadPos();
+                    const subj = st.catalog.find((s) => pos && s.subject === pos.subject) || st.catalog[0];
+                    if (!subj) { render(); return; }
+                    st.subject = subj.subject;
+                    const topic = subj.topics.find((t) => pos && t.label === pos.topic) || null;
+                    st.topic = topic ? topic.label : null;
+                    const note = topic ? (topic.notes.find((n) => n.slug === pos.note) || (topic.notes.length === 1 ? topic.notes[0] : null)) : null;
+                    if (note) await selectNote(note, pos);
+                    else render();
+                    return;
+                }
+                render();
+                showPreview();
+            },
+        };
         return el;
     }
 
-    _syncExChipState() {
-        const pop = this.popovers.exercises;
-        for (const btn of pop.querySelectorAll('[data-topic]')) {
-            btn.classList.toggle('active', btn.dataset.topic === this._exState.topic);
-        }
-        for (const btn of pop.querySelectorAll('[data-section]')) {
-            btn.classList.toggle('active', btn.dataset.section === this._exState.section);
-        }
-    }
-
-    async _openExercisesPopover() {
-        if (!this.exercisePicker) return;
-        const pop = this.popovers.exercises;
-        await this.exercisePicker.ensureLoaded();
-
-        if (!this._exState.topicsEnriched) {
-            this._exState.topicsEnriched = true;
-            const topics = this.exercisePicker.getTopics();
-            const topicsRow = pop.querySelector('[data-ex-topics]');
-            topicsRow.innerHTML = topics
-                .slice(0, 12)
-                .map((t) => `<button type="button" class="board-chip" data-topic="${t.query}">${t.label}</button>`)
-                .join('');
-            this._syncExChipState();
-        }
-
-        if (!this._exState.currentResult) {
-            await this._runExerciseSearch();
-        }
-        const searchInput = pop.querySelector('[data-ex-search]');
-        if (searchInput) searchInput.focus({ preventScroll: true });
-    }
-
-    async _runExerciseSearch() {
-        if (!this.exercisePicker) return;
-        const pop = this.popovers.exercises;
-        const searchInput = pop.querySelector('[data-ex-search]');
-        const metaEl = pop.querySelector('.board-ex-preview-meta');
-        const bodyEl = pop.querySelector('.board-ex-preview-body');
-        const notesRow = pop.querySelector('[data-ex-notes]');
-        const itemsRow = pop.querySelector('[data-ex-items]');
-        const insertBtn = pop.querySelector('[data-ex-insert]');
-
-        const seq = ++this._exState.searchSeq;
-        const rawQuery = searchInput ? searchInput.value : '';
-
-        metaEl.textContent = 'Ricerca…';
-        insertBtn.disabled = true;
-
-        try {
-            const res = await this.exercisePicker.resolveQuery(rawQuery, {
-                topicChip: this._exState.topic,
-                sectionChip: this._exState.section,
-                noteUrl: this._exState.noteUrl,
-            });
-            if (seq !== this._exState.searchSeq) return;
-
-            this._exState.currentResult = res;
-
-            // Render note tabs when multiple notes match
-            if (res.notes.length > 1) {
-                notesRow.hidden = false;
-                notesRow.innerHTML = '';
-                for (const n of res.notes.slice(0, 5)) {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.className = `board-chip${res.activeNote && n.url === res.activeNote.url ? ' active' : ''}`;
-                    b.textContent = n.title.replace(/^Esercizi\s+(?:di|su|sui|sulle|sulla)\s+/i, '');
-                    b.title = n.title;
-                    b.addEventListener('click', () => {
-                        this._exState.noteUrl = n.url;
-                        this._runExerciseSearch();
-                    });
-                    notesRow.appendChild(b);
-                }
-            } else {
-                notesRow.hidden = true;
-                notesRow.innerHTML = '';
-            }
-
-            const candidates = res.extracted ? (res.extracted.candidates || []) : [];
-            const topItems = candidates.filter((it) => it.subItemNumber === null || (res.parsed && res.parsed.subItemNumber !== null));
-
-            if (topItems.length > 1) {
-                itemsRow.hidden = false;
-                itemsRow.innerHTML = '';
-                for (const it of topItems.slice(0, 24)) {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    const isSel = res.extracted.match === it;
-                    b.className = `board-chip board-ex-item-pill${isSel ? ' active' : ''}`;
-                    b.textContent = `${it.section ? it.section.slice(0, 3) + ' ' : ''}${it.label}`;
-                    b.title = `${it.section} ${it.label}`;
-                    b.addEventListener('click', () => {
-                        this._renderExercisePreview(res.extracted.noteTitle, it, itemsRow, b);
-                    });
-                    itemsRow.appendChild(b);
-                }
-            } else {
-                itemsRow.hidden = true;
-                itemsRow.innerHTML = '';
-            }
-
-            if (res.extracted && res.extracted.match) {
-                await this._renderExercisePreview(res.extracted.noteTitle, res.extracted.match, itemsRow);
-            } else {
-                this._clearPreviewInstances();
-                metaEl.textContent = res.activeNote ? res.activeNote.title : 'Nessun risultato';
-                bodyEl.innerHTML = res.activeNote && res.activeNote.snippet
-                    ? `<p>${res.activeNote.snippet}</p>`
-                    : '<p>Nessun esercizio trovato per questa ricerca.</p>';
-                insertBtn.disabled = true;
-            }
-        } catch (err) {
-            if (seq !== this._exState.searchSeq) return;
-            metaEl.textContent = 'Errore nel caricamento';
-            bodyEl.innerHTML = `<p>${String(err && err.message ? err.message : err)}</p>`;
-            insertBtn.disabled = true;
-        }
-    }
-
     _clearPreviewInstances() {
-        for (const inst of this._exState.previewInstances) {
+        for (const inst of this._exState.previewInstances || []) {
             if (inst && typeof inst.destroy === 'function') {
                 try { inst.destroy(); } catch (_) { /* ignore */ }
             }
         }
         this._exState.previewInstances = [];
-    }
-
-    async _renderExercisePreview(noteTitle, item, itemsRow, activeBtn = null) {
-        const pop = this.popovers.exercises;
-        const metaEl = pop.querySelector('.board-ex-preview-meta');
-        const bodyEl = pop.querySelector('.board-ex-preview-body');
-        const previewEl = pop.querySelector('.board-ex-preview');
-        const hideSolCheck = pop.querySelector('[data-ex-hide-sol]');
-        const insertBtn = pop.querySelector('[data-ex-insert]');
-
-        if (activeBtn && itemsRow) {
-            for (const b of itemsRow.querySelectorAll('.board-ex-item-pill')) {
-                b.classList.toggle('active', b === activeBtn);
-            }
-        }
-
-        this._clearPreviewInstances();
-        this._exState.selectedItem = item;
-        const parts = [noteTitle, item.section, item.subsection, item.label].filter(Boolean);
-        metaEl.textContent = parts.join(' · ');
-        bodyEl.innerHTML = item.html;
-        previewEl.classList.toggle('is-solution-hidden', Boolean(hideSolCheck && hideSolCheck.checked));
-        insertBtn.disabled = false;
-
-        if (this.engineLoader) {
-            try {
-                const insts = await hydrateEmbeddedEngines(bodyEl, this.engineLoader);
-                this._exState.previewInstances.push(...insts);
-            } catch (_) { /* ignore */ }
-            try {
-                await this.engineLoader.typeset([bodyEl]);
-            } catch (_) { /* ignore */ }
-        }
     }
 
     // =========================================================================

@@ -373,3 +373,27 @@ describe('Matephis Widgets — preset JSON & quick plot config validation (zero 
         expect(roundTrip.segments.some((s) => (s.components || []).some((c) => c.type === 'resistor'))).toBe(true);
     });
 });
+
+describe('Exercise sheet catalog', () => {
+    it('joins the curated subjects with the manifest and keeps unlisted notes under Altro', async () => {
+        const { buildExerciseCatalog, shortNoteTitle } = await import('../assets/js/matephis-board-src/ui/exercise-picker.js');
+        const manifest = [
+            { slug: 'esercizi-limiti', title: 'Esercizi sui limiti', url: '/notes/esercizi-limiti' },
+            { slug: 'esercizi-onde', title: 'Esercizi sulle onde', url: '/notes/esercizi-onde' },
+            { slug: 'esercizi-nuovi', title: 'Esercizi nuovi', url: '/notes/esercizi-nuovi' },
+        ];
+        const raw = [
+            { subject: 'Matematica', topics: [{ label: 'Limiti', notes: ['esercizi-limiti', 'manca'] }, { label: 'Vuoto', notes: ['manca'] }] },
+            { subject: 'Fisica', topics: [{ label: 'Onde', notes: ['esercizi-onde'] }] },
+        ];
+        const cat = buildExerciseCatalog(raw, manifest);
+        expect(cat.map((s) => s.subject)).toEqual(['Matematica', 'Fisica', 'Altro']);
+        expect(cat[0].topics.map((t) => t.label)).toEqual(['Limiti']);
+        expect(cat[0].topics[0].notes.map((n) => n.slug)).toEqual(['esercizi-limiti']);
+        expect(cat[2].topics[0].notes.map((n) => n.slug)).toEqual(['esercizi-nuovi']);
+        expect(shortNoteTitle('Esercizi sulle disequazioni')).toBe('Disequazioni');
+        expect(shortNoteTitle('Esercizi guidati sul completamento del quadrato')).toBe('Completamento del quadrato');
+        expect(shortNoteTitle('Domande di elettrostatica')).toBe('Domande di elettrostatica');
+        expect(shortNoteTitle('Esercizi introduttivi sulle funzioni')).toBe('Funzioni');
+    });
+});

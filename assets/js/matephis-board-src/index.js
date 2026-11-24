@@ -194,6 +194,7 @@ async function initMatephisBoard() {
         },
     });
     surface.getWidgetPictures = () => widgetPictures.picturesFor(scene.widgets);
+    surface.getConnectorShapes = () => (connectorManager ? connectorManager.shapesForPicture() : []);
 
     pinnedStrip = new PinnedStrip(root, {
         surface,

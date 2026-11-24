@@ -39,6 +39,7 @@ import lockOpen from './icons/lock-open.svg';
 import interact from './icons/interact.svg';
 import code from './icons/code.svg';
 import remove from './icons/remove.svg';
+import link from './icons/link.svg';
 
 export const BoardIcons = {
     pen,
@@ -79,4 +80,5 @@ export const BoardIcons = {
     interact,
     code,
     remove,
+    link,
 };

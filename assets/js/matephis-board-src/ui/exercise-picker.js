@@ -955,6 +955,36 @@ export async function hydrateEmbeddedEngines(containerEl, engineLoader) {
 // Runtime ExercisePicker Data Client
 // =============================================================================
 
+/** "Esercizi sulle disequazioni" → "Disequazioni" (the topic is on screen); "Domande…" and "Problemi…" stay. */
+export function shortNoteTitle(title) {
+    const t = String(title || '').trim()
+        .replace(/^esercizi\s+((introduttivi|guidati)\s+)?((sulle|sulla|sugli|sullo|sui|sul|su|delle|della|degli|dello|dei|del|di)\s+)?/i, '');
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : String(title || '');
+}
+
+/**
+ * Subjects → topics → notes for the board, from `_data/board_exercises.yml`
+ * (as /board-exercises.json) joined with the exercises manifest. Manifest notes
+ * the catalog does not list go to an "Altro" subject, so none is lost.
+ */
+export function buildExerciseCatalog(raw, manifest = []) {
+    const bySlug = new Map(manifest.map((m) => [m.slug, m]));
+    const used = new Set();
+    const subjects = [];
+    for (const s of Array.isArray(raw) ? raw : []) {
+        const topics = [];
+        for (const t of Array.isArray(s && s.topics) ? s.topics : []) {
+            const notes = (t.notes || []).map((slug) => bySlug.get(slug)).filter(Boolean);
+            notes.forEach((n) => used.add(n.slug));
+            if (notes.length) topics.push({ label: String(t.label), notes });
+        }
+        if (topics.length) subjects.push({ subject: String(s.subject), topics });
+    }
+    const rest = manifest.filter((m) => !used.has(m.slug));
+    if (rest.length) subjects.push({ subject: 'Altro', topics: [{ label: 'Altre note', notes: rest }] });
+    return subjects;
+}
+
 export class ExercisePicker {
     constructor({ baseurl = '', engineLoader = null, fetchImpl = null, DOMParserImpl = null } = {}) {
         const cleanBase = baseurl && baseurl !== '/' ? (baseurl.endsWith('/') ? baseurl.slice(0, -1) : baseurl) : '';
@@ -1019,6 +1049,37 @@ export class ExercisePicker {
         })();
 
         return this._loadPromise;
+    }
+
+    /** Subjects → topics → notes (see buildExerciseCatalog). */
+    async loadCatalog() {
+        if (this._catalog) return this._catalog;
+        const { manifest } = await this.ensureLoaded();
+        let raw = [];
+        if (this.fetchImpl) {
+            try {
+                const res = await this.fetchImpl(this._url('/board-exercises.json'));
+                if (res && res.ok) raw = await res.json();
+            } catch (_) { /* everything goes to "Altro" */ }
+        }
+        this._catalog = buildExerciseCatalog(raw, manifest);
+        return this._catalog;
+    }
+
+    /** All exercises of a note, parsed once: { noteTitle, items }. */
+    async loadNote(note) {
+        if (!this._parsedNotes) this._parsedNotes = new Map();
+        if (this._parsedNotes.has(note.url)) return this._parsedNotes.get(note.url);
+        const html = await this.fetchNoteHtml(note.url);
+        const extracted = extractExercisesFromHtml(html, {
+            noteUrl: note.url,
+            noteTitle: note.title,
+            baseurl: this.baseurl,
+            DOMParserImpl: this.DOMParserImpl,
+        });
+        const out = { noteTitle: extracted.noteTitle || note.title, items: extracted.items || [] };
+        this._parsedNotes.set(note.url, out);
+        return out;
     }
 
     getTopics() {

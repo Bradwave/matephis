@@ -425,6 +425,25 @@ export class ConnectorManager {
         this._syncPositions(this.scene.camera);
     }
 
+    /**
+     * The badges of the current page as plain shapes, for pictures drawn on the
+     * canvas (pixelated pan/zoom): { x, y (mm), label, color (css), paired }.
+     */
+    shapesForPicture() {
+        const theme = this.getTheme();
+        const out = [];
+        for (const { el, connector } of this._badges.values()) {
+            out.push({
+                x: connector.x,
+                y: connector.y,
+                label: String(connector.label || ''),
+                color: resolveInkColor(connector.color, theme),
+                paired: !el.classList.contains('is-unpaired'),
+            });
+        }
+        return out;
+    }
+
     _createBadgeElement(connector, isPaired, theme) {
         const el = document.createElement('div');
         el.className = 'board-connector';

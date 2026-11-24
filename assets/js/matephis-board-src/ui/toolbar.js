@@ -1006,19 +1006,22 @@ export class BoardToolbar {
      */
     _buildConnectorsTray() {
         const tray = document.createElement('div');
-        tray.className = 'board-tray board-connectors-tray';
+        tray.className = 'board-tray board-stack-tray board-connectors-tray';
         tray.hidden = true;
         tray.innerHTML = `
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="alpha" title="Codifica lettere (A, B, C…)">A, B…</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="num" title="Codifica numeri (1, 2, 3…)">1, 2…</button>
+            <div class="board-stack-section">
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="alpha" title="Etichette con lettere">A B C</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="num" title="Etichette con numeri">1 2 3</button>
             </div>
-            <span class="board-dock-sep"></span>
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-mode="new" title="Piazza il primo segnaposto di una nuova coppia">Nuovo</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-mode="link" title="Collega al segnaposto aperto">Collega</button>
+            <div class="board-stack-section">
+                <button type="button" class="board-tray-btn board-tray-text-btn board-tray-icon-text" data-conn-mode="new" title="Piazza il primo segnaposto di una nuova coppia">${BoardIcons.add}<span>Nuova</span></button>
+                <button type="button" class="board-tray-btn board-tray-text-btn board-tray-icon-text" data-conn-mode="link" title="Piazza il gemello di un segnaposto aperto">${BoardIcons.link}<span>Collega</span></button>
             </div>
-            <div class="board-tray-group board-connectors-open" hidden></div>
+            <div class="board-conn-hint" data-conn-hint></div>
+            <div class="board-conn-open" hidden>
+                <div class="board-conn-open-label">Da collegare</div>
+                <div class="board-conn-open-list"></div>
+            </div>
         `;
 
         this.connSeriesBtns = Array.from(tray.querySelectorAll('[data-conn-series]'));
@@ -1047,7 +1050,9 @@ export class BoardToolbar {
         }
 
         this.connLinkBtn = tray.querySelector('[data-conn-mode="link"]');
-        this.connOpenWrap = tray.querySelector('.board-connectors-open');
+        this.connHintEl = tray.querySelector('[data-conn-hint]');
+        this.connOpenWrap = tray.querySelector('.board-conn-open');
+        this.connOpenList = tray.querySelector('.board-conn-open-list');
         return tray;
     }
 
@@ -1136,32 +1141,42 @@ export class BoardToolbar {
             }
         }
         if (this.connLinkBtn) {
-            this.connLinkBtn.textContent = this.connectorPendingLabel
-                ? `Collega (${this.connectorPendingLabel})`
-                : 'Collega';
+            const openPairs = this.connectorOpenPairs || [];
+            this.connLinkBtn.disabled = openPairs.length === 0;
+        }
+        if (this.connHintEl) {
+            // One short line saying what the next tap on the board does.
+            const series = this.state.connectorSeries === 'num' ? '1, 2…' : 'A, B…';
+            this.connHintEl.textContent = this.state.connectorMode === 'link'
+                ? (this.connectorPendingLabel
+                    ? `Tocca per il gemello di ${this.connectorPendingLabel}`
+                    : 'Scegli quale collegare')
+                : `Tocca per una nuova coppia (${series})`;
         }
         if (this.connOpenWrap) {
             const openPairs = this.connectorOpenPairs || [];
-            this.connOpenWrap.innerHTML = '';
-            if (openPairs.length > 0) {
-                this.connOpenWrap.hidden = false;
-                for (const pair of openPairs) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'board-tray-btn board-tray-text-btn board-connector-open-btn';
-                    if (this.connectorPendingPairId === pair.pairId && this.state.connectorMode === 'link') {
-                        btn.classList.add('active');
-                    }
-                    btn.textContent = pair.label;
-                    btn.title = `Collega a ${pair.label} (pagina ${pair.pageIndex + 1})`;
-                    btn.style.setProperty('--conn-color', resolveInkColor(pair.color, theme));
-                    btn.addEventListener('click', () => {
-                        if (this.onSelectOpenConnector) this.onSelectOpenConnector(pair);
-                    });
-                    this.connOpenWrap.appendChild(btn);
+            this.connOpenList.innerHTML = '';
+            this.connOpenWrap.hidden = openPairs.length === 0;
+            for (const pair of openPairs) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'board-conn-open-row';
+                if (this.connectorPendingPairId === pair.pairId && this.state.connectorMode === 'link') {
+                    btn.classList.add('active');
                 }
-            } else {
-                this.connOpenWrap.hidden = true;
+                btn.style.setProperty('--conn-color', resolveInkColor(pair.color, theme));
+                const badge = document.createElement('span');
+                badge.className = 'board-conn-open-badge';
+                badge.textContent = pair.label;
+                const page = document.createElement('span');
+                page.className = 'board-conn-open-page';
+                page.textContent = `pag. ${pair.pageIndex + 1}`;
+                btn.append(badge, page);
+                btn.title = `Collega a ${pair.label} (pagina ${pair.pageIndex + 1})`;
+                btn.addEventListener('click', () => {
+                    if (this.onSelectOpenConnector) this.onSelectOpenConnector(pair);
+                });
+                this.connOpenList.appendChild(btn);
             }
         }
 

@@ -1,0 +1,41 @@
+# Exercise notes offered by the board's exercise panel, by subject and topic.
+# `notes` are note slugs (the file name without .md); a note may appear in more
+# than one topic. Exercise notes not listed here still show up under "Altro".
+- subject: Matematica
+  topics:
+    - label: Equazioni
+      notes: [esercizi-equazioni, esercizi-equazioni-grado-2, esercizi-completamento-quadrato, esercizi-equazioni-disequazioni, esercizi-relazioni-equazioni-lineari]
+    - label: Disequazioni
+      notes: [esercizi-disequazioni, esercizi-equazioni-disequazioni]
+    - label: Geometria analitica
+      notes: [esercizi-parabola, esercizi-retta-parabola, esercizi-distanza-coniche]
+    - label: Funzioni
+      notes: [esercizi-funzioni, esercizi-sulle-funzioni, esercizi-composizione-funzioni, esercizi-problemi-di-scelta]
+    - label: Esponenziali e logaritmi
+      notes: [esercizi-esponenziali-logaritmi]
+    - label: Funzioni circolari
+      notes: [esercizi-onde]
+    - label: Limiti
+      notes: [esercizi-limiti]
+    - label: Derivate
+      notes: [esercizi-derivata]
+- subject: Fisica
+  topics:
+    - label: Cinematica
+      notes: [esercizi-cinematica-1d, esercizi-moto-relativo]
+    - label: Dinamica
+      notes: [esercizi-dinamica, problemi-stima-dinamica]
+    - label: Energia
+      notes: [esercizi-energia]
+    - label: Quantità di moto
+      notes: [esercizi-quantita-di-moto]
+    - label: Calore
+      notes: [esercizi-calore]
+    - label: Onde e ottica
+      notes: [esercizi-onde, esercizi-ottica]
+    - label: Elettrostatica
+      notes: [esercizi-elettrostatica-1, esercizi-elettrostatica-2, domande-elettrostatica, lettura-elettrostatica-1, precipitatore-elettrostatico]
+    - label: Circuiti
+      notes: [esercizi-circuiti]
+    - label: Magnetismo
+      notes: [esercizi-elettromagnetismo]

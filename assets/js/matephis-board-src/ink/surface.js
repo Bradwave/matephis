@@ -206,6 +206,34 @@ export function drawPageBackground(ctx, cam, viewBox, background = 'blank', them
  * Shared vector renderer for rendering any page's strokes into a target canvas
  * (reused by PinnedStrip for crisp zoomable/pannable vector previews).
  */
+/**
+ * Connector badges drawn like the DOM ones (28px square, 2px border, bold label;
+ * dashed when unpaired), in screen space for camera `cam`.
+ */
+function drawConnectorShapes(ctx, shapes, cam, width, height, theme) {
+    const bg = theme === 'dark' ? '#121212' : '#ffffff';
+    ctx.save();
+    ctx.font = '700 13px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const c of shapes || []) {
+        const sx = (c.x - cam.x) * cam.scale;
+        const sy = (c.y - cam.y) * cam.scale;
+        if (sx < -40 || sy < -40 || sx > width + 40 || sy > height + 40) continue;
+        const w = Math.max(28, ctx.measureText(c.label).width + 16);
+        const h = 28;
+        ctx.fillStyle = bg;
+        ctx.fillRect(sx - w / 2, sy - h / 2, w, h);
+        ctx.setLineDash(c.paired ? [] : [4, 3]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = c.color;
+        ctx.strokeRect(sx - w / 2 + 1, sy - h / 2 + 1, w - 2, h - 2);
+        ctx.fillStyle = c.color;
+        ctx.fillText(c.label, sx, sy + 1);
+    }
+    ctx.restore();
+}
+
 /** Draw widget pictures ({x, y, w, h, canvas} in mm) in world coordinates. */
 export function drawWidgetPictures(ctx, pictures, viewBox = null) {
     for (const p of pictures || []) {
@@ -730,6 +758,11 @@ export class InkSurface {
         }
 
         ctx.restore();
+
+        // Pixelated gesture: connectors (screen-sized badges above the ink) join the picture.
+        if (pictures && this.getConnectorShapes) {
+            drawConnectorShapes(ctx, this.getConnectorShapes(), cam, width, height, this.theme);
+        }
 
         // In overview mode, highlight the saved writing viewport on top
         if (this.overviewMode && this.savedCamera) {

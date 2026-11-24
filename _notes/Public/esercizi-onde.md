@@ -1,5 +1,5 @@
 ---
-title: Esercizi sulle onde e sulle funzioni circolari
+title: Esercizi su onde e funzioni circolari
 feed: show
 plot: true
 tags:
