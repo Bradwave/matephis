@@ -20,13 +20,13 @@ const LASER_LIFETIME_MS = 1250;
 
 // Image-based pan/zoom (setting `fastPan`): while fingers move, the last sharp picture of
 // the board is moved/scaled instead of redrawing every stroke each frame.
-const GESTURE_DIM = 0.6;           // ink and widget opacity while moving (reads as "moving", hides softness)
+export const GESTURE_DIM = 0.6;           // ink and widget opacity while moving (reads as "moving", hides softness)
 const SNAP_MARGIN = 0.15;          // extra picture around the screen so a pan rarely shows an edge
 const REFRESH_ZOOM_RATIO = 1.2;    // re-render a sharp picture once zoom drifts more than this
 const REFRESH_MIN_MS = 150;        // ...but at most this often,
 const REFRESH_COST_FACTOR = 8;     // ...and spaced by 8× the measured redraw cost on heavy pages
 const SETTLE_MS = 120;             // soft → sharp fade when the gesture ends
-const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
+export const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
 const PIXEL_SETTLE_MS = 160;       // EXPERIMENT: blocks shrink to sharp over this time
 
 /**
@@ -1026,6 +1026,37 @@ export class InkSurface {
     /**
      * Smoothly animate the camera to target { x, y, scale }.
      */
+    /**
+     * Glide the camera to `target` as a pan gesture would move it: the moving picture
+     * (and its fade or pixel effect) during the glide, one sharp redraw at the end.
+     * Ease-in-out, so it starts and stops gently.
+     */
+    glideCameraTo(target, durationMs = 420, onDone = null) {
+        if (this._glideRaf) cancelAnimationFrame(this._glideRaf);
+        const start = { ...this.scene.camera };
+        const t0 = performance.now();
+        this.beginGesture();
+        const step = (now) => {
+            const p = clamp((now - t0) / durationMs, 0, 1);
+            const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+            this.scene.camera.x = start.x + (target.x - start.x) * ease;
+            this.scene.camera.y = start.y + (target.y - start.y) * ease;
+            this.scene.camera.scale = start.scale + (target.scale - start.scale) * ease;
+            if (this.gesture && this.snap) this._gestureFrame();
+            else this.renderCommittedNow();
+            this.renderActiveNow();
+            if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+            if (p < 1) {
+                this._glideRaf = requestAnimationFrame(step);
+            } else {
+                this._glideRaf = null;
+                this.endGesture();
+                if (onDone) onDone();
+            }
+        };
+        this._glideRaf = requestAnimationFrame(step);
+    }
+
     animateCameraTo(target, durationMs = 220, onDone = null) {
         if (this.cameraAnim) cancelAnimationFrame(this.cameraAnim);
         const start = { ...this.scene.camera };

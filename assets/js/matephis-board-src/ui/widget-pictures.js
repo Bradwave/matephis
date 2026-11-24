@@ -10,8 +10,9 @@
 
 import { OVERLAY_PX_PER_MM } from './overlay.js';
 import { cloneStyledWidgetSVG } from '../export/svg-export.js';
+import { renderDomPicture } from './dom-picture.js';
 
-const PICTURE_SCALE = 2;          // bitmap pixels per layout pixel
+const PICTURE_SCALE = 1.5;        // bitmap pixels per layout pixel (memory: ~3 MB per large widget)
 const MAX_SIDE_PX = 2400;
 const LIVE_SETTLE_MS = 800;       // a live widget is re-pictured once it has been still this long
 
@@ -142,12 +143,65 @@ export class WidgetPictureCache {
     }
 
     async _build(widget) {
-        if (widget.kind === 'exercise') return this._exerciseCard(widget);
         const live = this.getMountedElement(widget.id);
-        if (live && live.isConnected && live.querySelector('svg, canvas')) {
-            return this._fromElement(live, widget);
+        if (live && live.isConnected && live.offsetWidth > 0) {
+            return this._picture(live, widget);
         }
+        if (widget.kind === 'exercise') return this._offscreenExercise(widget);
         return this._offscreenRender(widget);
+    }
+
+    /** Whole widget, HTML included; the SVG-only drawing is the fallback. */
+    async _picture(el, widget) {
+        const width = el.offsetWidth || widget.w * OVERLAY_PX_PER_MM;
+        const height = el.offsetHeight || widget.h * OVERLAY_PX_PER_MM;
+        try {
+            return await renderDomPicture(el, {
+                width,
+                height,
+                scale: Math.min(PICTURE_SCALE, MAX_SIDE_PX / Math.max(width, height, 1)),
+                theme: this.getTheme(),
+                strip: ['.board-widget-grip', '.board-widget-resize'],
+                classesOff: ['is-editing', 'is-canvas-interactive'],
+            });
+        } catch (_) {
+            if (widget.kind === 'exercise') return this._exerciseCard(widget);
+            return this._fromElement(el, widget);
+        }
+    }
+
+    _offscreenHost() {
+        if (!this._offscreen) {
+            this._offscreen = document.createElement('div');
+            this._offscreen.className = 'board-picture-host';
+            this._offscreen.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(this._offscreen);
+        }
+        return this._offscreen;
+    }
+
+    /** An exercise of another page: same card markup as the widget, typeset, pictured. */
+    async _offscreenExercise(widget) {
+        const data = widget.data || {};
+        const host = document.createElement('div');
+        host.className = 'board-widget';
+        host.dataset.widgetKind = 'exercise';
+        host.style.width = `${Math.round(widget.w * OVERLAY_PX_PER_MM)}px`;
+        host.innerHTML = `<div class="board-widget-body"><div class="board-widget-exercise${data.hideSolution ? ' is-solution-hidden' : ''}">`
+            + '<div class="board-widget-ex-header"><div class="board-widget-ex-meta"></div></div>'
+            + '<div class="board-widget-ex-content"></div></div></div>';
+        host.querySelector('.board-widget-ex-meta').textContent = [data.noteTitle || 'Esercizio', data.section, data.label].filter(Boolean).join(' · ');
+        const content = host.querySelector('.board-widget-ex-content');
+        content.innerHTML = data.html || '';
+        this._offscreenHost().appendChild(host);
+        try {
+            if (this.engineLoader && typeof this.engineLoader.typeset === 'function') {
+                try { await this.engineLoader.typeset([content]); } catch (_) { /* text only */ }
+            }
+            return await this._picture(host, widget);
+        } finally {
+            host.remove();
+        }
     }
 
     _newCanvas(widthPx, heightPx) {
@@ -211,12 +265,7 @@ export class WidgetPictureCache {
             await this.engineLoader.loadEngine('plot');
         }
         if (!Engine) return null;
-        if (!this._offscreen) {
-            this._offscreen = document.createElement('div');
-            this._offscreen.className = 'board-picture-host';
-            this._offscreen.setAttribute('aria-hidden', 'true');
-            document.body.appendChild(this._offscreen);
-        }
+        this._offscreenHost();
         const host = document.createElement('div');
         host.className = 'board-widget';
         const widthPx = Math.round(widget.w * OVERLAY_PX_PER_MM);
@@ -237,7 +286,7 @@ export class WidgetPictureCache {
                 inst = Engine.render(body, cfg, { noLightbox: true, observeResize: false, width: Math.max(160, widthPx) });
             }
             await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-            return await this._fromElement(host, widget);
+            return await this._picture(host, widget);
         } finally {
             if (inst && typeof inst.destroy === 'function') {
                 try { inst.destroy(); } catch (_) { /* ignore */ }

@@ -14,6 +14,7 @@ import { nextConnectorId } from '../model/scene.js';
 const DRAG_THRESHOLD_PX = 4;
 const LONG_PRESS_MS = 420;
 const HIGHLIGHT_MS = 1400;
+const GLIDE_MS = 420;
 
 let pairCounter = 1;
 
@@ -584,7 +585,7 @@ export class ConnectorManager {
 
     /**
      * Jump (or switch pages) to the matching twin and mark it with a static ring.
-     * No camera glide: the board has no UI animations.
+     * The camera glides there only if the "Scorri tra i connettori" option is on.
      */
     jumpToTwin(connector) {
         const twin = findTwinConnector(this.scene, connector);
@@ -605,10 +606,16 @@ export class ConnectorManager {
             }
             this.highlightConnector(twin.connector.id);
         } else if (this.surface && typeof this.surface.animateCameraTo === 'function') {
-            // A one-frame "animation" is an instant jump that still redraws everything.
-            this.surface.animateCameraTo(targetCam, 1, () => {
+            // Camera movement, not UI: an optional glide (Options), otherwise one frame = instant.
+            const glide = Boolean(this.scene.settings && this.scene.settings.connectorGlide);
+            const done = () => {
                 if (!this._destroyed) this.highlightConnector(twin.connector.id);
-            });
+            };
+            if (glide && typeof this.surface.glideCameraTo === 'function') {
+                this.surface.glideCameraTo(targetCam, GLIDE_MS, done);
+            } else {
+                this.surface.animateCameraTo(targetCam, 1, done);
+            }
         } else {
             Object.assign(this.scene.camera, targetCam);
             this._syncPositions(this.scene.camera);

@@ -69,6 +69,10 @@ export class OptionsMenu {
                     <span>Pan e zoom fluidi</span>
                     <input type="checkbox" data-opt="fastPan" />
                 </label>
+                <label class="board-opt-row" title="Saltando da un connettore all'altro la vista scorre fino al gemello invece di cambiare di colpo">
+                    <span>Scorri tra i connettori</span>
+                    <input type="checkbox" data-opt="connectorGlide" />
+                </label>
                 <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
                 <div class="board-opt-bg-row">
                     <span>Effetto durante pan e zoom</span>
@@ -151,7 +155,7 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
@@ -270,7 +274,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;

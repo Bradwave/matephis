@@ -337,11 +337,13 @@ export class FutureMenus {
             rangesEl.appendChild(zoomRow);
         };
 
-        const openEditor = (index) => {
+        // `seed`: a template's expression and sliders, opened for editing before it is added.
+        const openEditor = (index, seed = null) => {
             st.editIndex = index;
-            const f = index === null ? null : st.fns[index];
-            fnEditor.setValue(f ? f.fn : '');
+            st.seedParams = seed ? seed.params : null;
+            const f = index === null ? seed : st.fns[index];
             st.draft = f ? f.fn : '';
+            fnEditor.setValue(f ? f.fn : '');
             keypadWrap.hidden = false;
             render();
             fnEditor.focus();
@@ -349,6 +351,7 @@ export class FutureMenus {
 
         const closeEditor = () => {
             st.editIndex = null;
+            st.seedParams = null;
             st.draft = '';
             keypadWrap.hidden = true;
             render();
@@ -407,6 +410,7 @@ export class FutureMenus {
             return names;
         };
 
+        // One tap adds a template as it is; tapping it in the list opens it in the editor.
         const addTemplate = (tpl) => {
             if (st.fns.length >= MAX_PLOT_FNS) return;
             const { fn, params } = instantiateTemplate(tpl, usedParamNames());
@@ -434,7 +438,7 @@ export class FutureMenus {
 
         /** Params for an expression typed in the editor: known ones kept, new letters become sliders. */
         const paramsFor = (expr, ownIndex) => {
-            const own = ownIndex === null ? {} : (st.fns[ownIndex].params || {});
+            const own = ownIndex === null ? (st.seedParams || {}) : (st.fns[ownIndex].params || {});
             const known = { ...(st.base.params || {}) };
             st.fns.forEach((f, i) => { if (i !== ownIndex) Object.assign(known, f.params || {}); });
             const out = {};

@@ -13,7 +13,13 @@
  */
 
 import { MAX_SCALE, MIN_SCALE, clamp, screenToWorld } from '../ink/geometry.js';
-import { renderPageToContext } from '../ink/surface.js';
+import { renderPageToContext, GESTURE_DIM, PIXEL_BLOCK_PX } from '../ink/surface.js';
+
+// Pan/zoom in the strip moves a picture of it, like the board (setting `fastPan`).
+const STRIP_SNAP_MARGIN = 0.15;
+const STRIP_REFRESH_RATIO = 1.2;
+const STRIP_REFRESH_MIN_MS = 150;
+const STRIP_WHEEL_END_MS = 160;
 import { BoardIcons } from './icons.js';
 
 export class PinnedStrip {
@@ -428,13 +434,13 @@ export class PinnedStrip {
             this.stripCamera.scale = newScale;
             this.stripCamera.x = this.pinchAnchor.worldMid.x - midX / newScale;
             this.stripCamera.y = this.pinchAnchor.worldMid.y - midY / newScale;
-            this.render();
+            this._gestureMoved();
         } else if (this.pointers.size === 1 && this.panAnchor) {
             const dx = sx - this.panAnchor.sx;
             const dy = sy - this.panAnchor.sy;
             this.stripCamera.x = this.panAnchor.camX - dx / this.stripCamera.scale;
             this.stripCamera.y = this.panAnchor.camY - dy / this.stripCamera.scale;
-            this.render();
+            this._gestureMoved();
         }
     }
 
@@ -457,6 +463,7 @@ export class PinnedStrip {
         }
         if (this.pointers.size === 0) {
             this.panAnchor = null;
+            this._endGesture();
         }
     }
 
@@ -476,7 +483,119 @@ export class PinnedStrip {
             this.stripCamera.x += e.deltaX / this.stripCamera.scale;
             this.stripCamera.y += e.deltaY / this.stripCamera.scale;
         }
+        this._gestureMoved();
+        clearTimeout(this._wheelEndTimer);
+        this._wheelEndTimer = setTimeout(() => this._endGesture(), STRIP_WHEEL_END_MS);
+    }
+
+    // ---------- Picture-based pan / zoom (same idea and effects as the board) ----------
+
+    /** Camera changed by a gesture: move the picture (or redraw, if the option is off). */
+    _gestureMoved() {
+        if (this.scene.settings.fastPan === false) {
+            this.render();
+            return;
+        }
+        if (!this._gesture) this._beginGesture();
+        if (this._gestureRaf) return;
+        this._gestureRaf = requestAnimationFrame(() => {
+            this._gestureRaf = null;
+            this._drawGestureFrame();
+        });
+    }
+
+    _beginGesture() {
+        this._gesture = { lastSnap: 0, cost: 0 };
+        this._snapPicture();
+    }
+
+    _endGesture() {
+        if (!this._gesture) return;
+        if (this._gestureRaf) cancelAnimationFrame(this._gestureRaf);
+        this._gestureRaf = null;
+        this._gesture = null;
+        this._snap = null;
         this.render();
+    }
+
+    /** Sharp picture of the strip with a margin around it, so a pan rarely shows an edge. */
+    _snapPicture() {
+        const info = this._getPinnedPageInfo();
+        if (!info) return;
+        const t0 = performance.now();
+        const w = parseFloat(this.canvas.style.width) || this.canvas.width;
+        const h = parseFloat(this.canvas.style.height) || this.canvas.height;
+        const dpr = this.canvas.width / Math.max(1, w);
+        const margin = Math.round(Math.max(w, h) * STRIP_SNAP_MARGIN);
+        if (!this._snapCanvas) this._snapCanvas = document.createElement('canvas');
+        const c = this._snapCanvas;
+        const pw = Math.round((w + margin * 2) * dpr);
+        const ph = Math.round((h + margin * 2) * dpr);
+        if (c.width !== pw) c.width = pw;
+        if (c.height !== ph) c.height = ph;
+        const cam = { ...this.stripCamera };
+        const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
+        renderPageToContext(
+            c.getContext('2d'), w + margin * 2, h + margin * 2, dpr,
+            info.page.strokes, shifted, this.surface.theme,
+            this.scene.settings.showCropMarks, info.page.background,
+            this.getWidgetPictures ? this.getWidgetPictures(info.page) : null
+        );
+        this._snap = { cam, margin, w, h };
+        if (this._gesture) {
+            this._gesture.lastSnap = performance.now();
+            this._gesture.cost = this._gesture.lastSnap - t0;
+        }
+    }
+
+    _drawGestureFrame() {
+        if (!this._gesture || !this._snap) return;
+        const cam = this.stripCamera;
+        let snap = this._snap;
+        const k = cam.scale / snap.cam.scale;
+        let dx = -snap.margin * k + (snap.cam.x - cam.x) * cam.scale;
+        let dy = -snap.margin * k + (snap.cam.y - cam.y) * cam.scale;
+        let dw = (snap.w + snap.margin * 2) * k;
+        let dh = (snap.h + snap.margin * 2) * k;
+        const uncovered = dx > 0.5 || dy > 0.5 || dx + dw < snap.w - 0.5 || dy + dh < snap.h - 0.5;
+        const stale = uncovered || k > STRIP_REFRESH_RATIO || k < 1 / STRIP_REFRESH_RATIO;
+        const wait = Math.max(STRIP_REFRESH_MIN_MS, this._gesture.cost * 8);
+        if (stale && performance.now() - this._gesture.lastSnap >= wait) {
+            this._snapPicture();
+            snap = this._snap;
+            dx = -snap.margin;
+            dy = -snap.margin;
+            dw = snap.w + snap.margin * 2;
+            dh = snap.h + snap.margin * 2;
+        }
+
+        const ctx = this.ctx;
+        const dpr = this.canvas.width / Math.max(1, snap.w);
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = this.surface.theme === 'dark' ? '#121212' : '#ffffff';
+        ctx.fillRect(0, 0, snap.w, snap.h);
+        if (this.scene.settings.gestureEffect === 'pixel') {
+            const block = PIXEL_BLOCK_PX;
+            const tw = Math.max(1, Math.ceil(snap.w / block));
+            const th = Math.max(1, Math.ceil(snap.h / block));
+            if (!this._tinyCanvas) this._tinyCanvas = document.createElement('canvas');
+            const tiny = this._tinyCanvas;
+            if (tiny.width !== tw) tiny.width = tw;
+            if (tiny.height !== th) tiny.height = th;
+            const tctx = tiny.getContext('2d');
+            tctx.clearRect(0, 0, tw, th);
+            tctx.imageSmoothingEnabled = true;
+            tctx.imageSmoothingQuality = 'high';
+            tctx.drawImage(this._snapCanvas, dx / block, dy / block, dw / block, dh / block);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tiny, 0, 0, tw * block, th * block);
+        } else {
+            ctx.globalAlpha = GESTURE_DIM;
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(this._snapCanvas, dx, dy, dw, dh);
+        }
+        ctx.restore();
     }
 
     close() {
