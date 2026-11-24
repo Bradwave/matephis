@@ -54,14 +54,14 @@
     {%- if site.mathjax -%}
     {%- comment -%}
     The deployed site is typeset at build time (tools/mathjax/prerender.mjs marks such pages with
-    data-mathjax="prerendered"): MathJax is then loaded only where formulas are still made in the
-    browser, the labels of plots, physics and sets (and the playground). Without the build step
-    (jekyll serve) every page loads it, as before. Keep this configuration in step with the script.
+    data-mathjax="prerendered") and does not load MathJax: the plot, physics and sets engines load
+    it themselves when a label needs TeX (renderers/mathjax-bridge.js, same configuration). Without
+    the build step (jekyll serve) every page loads it, as before. Keep this configuration in step
+    with the bridge and the script.
     {%- endcomment -%}
     <script>
         (function () {
-            var runtime = {% if page.plot or page.physics or page.sets %}true{% else %}false{% endif %};
-            if (document.documentElement.getAttribute('data-mathjax') === 'prerendered' && !runtime) return;
+            if (document.documentElement.getAttribute('data-mathjax') === 'prerendered') return;
             window.MathJax = {
                 tex: {
                     inlineMath: [['$', '$'], ['\\(', '\\)']],

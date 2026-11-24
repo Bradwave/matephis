@@ -18,6 +18,7 @@
  */
 import { niceNumber } from '../core/interval.js';
 import { SetsModel } from '../core/model.js';
+import { texReady } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 const DASH = '—';
 
@@ -172,8 +173,7 @@ export class Table {
 
     /** A cell's content: MathJax when the page has it, plain text otherwise. */
     _tex(el, tex) {
-        const mj = typeof window !== 'undefined' && window.MathJax && window.MathJax.tex2svg;
-        if (mj) {
+        if (texReady(this.scene)) {
             let node = this._texCache.get(tex);
             if (!node) {
                 try {

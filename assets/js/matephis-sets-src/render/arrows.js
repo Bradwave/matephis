@@ -7,7 +7,7 @@ import { curvedArrow, arrowHeadPoints } from '../core/geometry.js';
 import { pointPx, setLabelText } from '../core/layout.js';
 import { niceNumber } from '../core/interval.js';
 import { SetsModel } from '../core/model.js';
-import { TexNodes, hasMathJax, onNextFrame } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
+import { TexNodes, texReady, onNextFrame } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 
 const f2 = (v) => +v.toFixed(2);
 
@@ -457,7 +457,7 @@ export function renderReadouts(scene, items) {
     el.textContent = '';
     if (!scene.readoutHeights) scene.readoutHeights = [];
     // A formula that has not changed since the last draw is the same node again
-    const pool = scene._readoutTex || (scene._readoutTex = new TexNodes());
+    const pool = scene._readoutTex || (scene._readoutTex = new TexNodes(scene));
     items.forEach(({ tex, color }, k) => {
         const line = document.createElement('div');
         line.className = 'matephis-sets-readout';
@@ -469,7 +469,7 @@ export function renderReadouts(scene, items) {
             keepHeight(scene, k, line);
             return;
         }
-        if (hasMathJax()) {
+        if (texReady(scene)) {
             const node = pool.get(tex);
             if (node) line.appendChild(node);
             else line.textContent = tex;

@@ -15,7 +15,7 @@
 import { CoordinateSystem } from '../../matephis-plot-src/core/coordinate-system.js';
 import { createPalettes, parseAspectRatio, cssLength, adaptColorForTheme } from '../../matephis-plot-src/core/config.js';
 import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.js';
-import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
+import { renderMathJaxLabel, texReady } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 import { LightboxBridge } from '../../matephis-plot-src/ui/lightbox-bridge.js';
 import { WarningsMixin } from '../../matephis-plot-src/ui/warnings.js';
@@ -252,6 +252,8 @@ export class MatephisPhysics {
             lazy,
             build: (el, src, width) => new MatephisPhysics(el, src, width > 0 ? { width } : {}),
             placeholder: (cfg) => MatephisPhysics.placeholder(cfg),
+            // Scenes make TeX labels themselves (forces, vectors, presets)
+            needsMath: () => true,
             fail: (el, e) => {
                 console.error(label, e);
                 const div = document.createElement('div');
@@ -609,10 +611,10 @@ export class MatephisPhysics {
             t.style.strokeWidth = "2.5px";
             return t;
         };
-        if (hasMathJax() && str.includes('$')) {
+        if (str.includes('$') && texReady(this)) {
             // Formulas get the same outline as plain labels unless "labelHalo": false
             const halo = this.config.labelHalo !== false ? { color: this._isDark() ? "#181818" : "#fff" } : null;
-            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain, { halo });
+            return renderMathJaxLabel(toTeX(str), x, y, fontSize, color, anchor, baseline, parent, plain, { halo, owner: this });
         }
         return plain();
     }

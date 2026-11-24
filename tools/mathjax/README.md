@@ -10,8 +10,8 @@ browser would:
   - a global font cache;
   - hidden MathML for screen readers.
 - **Pages get marked:** typeset pages get `data-mathjax="prerendered"` on `<html>`. `Post.html`
-  then loads MathJax only on pages with plot, physics or sets blocks, whose labels are still
-  typeset in the browser.
+  then does not load MathJax: the plot, physics and sets engines load it themselves when a label
+  needs TeX (`renderers/mathjax-bridge.js`), so engine pages without TeX skip it too.
 - **Pages without maths are not touched.** Without the build step (`jekyll serve`), every page
   loads MathJax as before.
 

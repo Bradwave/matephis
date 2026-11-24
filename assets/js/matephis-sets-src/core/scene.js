@@ -12,7 +12,7 @@
 import { ExpressionCompiler } from '../../matephis-plot-src/parser/expression-parser.js';
 import { createPalettes, cssLength, adaptColorForTheme } from '../../matephis-plot-src/core/config.js';
 import { createSvgElement } from '../../matephis-plot-src/renderers/svg-factory.js';
-import { renderMathJaxLabel, hasMathJax } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
+import { renderMathJaxLabel, texReady } from '../../matephis-plot-src/renderers/mathjax-bridge.js';
 import { SliderManager, paramScale } from '../../matephis-plot-src/ui/slider-manager.js';
 import { WarningsMixin } from '../../matephis-plot-src/ui/warnings.js';
 import { toTeX, estimateTextSize } from '../../matephis-physics-src/core/labels.js';
@@ -195,6 +195,8 @@ export class MatephisSets {
             lazy,
             build: (el, src, width) => new MatephisSets(el, src, width > 0 ? { width } : {}),
             placeholder: (cfg) => MatephisSets.placeholder(cfg),
+            // Labels are math by default (mathLabel)
+            needsMath: () => true,
             group: (cfg) => (typeof cfg.sync === 'string' && cfg.sync ? `sets:${cfg.sync}` : null),
             fail: (el, e) => {
                 console.error(label, e);
@@ -546,9 +548,9 @@ export class MatephisSets {
             t.style.strokeWidth = '2.5px';
             return t;
         };
-        if (hasMathJax() && str.includes('$')) {
+        if (str.includes('$') && texReady(this)) {
             const halo = this.config.labelHalo !== false ? { color: dark ? '#181818' : '#fff' } : null;
-            return renderMathJaxLabel(toTeX(str), x, y, fontSize, fill, anchor, baseline, parent, plain, { halo });
+            return renderMathJaxLabel(toTeX(str), x, y, fontSize, fill, anchor, baseline, parent, plain, { halo, owner: this });
         }
         return plain();
     }

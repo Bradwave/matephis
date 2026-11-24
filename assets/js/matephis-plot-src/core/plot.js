@@ -18,7 +18,7 @@ import { createPalettes, validateConfig, parseAspectRatio, cssLength, adaptColor
 import { CoordinateSystem } from './coordinate-system.js';
 import { ExpressionCompiler, substituteLabel } from '../parser/expression-parser.js';
 import { SVG_NS } from '../renderers/svg-factory.js';
-import { renderMathJaxLabel } from '../renderers/mathjax-bridge.js';
+import { renderMathJaxLabel, sourceHasTeX } from '../renderers/mathjax-bridge.js';
 import { GridMixin } from '../renderers/grid-renderer.js';
 import { DataMixin } from '../renderers/data-renderer.js';
 import { AreaMixin } from '../renderers/area-renderer.js';
@@ -167,6 +167,8 @@ export class MatephisPlot {
                 return new MatephisPlot(el, cfg, options);
             },
             placeholder: (cfg) => MatephisPlot.placeholder(cfg),
+            // TeX in the JSON, or a Riemann value (a formula the engine makes)
+            needsMath: (src) => sourceHasTeX(src) || /"showValue"\s*:\s*true/.test(src),
             fail: (el, e) => {
                 console.error(label, e);
                 const div = document.createElement('div');
@@ -568,7 +570,7 @@ export class MatephisPlot {
         // "labelHalo": true outlines formulas like plain labels (off by default in plots)
         const halo = this.config.labelHalo === true ? { color: this._isDark() ? "#181818" : "#fff" } : null;
         return renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline, parent,
-            () => this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize), { halo });
+            () => this._text(x, y, text, anchor, baseline, color, "normal", "normal", parent, baseSize), { halo, owner: this });
     }
 
     // =========================================================================

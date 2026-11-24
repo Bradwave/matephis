@@ -9,7 +9,7 @@ import { SVG_NS } from './svg-factory.js';
 import { sampleCurve, polylinesToPath } from './curve-sampler.js';
 import { sampleImplicit } from './implicit-sampler.js';
 import { SampleCache } from './sample-cache.js';
-import { hasMathJax } from './mathjax-bridge.js';
+import { texReady } from './mathjax-bridge.js';
 
 const TAU = 2 * Math.PI;
 /** Largest pixel coordinate worth drawing (WebKit's boxes top out near 2^25). */
@@ -615,7 +615,7 @@ export const DataMixin = {
     _drawPointLabel(text, x, y, color, weight) {
         const label = this._substituteLabel(text);
         const fs = this._getConfigSize('labelSize');
-        if (hasMathJax() && label.includes('$')) {
+        if (label.includes('$') && texReady(this)) {
             this._renderMathJax(label, x, y, fs, color, 'start', 'alphabetic', this.labelGroup);
         } else {
             this._text(x, y, label, 'start', 'alphabetic', color, weight, this.config.labelStyle || 'normal', this.labelGroup, fs);
@@ -887,7 +887,7 @@ export const DataMixin = {
         const label = this._substituteLabel(item.label);
         const fs = this._getConfigSize('labelSize');
 
-        if (hasMathJax() && label.includes("$")) {
+        if (label.includes("$") && texReady(this)) {
             this._renderMathJax(label, lx, ly, fs, color, anchor, baseline === 'middle' ? 'middle' : 'auto', this.labelGroup);
         } else {
             this._text(lx, ly, label.replace(/\*/g, '·'), anchor, baseline, color,
@@ -943,7 +943,7 @@ export const DataMixin = {
                 this._line(lx, cy, lx + 15, cy, item.color, 2, item.dash, this.legendGroup);
             }
             const baselineY = cy + fs * 0.35;
-            if (hasMathJax() && item.label.includes("$")) {
+            if (item.label.includes("$") && texReady(this)) {
                 this._renderMathJax(item.label, lx + 25, baselineY - 1, fs, textColor, "start", "alphabetic", this.legendGroup);
             } else {
                 this._text(lx + 20, baselineY, item.label.replace(/\*/g, '·'), "start", "alphabetic", textColor,

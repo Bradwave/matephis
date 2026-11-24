@@ -10,6 +10,19 @@
  * frame (sliders, dragging) do not hit MathJax again: a call to MathJax costs
  * the conversion and also adds to its global font cache, which makes the
  * browser restyle the page.
+ *
+ * MathJax on demand: the site's pages are typeset at build time, so a page
+ * with engine blocks does not load MathJax itself. The engines load it (with
+ * the configuration of _layouts/Post.html) the first time something needs TeX:
+ *   - a block whose JSON has "$" or "\" waits for it before its first draw
+ *     (lazy-init.js), so its labels never show as plain text first;
+ *   - TeX the engines make themselves (Riemann values, force labels) draws
+ *     as plain text until MathJax is ready, then the block draws again
+ *     (texReady);
+ *   - HTML labels (sliders, captions) wait in the typeset queue.
+ * Hosts that bring their own MathJax (the board, Obsidian: they set
+ * MATEPHIS_NO_AUTO_INIT) or a page that loads it (#MathJax-script) are left
+ * to it.
  */
 import { SVG_NS } from './svg-factory.js';
 
@@ -47,7 +60,7 @@ export function hasMathJax() {
     return typeof window !== 'undefined' && !!(window.MathJax && window.MathJax.tex2svg);
 }
 
-/** Calls cb once MathJax is ready (or right away when the page does not load it). */
+/** Calls cb once MathJax is ready (or right away when the page, or loadMathJax, does not load it). */
 export function whenMathJaxReady(cb) {
     if (!document.getElementById('MathJax-script')) { cb(); return; }
     const started = Date.now();
@@ -60,6 +73,81 @@ export function whenMathJaxReady(cb) {
         setTimeout(check, 50);
     };
     check();
+}
+
+const MATHJAX_SRC = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+
+/** May the engines load MathJax here? Only on pages they set up themselves, when nothing else loads it. */
+function mayLoad() {
+    return typeof document !== 'undefined' && !!document.head && typeof document.createElement === 'function'
+        && !window.MATEPHIS_NO_AUTO_INIT && !window.MathJax && !document.getElementById('MathJax-script');
+}
+
+/** Will MathJax be there: ready, being loaded, or loadable by the engines? */
+export function mathJaxAvailable() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+    return hasMathJax() || !!window.MathJax || !!document.getElementById('MathJax-script') || mayLoad();
+}
+
+/**
+ * MathJax, loaded once for the three bundles when the page does not load it.
+ * The configuration is _layouts/Post.html's; the page itself is not typeset
+ * (it was at build time): the engines typeset what they draw.
+ * @returns {Promise<boolean>} true once MathJax is ready, false without it
+ */
+export function loadMathJax() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(false);
+    const s = shared();
+    if (s.loading) return s.loading;
+    if (mayLoad()) {
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            },
+            svg: { fontCache: 'global' },
+            startup: { typeset: false },
+        };
+        const script = document.createElement('script');
+        script.id = 'MathJax-script';
+        script.async = true;
+        script.src = MATHJAX_SRC;
+        document.head.appendChild(script);
+    }
+    const loading = new Promise(resolve => whenMathJaxReady(() => resolve(hasMathJax())));
+    s.loading = loading;
+    // Not there (yet): ask again next time (a host may load it later)
+    loading.then(ok => { if (!ok && s.loading === loading) s.loading = null; });
+    return loading;
+}
+
+/**
+ * Before drawing TeX: true when MathJax can draw it now. Otherwise false
+ * (draw plain text), MathJax is loaded where the engines may, and once it is
+ * ready owner.requestDraw() draws the block again, with its formulas.
+ * @param {{requestDraw?: Function, _destroyed?: boolean}} [owner] - the block drawing
+ */
+export function texReady(owner) {
+    if (hasMathJax()) return true;
+    if (!mathJaxAvailable()) return false;
+    const s = shared();
+    if (!s.redraw) s.redraw = new Set();
+    if (owner && typeof owner.requestDraw === 'function') s.redraw.add(owner);
+    if (!s.redrawPending) {
+        s.redrawPending = true;
+        loadMathJax().then(ok => {
+            s.redrawPending = false;
+            const owners = [...s.redraw];
+            s.redraw.clear();
+            if (ok) owners.forEach(o => { if (!o._destroyed) o.requestDraw(); });
+        });
+    }
+    return false;
+}
+
+/** Does a block's JSON contain TeX ("$" or a backslash)? Such a block waits for MathJax before its first draw. */
+export function sourceHasTeX(source) {
+    return /[$\\]/.test(typeof source === 'string' ? source : JSON.stringify(source || ''));
 }
 
 /**
@@ -93,7 +181,7 @@ export function typesetElements(els) {
         s.queue.push({ els: Array.from(els), resolve });
         if (s.scheduled) return;
         s.scheduled = true;
-        whenMathJaxReady(() => onNextFrame(() => flushTypeset(s)));
+        loadMathJax().then(() => onNextFrame(() => flushTypeset(s)));
     });
 }
 
@@ -133,13 +221,15 @@ function flushTypeset(s) {
  *   pool.done();                       // after the draw: unused formulas go
  */
 export class TexNodes {
-    constructor() {
+    /** @param {object} [owner] - the block drawing (texReady: drawn again once MathJax is ready) */
+    constructor(owner) {
+        this.owner = owner || null;
         this.prev = new Map();
         this.next = new Map();
     }
 
     get(tex, display = false) {
-        if (!hasMathJax()) return null;
+        if (!texReady(this.owner)) return null;
         const key = `${display ? 'D' : 'I'}${tex}`;
         const reuse = this.prev.get(key);
         let node = reuse && reuse.pop();
@@ -217,10 +307,11 @@ function applyHalo(svgNode, widthPx, halo) {
  * @param {Function} fallback - called with no args when MathJax is unavailable or fails
  * @param {object} [opts]
  * @param {{color: string, width?: number}} [opts.halo] - outline under the glyphs (width in px)
+ * @param {object} [opts.owner] - the block drawing: drawn again once MathJax is ready (texReady)
  * @returns {SVGElement|null}
  */
 export function renderMathJaxLabel(text, x, y, baseSize, color, anchor, baseline, parent, fallback, opts = {}) {
-    if (!hasMathJax()) return fallback ? fallback() : null;
+    if (!texReady(opts.owner)) return fallback ? fallback() : null;
 
     try {
         // "$x$" -> "x"; "text $x$" -> "\text{text }x"; bare TeX is kept

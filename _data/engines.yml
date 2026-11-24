@@ -3,13 +3,13 @@
 # Read by _layouts/Post.html (pages) and by _layouts/Board.html and BoardBench.html, which hand
 # them to the board's engine loader (assets/js/matephis-board-src/ui/engine-loader.js).
 plot:
-  js: "2.24"
+  js: "2.25"
   css: "2.4"
 physics:
-  js: "1.21"
+  js: "1.22"
   css: "0.9"
 sets:
-  js: "1.13"
+  js: "1.14"
   css: "0.8"
 circuit:
   js: "1.1"
