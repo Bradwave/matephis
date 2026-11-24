@@ -100,6 +100,7 @@ export const DataMixin = {
         this._samples.begin(JSON.stringify([cs.width, cs.height, cs.padL, cs.padR, cs.padT, cs.padB,
             cs.xMin, cs.xMax, cs.yMin, cs.yMax, cs.xScale, cs.yScale, cfg.sampleStep, cfg.sampleTolerance, cfg.implicitResolution]));
         this._riemannValueCount = 0;
+        this._fillSlots = new Map();
 
         data.forEach((item, idx) => this._drawItem(item, idx, cs, legendItems));
         if (this.config.legend && legendItems.length > 0) this._drawLegend(legendItems);
@@ -124,8 +125,15 @@ export const DataMixin = {
         let pos = null;
         const keep = (p) => { if (p) pos = p; };
         try {
-            // Areas first, under the curve of the item
-            if (item.fill && (item.fn || item.series)) this._drawFill(st);
+            // Areas first, under the curve of the item. A "liveFill" item (a host changes its
+            // fill every frame, see updateFills) gets its own group here, in the same place
+            if (item.liveFill && (item.fn || item.series)) {
+                const slot = document.createElementNS(SVG_NS, "g");
+                slot.setAttribute("class", "matephis-plot-fill-slot");
+                this.dataGroup.appendChild(slot);
+                this._fillSlots.set(idx, { g: slot, st });
+                this._inGroup(slot, () => this._drawFill(st));
+            } else if (item.fill && (item.fn || item.series)) this._drawFill(st);
             if (item.riemann) this._drawRiemann(st);
             if (item.type === 'interpolation' && isArr(item.points)) keep(this._drawInterpolation(st));
             if (item.fn) keep(this._drawFunction(st));
@@ -163,6 +171,27 @@ export const DataMixin = {
     setOverlay(items, startIndex = (this.config.data || []).length, redraw = true) {
         this._overlay = { items: items || [], startIndex };
         if (redraw && this.transform && !this._inDraw) this._drawOverlay(this.transform, false);
+    },
+
+    /**
+     * New fills for "liveFill" items, by item index ({ 3: { range: [0, 1.2], ... } }; null for
+     * none): only their groups are redrawn, the rest of the plot stays as it is.
+     */
+    updateFills(fills) {
+        if (!this._fillSlots || this._inDraw) return;
+        for (const [idx, slot] of this._fillSlots) {
+            if (!(idx in fills) || !slot.g.isConnected) continue;
+            slot.st.item.fill = fills[idx];
+            slot.g.textContent = "";
+            this._inGroup(slot.g, () => this._drawFill(slot.st));
+        }
+    },
+
+    /** Runs fn with the data group pointing at g, so what it draws goes there. */
+    _inGroup(g, fn) {
+        const main = this.dataGroup;
+        this.dataGroup = g;
+        try { fn(); } finally { this.dataGroup = main; }
     },
 
     _drawOverlay(cs, fresh) {
