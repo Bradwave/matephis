@@ -41,15 +41,33 @@ export class OptionsMenu {
         this.el.innerHTML = `
             <div class="board-popover-title">Opzioni lavagna</div>
             <button type="button" class="board-action-btn board-fullscreen-btn" data-fullscreen hidden></button>
-            <div class="board-options-list">
-                <label class="board-opt-row">
-                    <span>Tema scuro</span>
-                    <input type="checkbox" data-opt="darkTheme" />
-                </label>
+            <div class="board-opt-tabs board-bg-seg" role="tablist" aria-label="Sezioni delle opzioni">
+                <button type="button" class="board-bg-btn" role="tab" data-tab="page">Pagina</button>
+                <button type="button" class="board-bg-btn" role="tab" data-tab="touch">Tocco</button>
+                <button type="button" class="board-bg-btn" role="tab" data-tab="ui">Barra</button>
+                <button type="button" class="board-bg-btn" role="tab" data-tab="perf">Velocità</button>
+                <button type="button" class="board-bg-btn" role="tab" data-tab="file">File</button>
+            </div>
+            <div class="board-options-list" role="tabpanel" data-tab-panel="page">
+                <div class="board-opt-bg-row">
+                    <span>Sfondo pagina</span>
+                    <div class="board-bg-seg" data-page-bg>
+                        <button type="button" class="board-bg-btn" data-bg="blank">Vuoto</button>
+                        <button type="button" class="board-bg-btn" data-bg="grid">Quadretti</button>
+                        <button type="button" class="board-bg-btn" data-bg="dots">Puntini</button>
+                        <button type="button" class="board-bg-btn" data-bg="ruled">Righe</button>
+                    </div>
+                </div>
                 <label class="board-opt-row">
                     <span>Bordi pagina A4</span>
                     <input type="checkbox" data-opt="showCropMarks" />
                 </label>
+                <label class="board-opt-row">
+                    <span>Tema scuro</span>
+                    <input type="checkbox" data-opt="darkTheme" />
+                </label>
+            </div>
+            <div class="board-options-list" role="tabpanel" data-tab-panel="touch" hidden>
                 <label class="board-opt-row">
                     <span>Solo stilo (1 dito sposta)</span>
                     <input type="checkbox" data-opt="penOnly" />
@@ -63,33 +81,15 @@ export class OptionsMenu {
                     <input type="range" min="26" max="80" step="2" data-opt="palmThreshold" />
                 </div>
                 <label class="board-opt-row">
-                    <span>Modalità veloce (1× DPR)</span>
-                    <input type="checkbox" data-opt="lowDpr" />
-                </label>
-                <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
-                    <span>Pan e zoom fluidi</span>
-                    <input type="checkbox" data-opt="fastPan" />
+                    <span>Menu rapido (tocco con due dita)</span>
+                    <input type="checkbox" data-opt="quickMenu" />
                 </label>
                 <label class="board-opt-row" title="Saltando da un connettore all'altro la vista scorre fino al gemello invece di cambiare di colpo">
                     <span>Scorri tra i connettori</span>
                     <input type="checkbox" data-opt="connectorGlide" />
                 </label>
-                <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
-                <div class="board-opt-bg-row">
-                    <span>Effetto durante pan e zoom</span>
-                    <div class="board-bg-seg" data-seg="gestureEffect">
-                        <button type="button" class="board-bg-btn" data-val="dim">Attenuato</button>
-                        <button type="button" class="board-bg-btn" data-val="pixel">Pixel</button>
-                    </div>
-                </div>
-                <label class="board-opt-row">
-                    <span>Menu rapido (tocco con due dita)</span>
-                    <input type="checkbox" data-opt="quickMenu" />
-                </label>
-                <label class="board-opt-row">
-                    <span>HUD prestazioni e input</span>
-                    <input type="checkbox" data-opt="showHud" />
-                </label>
+            </div>
+            <div class="board-options-list" role="tabpanel" data-tab-panel="ui" hidden>
                 <div class="board-opt-bg-row">
                     <span>Dimensione interfaccia</span>
                     <div class="board-bg-seg" data-seg="uiSize">
@@ -109,17 +109,30 @@ export class OptionsMenu {
                         <button type="button" class="board-bg-btn" data-val="right">Destra</button>
                     </div>
                 </div>
+            </div>
+            <div class="board-options-list" role="tabpanel" data-tab-panel="perf" hidden>
+                <label class="board-opt-row">
+                    <span>Modalità veloce (1× DPR)</span>
+                    <input type="checkbox" data-opt="lowDpr" />
+                </label>
+                <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
+                    <span>Pan e zoom fluidi</span>
+                    <input type="checkbox" data-opt="fastPan" />
+                </label>
+                <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
                 <div class="board-opt-bg-row">
-                    <span>Sfondo pagina</span>
-                    <div class="board-bg-seg" data-page-bg>
-                        <button type="button" class="board-bg-btn" data-bg="blank">Vuoto</button>
-                        <button type="button" class="board-bg-btn" data-bg="grid">Quadretti</button>
-                        <button type="button" class="board-bg-btn" data-bg="dots">Puntini</button>
-                        <button type="button" class="board-bg-btn" data-bg="ruled">Righe</button>
+                    <span>Effetto durante pan e zoom</span>
+                    <div class="board-bg-seg" data-seg="gestureEffect">
+                        <button type="button" class="board-bg-btn" data-val="dim">Attenuato</button>
+                        <button type="button" class="board-bg-btn" data-val="pixel">Pixel</button>
                     </div>
                 </div>
+                <label class="board-opt-row">
+                    <span>HUD prestazioni e input</span>
+                    <input type="checkbox" data-opt="showHud" />
+                </label>
             </div>
-            <div class="board-options-actions">
+            <div class="board-options-actions" role="tabpanel" data-tab-panel="file" hidden>
                 <button type="button" class="board-action-btn" data-action="export">
                     ${BoardIcons.download}<span>Esporta JSON</span>
                 </button>
@@ -143,6 +156,12 @@ export class OptionsMenu {
         `;
 
         this.fileInput = this.el.querySelector('.board-file-input');
+        // Sections as tabs: the menu stays short enough to need no scrolling on a board
+        this.tab = 'page';
+        this.el.querySelectorAll('[data-tab]').forEach((btn) => {
+            btn.addEventListener('click', () => this._showTab(btn.dataset.tab));
+        });
+        this._showTab(this.tab);
         this._bindFullscreen();
         this._bindEvents();
         this.syncFromState();
@@ -306,6 +325,18 @@ export class OptionsMenu {
     _syncPalmSliderVisibility() {
         const wrap = this.el.querySelector('[data-opt-wrap="palmThreshold"]');
         wrap.hidden = !this.scene.settings.palmErase;
+    }
+
+    _showTab(name) {
+        this.tab = name;
+        this.el.querySelectorAll('[data-tab]').forEach((btn) => {
+            const on = btn.dataset.tab === name;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-selected', String(on));
+        });
+        this.el.querySelectorAll('[data-tab-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.tabPanel !== name;
+        });
     }
 
     syncFromState() {

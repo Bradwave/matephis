@@ -907,6 +907,14 @@ body.board-body {
     left: max(12px, env(safe-area-inset-left));
 }
 
+/* Wall-mounted touch boards: the top of the screen is out of reach, so sheets (plot,
+   diagram and exercise editors) start a third of the way down; their content scrolls inside */
+@media (pointer: coarse) and (min-height: 700px) {
+    .board-popover.board-sheet {
+        top: max(12px, env(safe-area-inset-top), 32vh);
+    }
+}
+
 .board-popover-title {
     font-family: var(--font-title);
     font-weight: 600;
@@ -968,9 +976,25 @@ body.board-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.4em;
-    margin-top: 0.8em;
-    padding-top: 0.65em;
-    border-top: 1px solid var(--border);
+}
+
+/* Options in tabs: one section at a time, so the menu never needs scrolling */
+.board-opt-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 0.7em;
+}
+
+.board-opt-tabs .board-bg-btn {
+    font-size: 0.82em;
+    padding: 0 0.15em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.board-options-list[hidden],
+.board-options-actions[hidden] {
+    display: none;
 }
 
 .board-action-btn {
