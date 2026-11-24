@@ -2,6 +2,7 @@
 <html lang="it">
 
 <head>
+    <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <meta content="{{ site.title | default: site.heading }}" property="og:site_name" />
     <meta content="{{ site.description | default: 'Un blog di matematica e fisica' }}" property="og:description">
@@ -10,7 +11,7 @@
     <meta property="og:image" content="{{ site.baseurl }}{{ site.og_image }}">
     {%- endif -%}
     {%- if page.title -%}
-    <meta content="{{ page.title }}" property="og:title">
+    <meta content="{{ page.title | escape }}" property="og:title">
     <meta content="article" property="og:type">
     <meta content="{{ site.url }}{{ page.url }}" property="og:url">
     {%- else -%}
@@ -51,20 +52,32 @@
     <link href="{{ site.baseurl }}/assets/css/matephis-draw.css?v=1.0" rel="stylesheet" />
     {%- endif -%}
     {%- if site.mathjax -%}
+    {%- comment -%}
+    The deployed site is typeset at build time (tools/mathjax/prerender.mjs marks such pages with
+    data-mathjax="prerendered"): MathJax is then loaded only where formulas are still made in the
+    browser, the labels of plots, physics and sets (and the playground). Without the build step
+    (jekyll serve) every page loads it, as before. Keep this configuration in step with the script.
+    {%- endcomment -%}
     <script>
-        MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            },
-            svg: {
-                fontCache: 'global'
-            }
-        };
+        (function () {
+            var runtime = {% if page.plot or page.physics or page.sets %}true{% else %}false{% endif %};
+            if (document.documentElement.getAttribute('data-mathjax') === 'prerendered' && !runtime) return;
+            window.MathJax = {
+                tex: {
+                    inlineMath: [['$', '$'], ['\\(', '\\)']],
+                    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+                },
+                svg: {
+                    fontCache: 'global'
+                }
+            };
+            var s = document.createElement('script');
+            s.id = 'MathJax-script';
+            s.async = true;
+            s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+            document.head.appendChild(s);
+        })();
     </script>
-    <script type="text/javascript" id="MathJax-script" async
-        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
-        </script>
     {%- endif -%}
 
     <link rel="alternate" type="application/rss+xml" href="{{ site.url }}/feed.xml">
@@ -245,7 +258,13 @@
                         
                         const a = document.createElement('a');
                         a.href = '#' + header.id;
-                        a.textContent = header.textContent;
+                        if (header.querySelector('mjx-container')) {
+                            // Maths typeset at build time: copy the formulas, not their text
+                            header.childNodes.forEach(n => a.appendChild(n.cloneNode(true)));
+                            a.querySelectorAll('a').forEach(link => link.replaceWith(...link.childNodes));
+                        } else {
+                            a.textContent = header.textContent;
+                        }
                         
                         li.appendChild(a);
                         tocList.appendChild(li);
@@ -284,15 +303,15 @@
         </div>
     </div>
     {%- if page.plot -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.20"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.24"></script>
     {%- endif -%}
     {%- if page.physics -%}
     {%- comment -%} Macros for "use" in physics blocks (_data/physics-macros.json) {%- endcomment -%}
     <script>window.MatephisPhysicsMacros = {{ site.data["physics-macros"] | jsonify }};</script>
-    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=1.17"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=1.21"></script>
     {%- endif -%}
     {%- if page.sets -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-sets.js?v=1.12"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-sets.js?v=1.13"></script>
     {%- endif -%}
     {%- if page.circuit -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.1"></script>

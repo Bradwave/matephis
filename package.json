@@ -4,21 +4,24 @@
   "private": true,
   "description": "Matephis - Matematica e Fisica con grafici interattivi",
   "scripts": {
-    "build": "npm run build:plot && npm run build:physics && npm run build:sets && npm run build:board",
+    "build": "npm run build:plot && npm run build:physics && npm run build:sets && npm run build:board && npm run build:bench",
     "build:plot": "esbuild assets/js/matephis-plot-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisPlotBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisPlotBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-plot.js",
-    "build:physics": "esbuild assets/js/matephis-physics-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisPhysicsBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisPhysicsBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-physics.js",
-    "build:sets": "esbuild assets/js/matephis-sets-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisSetsBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisSetsBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-sets.js",
+    "build:physics": "node tools/build/engines.mjs physics",
+    "build:sets": "node tools/build/engines.mjs sets",
     "build:board": "node tools/build/board.mjs",
+    "build:bench": "esbuild assets/js/matephis-board-src/bench/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --minify --sourcemap --outfile=assets/js/matephis-board-bench.js",
     "dev:js": "esbuild assets/js/matephis-plot-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisPlotBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisPlotBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-plot.js --watch",
-    "dev:physics": "esbuild assets/js/matephis-physics-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisPhysicsBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisPhysicsBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-physics.js --watch",
-    "dev:sets": "esbuild assets/js/matephis-sets-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisSetsBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisSetsBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-sets.js --watch",
+    "dev:physics": "node tools/build/engines.mjs physics --watch",
+    "dev:sets": "node tools/build/engines.mjs sets --watch",
     "dev:board": "node tools/build/board.mjs --watch",
     "dev": "concurrently -k -n \"PLOT,PHYSICS,SETS,BOARD,JEKYLL\" -c \"cyan,green,yellow,blue,magenta\" \"npm run dev:js\" \"npm run dev:physics\" \"npm run dev:sets\" \"npm run dev:board\" \"bundle exec jekyll serve\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prerender:math": "node tools/mathjax/prerender.mjs _site"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "esbuild": "^0.21.5",
+    "mathjax-full": "3.2.2",
     "vitest": "^1.6.0"
   }
 }

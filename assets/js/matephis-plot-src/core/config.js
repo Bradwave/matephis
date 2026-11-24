@@ -35,7 +35,8 @@ export const VALID_DATA_KEYS = [
     "smoothness", "sampling", "showPoints", "pointColor", "pointRadius", "pointOpacity", "pointStroke", "pointStrokeWidth", "param",
     "freeCoordinates", "name", "from", "to", "arrow", "arrowSize",
     "components", "componentColor", "draggable", "snap", "showValue", "rightAngle",
-    "fill", "fillOpacity", "id", "riemann"
+    "fill", "fillOpacity", "id", "riemann",
+    "liveFill" // set by hosts (physics graphs): the fill changes every frame, see updateFills
 ];
 
 /** Keys of a multi-plot group block ({ "plots": [...] }). */

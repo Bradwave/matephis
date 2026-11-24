@@ -36,6 +36,7 @@ ResizeObserver's first report changes nothing.
 
 ```
 index.js                      entry: globals + auto-init
+shared.js                     modules physics and sets read from this bundle (window.MatephisPlotModules)
 core/
   lazy-init.js                lazy building of a page's blocks (all three engines), placeholders
   plot.js                     MatephisPlot: lifecycle, layout, resize, draw orchestration, lightbox, destroy
@@ -85,6 +86,9 @@ Pure modules (parser, samplers, coordinate system) have no DOM dependency and ar
 - **Geometry cache.** Every line-like item stores its screen polylines in `plotData`
   (snapping, selection, slopes); draggable things are registered in `handles`.
 - **Redraws are coalesced** with `requestDraw()` (one per animation frame).
+- **One copy for all engines.** Physics and sets import the plot modules listed in `shared.js`
+  from this bundle at run time instead of carrying copies (`tools/build/engines.mjs`), so this
+  bundle must load first (Post.html and the board's engine loader do).
 - **Sampled curves are cached between draws** (`renderers/sample-cache.js`), keyed on the visible
   window and size, the item's settings and the values of the parameters and points its
   expressions read (found in the generated code). Moving one slider resamples only the curves
