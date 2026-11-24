@@ -738,8 +738,30 @@ body.board-body {
     border-color: var(--title);
 }
 
-.board-quick-item.active .board-quick-dot-fill {
-    box-shadow: 0 0 0 2px var(--bg);
+/* Colours mark the current one with the same underline as the rail's colour dots,
+   not the filled background tools use. */
+.board-quick-item[data-color-id] {
+    position: relative;
+}
+
+.board-quick-item[data-color-id].active {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text);
+}
+
+.board-quick-item[data-color-id].active::after {
+    content: "";
+    position: absolute;
+    left: 26%;
+    right: 26%;
+    bottom: 12%;
+    height: max(2px, calc(var(--bu) * 0.06));
+    background: var(--title);
+}
+
+.board-quick-item[data-color-id].active:hover {
+    background: var(--bg2);
 }
 
 .board-quick-item:disabled {

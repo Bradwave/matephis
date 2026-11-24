@@ -25,6 +25,11 @@ const TAP_MAX_MS = 350;
 const TAP_MAX_MOVE_PX = 14;
 // A first-finger dot committed just before the second finger landed is undone on a tap.
 const TAP_DOT_MS = 250;
+// A press that closed a menu becomes a stroke once it moves this far; less is a tap.
+const DISMISS_TAP_MOVE_PX = 6;
+// Two-finger gestures pan only, until the fingers spread or close by this fraction;
+// then they zoom too. Keeps jittery smartboard touch from zooming during a pan.
+const PINCH_ZOOM_LOCK = 0.1;
 
 export class InputController {
     constructor(surface, {
@@ -157,10 +162,34 @@ export class InputController {
             return;
         }
 
-        // Notify toolbar/popovers to auto-dismiss; swallow tap if a popover was dismissed
+        // Notify toolbar/popovers to auto-dismiss. A single press that closed a menu still
+        // draws if it moves (so starting to write is never lost), but a plain tap leaves no
+        // dot; see dismissPress. Extra fingers of that press are swallowed so a two-finger
+        // tap that closes a menu does not pan or reopen the quick menu.
+        let dismissed = false;
         if (this.onCanvasTouch && this.onCanvasTouch() === true) {
-            this.pointers.delete(e.pointerId);
-            return;
+            if (this.pointers.size > 1) {
+                if (this.dismissPress) {
+                    this._cancelUncommittedDraw();
+                    this.pointers.clear();
+                } else {
+                    this.pointers.delete(e.pointerId);
+                }
+                return;
+            }
+            // Only a press that would draw carries on; erasing, panning or the laser from a
+            // menu-closing press is still swallowed as before.
+            const ts = this.getToolState();
+            const wouldDraw = (ts.tool === 'pen' || ts.tool === 'highlighter')
+                && !this.spaceHeld && e.button !== 1
+                && !(this.scene.settings.penOnly && e.pointerType === 'touch')
+                && !(e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32)))
+                && !this._isPalm(e);
+            if (!wouldDraw) {
+                this.pointers.delete(e.pointerId);
+                return;
+            }
+            dismissed = true;
         }
 
         // Check palm-to-erase immediately
@@ -243,6 +272,8 @@ export class InputController {
         } else if (toolState.tool === 'connector') {
             const pt = screenToWorld(sx, sy, this.scene.camera);
             if (this.onConnectorPlace) this.onConnectorPlace(pt.x, pt.y);
+        } else if (dismissed) {
+            this._startDraw(e, sx, sy, toolState, true);
         } else {
             this._startDraw(e, sx, sy, toolState);
         }
@@ -286,7 +317,7 @@ export class InputController {
         this._emitTelemetry(e, 1, performance.now() - t0);
     }
 
-    _startDraw(e, sx, sy, toolState) {
+    _startDraw(e, sx, sy, toolState, dismissing = false) {
         const t0 = performance.now();
         this.mode = 'draw';
         this.activePointerId = e.pointerId;
@@ -301,7 +332,9 @@ export class InputController {
             style: isHighlighter ? 'solid' : toolState.penStyle,
             points: [pt],
         });
-        this.surface.setActiveStroke(this.currentStroke);
+        // After closing a menu the stroke stays hidden until the press moves like a stroke.
+        this.dismissPress = dismissing ? { sx, sy, moved: false } : null;
+        if (!dismissing) this.surface.setActiveStroke(this.currentStroke);
         this._emitTelemetry(e, 1, performance.now() - t0);
     }
 
@@ -426,6 +459,25 @@ export class InputController {
             const midY = (pts[0].sy + pts[1].sy) * 0.5;
             const dist = Math.max(10, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
 
+            const anchor = this.pinchAnchor;
+            if (!anchor.zooming) {
+                if (Math.abs(dist / anchor.dist - 1) < PINCH_ZOOM_LOCK) {
+                    // Pan only: the scale stays put while the fingers keep their spread.
+                    this.scene.camera.x = anchor.worldMid.x - midX / anchor.startScale;
+                    this.scene.camera.y = anchor.worldMid.y - midY / anchor.startScale;
+                    this.surface.requestCommittedRedraw();
+                    this.surface.renderActiveNow();
+                    if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+                    this._emitTelemetry(e, 1);
+                    return;
+                }
+                // Zoom engages from here on, starting from the current spread (no jump).
+                anchor.zooming = true;
+                anchor.dist = dist;
+                anchor.startScale = this.scene.camera.scale;
+                anchor.worldMid = screenToWorld(midX, midY, this.scene.camera);
+            }
+
             const newScale = clamp(
                 this.pinchAnchor.startScale * (dist / this.pinchAnchor.dist),
                 MIN_SCALE,
@@ -474,7 +526,11 @@ export class InputController {
                     added = true;
                 }
             }
-            if (added) {
+            const dp = this.dismissPress;
+            if (dp && !dp.moved && Math.hypot(sx - dp.sx, sy - dp.sy) > DISMISS_TAP_MOVE_PX) {
+                dp.moved = true;
+                this.surface.setActiveStroke(this.currentStroke);
+            } else if (added && !(dp && !dp.moved)) {
                 this.surface.renderActiveNow();
             }
             this._emitTelemetry(e, list.length, performance.now() - t0);
@@ -589,6 +645,7 @@ export class InputController {
 
     _cancelUncommittedDraw() {
         this.currentStroke = null;
+        this.dismissPress = null;
         this.surface.setActiveStroke(null);
         if (this.mode === 'draw') {
             this.mode = 'idle';
@@ -632,9 +689,14 @@ export class InputController {
 
     _commitDraw() {
         const stroke = this.currentStroke;
+        const dismissing = this.dismissPress;
         this.currentStroke = null;
-        this.surface.setActiveStroke(null);
-        if (!stroke || stroke.points.length === 0) return;
+        this.dismissPress = null;
+        // A tap that only closed a menu leaves no dot (a real stroke from it is kept).
+        if (!stroke || stroke.points.length === 0 || (dismissing && !dismissing.moved)) {
+            this.surface.setActiveStroke(null);
+            return;
+        }
 
         // Simplify curve in world mm for compact storage while preserving fine handwriting hooks
         if (stroke.points.length > 3) {
@@ -644,7 +706,7 @@ export class InputController {
 
         this.scene.strokes.push(stroke);
         this.history.push({ type: 'add', stroke });
-        this.surface.appendStroke(stroke);
+        this.surface.commitActiveStroke(stroke);
         if (this.onSceneMutated) this.onSceneMutated();
     }
 
