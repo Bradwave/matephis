@@ -281,6 +281,20 @@ export class Graphs {
         return out;
     }
 
+    /** Curves whose fill grows with time ("upTo": "now" while the clock runs). */
+    _liveFills(it, live) {
+        const out = new Set();
+        const d = it.def;
+        if (!live || !it.overTime || d.fill === undefined || d.fill === false) return out;
+        const specs = d.fill === true ? [{}] : listOf(d.fill);
+        specs.forEach(sp => {
+            if (!sp || typeof sp !== 'object' || sp.upTo !== 'now') return;
+            const k = sp.curve !== undefined ? Number(sp.curve) : 0;
+            if (k >= 0 && k < it.ys.length) out.add(k);
+        });
+        return out;
+    }
+
     /** Redraws with the cursor at the current time (after the scene was resolved there). */
     update() {
         if (typeof window === 'undefined' || !window.MatephisPlot) return;
@@ -296,9 +310,11 @@ export class Graphs {
             const n = upTo < 0 ? it.ts.length : upTo;
             const fills = this._fills(it, t, live);
             // The cursor moves every frame; the curves only when this key changes (new samples,
-            // a growing "progressive" curve, a fill "up to now", other colours)
+            // a growing "progressive" curve, other colours). Fills "up to now" grow every frame
+            // too: they are redrawn on their own (plot.updateFills), so their range is not in it
             const extraCounts = (it.extra || []).map(ex => (ex ? (d.progressive === true ? ex.ts.filter(tt => tt <= t + 1e-9).length : ex.ts.length) : -1));
-            const key = JSON.stringify([it.version || 0, n, extraCounts, fills, colors]);
+            const liveFills = this._liveFills(it, live);
+            const key = JSON.stringify([it.version || 0, n, extraCounts, fills.map((f, k) => (liveFills.has(k) ? 'live' : f)), [...liveFills], colors]);
             const cursor = [];
             if (d.cursor !== false && live) {
                 if (it.overTime) cursor.push({ x: t, color: 'black', width: 1, dash: '5,4', opacity: 0.6 });
@@ -310,6 +326,11 @@ export class Graphs {
             }
             const overlay = typeof it.plot.setOverlay === 'function';
             if (overlay && key === it.drawnKey) {
+                if (liveFills.size && typeof it.plot.updateFills === 'function') {
+                    const byIndex = {};
+                    liveFills.forEach(k => { byIndex[it.curveStart + k] = fills[k] || null; });
+                    it.plot.updateFills(byIndex);
+                }
                 it.plot.setOverlay(cursor, it.drawnCount);
                 return;
             }
@@ -323,12 +344,15 @@ export class Graphs {
                     color: colors[k] || COLORS[k % COLORS.length], width: 2, opacity: 0.4, dash: '6,4',
                 }));
             });
+            it.curveStart = data.length;
+            const slots = overlay && typeof it.plot.updateFills === 'function';
             it.ys.forEach((ys, k) => {
                 const item = {
                     series: ys.slice(0, n).map((y, j) => [it.xs[j], y]),
                     color: colors[k] || COLORS[k % COLORS.length], width: 2.5,
                 };
                 if (fills[k]) item.fill = fills[k];
+                if (slots && liveFills.has(k)) item.liveFill = true;
                 data.push(item);
             });
             if (it.legendEl) {
