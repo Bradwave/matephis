@@ -30,6 +30,8 @@ const STATIC_SPAN = 2;
 const BASE_SAMPLES = 40;
 const SAMPLES_PER_SECOND = 60;
 const MAX_SAMPLES = 600;
+/** States remembered per run (see _stateAt): a few precomputing passes' worth. */
+const STATE_CACHE_MAX = 8192;
 
 export class Simulation {
     /**
@@ -384,9 +386,17 @@ export class Simulation {
             const fm = fs && frameMap(frame, { pos: fs.com || fs.pos, angle: fs.angle || 0 }, start);
             return fm ? fm.point(p) : null;
         };
-        // Three instants t0, t0 + h, t0 + 2h around t, and where t is among them
-        const t0 = t - h < 0 ? 0 : t + h > this.tEnd ? this.tEnd - 2 * h : t - h;
-        const a = pos(t0), b = pos(t0 + h), c = pos(t0 + 2 * h);
+        const t0 = this._diffStart(t, h);
+        return this._diff(pos(t0), pos(t0 + h), pos(t0 + 2 * h), t, t0, h);
+    }
+
+    /** First of three instants t0, t0 + h, t0 + 2h around t (one-sided at the ends of the run). */
+    _diffStart(t, h) {
+        return t - h < 0 ? 0 : t + h > this.tEnd ? this.tEnd - 2 * h : t - h;
+    }
+
+    /** Velocity and acceleration at t from positions at t0, t0 + h, t0 + 2h. */
+    _diff(a, b, c, t, t0, h) {
         if (!a || !b || !c) return null;
         const k = (t - t0) / h; // 0, 1 or 2
         // Derivative of the parabola through the three points, at t
@@ -422,11 +432,23 @@ export class Simulation {
         return this._kinIds;
     }
 
+    /**
+     * Kinematics of every target at t. They all use the same three instants, so the
+     * scene is resolved once per instant for all of them (same values as one by one).
+     */
     _kinematicsAt(t, view) {
         const ids = this._kinTargets();
         this.kin = new Map();
+        const h = Math.min(DIFF_H, this.tEnd / 4);
+        if (!ids.length || !(h > 0)) return;
+        const t0 = this._diffStart(t, h);
+        const pos = (states, id) => {
+            const st = states.get(id);
+            return st ? st.com || st.pos : null;
+        };
+        const [sa, sb, sc] = [t0, t0 + h, t0 + 2 * h].map(tt => this._statesAt(tt, ids, view));
         ids.forEach(id => {
-            const k = this._kinematics(id, t, view);
+            const k = this._diff(pos(sa, id), pos(sb, id), pos(sc, id), t, t0, h);
             if (k) this.kin.set(id, k);
         });
     }
@@ -461,9 +483,28 @@ export class Simulation {
     /** Sets t (clamped) and the state at t into the params. */
     setTime(t) {
         const tt = Math.min(Math.max(0, t), this.tEnd || 0);
-        const y = this.run && this.run.states.length && this.run.states[0].length ? stateAt(this.run, tt) : [];
+        const y = this.run && this.run.states.length && this.run.states[0].length ? this._stateAt(tt) : [];
         this._scope(y, tt);
         return tt;
+    }
+
+    /**
+     * State of the run at t, remembered per run: precomputing asks for the same instants
+     * several times (the kinematics around t, then the scene at t), and each answer costs
+     * an RK4 sub-step. The values are the same as computing them again.
+     */
+    _stateAt(t) {
+        if (this._statesRun !== this.run) {
+            this._statesRun = this.run;
+            this._states = new Map();
+        }
+        let y = this._states.get(t);
+        if (!y) {
+            y = stateAt(this.run, t);
+            if (this._states.size >= STATE_CACHE_MAX) this._states.clear();
+            this._states.set(t, y);
+        }
+        return y;
     }
 
     /** Current time, as the clock moves it. */
