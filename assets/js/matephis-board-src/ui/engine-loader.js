@@ -6,30 +6,49 @@
  * Sets `window.MATEPHIS_NO_AUTO_INIT = true` so engines never auto-scan the DOM.
  */
 
+/**
+ * Engines the board can load. Paths carry no ?v=: the cache versions live in _data/engines.yml,
+ * which the board layouts hand over as `window.MatephisEngineVersions` ({ plot: { js, css }, … }),
+ * the same versions _layouts/Post.html uses, so pages and board always fetch matching bundles.
+ */
 const ENGINE_SPECS = {
     plot: {
-        css: ['/assets/css/matephis-plot.css?v=2.4'],
+        css: ['/assets/css/matephis-plot.css'],
         js: ['/assets/js/matephis-plot.js'],
         globalName: 'MatephisPlot',
     },
     physics: {
         deps: ['plot'],
-        css: ['/assets/css/matephis-physics.css?v=0.9'],
+        css: ['/assets/css/matephis-physics.css'],
         js: ['/assets/js/matephis-physics.js'],
         globalName: 'MatephisPhysics',
     },
     sets: {
         deps: ['plot'],
-        css: ['/assets/css/matephis-sets.css?v=0.8'],
+        css: ['/assets/css/matephis-sets.css'],
         js: ['/assets/js/matephis-sets.js'],
         globalName: 'MatephisSets',
     },
     circuit: {
-        css: ['/assets/css/matephis-circuit.css?v=1.1'],
+        css: ['/assets/css/matephis-circuit.css'],
         js: ['/assets/js/matephis-circuit.js'],
         globalName: 'MatephisCircuit',
     },
 };
+
+/**
+ * Append the engine's cache version (from _data/engines.yml) to an asset path.
+ * @param {string} path
+ * @param {string} kind engine key, e.g. 'plot'
+ * @param {'js'|'css'} type
+ * @param {object} [versions]
+ */
+export function versionedPath(path, kind, type, versions) {
+    const table = versions || (typeof window !== 'undefined' ? window.MatephisEngineVersions : null);
+    const v = table && table[kind] && table[kind][type];
+    if (!v) return path;
+    return `${path}${path.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(v))}`;
+}
 
 const MATHJAX_SRC = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
 
@@ -111,7 +130,7 @@ export class EngineLoader {
         if (!spec) return null;
 
         if (typeof window !== 'undefined' && window[spec.globalName]) {
-            await Promise.all((spec.css || []).map((c) => this.loadCss(c)));
+            await Promise.all((spec.css || []).map((c) => this.loadCss(versionedPath(c, kind, 'css'))));
             return window[spec.globalName];
         }
 
@@ -128,9 +147,9 @@ export class EngineLoader {
                     await this.loadEngine(dep);
                 }
             }
-            await Promise.all((spec.css || []).map((c) => this.loadCss(c)));
+            await Promise.all((spec.css || []).map((c) => this.loadCss(versionedPath(c, kind, 'css'))));
             for (const js of spec.js || []) {
-                await this.loadScript(js);
+                await this.loadScript(versionedPath(js, kind, 'js'));
             }
             return typeof window !== 'undefined' ? window[spec.globalName] || null : null;
         })();

@@ -1,0 +1,22 @@
+# Cache versions (?v=) of the engine bundles: the one place to bump them.
+# GitHub Pages lets browsers cache for 10 minutes, so bump a bundle's version whenever it changes.
+# Read by _layouts/Post.html (pages) and by _layouts/Board.html and BoardBench.html, which hand
+# them to the board's engine loader (assets/js/matephis-board-src/ui/engine-loader.js).
+plot:
+  js: "2.24"
+  css: "2.4"
+physics:
+  js: "1.21"
+  css: "0.9"
+sets:
+  js: "1.13"
+  css: "0.8"
+circuit:
+  js: "1.1"
+  css: "1.1"
+slides:
+  js: "1.1"
+  css: "1.1"
+draw:
+  js: "1.0"
+  css: "1.0"

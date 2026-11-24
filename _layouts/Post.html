@@ -34,22 +34,22 @@
     <link href="{{ site.baseurl }}/assets/css/style.css?v=2.16" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
     {%- if page.plot or page.physics or page.sets -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v=2.4" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v={{ site.data.engines.plot.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if page.physics -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-physics.css?v=0.9" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-physics.css?v={{ site.data.engines.physics.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if page.sets -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-sets.css?v=0.8" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-sets.css?v={{ site.data.engines.sets.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if page.circuit -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-circuit.css?v=1.1" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-circuit.css?v={{ site.data.engines.circuit.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if page.slides -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-slides.css?v=1.1" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-slides.css?v={{ site.data.engines.slides.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if page.draw -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-draw.css?v=1.0" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-draw.css?v={{ site.data.engines.draw.css }}" rel="stylesheet" />
     {%- endif -%}
     {%- if site.mathjax -%}
     {%- comment -%}
@@ -303,25 +303,25 @@
         </div>
     </div>
     {%- if page.plot -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v=2.24"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-plot.js?v={{ site.data.engines.plot.js }}"></script>
     {%- endif -%}
     {%- if page.physics -%}
     {%- comment -%} Macros for "use" in physics blocks (_data/physics-macros.json) {%- endcomment -%}
     <script>window.MatephisPhysicsMacros = {{ site.data["physics-macros"] | jsonify }};</script>
-    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v=1.21"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-physics.js?v={{ site.data.engines.physics.js }}"></script>
     {%- endif -%}
     {%- if page.sets -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-sets.js?v=1.13"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-sets.js?v={{ site.data.engines.sets.js }}"></script>
     {%- endif -%}
     {%- if page.circuit -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v=1.1"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-circuit.js?v={{ site.data.engines.circuit.js }}"></script>
     {%- endif -%}
     {%- if page.slides -%}
     <script src="{{ site.baseurl }}/assets/js/seamless-scroll-polyfill-bundle.min.js"></script>
-    <script src="{{ site.baseurl }}/assets/js/matephis-slides.js?v=1.1"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-slides.js?v={{ site.data.engines.slides.js }}"></script>
     {%- endif -%}
     {%- if page.draw -%}
-    <script src="{{ site.baseurl }}/assets/js/matephis-draw.js?v=1.0"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-draw.js?v={{ site.data.engines.draw.js }}"></script>
     {%- endif -%}
     {%- if page.draw -%}
     <div class="draw-ui">

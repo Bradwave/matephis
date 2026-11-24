@@ -19,7 +19,9 @@
 
 <body class="bench-body" data-baseurl="{{ site.baseurl }}">
     {{ content }}
-    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=1"></script>
+    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml) {%- endcomment -%}
+    <script>window.MatephisEngineVersions = {{ site.data.engines | jsonify }};</script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=2"></script>
 </body>
 
 </html>
