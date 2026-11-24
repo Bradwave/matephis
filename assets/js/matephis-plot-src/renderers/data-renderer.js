@@ -100,51 +100,122 @@ export const DataMixin = {
         this._samples.begin(JSON.stringify([cs.width, cs.height, cs.padL, cs.padR, cs.padT, cs.padB,
             cs.xMin, cs.xMax, cs.yMin, cs.yMax, cs.xScale, cs.yScale, cfg.sampleStep, cfg.sampleTolerance, cfg.implicitResolution]));
         this._riemannValueCount = 0;
+        this._fillSlots = new Map();
 
-        data.forEach((item, idx) => {
-            const color = this._getColor(idx, item.color);
-            const width = item.width || item.strokeWidth || 3;
-            const dash = dashString(item.dash);
-            const st = { item, idx, cs, color, width, dash };
-
-            if (item.label && this.config.legend) {
-                let type = 'line';
-                if (item.points && item.type !== 'interpolation') type = 'point';
-                else if (item.type === 'interpolation') type = 'interpolation';
-                else if (item.vector || item.type === 'vector') type = 'vector';
-                legendItems.push({ color, label: this._substituteLabel(item.label), type, dash });
-            }
-
-            let pos = null;
-            const keep = (p) => { if (p) pos = p; };
-            try {
-                // Areas first, under the curve of the item
-                if (item.fill && (item.fn || item.series)) this._drawFill(st);
-                if (item.riemann) this._drawRiemann(st);
-                if (item.type === 'interpolation' && isArr(item.points)) keep(this._drawInterpolation(st));
-                if (item.fn) keep(this._drawFunction(st));
-                if (item.parametric) keep(this._drawParametric(st));
-                if (item.series) keep(this._drawSeries(st));
-                if (item.r) keep(this._drawPolarCurve(st, item.r));
-                if (item.implicit) keep(this._drawImplicit(st));
-                if (item.x !== undefined) keep(this._drawVertical(st));
-                if (item.points && item.type !== 'interpolation') keep(this._drawPoints(st));
-                if (item.vector || item.type === 'vector') keep(this._drawVector(st));
-                if (item.angle) keep(this._drawAngle(st));
-            } catch (e) {
-                this._addWarning(`Item ${idx + 1}: ${e.message}`);
-            }
-
-            if (item.labelAt) {
-                const lx = this._eval(item.labelAt[0], "labelAt x");
-                const ly = this._eval(item.labelAt[1], "labelAt y");
-                pos = (typeof lx === 'number' && typeof ly === 'number' && !isNaN(lx) && !isNaN(ly))
-                    ? { x: cs.mapX(lx), y: cs.mapY(ly) } : pos;
-            }
-            if (item.label && pos && !pos.labelDrawn && !this.config.legend) this._drawItemLabel(item, pos, color);
-        });
-
+        data.forEach((item, idx) => this._drawItem(item, idx, cs, legendItems));
         if (this.config.legend && legendItems.length > 0) this._drawLegend(legendItems);
+        this._drawOverlay(cs, true);
+    },
+
+    /** Draws one data item (and records its legend entry in `legendItems`, when given). */
+    _drawItem(item, idx, cs, legendItems) {
+        const color = this._getColor(idx, item.color);
+        const width = item.width || item.strokeWidth || 3;
+        const dash = dashString(item.dash);
+        const st = { item, idx, cs, color, width, dash };
+
+        if (legendItems && item.label && this.config.legend) {
+            let type = 'line';
+            if (item.points && item.type !== 'interpolation') type = 'point';
+            else if (item.type === 'interpolation') type = 'interpolation';
+            else if (item.vector || item.type === 'vector') type = 'vector';
+            legendItems.push({ color, label: this._substituteLabel(item.label), type, dash });
+        }
+
+        let pos = null;
+        const keep = (p) => { if (p) pos = p; };
+        try {
+            // Areas first, under the curve of the item. A "liveFill" item (a host changes its
+            // fill every frame, see updateFills) gets its own group here, in the same place
+            if (item.liveFill && (item.fn || item.series)) {
+                const slot = document.createElementNS(SVG_NS, "g");
+                slot.setAttribute("class", "matephis-plot-fill-slot");
+                this.dataGroup.appendChild(slot);
+                this._fillSlots.set(idx, { g: slot, st });
+                this._inGroup(slot, () => this._drawFill(st));
+            } else if (item.fill && (item.fn || item.series)) this._drawFill(st);
+            if (item.riemann) this._drawRiemann(st);
+            if (item.type === 'interpolation' && isArr(item.points)) keep(this._drawInterpolation(st));
+            if (item.fn) keep(this._drawFunction(st));
+            if (item.parametric) keep(this._drawParametric(st));
+            if (item.series) keep(this._drawSeries(st));
+            if (item.r) keep(this._drawPolarCurve(st, item.r));
+            if (item.implicit) keep(this._drawImplicit(st));
+            if (item.x !== undefined) keep(this._drawVertical(st));
+            if (item.points && item.type !== 'interpolation') keep(this._drawPoints(st));
+            if (item.vector || item.type === 'vector') keep(this._drawVector(st));
+            if (item.angle) keep(this._drawAngle(st));
+        } catch (e) {
+            this._addWarning(`Item ${idx + 1}: ${e.message}`);
+        }
+
+        if (item.labelAt) {
+            const lx = this._eval(item.labelAt[0], "labelAt x");
+            const ly = this._eval(item.labelAt[1], "labelAt y");
+            pos = (typeof lx === 'number' && typeof ly === 'number' && !isNaN(lx) && !isNaN(ly))
+                ? { x: cs.mapX(lx), y: cs.mapY(ly) } : pos;
+        }
+        if (item.label && pos && !pos.labelDrawn && !this.config.legend) this._drawItemLabel(item, pos, color);
+    },
+
+    // =====================================================================
+    // OVERLAY: items that change every frame
+    // =====================================================================
+
+    /**
+     * Items drawn on top of the data (inside its group: same clipping, same place in the
+     * stacking order) that a host changes often while the rest stays put, such as the time
+     * cursor of a physics graph. `setOverlay` redraws only them; a full draw redraws them too.
+     * `startIndex` is their index after the regular data, for default colours.
+     */
+    setOverlay(items, startIndex = (this.config.data || []).length, redraw = true) {
+        this._overlay = { items: items || [], startIndex };
+        if (redraw && this.transform && !this._inDraw) this._drawOverlay(this.transform, false);
+    },
+
+    /**
+     * New fills for "liveFill" items, by item index ({ 3: { range: [0, 1.2], ... } }; null for
+     * none): only their groups are redrawn, the rest of the plot stays as it is.
+     */
+    updateFills(fills) {
+        if (!this._fillSlots || this._inDraw) return;
+        for (const [idx, slot] of this._fillSlots) {
+            if (!(idx in fills) || !slot.g.isConnected) continue;
+            slot.st.item.fill = fills[idx];
+            slot.g.textContent = "";
+            this._inGroup(slot.g, () => this._drawFill(slot.st));
+        }
+    },
+
+    /** Runs fn with the data group pointing at g, so what it draws goes there. */
+    _inGroup(g, fn) {
+        const main = this.dataGroup;
+        this.dataGroup = g;
+        try { fn(); } finally { this.dataGroup = main; }
+    },
+
+    _drawOverlay(cs, fresh) {
+        const ov = this._overlay;
+        if (!ov) return;
+        let g = this._overlayGroup;
+        if (fresh || !g || g.parentNode !== this.dataGroup) {
+            g = this._overlayGroup = document.createElementNS(SVG_NS, "g");
+            g.setAttribute("class", "matephis-plot-overlay");
+            this.dataGroup.appendChild(g);
+            this._overlayMarks = { plotData: this.plotData.length, handles: this.handles.length };
+        } else {
+            g.textContent = "";
+            // Geometry of the previous overlay goes; the data's stays
+            this.plotData.length = this._overlayMarks.plotData;
+            this.handles.length = this._overlayMarks.handles;
+        }
+        const main = this.dataGroup;
+        this.dataGroup = g;
+        try {
+            ov.items.forEach((item, j) => this._drawItem(item, ov.startIndex + j, cs, null));
+        } finally {
+            this.dataGroup = main;
+        }
     },
 
     _path(lines, color, width, dash, opacity, parent = this.dataGroup) {

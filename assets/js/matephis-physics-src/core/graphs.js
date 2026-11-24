@@ -190,7 +190,10 @@ export class Graphs {
     }
 
     beginSamples(slot = 0) {
-        this.items.forEach(it => { const d = this._slot(it, slot); d.ts = []; d.xs = []; d.ys = it.fys.map(() => []); });
+        this.items.forEach(it => {
+            const d = this._slot(it, slot); d.ts = []; d.xs = []; d.ys = it.fys.map(() => []);
+            it.version = (it.version || 0) + 1; // new samples: the curves must be drawn again
+        });
     }
 
     /** Values at one instant of the run (the scene is resolved there). */
@@ -278,6 +281,20 @@ export class Graphs {
         return out;
     }
 
+    /** Curves whose fill grows with time ("upTo": "now" while the clock runs). */
+    _liveFills(it, live) {
+        const out = new Set();
+        const d = it.def;
+        if (!live || !it.overTime || d.fill === undefined || d.fill === false) return out;
+        const specs = d.fill === true ? [{}] : listOf(d.fill);
+        specs.forEach(sp => {
+            if (!sp || typeof sp !== 'object' || sp.upTo !== 'now') return;
+            const k = sp.curve !== undefined ? Number(sp.curve) : 0;
+            if (k >= 0 && k < it.ys.length) out.add(k);
+        });
+        return out;
+    }
+
     /** Redraws with the cursor at the current time (after the scene was resolved there). */
     update() {
         if (typeof window === 'undefined' || !window.MatephisPlot) return;
@@ -291,23 +308,51 @@ export class Graphs {
             const colors = listOf(d.colors);
             const upTo = d.progressive === true ? it.ts.findIndex(tt => tt > t + 1e-9) : -1;
             const n = upTo < 0 ? it.ts.length : upTo;
+            const fills = this._fills(it, t, live);
+            // The cursor moves every frame; the curves only when this key changes (new samples,
+            // a growing "progressive" curve, other colours). Fills "up to now" grow every frame
+            // too: they are redrawn on their own (plot.updateFills), so their range is not in it
+            const extraCounts = (it.extra || []).map(ex => (ex ? (d.progressive === true ? ex.ts.filter(tt => tt <= t + 1e-9).length : ex.ts.length) : -1));
+            const liveFills = this._liveFills(it, live);
+            const key = JSON.stringify([it.version || 0, n, extraCounts, fills.map((f, k) => (liveFills.has(k) ? 'live' : f)), [...liveFills], colors]);
+            const cursor = [];
+            if (d.cursor !== false && live) {
+                if (it.overTime) cursor.push({ x: t, color: 'black', width: 1, dash: '5,4', opacity: 0.6 });
+                const x = it.overTime ? t : it.fx();
+                it.fys.forEach((f, k) => {
+                    const y = f();
+                    if (isFinite(x) && isFinite(y)) cursor.push({ points: [[x, y]], color: colors[k] || COLORS[k % COLORS.length], radius: 4.5 });
+                });
+            }
+            const overlay = typeof it.plot.setOverlay === 'function';
+            if (overlay && key === it.drawnKey) {
+                if (liveFills.size && typeof it.plot.updateFills === 'function') {
+                    const byIndex = {};
+                    liveFills.forEach(k => { byIndex[it.curveStart + k] = fills[k] || null; });
+                    it.plot.updateFills(byIndex);
+                }
+                it.plot.setOverlay(cursor, it.drawnCount);
+                return;
+            }
             // The compared sets first, faded and dashed, under the scene's curves
             const data = [];
-            (it.extra || []).forEach(ex => {
+            (it.extra || []).forEach((ex, e) => {
                 if (!ex) return;
-                const m = d.progressive === true ? ex.ts.filter(tt => tt <= t + 1e-9).length : ex.ts.length;
+                const m = extraCounts[e];
                 ex.ys.forEach((ys, k) => data.push({
                     series: ys.slice(0, m).map((y, j) => [ex.xs[j], y]),
                     color: colors[k] || COLORS[k % COLORS.length], width: 2, opacity: 0.4, dash: '6,4',
                 }));
             });
-            const fills = this._fills(it, t, live);
+            it.curveStart = data.length;
+            const slots = overlay && typeof it.plot.updateFills === 'function';
             it.ys.forEach((ys, k) => {
                 const item = {
                     series: ys.slice(0, n).map((y, j) => [it.xs[j], y]),
                     color: colors[k] || COLORS[k % COLORS.length], width: 2.5,
                 };
                 if (fills[k]) item.fill = fills[k];
+                if (slots && liveFills.has(k)) item.liveFill = true;
                 data.push(item);
             });
             if (it.legendEl) {
@@ -317,13 +362,13 @@ export class Graphs {
                     if (item.dataset.color !== c) { item.dataset.color = c; item.firstChild.style.background = c; }
                 });
             }
-            if (d.cursor !== false && live) {
-                if (it.overTime) data.push({ x: t, color: 'black', width: 1, dash: '5,4', opacity: 0.6 });
-                const x = it.overTime ? t : it.fx();
-                it.fys.forEach((f, k) => {
-                    const y = f();
-                    if (isFinite(x) && isFinite(y)) data.push({ points: [[x, y]], color: colors[k] || COLORS[k % COLORS.length], radius: 4.5 });
-                });
+            if (overlay) {
+                // The cursor is drawn by the plot on top of the curves, in the same place
+                it.plot.setOverlay(cursor, data.length, false);
+                it.drawnKey = key;
+                it.drawnCount = data.length;
+            } else {
+                data.push(...cursor); // an older plot engine: everything in one draw
             }
             it.plot.config.data = data;
             it.plot.draw();
