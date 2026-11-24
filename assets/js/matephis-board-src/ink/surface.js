@@ -705,6 +705,19 @@ export class InkSurface {
         this.renderActiveNow();
     }
 
+    /**
+     * Hand a finished stroke from the live layer to the committed layer without a gap.
+     * The live layer is desynchronized, so clearing it shows at once, while the committed
+     * layer only shows at the browser's next frame: clearing both in the same task left a
+     * frame or two (longer on slow boards) with the stroke on neither layer. The live copy
+     * stays until the committed picture has been presented, then goes.
+     */
+    commitActiveStroke(stroke) {
+        this.appendStroke(stroke);
+        if (this.activeStroke === stroke) this.activeStroke = null;
+        requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
+    }
+
     setEraserCursor(cursor) {
         this.eraserCursor = cursor;
         this.renderActiveNow();
