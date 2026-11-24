@@ -31,7 +31,9 @@
 
 <body class="board-body" data-baseurl="{{ site.baseurl }}">
     {{ content }}
-    <script type="module" src="{{ site.baseurl }}/assets/js/matephis-board/board.js?v=0.18"></script>
+    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml) {%- endcomment -%}
+    <script>window.MatephisEngineVersions = {{ site.data.engines | jsonify }};</script>
+    <script type="module" src="{{ site.baseurl }}/assets/js/matephis-board/board.js?v=0.19"></script>
 </body>
 
 </html>
