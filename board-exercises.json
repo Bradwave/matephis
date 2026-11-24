@@ -1,0 +1,4 @@
+---
+permalink: /board-exercises.json
+---
+{{ site.data.board_exercises | jsonify }}

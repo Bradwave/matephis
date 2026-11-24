@@ -33,6 +33,15 @@ import refresh from './icons/refresh.svg';
 import del from './icons/delete.svg';
 import download from './icons/download.svg';
 import upload from './icons/upload.svg';
+import grip from './icons/grip.svg';
+import lock from './icons/lock.svg';
+import lockOpen from './icons/lock-open.svg';
+import interact from './icons/interact.svg';
+import code from './icons/code.svg';
+import remove from './icons/remove.svg';
+import link from './icons/link.svg';
+import fullscreen from './icons/fullscreen.svg';
+import fullscreenExit from './icons/fullscreen-exit.svg';
 
 export const BoardIcons = {
     pen,
@@ -67,4 +76,13 @@ export const BoardIcons = {
     delete: del,
     download,
     upload,
+    grip,
+    lock,
+    lockOpen,
+    interact,
+    code,
+    remove,
+    link,
+    fullscreen,
+    fullscreenExit,
 };

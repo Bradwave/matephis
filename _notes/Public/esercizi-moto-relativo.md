@@ -1,5 +1,5 @@
 ---
-title: Esercizi sui sistemi non inerziali e sulla relatività galileiana
+title: Esercizi su sistemi non inerziali e relatività galileiana
 feed: show
 tags:
   - esercizi

@@ -37,6 +37,7 @@ body.board-body {
     width: 100%;
     height: 100%;
     touch-action: none;
+    cursor: crosshair;
 }
 
 .board-canvas {
@@ -44,16 +45,137 @@ body.board-body {
     inset: 0;
     display: block;
     touch-action: none;
-}
-
-.board-canvas-committed {
-    z-index: 1;
     pointer-events: none;
 }
 
-.board-canvas-active {
+.board-canvas-bg {
+    z-index: 0;
+}
+
+.board-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.board-overlay-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+    pointer-events: none;
+}
+
+.board-overlay-widgets {
+    position: relative;
+    pointer-events: none;
+}
+
+.board-canvas-committed {
     z-index: 2;
-    cursor: crosshair;
+}
+
+.board-canvas-active {
+    z-index: 3;
+}
+
+.board-overlay-top {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.board-overlay-connectors,
+.board-overlay-chrome {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* Zone-based pass-through for widgets: bodies stay write-through by default,
+   explicit controls remain immediately interactive, and Overview disables all overlay hits. */
+.board-widget {
+    position: absolute;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.board-widget-body {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.board-widget.is-canvas-interactive,
+.board-widget.is-canvas-interactive .board-widget-body {
+    pointer-events: auto;
+    cursor: default;
+}
+
+.board-widget:not(.is-controls-locked) input,
+.board-widget:not(.is-controls-locked) button,
+.board-widget:not(.is-controls-locked) select,
+.board-widget:not(.is-controls-locked) textarea,
+.board-widget:not(.is-controls-locked) summary,
+.board-widget:not(.is-controls-locked) [data-board-interactive],
+.board-widget:not(.is-controls-locked) .matephis-slider,
+.board-widget:not(.is-controls-locked) .matephis-controls,
+.board-widget:not(.is-controls-locked) .circuit-switch,
+.board-widget-grip,
+.board-widget-resize,
+.board-widget-chrome,
+.board-connector,
+.board-overlay-interactive {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.board-widget.is-controls-locked input,
+.board-widget.is-controls-locked button,
+.board-widget.is-controls-locked select,
+.board-widget.is-controls-locked textarea,
+.board-widget.is-controls-locked summary,
+.board-widget.is-controls-locked [data-board-interactive] {
+    pointer-events: none !important;
+}
+
+/* Pan/zoom: widgets and connectors move as one cached picture and dim with the ink. */
+.board-stage.is-gesturing .board-overlay-world {
+    will-change: transform;
+}
+
+.board-overlay-world,
+.board-overlay-connectors {
+    opacity: var(--gesture-alpha, 1);
+}
+
+/* Opacity, not visibility: the widget pictures are cloned from these elements. */
+.board-stage.is-widgets-pictured .board-overlay-world,
+.board-stage.is-widgets-pictured .board-overlay-connectors {
+    opacity: 0;
+}
+
+/* Off-screen host where widgets of other pages are rendered once to be pictured */
+.board-picture-host {
+    position: fixed;
+    left: -20000px;
+    top: 0;
+    pointer-events: none;
+    contain: layout paint;
+}
+
+.board-picture-host .board-widget {
+    position: relative;
+}
+
+.board-stage.is-overview .board-overlay *,
+.board-stage.is-overview .board-overlay-top * {
+    pointer-events: none !important;
 }
 
 
@@ -154,11 +276,33 @@ body.board-body {
     box-shadow: none;
 }
 
+/* The rail's groups wrap as separate pieces of the bar, next to the navigation:
+ * a narrow screen gets two rows, not three. */
+.is-bar .board-rail {
+    display: contents;
+}
+
 .is-bar .board-rail-group {
     padding-left: 4px;
     margin-left: 2px;
     border-left: 1px solid var(--border);
 }
+
+/* A separator never opens a row (set by the toolbar after layout; colour only,
+ * so the row widths do not change). */
+.is-bar .board-rail-group.is-line-start {
+    border-left-color: transparent;
+}
+
+.board-dock-sep.is-line-edge {
+    visibility: hidden;
+}
+
+.is-bar .board-chrome.is-wrapped .board-nav { order: 0; }
+.is-bar .board-chrome.is-wrapped .board-rail-group.is-history { order: 1; }
+.is-bar .board-chrome.is-wrapped .board-rail-group.is-tools { order: 2; }
+.is-bar .board-chrome.is-wrapped .board-rail-group.is-colors { order: 3; }
+.is-bar .board-chrome.is-wrapped .board-rail-group.is-sys { order: 4; }
 
 .is-bar .board-rail-group.is-sys {
     order: 9;
@@ -638,12 +782,13 @@ body.board-body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: max(44px, calc(var(--bu) * 0.8));
-    height: calc(var(--bu) * 2);
+    width: max(36px, calc(var(--bu) * 0.66));
+    height: calc(var(--bu) * 2.25);
     padding: 0;
     background: var(--bg);
     border: 1px solid var(--border);
-    box-shadow: var(--chrome-shadow);
+    /* Shadow only on the side facing the board: the tab comes out of the screen edge. */
+    --side-tab-shadow: rgba(0, 0, 0, 0.13);
     color: var(--secondary-text);
     cursor: pointer;
 }
@@ -661,6 +806,11 @@ body.board-body {
 .is-rail.is-side-right .board-side-tab {
     left: max(0px, env(safe-area-inset-left));
     border-left: none;
+    box-shadow: 8px 0 18px -8px var(--side-tab-shadow);
+}
+
+[data-theme="dark"] .is-rail .board-side-tab {
+    --side-tab-shadow: rgba(0, 0, 0, 0.6);
 }
 
 .is-rail.is-side-right.has-pin-left .board-side-tab {
@@ -670,6 +820,7 @@ body.board-body {
 .is-rail.is-side-left .board-side-tab {
     right: max(0px, env(safe-area-inset-right));
     border-right: none;
+    box-shadow: -8px 0 18px -8px var(--side-tab-shadow);
 }
 
 .is-bar.is-minimal .board-rail-group.is-sys {
@@ -741,7 +892,7 @@ body.board-body {
 /* Exercise picker: full-height side sheet on the side away from the tool rail */
 .board-popover.board-sheet {
     top: max(12px, env(safe-area-inset-top));
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--bu) + 20px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--board-bar-h, calc(var(--bu) + 8px)) + 12px);
     right: max(12px, env(safe-area-inset-right));
     left: auto;
     width: min(30em, calc(100vw - 24px));
@@ -1384,6 +1535,13 @@ body.board-body {
     color: var(--text);
 }
 
+.board-inline-check input[type="checkbox"] {
+    width: 1.2em;
+    height: 1.2em;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
 .board-action-primary {
     background: var(--title);
     border-color: var(--title);
@@ -1438,4 +1596,1599 @@ body.board-body {
     font-family: var(--font-plot);
     font-size: 0.96em;
     color: var(--title);
+}
+
+/* === Track 2A: Lasso & Shapes === */
+
+.board-tray-btn:disabled {
+    opacity: 0.32;
+    cursor: default;
+}
+
+/* === Track 2B: Explanation Connectors === */
+
+.board-connector {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 28px;
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 0;
+    background: var(--bg);
+    border: 2px solid var(--conn-color, var(--accent));
+    color: var(--conn-color, var(--accent));
+    font-family: var(--font-plot);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    box-sizing: border-box;
+}
+
+.board-connector.is-unpaired {
+    border-style: dashed;
+}
+
+.board-connector.is-pending,
+.board-connector.is-selected {
+    outline: 2px solid var(--conn-color, var(--accent));
+    outline-offset: 2px;
+}
+
+.board-connector-label {
+    pointer-events: none;
+}
+
+.board-connector-del {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 17px;
+    height: 17px;
+    padding: 0;
+    border-radius: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.board-connector:hover .board-connector-del,
+.board-connector.is-selected .board-connector-del {
+    display: inline-flex;
+}
+
+.board-connector-del:hover {
+    background: #b01a00;
+    border-color: #b01a00;
+    color: #ffffff;
+}
+
+.board-connector-ring {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 0;
+    border: 2px solid var(--conn-color, var(--accent));
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.board-connector-chip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    pointer-events: auto;
+    white-space: nowrap;
+}
+
+.board-connector-chip-label {
+    font-family: var(--font-plot);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--title);
+    padding: 0 4px;
+}
+
+.board-connector-chip-btn {
+    appearance: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.board-connector-chip-btn:hover {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-connector-chip-btn.is-danger {
+    color: var(--accent);
+}
+
+.board-connector-chip-btn.is-danger:hover {
+    background: #b01a00;
+    border-color: #b01a00;
+    color: #ffffff;
+}
+
+.board-connectors-open {
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.board-connector-open-btn {
+    border-color: var(--conn-color, var(--border));
+    color: var(--conn-color, var(--title));
+    min-width: calc(var(--bu) * 0.72);
+}
+
+.board-connector-open-btn.active {
+    background: var(--conn-color, var(--title));
+    border-color: var(--conn-color, var(--title));
+    color: var(--bg);
+}
+
+/* === Track 2C: Widgets & Exercise Picker === */
+
+.board-widget:not(.is-controls-locked) .matephis-plot-controls,
+.board-widget:not(.is-controls-locked) .matephis-plot-play-btn,
+.board-widget:not(.is-controls-locked) .matephis-plot-btn,
+.board-widget:not(.is-controls-locked) .matephis-physics-button,
+.board-widget:not(.is-controls-locked) .matephis-physics-speed-btn,
+.board-widget:not(.is-controls-locked) .mp-draggable,
+.board-widget:not(.is-controls-locked) .mp-clickable,
+.board-widget:not(.is-controls-locked) .mps-draggable,
+.board-widget:not(.is-controls-locked) .matephis-circuit-switch,
+.board-widget:not(.is-controls-locked) .matephis-circuit-comp,
+.board-widget:not(.is-controls-locked) .board-widget-sol-toggle,
+.board-widget-resize {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.board-widget.is-controls-locked .matephis-slider,
+.board-widget.is-controls-locked .matephis-controls,
+.board-widget.is-controls-locked .matephis-plot-controls,
+.board-widget.is-controls-locked .matephis-plot-play-btn,
+.board-widget.is-controls-locked .matephis-plot-btn,
+.board-widget.is-controls-locked .matephis-physics-button,
+.board-widget.is-controls-locked .matephis-physics-speed-btn,
+.board-widget.is-controls-locked .mp-draggable,
+.board-widget.is-controls-locked .mp-clickable,
+.board-widget.is-controls-locked .mps-draggable,
+.board-widget.is-controls-locked .matephis-circuit-switch,
+.board-widget.is-controls-locked .matephis-circuit-comp,
+.board-widget.is-controls-locked .board-widget-sol-toggle {
+    pointer-events: none !important;
+}
+
+.board-widget .matephis-plot-container,
+.board-widget .matephis-circuit-container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+}
+
+/* Dark-mode overrides for MatephisCircuit inside board widgets */
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-wire,
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-comp {
+    stroke: var(--plot-axis, #e2e8f0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-comp-fill {
+    fill: var(--bg, #121212);
+    stroke: var(--plot-axis, #e2e8f0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-label {
+    fill: var(--plot-text, #c9cbcf);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-caption {
+    color: var(--secondary-text, #8e95a0);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container .matephis-circuit-switch:hover {
+    stroke: var(--accent, #ff523d);
+}
+
+[data-theme="dark"] .board-widget .matephis-circuit-container circle[fill="#333"] {
+    fill: var(--plot-axis, #e2e8f0);
+}
+
+/* Widget card frame, grip tab & width handle.
+ * `--ov-inv` (set by the overlay) undoes the camera zoom, so grip and handle keep the
+ * toolbar's button size on screen at any zoom. */
+.board-widget {
+    --g: calc(var(--bu) * 0.62 * var(--ov-inv, 1));
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+
+.board-widget.is-editing {
+    outline: calc(2px * var(--ov-inv, 1)) solid var(--title);
+    outline-offset: 0;
+}
+
+.board-widget.is-canvas-interactive {
+    outline-color: var(--accent);
+}
+
+.board-widget-body {
+    overflow: hidden;
+    padding: 4px;
+    box-sizing: border-box;
+    background: var(--bg);
+}
+
+.board-widget-loading,
+.board-widget-error {
+    padding: 12px;
+    font-family: var(--font-plot);
+    font-size: 13px;
+    color: var(--secondary-text);
+}
+
+.board-widget-error {
+    color: var(--accent);
+}
+
+/* Grip: a flat tab sitting on the widget's top edge */
+.board-widget-grip {
+    position: absolute;
+    left: -1px;
+    bottom: 100%;
+    height: var(--g);
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--g) * 0.12);
+    padding: 0 calc(var(--g) * 0.32) 0 calc(var(--g) * 0.1);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    color: var(--secondary-text);
+    font-family: var(--font-plot);
+    font-size: calc(var(--g) * 0.36);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.board-widget-grip svg {
+    width: calc(var(--g) * 0.62);
+    height: calc(var(--g) * 0.62);
+    flex-shrink: 0;
+}
+
+.board-widget-grip:hover {
+    color: var(--title);
+}
+
+.board-widget-grip:active {
+    cursor: grabbing;
+}
+
+.board-widget.is-editing .board-widget-grip {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+/* Width handle: a bar centred on the right edge, only while selected */
+.board-widget-resize {
+    display: none;
+    position: absolute;
+    top: 50%;
+    right: calc(var(--g) * -0.2);
+    width: calc(var(--g) * 0.4);
+    height: calc(var(--g) * 1.4);
+    transform: translateY(-50%);
+    background: var(--title);
+    border: calc(2px * var(--ov-inv, 1)) solid var(--bg);
+    box-sizing: border-box;
+    cursor: ew-resize;
+    touch-action: none;
+    z-index: 3;
+}
+
+.board-widget.is-editing .board-widget-resize {
+    display: block;
+}
+
+.board-stage.is-overview .board-widget-grip,
+.board-stage.is-overview .board-widget-resize {
+    display: none;
+}
+
+/* Screen-space Widget Edit Chrome: same buttons as the toolbar trays */
+.board-widget-chrome {
+    position: fixed;
+    z-index: 44;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--bu-font);
+}
+
+.board-widget-chrome-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    align-self: flex-start;
+}
+
+[data-theme="dark"] .board-widget-chrome-bar {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.board-widget-chrome-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    min-width: calc(var(--bu) * 0.9);
+    height: calc(var(--bu) * 0.9);
+    padding: 0 0.6em;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.95em;
+    cursor: pointer;
+}
+
+.board-widget-chrome-btn svg {
+    width: calc(var(--bu) * 0.46);
+    height: calc(var(--bu) * 0.46);
+    flex-shrink: 0;
+}
+
+.board-widget-chrome-btn:hover {
+    border-color: var(--border);
+    color: var(--title);
+}
+
+.board-widget-chrome-btn.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-widget-chrome-btn.is-danger {
+    color: var(--accent);
+}
+
+.board-widget-chrome-btn.is-danger:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.board-widget-chrome-sep {
+    width: 1px;
+    align-self: stretch;
+    margin: 4px 3px;
+    background: var(--border);
+}
+
+.board-widget-json-editor {
+    width: min(26em, calc(100vw - 24px));
+    padding: 0.65em;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+}
+
+.board-widget-json-editor textarea,
+.board-json-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5em;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-code, monospace);
+    font-size: 0.85em;
+    line-height: 1.35;
+    resize: vertical;
+    outline: none;
+}
+
+.board-widget-json-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4em;
+}
+
+.board-widget-json-err,
+.board-popover-error {
+    font-family: var(--font-plot);
+    font-size: 0.82em;
+    color: var(--accent);
+    margin-bottom: 0.4em;
+}
+
+/* Exercise widget card & solution toggle */
+.board-widget-exercise {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--text);
+}
+
+.board-widget-ex-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+}
+
+.board-widget-ex-meta {
+    font-family: var(--font-plot);
+    font-size: 11.5px;
+    color: var(--secondary-text);
+}
+
+.board-widget-sol-toggle {
+    appearance: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 11.5px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+
+.board-widget-sol-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.board-widget-ex-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 6px auto;
+}
+
+.board-widget-ex-content p:first-child {
+    margin-top: 0;
+}
+
+.board-widget-ex-content p:last-child {
+    margin-bottom: 0;
+}
+
+.board-widget-exercise.is-solution-hidden .solution-text,
+.board-widget-exercise.is-solution-hidden .hint-text,
+.board-ex-preview.is-solution-hidden .solution-text,
+.board-ex-preview.is-solution-hidden .hint-text {
+    filter: blur(5px);
+    opacity: 0.28;
+}
+
+.board-widget-exercise:not(.is-solution-hidden) .solution-text,
+.board-widget-exercise:not(.is-solution-hidden) .hint-text,
+.board-ex-preview:not(.is-solution-hidden) .solution-text,
+.board-ex-preview:not(.is-solution-hidden) .hint-text {
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+/* Interactive chips, engine cards & Exercise Picker preview */
+.board-engine-card:not(.is-stub),
+.board-chip:not(.is-stub),
+.board-tab-btn:not(.is-stub) {
+    cursor: pointer;
+}
+
+.board-engine-card:not(.is-stub):hover,
+.board-chip:not(.is-stub):hover {
+    border-color: var(--title);
+    color: var(--title);
+}
+
+.board-engine-card.active,
+.board-chip.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-engine-card.active span {
+    color: var(--bg);
+    opacity: 0.8;
+}
+
+.board-diagram-editor {
+    margin-top: 0.65em;
+    padding-top: 0.65em;
+    border-top: 1px solid var(--border);
+}
+
+.board-ex-notes-row,
+.board-ex-items-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+    margin-bottom: 0.55em;
+}
+
+.board-ex-items-row {
+    max-height: 6.2em;
+    overflow-y: auto;
+}
+
+.board-ex-preview {
+    max-height: 44vh;
+    overflow-y: auto;
+}
+
+.board-ex-preview-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.45em auto;
+}
+
+.board-ex-stem {
+    font-weight: 500;
+    margin-bottom: 0.4em;
+    color: var(--title);
+}
+
+.board-ex-subnum {
+    font-family: var(--font-plot);
+    font-weight: 700;
+    margin-right: 0.3em;
+}
+
+/* === Plot editor: window steppers, function list, templates, math keypad === */
+
+.board-range-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35em 0.6em;
+    margin-top: 0.45em;
+}
+
+.board-stepper {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+}
+
+.board-stepper-label {
+    padding-left: 0.5em;
+    white-space: nowrap;
+    font-family: var(--font-plot);
+    font-size: 0.82em;
+    color: var(--secondary-text);
+}
+
+.board-stepper-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: max(2.3em, calc(var(--bu) * 0.78));
+    height: max(2.3em, calc(var(--bu) * 0.78));
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--title);
+    cursor: pointer;
+}
+
+.board-stepper-btn svg {
+    width: 1.2em;
+    height: 1.2em;
+}
+
+.board-stepper-btn:hover {
+    background: var(--bg);
+}
+
+.board-stepper-value {
+    text-align: center;
+    font-family: var(--font-plot);
+    font-size: 1.08em;
+    color: var(--title);
+    font-variant-numeric: tabular-nums;
+}
+
+.board-range-zoom {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35em;
+}
+
+.board-fn-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+}
+
+.board-fn-empty {
+    font-size: 0.9em;
+    color: var(--secondary-text);
+    padding: 0.2em 0;
+}
+
+.board-fn-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55em;
+    min-height: max(2.3em, calc(var(--bu) * 0.78));
+    padding-left: 0.55em;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+}
+
+.board-fn-swatch {
+    width: 0.9em;
+    height: 0.9em;
+    flex-shrink: 0;
+}
+
+.board-fn-expr {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-plot);
+    color: var(--title);
+    overflow-wrap: anywhere;
+}
+
+.board-fn-params {
+    font-size: 0.78em;
+    color: var(--secondary-text);
+}
+
+.board-fn-remove {
+    appearance: none;
+    align-self: stretch;
+    width: max(2.3em, calc(var(--bu) * 0.78));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    color: var(--secondary-text);
+    cursor: pointer;
+}
+
+.board-fn-remove svg {
+    width: 1.1em;
+    height: 1.1em;
+}
+
+.board-fn-remove:hover {
+    color: var(--accent);
+}
+
+.board-fn-templates {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3em;
+    margin-top: 0.35em;
+}
+
+.board-fn-template,
+.board-preset-card {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.1em;
+    min-height: max(2.9em, calc(var(--bu) * 0.95));
+    padding: 0.35em 0.55em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 0.92em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.board-fn-template strong,
+.board-preset-card strong {
+    font-weight: 600;
+    font-size: 0.98em;
+    line-height: 1.2;
+}
+
+.board-fn-template span,
+.board-preset-card span {
+    font-family: var(--font-plot);
+    font-size: 0.82em;
+    color: var(--secondary-text);
+}
+
+.board-fn-template:hover:not(:disabled),
+.board-preset-card:hover {
+    border-color: var(--title);
+}
+
+.board-fn-template:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.board-fn-template.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-fn-template.active span {
+    color: var(--bg);
+    opacity: 0.8;
+}
+
+.board-keypad-wrap {
+    margin-bottom: 0.65em;
+}
+
+.board-keypad-wrap[hidden] {
+    display: none;
+}
+
+.board-keypad {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    padding: 0.5em;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+}
+
+.board-keypad-top {
+    display: flex;
+    align-items: stretch;
+    gap: 0.3em;
+}
+
+.board-keypad-prefix {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-plot);
+    color: var(--secondary-text);
+}
+
+.board-keypad-input {
+    flex: 1;
+    min-width: 0;
+    height: max(2.4em, calc(var(--bu) * 0.8));
+    padding: 0 0.5em;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-plot);
+    font-size: 1.1em;
+    outline: none;
+}
+
+.board-keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.25em;
+}
+
+.board-keypad-key {
+    appearance: none;
+    height: max(2.4em, calc(var(--bu) * 0.82));
+    padding: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-plot);
+    font-size: 1.05em;
+    cursor: pointer;
+}
+
+.board-keypad-key:hover {
+    border-color: var(--title);
+}
+
+.board-keypad-key.is-action {
+    width: max(2.6em, calc(var(--bu) * 0.9));
+    flex-shrink: 0;
+}
+
+.board-keypad-add {
+    width: 100%;
+}
+
+/* Underline tabs (sections, subjects): text on one line, the active one in the accent
+ * colour with a short underline — the same style as the engines' own tabs. A row that
+ * does not fit scrolls sideways instead of wrapping. */
+.board-seg-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.1em;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.7em;
+}
+
+.board-seg-row::-webkit-scrollbar {
+    display: none;
+}
+
+.board-action-btn[hidden],
+.board-seg-row[hidden],
+.board-preset-grid[hidden],
+.board-tab-row[hidden] {
+    display: none;
+}
+
+.board-seg-btn {
+    appearance: none;
+    flex: 0 0 auto;
+    min-height: max(2.2em, calc(var(--bu) * 0.72));
+    padding: 0 0.1em;
+    margin-bottom: -1px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--secondary-text);
+    font-family: var(--font);
+    font-size: 0.95em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.board-seg-btn:hover {
+    color: var(--title);
+}
+
+.board-seg-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.board-preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35em;
+    margin-bottom: 0.65em;
+}
+
+.board-diagrams-popover .board-json-textarea,
+.board-plot-popover .board-json-textarea {
+    margin-bottom: 0.5em;
+}
+
+.board-plot-popover .board-popover-footer .board-action-btn.active,
+.board-diagrams-popover .board-popover-footer .board-action-btn.active {
+    border-color: var(--title);
+    color: var(--title);
+}
+
+.board-plot-popover,
+.board-diagrams-popover {
+    width: min(28em, calc(100vw - 20px));
+}
+
+/* === Editor sheets (plot, diagrams): fixed header, preview, scrolling body, footer === */
+
+.board-popover.board-editor-sheet {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: min(30em, calc(100vw - 24px));
+}
+
+.board-popover.board-editor-sheet[hidden] {
+    display: none;
+}
+
+.board-editor-sheet > * {
+    flex-shrink: 0;
+}
+
+.board-sheet-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0 -1em;
+    padding: 0.2em 1em 0.6em;
+}
+
+.board-editor-sheet .board-popover-footer {
+    margin-top: auto;
+}
+
+.board-footer-spacer {
+    flex: 1;
+}
+
+.board-micro-sub {
+    margin-top: 0.45em;
+}
+
+/* Live preview of what will be inserted */
+.board-preview {
+    position: relative;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    margin-bottom: 0.65em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 8em;
+}
+
+.board-plot-popover .board-preview {
+    max-height: 42%;
+}
+
+.board-preview-diagram {
+    flex: 0 1 auto;
+    max-height: 48%;
+}
+
+.board-preview.is-loading::after {
+    content: 'Anteprima…';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: var(--font-plot);
+    font-size: 0.85em;
+    color: var(--secondary-text);
+}
+
+.board-preview-msg {
+    padding: 1em;
+    font-family: var(--font-plot);
+    font-size: 0.85em;
+    color: var(--accent);
+}
+
+/* Title row: the subject switch as two small text links */
+.board-seg-compact {
+    border-bottom: none;
+    margin-bottom: 0;
+    gap: 0.9em;
+    font-family: var(--font);
+    font-weight: 400;
+    font-size: 0.84em;
+}
+
+.board-seg-compact .board-seg-btn {
+    min-height: max(1.8em, calc(var(--bu) * 0.56));
+    border-bottom-width: 2px;
+}
+
+/* Preset list: one clean row per scene, the sliders it offers on the right */
+.board-preset-list {
+    flex: 1 1 auto;
+    min-height: 6em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    margin-bottom: 0.65em;
+}
+
+.board-preset-list[hidden] {
+    display: none;
+}
+
+.board-preset-row {
+    appearance: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.8em;
+    min-height: max(2.4em, calc(var(--bu) * 0.78));
+    padding: 0.4em 0.75em;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 0.98em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.board-preset-row:first-child {
+    border-top: none;
+}
+
+.board-preset-row:hover {
+    background: var(--bg2);
+}
+
+.board-preset-row.active {
+    background: var(--title);
+    color: var(--bg);
+}
+
+.board-preset-sliders {
+    flex-shrink: 0;
+    font-family: var(--font-plot);
+    font-size: 0.78em;
+    color: var(--secondary-text);
+}
+
+.board-preset-row.active .board-preset-sliders {
+    color: var(--bg);
+    opacity: 0.75;
+}
+
+/* Function list rows are tappable to edit */
+.board-fn-expr {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0.3em 0;
+    text-align: left;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.board-fn-row.is-editing {
+    border-color: var(--title);
+}
+
+/* Function editor */
+.board-fn-editor-wrap {
+    margin-top: 0.35em;
+}
+
+.board-fn-editor-wrap[hidden] {
+    display: none;
+}
+
+.board-fn-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    padding: 0.5em;
+    border: 1px solid var(--title);
+    background: var(--bg2);
+}
+
+.board-fn-editor .board-keypad-grid {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.board-fn-editor-hint {
+    font-family: var(--font-plot);
+    font-size: 0.78em;
+    color: var(--secondary-text);
+    min-height: 1.2em;
+}
+
+.board-keypad-key.is-param {
+    color: var(--accent);
+    font-style: italic;
+}
+
+.board-keypad-key.is-var {
+    font-style: italic;
+    font-weight: 700;
+}
+
+.board-keypad-key.active {
+    background: var(--title);
+    color: var(--bg);
+}
+
+.board-fn-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35em;
+}
+
+/* Wide screens: editor sheets in two columns — choices on the left, a large preview
+ * on the right — so nothing needs scrolling. Narrow screens keep the stacked layout. */
+@media (min-width: 900px) and (min-height: 540px) {
+    .board-popover.board-editor-sheet:not([hidden]) {
+        display: grid;
+        width: min(62em, calc(100vw - 24px));
+        column-gap: 1em;
+        grid-template-columns: minmax(19em, 1fr) minmax(0, 1.25fr);
+    }
+
+    .board-plot-popover.board-editor-sheet:not([hidden]) {
+        grid-template-areas:
+            "title   title"
+            "scroll  preview"
+            "footer  footer";
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .board-diagrams-popover.board-editor-sheet:not([hidden]) {
+        grid-template-areas:
+            "title    title"
+            "sections preview"
+            "list     preview"
+            "json     preview"
+            "err      err"
+            "footer   footer";
+        grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+    }
+
+    .board-editor-sheet > .board-popover-title { grid-area: title; }
+    .board-editor-sheet > .board-popover-footer { grid-area: footer; }
+    .board-editor-sheet > .board-sheet-scroll { grid-area: scroll; margin: 0; padding: 0 0.2em 0.4em 0; }
+    .board-editor-sheet > .board-preview { grid-area: preview; max-height: none; align-self: stretch; margin-bottom: 0.65em; }
+    .board-editor-sheet > .board-diag-sections { grid-area: sections; }
+    .board-editor-sheet > .board-preset-list { grid-area: list; }
+    .board-editor-sheet > .board-diag-json { grid-area: json; }
+    .board-editor-sheet > .board-popover-error { grid-area: err; }
+
+    .board-editor-sheet .board-fn-templates {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* === Exercise sheet: tap-only path and number grid === */
+
+.board-ex-topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr));
+    gap: 0.3em;
+}
+
+.board-ex-topic {
+    appearance: none;
+    min-height: max(2.4em, calc(var(--bu) * 0.78));
+    padding: 0.3em 0.6em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 0.95em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.board-ex-topic:hover {
+    border-color: var(--title);
+}
+
+.board-ex-topic.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+.board-ex-note-list {
+    flex: 0 0 auto;
+    min-height: 0;
+    margin-bottom: 0;
+}
+
+.board-ex-sections {
+    margin-bottom: 0;
+}
+
+.board-ex-number-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(max(2.9em, calc(var(--bu) * 0.95)), 1fr));
+    gap: 0.25em;
+}
+
+.board-ex-num {
+    appearance: none;
+    position: relative;
+    min-height: max(2.6em, calc(var(--bu) * 0.9));
+    padding: 0.1em 0.2em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font-plot);
+    font-size: 1.02em;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.board-ex-num:hover {
+    border-color: var(--title);
+}
+
+.board-ex-num.active {
+    background: var(--title);
+    border-color: var(--title);
+    color: var(--bg);
+}
+
+/* Exercises with parts get a small corner mark */
+.board-ex-num.has-parts::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    background: currentColor;
+    opacity: 0.55;
+}
+
+.board-ex-num.is-all {
+    font-family: var(--font);
+    font-size: 0.9em;
+}
+
+.board-ex-diff {
+    font-size: 0.62em;
+    line-height: 1;
+    color: var(--secondary-text);
+}
+
+.board-ex-num.active .board-ex-diff {
+    color: var(--bg);
+    opacity: 0.75;
+}
+
+.board-ex-sub {
+    margin-top: 0.5em;
+}
+
+.board-ex-sub[hidden],
+[data-ex-notes-wrap][hidden],
+[data-ex-sections-wrap][hidden],
+[data-ex-items-wrap][hidden] {
+    display: none;
+}
+
+.board-ex-status {
+    font-family: var(--font-plot);
+    font-size: 0.82em;
+    color: var(--secondary-text);
+    min-height: 1.2em;
+}
+
+/* Preview: header with ◀ ▶, scrollable body */
+.board-exercises-popover .board-ex-preview {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    max-height: none;
+    overflow: hidden;
+}
+
+.board-ex-preview-head {
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.board-ex-preview-head .board-ex-preview-meta {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.board-ex-preview-head .board-stepper-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.board-exercises-popover .board-ex-preview-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.7em 0.8em;
+}
+
+/* Narrow screens: list on top, preview below */
+.board-exercises-popover .board-sheet-scroll {
+    flex: 0 1 auto;
+}
+
+.board-exercises-popover > .board-ex-preview {
+    flex: 1 1 12em;
+    min-height: 10em;
+}
+
+@media (min-width: 900px) and (min-height: 540px) {
+    .board-exercises-popover.board-editor-sheet:not([hidden]) {
+        grid-template-areas:
+            "title   title"
+            "scroll  preview"
+            "footer  footer";
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        grid-template-columns: minmax(19em, 1fr) minmax(0, 1.25fr);
+    }
+}
+
+.board-ex-crumb {
+    appearance: none;
+    display: none;
+    width: 100%;
+    margin-bottom: 0.6em;
+    padding: 0.5em 0.7em;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--title);
+    font-family: var(--font);
+    font-size: 0.92em;
+    text-align: left;
+    cursor: pointer;
+}
+
+@media (max-width: 899px), (max-height: 539px) {
+    .board-exercises-popover.is-folded .board-ex-crumb:not([hidden]) {
+        display: block;
+    }
+
+    .board-exercises-popover.is-folded .board-ex-topics-wrap,
+    .board-exercises-popover.is-folded .board-ex-notes-wrap {
+        display: none;
+    }
+}
+
+/* === Exercise text (panel preview and widget): one font, one size ===
+ * The notes' own CSS gives paragraphs, lists and problem titles different sizes;
+ * on the board every text element inherits the card's font and size. Badges keep
+ * theirs, and MathJax (custom elements) is left alone. */
+.board-ex-preview-body :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag),
+.board-widget-ex-content :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag) {
+    font-family: var(--font);
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.board-ex-preview-body {
+    font-family: var(--font);
+    line-height: 1.45;
+}
+
+.board-ex-preview-body :where(p, ol, ul) {
+    margin: 0.45em 0;
+}
+
+.board-ex-preview-body > :first-child,
+.board-ex-preview-body > :first-child > :first-child {
+    margin-top: 0;
+}
+
+/* The badges' hover tooltips are absolutely positioned boxes: hidden, they still
+ * stretched the preview (extra space right and below). No tooltips on the board. */
+.board-ex-preview-body .difficulty-tag::before,
+.board-ex-preview-body .difficulty-tag::after,
+.board-widget-ex-content .difficulty-tag::before,
+.board-widget-ex-content .difficulty-tag::after {
+    display: none !important;
+}
+
+.board-ex-preview-body,
+.board-widget-ex-content {
+    overflow-wrap: anywhere;
+}
+
+/* === Connector tray: label style, mode, one-line hint, open connectors === */
+.board-connectors-tray {
+    min-width: calc(var(--bu) * 5.5);
+}
+
+.board-conn-hint {
+    margin-top: 4px;
+    padding: 4px 4px 2px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-plot);
+    font-size: calc(var(--bu-font) * 0.82);
+    line-height: 1.35;
+    color: var(--secondary-text);
+    /* Fill the tray's width without widening it: the buttons set the width. */
+    align-self: stretch;
+    contain: inline-size;
+}
+
+.board-conn-open {
+    margin-top: 3px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.board-conn-open[hidden] {
+    display: none;
+}
+
+.board-conn-open-label {
+    padding: 0 4px 3px;
+    font-family: var(--font-plot);
+    font-size: calc(var(--bu-font) * 0.74);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--secondary-text);
+}
+
+.board-conn-open-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: calc(var(--bu) * 3.2);
+    overflow-y: auto;
+}
+
+.board-conn-open-row {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    min-height: calc(var(--bu) * 0.8);
+    padding: 0 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: var(--bu-font);
+    cursor: pointer;
+}
+
+.board-conn-open-row:hover {
+    border-color: var(--border);
+}
+
+.board-conn-open-row.active {
+    border-color: var(--conn-color, var(--title));
+}
+
+.board-conn-open-badge {
+    min-width: calc(var(--bu) * 0.56);
+    height: calc(var(--bu) * 0.56);
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 2px dashed var(--conn-color, var(--accent));
+    color: var(--conn-color, var(--accent));
+    font-family: var(--font-plot);
+    font-weight: 700;
+    font-size: 0.9em;
+}
+
+.board-conn-open-page {
+    font-family: var(--font-plot);
+    font-size: 0.85em;
+    color: var(--secondary-text);
+}
+
+.board-seg-row.has-more-right {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+}
+
+.board-seg-row.has-more-left {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5em), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 2.5em), transparent);
+}
+
+.board-seg-row.has-more-left.has-more-right {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+}
+
+/* === Quiet selection in panels ===
+ * The selected item in lists and grids is marked without a solid block: a light tint,
+ * a title-coloured outline (a left bar for list rows) and bolder text. Solid fills stay
+ * for toolbar tools; red is kept for tabs and actions. */
+.board-preset-row.active {
+    background: var(--bg2);
+    color: var(--title);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--title);
+}
+
+.board-preset-row.active .board-preset-sliders {
+    color: var(--secondary-text);
+    opacity: 1;
+    font-weight: 400;
+}
+
+.board-ex-topic.active,
+.board-ex-num.active,
+.board-chip.active,
+.board-engine-card.active,
+.board-fn-template.active {
+    background: var(--bg2);
+    border-color: var(--title);
+    color: var(--title);
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--title);
+}
+
+.board-ex-num.active .board-ex-diff,
+.board-fn-template.active span,
+.board-engine-card.active span {
+    color: var(--secondary-text);
+    opacity: 1;
+}
+
+/* The keyboard toggle in the function editor is a panel choice: quiet, not solid. */
+.board-keypad-key.active {
+    background: var(--bg2);
+    color: var(--title);
+    box-shadow: inset 0 0 0 1px var(--title);
+    border-color: var(--title);
+}
+
+/* Full screen toggle: first item of the Options menu */
+.board-fullscreen-btn {
+    width: 100%;
+    justify-content: flex-start;
+    margin-bottom: 0.6em;
+}
+
+.board-fullscreen-btn[hidden] {
+    display: none;
 }

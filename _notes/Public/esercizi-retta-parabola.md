@@ -1,5 +1,5 @@
 ---
-title: Esercizi sulla retta e sulla parabola
+title: Esercizi su retta e parabola
 feed: show
 tags:
   - esercizi

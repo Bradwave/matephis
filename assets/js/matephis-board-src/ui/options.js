@@ -1,9 +1,10 @@
 /**
  * Canvas Options popover menu (theme, A4 crop marks, pen-only, palm-to-erase + sensitivity,
- * 1x DPR fast mode, Perf/Input HUD, export/import .mboard.json, clear board).
+ * 1x DPR fast mode, Perf/Input HUD, export/import .mboard.json / .svg / .pdf, clear board).
  */
 
 import { BoardIcons } from './icons.js';
+import { extractBoardDataFromSVG } from '../export/svg-export.js';
 
 export class OptionsMenu {
     constructor(hostEl, {
@@ -11,8 +12,11 @@ export class OptionsMenu {
         getTheme,
         onToggleTheme,
         onSettingChange,
+        onPageBackgroundChange = null,
         onExportJSON,
         onImportJSON,
+        onExportSVG = null,
+        onExportPDF = null,
         onClearBoard,
         onDeletePage,
     }) {
@@ -21,8 +25,11 @@ export class OptionsMenu {
         this.getTheme = getTheme;
         this.onToggleTheme = onToggleTheme;
         this.onSettingChange = onSettingChange;
+        this.onPageBackgroundChange = onPageBackgroundChange;
         this.onExportJSON = onExportJSON;
         this.onImportJSON = onImportJSON;
+        this.onExportSVG = onExportSVG;
+        this.onExportPDF = onExportPDF;
         this.onClearBoard = onClearBoard;
         this.onDeletePage = onDeletePage;
 
@@ -33,6 +40,7 @@ export class OptionsMenu {
         this.el.hidden = true;
         this.el.innerHTML = `
             <div class="board-popover-title">Opzioni lavagna</div>
+            <button type="button" class="board-action-btn board-fullscreen-btn" data-fullscreen hidden></button>
             <div class="board-options-list">
                 <label class="board-opt-row">
                     <span>Tema scuro</span>
@@ -61,6 +69,10 @@ export class OptionsMenu {
                 <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
                     <span>Pan e zoom fluidi</span>
                     <input type="checkbox" data-opt="fastPan" />
+                </label>
+                <label class="board-opt-row" title="Saltando da un connettore all'altro la vista scorre fino al gemello invece di cambiare di colpo">
+                    <span>Scorri tra i connettori</span>
+                    <input type="checkbox" data-opt="connectorGlide" />
                 </label>
                 <!-- EXPERIMENT: pixelated gesture; delete this row to remove it -->
                 <div class="board-opt-bg-row">
@@ -99,11 +111,11 @@ export class OptionsMenu {
                 </div>
                 <div class="board-opt-bg-row">
                     <span>Sfondo pagina</span>
-                    <div class="board-bg-seg">
-                        <button type="button" class="board-bg-btn active">Vuoto</button>
-                        <button type="button" class="board-bg-btn is-stub">Quadretti</button>
-                        <button type="button" class="board-bg-btn is-stub">Puntini</button>
-                        <button type="button" class="board-bg-btn is-stub">Righe</button>
+                    <div class="board-bg-seg" data-page-bg>
+                        <button type="button" class="board-bg-btn" data-bg="blank">Vuoto</button>
+                        <button type="button" class="board-bg-btn" data-bg="grid">Quadretti</button>
+                        <button type="button" class="board-bg-btn" data-bg="dots">Puntini</button>
+                        <button type="button" class="board-bg-btn" data-bg="ruled">Righe</button>
                     </div>
                 </div>
             </div>
@@ -111,13 +123,13 @@ export class OptionsMenu {
                 <button type="button" class="board-action-btn" data-action="export">
                     ${BoardIcons.download}<span>Esporta JSON</span>
                 </button>
-                <button type="button" class="board-action-btn" data-action="import">
-                    ${BoardIcons.upload}<span>Importa JSON</span>
+                <button type="button" class="board-action-btn" data-action="import" title="Importa .mboard.json o .svg">
+                    ${BoardIcons.upload}<span>Importa</span>
                 </button>
-                <button type="button" class="board-action-btn is-stub" title="Esporta SVG con metadati modificabili (in arrivo)">
+                <button type="button" class="board-action-btn" data-action="export-svg" title="Esporta SVG con metadati modificabili">
                     ${BoardIcons.download}<span>Esporta SVG</span>
                 </button>
-                <button type="button" class="board-action-btn is-stub" title="Esporta PDF vettoriale (in arrivo)">
+                <button type="button" class="board-action-btn" data-action="export-pdf" title="Esporta PDF vettoriale">
                     ${BoardIcons.download}<span>Esporta PDF</span>
                 </button>
                 <button type="button" class="board-action-btn is-danger" data-action="clear">
@@ -127,13 +139,48 @@ export class OptionsMenu {
                     ${BoardIcons.close}<span>Elimina pagina</span>
                 </button>
             </div>
-            <input type="file" accept=".json,.mboard.json" class="board-file-input" hidden />
+            <input type="file" accept=".json,.mboard.json,.svg" class="board-file-input" hidden />
         `;
 
         this.fileInput = this.el.querySelector('.board-file-input');
+        this._bindFullscreen();
         this._bindEvents();
         this.syncFromState();
         this.hostEl.appendChild(this.el);
+    }
+
+    /**
+     * Full screen on/off, for browsers without their own control (smartboards).
+     * Hidden where the Fullscreen API is missing (e.g. iPhone Safari).
+     */
+    _bindFullscreen() {
+        const btn = this.el.querySelector('[data-fullscreen]');
+        const doc = typeof document !== 'undefined' ? document : null;
+        const root = doc && doc.documentElement;
+        if (!btn || !root) return;
+        const request = root.requestFullscreen || root.webkitRequestFullscreen;
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+        const current = () => doc.fullscreenElement || doc.webkitFullscreenElement || null;
+        if (!request || !exit) return;
+
+        const sync = () => {
+            const on = Boolean(current());
+            btn.innerHTML = on
+                ? `${BoardIcons.fullscreenExit}<span>Esci da schermo intero</span>`
+                : `${BoardIcons.fullscreen}<span>Schermo intero</span>`;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', String(on));
+        };
+        btn.hidden = false;
+        btn.addEventListener('click', () => {
+            try {
+                const res = current() ? exit.call(doc) : request.call(root, { navigationUI: 'hide' });
+                if (res && typeof res.catch === 'function') res.catch(() => { /* refused by the browser */ });
+            } catch (_) { /* refused by the browser */ }
+        });
+        doc.addEventListener('fullscreenchange', sync);
+        doc.addEventListener('webkitfullscreenchange', sync);
+        sync();
     }
 
     _bindEvents() {
@@ -144,7 +191,7 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
@@ -164,6 +211,15 @@ export class OptionsMenu {
             }
         }
 
+        for (const btn of this.el.querySelectorAll('[data-page-bg] [data-bg]')) {
+            btn.addEventListener('click', () => {
+                const bg = btn.dataset.bg;
+                this.scene.pageBackground = bg;
+                this._syncPageBackground();
+                if (this.onPageBackgroundChange) this.onPageBackgroundChange(bg);
+            });
+        }
+
         const slider = this.el.querySelector('[data-opt="palmThreshold"]');
         const sliderVal = this.el.querySelector('[data-opt-val="palmThreshold"]');
         slider.addEventListener('input', () => {
@@ -178,6 +234,16 @@ export class OptionsMenu {
             this.hide();
         });
 
+        this.el.querySelector('[data-action="export-svg"]').addEventListener('click', () => {
+            if (this.onExportSVG) this.onExportSVG();
+            this.hide();
+        });
+
+        this.el.querySelector('[data-action="export-pdf"]').addEventListener('click', () => {
+            if (this.onExportPDF) this.onExportPDF();
+            this.hide();
+        });
+
         this.el.querySelector('[data-action="import"]').addEventListener('click', () => {
             this.fileInput.value = '';
             this.fileInput.click();
@@ -189,11 +255,17 @@ export class OptionsMenu {
             const reader = new FileReader();
             reader.onload = () => {
                 try {
-                    const parsed = JSON.parse(String(reader.result));
-                    if (this.onImportJSON) this.onImportJSON(parsed);
-                    this.hide();
+                    const text = String(reader.result || '');
+                    const isSvg = (file.name && file.name.toLowerCase().endsWith('.svg'))
+                        || file.type === 'image/svg+xml'
+                        || text.trimStart().startsWith('<');
+                    const parsed = isSvg ? extractBoardDataFromSVG(text) : JSON.parse(text);
+                    if (parsed && this.onImportJSON) {
+                        this.onImportJSON(parsed);
+                        this.hide();
+                    }
                 } catch (_) {
-                    // ignore invalid JSON
+                    // ignore invalid JSON/SVG
                 }
             };
             reader.readAsText(file);
@@ -222,6 +294,15 @@ export class OptionsMenu {
         }
     }
 
+    _syncPageBackground() {
+        const current = this.scene.pageBackground || 'blank';
+        for (const btn of this.el.querySelectorAll('[data-page-bg] [data-bg]')) {
+            const on = btn.dataset.bg === current;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', String(on));
+        }
+    }
+
     _syncPalmSliderVisibility() {
         const wrap = this.el.querySelector('[data-opt-wrap="palmThreshold"]');
         wrap.hidden = !this.scene.settings.palmErase;
@@ -229,7 +310,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;
@@ -237,6 +318,7 @@ export class OptionsMenu {
         this.el.querySelector('[data-opt-val="palmThreshold"]').textContent = `${th} px`;
         this._syncPalmSliderVisibility();
         this._syncSegments();
+        this._syncPageBackground();
         if (this.deletePageBtn) {
             this.deletePageBtn.disabled = this.scene.pageCount <= 1;
         }

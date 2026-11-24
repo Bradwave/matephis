@@ -12,7 +12,6 @@ import {
     A4_H,
     bboxIntersects,
     clamp,
-    computeA4Footprint,
     worldToScreen,
 } from './geometry.js';
 import { drawStroke } from './stroke.js';
@@ -21,13 +20,13 @@ const LASER_LIFETIME_MS = 1250;
 
 // Image-based pan/zoom (setting `fastPan`): while fingers move, the last sharp picture of
 // the board is moved/scaled instead of redrawing every stroke each frame.
-const GESTURE_DIM = 0.85;          // ink opacity while moving (reads as "moving", hides softness)
+export const GESTURE_DIM = 0.6;           // ink and widget opacity while moving (reads as "moving", hides softness)
 const SNAP_MARGIN = 0.15;          // extra picture around the screen so a pan rarely shows an edge
 const REFRESH_ZOOM_RATIO = 1.2;    // re-render a sharp picture once zoom drifts more than this
 const REFRESH_MIN_MS = 150;        // ...but at most this often,
 const REFRESH_COST_FACTOR = 8;     // ...and spaced by 8× the measured redraw cost on heavy pages
 const SETTLE_MS = 120;             // soft → sharp fade when the gesture ends
-const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
+export const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
 const PIXEL_SETTLE_MS = 160;       // EXPERIMENT: blocks shrink to sharp over this time
 
 /**
@@ -104,10 +103,158 @@ export function drawA4Borders(ctx, cam, viewBox, theme = 'light', showLabels = t
 }
 
 /**
+ * Shared helper: draws page background pattern (grid / dots / ruled) in world mm units.
+ * Automatically coarsens spacing when zoomed far out so patterns never turn muddy.
+ */
+export function drawPageBackground(ctx, cam, viewBox, background = 'blank', theme = 'light') {
+    if (!background || background === 'blank') return;
+
+    const isDark = theme === 'dark';
+
+    if (background === 'grid') {
+        let stepMm = 5;
+        if (stepMm * cam.scale < 8) stepMm = 10;
+        if (stepMm * cam.scale < 6) return;
+
+        const minX = Math.floor(viewBox.minX / stepMm) * stepMm;
+        const maxX = Math.ceil(viewBox.maxX / stepMm) * stepMm;
+        const minY = Math.floor(viewBox.minY / stepMm) * stepMm;
+        const maxY = Math.ceil(viewBox.maxY / stepMm) * stepMm;
+        if ((maxX - minX) / stepMm > 300 || (maxY - minY) / stepMm > 300) return;
+
+        const topPt = worldToScreen(0, minY, cam);
+        const botPt = worldToScreen(0, maxY, cam);
+        const leftPt = worldToScreen(minX, 0, cam);
+        const rightPt = worldToScreen(maxX, 0, cam);
+
+        ctx.save();
+        ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.075)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let wx = minX; wx <= maxX; wx += stepMm) {
+            const x = Math.round(worldToScreen(wx, 0, cam).x) + 0.5;
+            ctx.moveTo(x, topPt.y);
+            ctx.lineTo(x, botPt.y);
+        }
+        for (let wy = minY; wy <= maxY; wy += stepMm) {
+            const y = Math.round(worldToScreen(0, wy, cam).y) + 0.5;
+            ctx.moveTo(leftPt.x, y);
+            ctx.lineTo(rightPt.x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+        return;
+    }
+
+    if (background === 'dots') {
+        let stepMm = 5;
+        if (stepMm * cam.scale < 10) stepMm = 10;
+        if (stepMm * cam.scale < 7) return;
+
+        const minX = Math.floor(viewBox.minX / stepMm) * stepMm;
+        const maxX = Math.ceil(viewBox.maxX / stepMm) * stepMm;
+        const minY = Math.floor(viewBox.minY / stepMm) * stepMm;
+        const maxY = Math.ceil(viewBox.maxY / stepMm) * stepMm;
+        const nx = (maxX - minX) / stepMm;
+        const ny = (maxY - minY) / stepMm;
+        if (nx * ny > 18000) return;
+
+        const r = clamp(cam.scale * 0.22, 0.9, 1.8);
+        ctx.save();
+        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.20)';
+        ctx.beginPath();
+        for (let wy = minY; wy <= maxY; wy += stepMm) {
+            const sy = worldToScreen(0, wy, cam).y;
+            for (let wx = minX; wx <= maxX; wx += stepMm) {
+                const sx = worldToScreen(wx, 0, cam).x;
+                ctx.moveTo(sx + r, sy);
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
+            }
+        }
+        ctx.fill();
+        ctx.restore();
+        return;
+    }
+
+    if (background === 'ruled') {
+        let stepMm = 8;
+        if (stepMm * cam.scale < 10) stepMm = 16;
+        if (stepMm * cam.scale < 6) return;
+
+        const minY = Math.floor(viewBox.minY / stepMm) * stepMm;
+        const maxY = Math.ceil(viewBox.maxY / stepMm) * stepMm;
+        if ((maxY - minY) / stepMm > 300) return;
+
+        const leftPt = worldToScreen(viewBox.minX, 0, cam);
+        const rightPt = worldToScreen(viewBox.maxX, 0, cam);
+
+        ctx.save();
+        ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.11)' : 'rgba(0, 0, 0, 0.10)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let wy = minY; wy <= maxY; wy += stepMm) {
+            const y = Math.round(worldToScreen(0, wy, cam).y) + 0.5;
+            ctx.moveTo(leftPt.x, y);
+            ctx.lineTo(rightPt.x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+/**
  * Shared vector renderer for rendering any page's strokes into a target canvas
  * (reused by PinnedStrip for crisp zoomable/pannable vector previews).
  */
-export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme = 'light', showBorders = true) {
+/**
+ * Connector badges drawn like the DOM ones (28px square, 2px border, bold label;
+ * dashed when unpaired), in screen space for camera `cam`.
+ */
+function drawConnectorShapes(ctx, shapes, cam, width, height, theme) {
+    const bg = theme === 'dark' ? '#121212' : '#ffffff';
+    ctx.save();
+    ctx.font = '700 13px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const c of shapes || []) {
+        const sx = (c.x - cam.x) * cam.scale;
+        const sy = (c.y - cam.y) * cam.scale;
+        if (sx < -40 || sy < -40 || sx > width + 40 || sy > height + 40) continue;
+        const w = Math.max(28, ctx.measureText(c.label).width + 16);
+        const h = 28;
+        ctx.fillStyle = bg;
+        ctx.fillRect(sx - w / 2, sy - h / 2, w, h);
+        ctx.setLineDash(c.paired ? [] : [4, 3]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = c.color;
+        ctx.strokeRect(sx - w / 2 + 1, sy - h / 2 + 1, w - 2, h - 2);
+        ctx.fillStyle = c.color;
+        ctx.fillText(c.label, sx, sy + 1);
+    }
+    ctx.restore();
+}
+
+/** Draw widget pictures ({x, y, w, h, canvas} in mm) in world coordinates. */
+export function drawWidgetPictures(ctx, pictures, viewBox = null) {
+    for (const p of pictures || []) {
+        if (!p || !p.canvas) continue;
+        if (viewBox && (p.x > viewBox.maxX || p.y > viewBox.maxY || p.x + p.w < viewBox.minX || p.y + p.h < viewBox.minY)) continue;
+        ctx.drawImage(p.canvas, p.x, p.y, p.w, p.h);
+    }
+}
+
+export function renderPageToContext(
+    ctx,
+    width,
+    height,
+    dpr,
+    strokes,
+    cam,
+    theme = 'light',
+    showBorders = true,
+    background = 'blank',
+    pictures = null
+) {
     ctx.save();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -121,6 +268,10 @@ export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme
         maxY: cam.y + height / cam.scale + 10,
     };
 
+    if (background && background !== 'blank') {
+        drawPageBackground(ctx, cam, viewBox, background, theme);
+    }
+
     if (showBorders) {
         drawA4Borders(ctx, cam, viewBox, theme, false);
     }
@@ -128,6 +279,9 @@ export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme
     ctx.save();
     ctx.scale(cam.scale, cam.scale);
     ctx.translate(-cam.x, -cam.y);
+
+    // Widgets as static pictures, under the ink
+    if (pictures) drawWidgetPictures(ctx, pictures, viewBox);
 
     for (let i = 0; i < strokes.length; i++) {
         const s = strokes[i];
@@ -147,9 +301,10 @@ export function renderPageToContext(ctx, width, height, dpr, strokes, cam, theme
 }
 
 export class InkSurface {
-    constructor(container, { scene, onPerfSample = null, onCameraChange = null }) {
+    constructor(container, { scene, overlay = null, onPerfSample = null, onCameraChange = null }) {
         this.container = container;
         this.scene = scene;
+        this.overlay = overlay;
         this.onPerfSample = onPerfSample;
         this.onCameraChange = onCameraChange;
 
@@ -164,6 +319,8 @@ export class InkSurface {
 
         // Active-layer transient state
         this.activeStroke = null;
+        this.activeShape = null;
+        this.lassoOverlay = null; // { selectedStrokes, selectionBBox, marquee, drag }
         this.eraserCursor = null; // { x, y, radius } in world coords
         this.laserPoints = [];    // [{ x, y, t }]
         this.laserRaf = null;
@@ -172,9 +329,9 @@ export class InkSurface {
         this._committedDirty = true;
         this._rafPending = false;
 
-        // Image-based pan/zoom state
+        // Image-based pan/zoom state (ink layer only; bgCanvas & overlay stay crisp)
         this.gesture = null;      // { lastRefresh, refreshTimer } while a pan/zoom gesture runs
-        this.snap = null;         // { canvas, cam, margin, cssW, cssH }: picture moved during it
+        this.snap = null;         // { canvas, cam, margin, cssW, cssH }: transparent ink picture
         this._snapCanvases = [document.createElement('canvas'), document.createElement('canvas')];
         this._settleRaf = null;
 
@@ -182,10 +339,22 @@ export class InkSurface {
         this.resize();
     }
 
+    setOverlay(overlay) {
+        this.overlay = overlay;
+        if (this.overlay) {
+            this.overlay.setOverviewMode(this.overviewMode);
+            this.overlay.syncCamera(this.scene.camera);
+        }
+    }
+
     _createCanvases() {
+        this.bgCanvas = document.createElement('canvas');
+        this.bgCanvas.className = 'board-canvas board-canvas-bg';
+        this.bgCtx = this.bgCanvas.getContext('2d', { alpha: false });
+
         this.committedCanvas = document.createElement('canvas');
         this.committedCanvas.className = 'board-canvas board-canvas-committed';
-        this.committedCtx = this.committedCanvas.getContext('2d', { alpha: false });
+        this.committedCtx = this.committedCanvas.getContext('2d', { alpha: true });
 
         this.activeCanvas = document.createElement('canvas');
         this.activeCanvas.className = 'board-canvas board-canvas-active';
@@ -194,6 +363,7 @@ export class InkSurface {
             this.activeCanvas.getContext('2d', { alpha: true, desynchronized: true }) ||
             this.activeCanvas.getContext('2d', { alpha: true });
 
+        this.container.appendChild(this.bgCanvas);
         this.container.appendChild(this.committedCanvas);
         this.container.appendChild(this.activeCanvas);
     }
@@ -216,7 +386,7 @@ export class InkSurface {
         this.height = h;
         this.dpr = dpr;
 
-        for (const c of [this.committedCanvas, this.activeCanvas]) {
+        for (const c of [this.bgCanvas, this.committedCanvas, this.activeCanvas]) {
             c.width = Math.round(w * dpr);
             c.height = Math.round(h * dpr);
             c.style.width = `${w}px`;
@@ -248,11 +418,17 @@ export class InkSurface {
         return this.theme === 'dark' ? '#121212' : '#ffffff';
     }
 
+    _renderBackground(cam = this.scene.camera) {
+        this._renderBackgroundTo(this.bgCtx, this.width, this.height, this.dpr, cam);
+        if (this.overlay) this.overlay.syncCamera(cam);
+    }
+
     renderCommittedNow() {
         this._cancelSettle();
         this._committedDirty = false;
         const t0 = performance.now();
-        this._renderSceneTo(this.committedCtx, this.width, this.height, this.dpr, this.scene.camera);
+        this._renderBackground(this.scene.camera);
+        this._renderInkTo(this.committedCtx, this.width, this.height, this.dpr, this.scene.camera);
         // A full redraw during a gesture (undo, resize...) becomes the new picture to move.
         if (this.gesture) this._snapFromCommitted();
         this.lastCommittedRedrawMs = performance.now() - t0;
@@ -296,7 +472,15 @@ export class InkSurface {
         if (this._committedDirty) this.renderCommittedNow();
         this._cancelSettle();
         this.gesture = { lastRefresh: performance.now(), refreshTimer: null };
+        // Widgets get the same treatment as the ink. Fade: the overlay moves as a cached
+        // GPU picture, dimmed like the ink. Pixel: the widgets' pictures are drawn into the
+        // ink picture (so they pixelate with it) and the live overlay is hidden meanwhile.
+        const effect = this.scene.settings.gestureEffect;
+        this._gesturePictures = effect === 'pixel' && this.getWidgetPictures ? this.getWidgetPictures() : null;
         this._snapFromCommitted();
+        if (this.overlay) {
+            this.overlay.setGesture(true, effect, GESTURE_DIM, { hideWidgets: Boolean(this._gesturePictures && this._gesturePictures.length) });
+        }
     }
 
     /** End of the gesture: one sharp redraw, faded in while the ink returns to full strength. */
@@ -306,6 +490,7 @@ export class InkSurface {
         clearTimeout(g.refreshTimer);
         this.gesture = null;
         if (!this.snap) {
+            if (this.overlay) this.overlay.setGesture(false);
             this.renderCommittedNow();
             return;
         }
@@ -318,28 +503,41 @@ export class InkSurface {
 
         const ctx = this.committedCtx;
         const start = performance.now();
+        this._renderBackground(this.scene.camera);
         // EXPERIMENT (pixelated gesture): blocks shrink step by step instead of a fade.
         if (this.scene.settings.gestureEffect === 'pixel') {
+            const hadPictures = Boolean(this._gesturePictures);
+            if (this.overlay && !hadPictures) this.overlay.setGesture(false);
             const pixelStep = (now) => {
                 const t = clamp((now - start) / PIXEL_SETTLE_MS, 0, 1);
                 const block = Math.round(PIXEL_BLOCK_PX * (1 - t));
                 ctx.save();
                 ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+                ctx.clearRect(0, 0, this.width, this.height);
                 if (block <= 1) {
                     ctx.drawImage(sharp.canvas, 0, 0, this.width, this.height);
                 } else {
                     this._drawPixelated(ctx, sharp.canvas, 0, 0, this.width, this.height, block);
                 }
                 ctx.restore();
-                this._settleRaf = t < 1 ? requestAnimationFrame(pixelStep) : null;
+                if (t < 1) {
+                    this._settleRaf = requestAnimationFrame(pixelStep);
+                } else {
+                    this._settleRaf = null;
+                    // Sharp: the live widgets come back and the ink layer drops their pictures.
+                    this._endWidgetPictures();
+                }
             };
             this._settleRaf = requestAnimationFrame(pixelStep);
             return;
         }
 
+        // Widgets are re-rendered sharp now; their dimming fades out with the ink's.
+        if (this.overlay) this.overlay.setGesture(false, 'fade');
         const step = (now) => {
             const t = clamp((now - start) / SETTLE_MS, 0, 1);
-            this._drawSnap(GESTURE_DIM + (1 - GESTURE_DIM) * t);
+            if (this.overlay) this.overlay.setGestureAlpha(t < 1 ? GESTURE_DIM + (1 - GESTURE_DIM) * t : 1);
+            this._drawSnap(GESTURE_DIM * (1 - t));
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.globalAlpha = t;
@@ -354,7 +552,20 @@ export class InkSurface {
         this._settleRaf = requestAnimationFrame(step);
     }
 
+    /** Leave the pixelated-widgets state: live overlay back, ink layer without pictures. */
+    _endWidgetPictures() {
+        if (!this._gesturePictures) return;
+        this._gesturePictures = null;
+        if (this.overlay) this.overlay.setGesture(false);
+        this._renderInkTo(this.committedCtx, this.width, this.height, this.dpr, this.scene.camera);
+    }
+
     _cancelSettle() {
+        if (this.overlay && !this.gesture) this.overlay.setGestureAlpha(1);
+        if (!this.gesture && this._gesturePictures) {
+            this._gesturePictures = null;
+            if (this.overlay) this.overlay.setGesture(false);
+        }
         if (this._settleRaf) {
             cancelAnimationFrame(this._settleRaf);
             this._settleRaf = null;
@@ -363,6 +574,7 @@ export class InkSurface {
 
     _gestureFrame() {
         this._committedDirty = false;
+        this._renderBackground(this.scene.camera);
         const uncovered = this._drawSnap(GESTURE_DIM);
         const g = this.gesture;
         const ratio = this.scene.camera.scale / this.snap.cam.scale;
@@ -389,7 +601,7 @@ export class InkSurface {
         }
     }
 
-    /** Draw the gesture picture under the current camera. Returns true if an edge shows. */
+    /** Draw the gesture ink picture under the current camera. Returns true if an edge shows. */
     _drawSnap(alpha) {
         const snap = this.snap;
         const cam = this.scene.camera;
@@ -402,8 +614,7 @@ export class InkSurface {
 
         ctx.save();
         ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-        ctx.fillStyle = this._getBgColor();
-        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.clearRect(0, 0, this.width, this.height);
         // EXPERIMENT (pixelated gesture): remove this `if` and _drawPixelated() to drop it.
         if (this.scene.settings.gestureEffect === 'pixel') {
             this._drawPixelated(ctx, snap.canvas, dx, dy, dw, dh);
@@ -430,10 +641,9 @@ export class InkSurface {
         const tiny = this._pixelCanvas;
         if (tiny.width !== tw) tiny.width = tw;
         if (tiny.height !== th) tiny.height = th;
-        const tctx = tiny.getContext('2d', { alpha: false });
+        const tctx = tiny.getContext('2d', { alpha: true });
         const f = 1 / block;
-        tctx.fillStyle = this._getBgColor();
-        tctx.fillRect(0, 0, tw, th);
+        tctx.clearRect(0, 0, tw, th);
         tctx.imageSmoothingEnabled = true;
         tctx.imageSmoothingQuality = 'high';  // average each block instead of sampling one pixel
         tctx.drawImage(img, dx * f, dy * f, dw * f, dh * f);
@@ -441,16 +651,23 @@ export class InkSurface {
         ctx.drawImage(tiny, 0, 0, tw * block, th * block);
     }
 
-    /** Cheap picture at gesture start: a copy of what is on screen now. */
+    /** Cheap picture at gesture start: a copy of the transparent ink layer on screen now. */
     _snapFromCommitted() {
+        // Pixelated gesture with widgets: the picture to move must contain them too.
+        if (this._gesturePictures) {
+            this.snap = this._renderPicture(SNAP_MARGIN);
+            return;
+        }
         const canvas = this._takeSnapCanvas();
         canvas.width = this.committedCanvas.width;
         canvas.height = this.committedCanvas.height;
-        canvas.getContext('2d', { alpha: false }).drawImage(this.committedCanvas, 0, 0);
+        const sctx = canvas.getContext('2d', { alpha: true });
+        sctx.clearRect(0, 0, canvas.width, canvas.height);
+        sctx.drawImage(this.committedCanvas, 0, 0);
         this.snap = { canvas, cam: { ...this.scene.camera }, margin: 0, cssW: this.width, cssH: this.height };
     }
 
-    /** Full sharp render of the current camera into a spare canvas, with `marginRatio` around. */
+    /** Full sharp render of the ink layer under the current camera into a spare canvas. */
     _renderPicture(marginRatio) {
         const cam = this.scene.camera;
         const margin = Math.round(Math.max(this.width, this.height) * marginRatio);
@@ -462,7 +679,7 @@ export class InkSurface {
         if (canvas.width !== pxW) canvas.width = pxW;
         if (canvas.height !== pxH) canvas.height = pxH;
         const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
-        this._renderSceneTo(canvas.getContext('2d', { alpha: false }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted);
+        this._renderInkTo(canvas.getContext('2d', { alpha: true }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted, this._gesturePictures);
         return { canvas, cam: { ...cam }, margin, cssW, cssH };
     }
 
@@ -472,13 +689,40 @@ export class InkSurface {
         return this.snap && this.snap.canvas === a ? b : a;
     }
 
-    _renderSceneTo(ctx, width, height, dpr, cam) {
+    _renderBackgroundTo(ctx, width, height, dpr, cam) {
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // Clear background
+        // Opaque page fill
         ctx.fillStyle = this._getBgColor();
         ctx.fillRect(0, 0, width, height);
+
+        const viewBox = {
+            minX: cam.x - 10,
+            minY: cam.y - 10,
+            maxX: cam.x + width / cam.scale + 10,
+            maxY: cam.y + height / cam.scale + 10,
+        };
+
+        // Page pattern (grid / dots / ruled)
+        if (!this.overviewMode) {
+            drawPageBackground(ctx, cam, viewBox, this.scene.pageBackground, this.theme);
+        }
+
+        // Faint A4 corner crop marks (or full overview A4 grid)
+        if (this.overviewMode) {
+            this._drawOverviewGrid(ctx, cam);
+        } else if (this.scene.settings.showCropMarks) {
+            this._drawA4CropMarks(ctx, cam, viewBox);
+        }
+
+        ctx.restore();
+    }
+
+    _renderInkTo(ctx, width, height, dpr, cam, pictures = null) {
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
 
         // World viewport culling box
         const viewBox = {
@@ -488,17 +732,13 @@ export class InkSurface {
             maxY: cam.y + height / cam.scale + 10,
         };
 
-        // Faint A4 corner crop marks (or full overview A4 grid)
-        if (this.overviewMode) {
-            this._drawOverviewGrid(ctx, cam);
-        } else if (this.scene.settings.showCropMarks) {
-            this._drawA4CropMarks(ctx, cam, viewBox);
-        }
-
         // Apply world transform for vector strokes
         ctx.save();
         ctx.scale(cam.scale, cam.scale);
         ctx.translate(-cam.x, -cam.y);
+
+        // Widget pictures under the ink (only in pictures of a pixelated gesture)
+        if (pictures) drawWidgetPictures(ctx, pictures, viewBox);
 
         const strokes = this.scene.strokes;
         // Pass 1: Highlighters (underlay so ink remains crisp on top in light & dark mode)
@@ -518,6 +758,11 @@ export class InkSurface {
         }
 
         ctx.restore();
+
+        // Pixelated gesture: connectors (screen-sized badges above the ink) join the picture.
+        if (pictures && this.getConnectorShapes) {
+            drawConnectorShapes(ctx, this.getConnectorShapes(), cam, width, height, this.theme);
+        }
 
         // In overview mode, highlight the saved writing viewport on top
         if (this.overviewMode && this.savedCamera) {
@@ -539,7 +784,7 @@ export class InkSurface {
      * Full A4 tile grid rendered during General View (Overview).
      */
     _drawOverviewGrid(ctx, cam) {
-        const fp = computeA4Footprint(this.scene.strokes);
+        const fp = this.scene.getFootprint();
         const isDark = this.theme === 'dark';
 
         ctx.save();
@@ -590,7 +835,7 @@ export class InkSurface {
     }
 
     /**
-     * Render only the lightweight active layer (current stroke, eraser ring, laser).
+     * Render only the lightweight active layer (current stroke, shape preview, lasso, eraser ring, laser).
      */
     renderActiveNow() {
         const ctx = this.activeCtx;
@@ -607,6 +852,18 @@ export class InkSurface {
             ctx.translate(-cam.x, -cam.y);
             drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
             ctx.restore();
+        }
+
+        if (this.activeShape) {
+            ctx.save();
+            ctx.scale(cam.scale, cam.scale);
+            ctx.translate(-cam.x, -cam.y);
+            drawStroke(ctx, this.activeShape, this.theme, { cache: false });
+            ctx.restore();
+        }
+
+        if (this.lassoOverlay) {
+            this._drawLassoOverlay(ctx, cam, this.lassoOverlay);
         }
 
         if (this.eraserCursor) {
@@ -628,6 +885,85 @@ export class InkSurface {
         }
 
         ctx.restore();
+    }
+
+    _drawLassoOverlay(ctx, cam, state) {
+        const isDark = this.theme === 'dark';
+        const accent = isDark ? '#ff523d' : '#B01A00';
+        const fillTint = isDark ? 'rgba(255, 82, 61, 0.09)' : 'rgba(176, 26, 0, 0.06)';
+
+        if (state.marquee) {
+            const m = state.marquee;
+            ctx.save();
+            ctx.strokeStyle = accent;
+            ctx.fillStyle = fillTint;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 4]);
+            if (m.kind === 'rect') {
+                const minX = Math.min(m.start.x, m.end.x);
+                const minY = Math.min(m.start.y, m.end.y);
+                const maxX = Math.max(m.start.x, m.end.x);
+                const maxY = Math.max(m.start.y, m.end.y);
+                const tl = worldToScreen(minX, minY, cam);
+                const br = worldToScreen(maxX, maxY, cam);
+                ctx.fillRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+                ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+            } else if (m.kind === 'lasso' && m.points && m.points.length >= 2) {
+                ctx.beginPath();
+                const s0 = worldToScreen(m.points[0].x, m.points[0].y, cam);
+                ctx.moveTo(s0.x, s0.y);
+                for (let i = 1; i < m.points.length; i++) {
+                    const si = worldToScreen(m.points[i].x, m.points[i].y, cam);
+                    ctx.lineTo(si.x, si.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        if (state.selectionBBox) {
+            const bb = state.selectionBBox;
+            const dx = state.drag ? state.drag.dx : 0;
+            const dy = state.drag ? state.drag.dy : 0;
+
+            if (state.drag && (dx !== 0 || dy !== 0) && state.selectedStrokes && state.selectedStrokes.length > 0) {
+                ctx.save();
+                ctx.scale(cam.scale, cam.scale);
+                ctx.translate(-cam.x + dx, -cam.y + dy);
+                ctx.globalAlpha = 0.72;
+                for (let i = 0; i < state.selectedStrokes.length; i++) {
+                    drawStroke(ctx, state.selectedStrokes[i], this.theme, { cache: true });
+                }
+                ctx.restore();
+            }
+
+            const tl = worldToScreen(bb.minX + dx, bb.minY + dy, cam);
+            const br = worldToScreen(bb.maxX + dx, bb.maxY + dy, cam);
+            const padPx = 4;
+            const x = tl.x - padPx;
+            const y = tl.y - padPx;
+            const w = (br.x - tl.x) + padPx * 2;
+            const h = (br.y - tl.y) + padPx * 2;
+
+            ctx.save();
+            ctx.fillStyle = fillTint;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+
+            // Corner handles indicate draggable selection box
+            const hs = 5;
+            ctx.fillStyle = accent;
+            for (const [cx, cy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) {
+                ctx.fillRect(cx - hs * 0.5, cy - hs * 0.5, hs, hs);
+            }
+            ctx.restore();
+        }
     }
 
     _drawLaserTrail(ctx, cam) {
@@ -718,6 +1054,16 @@ export class InkSurface {
         requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
     }
 
+    setActiveShape(stroke) {
+        this.activeShape = stroke;
+        this.renderActiveNow();
+    }
+
+    setLassoOverlay(state) {
+        this.lassoOverlay = state;
+        this.renderActiveNow();
+    }
+
     setEraserCursor(cursor) {
         this.eraserCursor = cursor;
         this.renderActiveNow();
@@ -726,6 +1072,37 @@ export class InkSurface {
     /**
      * Smoothly animate the camera to target { x, y, scale }.
      */
+    /**
+     * Glide the camera to `target` as a pan gesture would move it: the moving picture
+     * (and its fade or pixel effect) during the glide, one sharp redraw at the end.
+     * Ease-in-out, so it starts and stops gently.
+     */
+    glideCameraTo(target, durationMs = 420, onDone = null) {
+        if (this._glideRaf) cancelAnimationFrame(this._glideRaf);
+        const start = { ...this.scene.camera };
+        const t0 = performance.now();
+        this.beginGesture();
+        const step = (now) => {
+            const p = clamp((now - t0) / durationMs, 0, 1);
+            const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+            this.scene.camera.x = start.x + (target.x - start.x) * ease;
+            this.scene.camera.y = start.y + (target.y - start.y) * ease;
+            this.scene.camera.scale = start.scale + (target.scale - start.scale) * ease;
+            if (this.gesture && this.snap) this._gestureFrame();
+            else this.renderCommittedNow();
+            this.renderActiveNow();
+            if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+            if (p < 1) {
+                this._glideRaf = requestAnimationFrame(step);
+            } else {
+                this._glideRaf = null;
+                this.endGesture();
+                if (onDone) onDone();
+            }
+        };
+        this._glideRaf = requestAnimationFrame(step);
+    }
+
     animateCameraTo(target, durationMs = 220, onDone = null) {
         if (this.cameraAnim) cancelAnimationFrame(this.cameraAnim);
         const start = { ...this.scene.camera };
@@ -766,8 +1143,9 @@ export class InkSurface {
         if (this.overviewMode) return;
         this.savedCamera = { ...this.scene.camera };
         this.overviewMode = true;
+        if (this.overlay) this.overlay.setOverviewMode(true);
 
-        const fp = computeA4Footprint(this.scene.strokes);
+        const fp = this.scene.getFootprint();
         const b = fp.bounds;
         const padMm = 20;
         const bw = (b.maxX - b.minX) + padMm * 2;
@@ -785,6 +1163,7 @@ export class InkSurface {
     exitOverview(jumpWorldPt = null) {
         if (!this.overviewMode) return;
         this.overviewMode = false;
+        if (this.overlay) this.overlay.setOverviewMode(false);
         const baseScale = this.scene.camera.baseScale;
         let target;
         if (jumpWorldPt) {
@@ -821,6 +1200,7 @@ export class InkSurface {
 
         if (!targetCamera) {
             if (this._committedDirty) this.renderCommittedNow();
+            sctx.drawImage(this.bgCanvas, 0, 0, sw, sh);
             sctx.drawImage(this.committedCanvas, 0, 0, sw, sh);
         } else {
             // Render the pinned camera view directly with the current theme

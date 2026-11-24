@@ -17,6 +17,7 @@ import {
 } from './geometry.js';
 import { createStroke, refreshStrokeBBox } from './stroke.js';
 import { EraseGesture } from './eraser.js';
+import { createShapeStroke } from './shapes.js';
 
 const GESTURE_CANCEL_MS = 95;
 // Two-finger tap (opens the quick menu): both fingers down and up quickly, barely moving.
@@ -34,6 +35,8 @@ export class InputController {
     constructor(surface, {
         scene,
         history,
+        overlay = null,
+        lasso = null,
         getToolState,
         onCanvasTouch = null,
         onSceneMutated = null,
@@ -41,10 +44,13 @@ export class InputController {
         onOverviewPick = null,
         onTelemetry = null,
         onTwoFingerTap = null,
+        onConnectorPlace = null,
     }) {
         this.surface = surface;
         this.scene = scene;
         this.history = history;
+        this.overlay = overlay;
+        this.lasso = lasso;
         this.getToolState = getToolState;
         this.onCanvasTouch = onCanvasTouch;
         this.onSceneMutated = onSceneMutated;
@@ -52,15 +58,17 @@ export class InputController {
         this.onOverviewPick = onOverviewPick;
         this.onTelemetry = onTelemetry;
         this.onTwoFingerTap = onTwoFingerTap;
+        this.onConnectorPlace = onConnectorPlace;
         this.tapCandidate = null;
 
-        this.el = surface.activeCanvas;
+        this.el = surface.container;
         this.pointers = new Map(); // pointerId -> { sx, sy, type, w, h }
-        this.mode = 'idle';        // 'idle' | 'draw' | 'erase' | 'laser' | 'pan' | 'pinch'
+        this.mode = 'idle';        // 'idle' | 'draw' | 'erase' | 'laser' | 'lasso' | 'shape' | 'pan' | 'pinch'
         this.activePointerId = null;
         this.strokeStartTime = 0;
         this.currentStroke = null;
         this.currentErase = null;
+        this.shapeAnchor = null;
         this.palmActive = false;
         this.spaceHeld = false;
 
@@ -74,7 +82,7 @@ export class InputController {
         this.el.addEventListener('pointerdown', (e) => this._onPointerDown(e));
         this.el.addEventListener('pointermove', (e) => this._onPointerMove(e));
         this.el.addEventListener('pointerup', (e) => this._onPointerUp(e));
-        this.el.addEventListener('pointercancel', (e) => this._onPointerUp(e));
+        this.el.addEventListener('pointercancel', (e) => this._onPointerCancel(e));
         this.el.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
         this.el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
@@ -130,6 +138,9 @@ export class InputController {
     _onPointerDown(e) {
         this.lastPointerType = e.pointerType;
         if (e.button === 2) return; // right-click: handled by contextmenu (quick menu)
+        if (this.pointers.size === 0 && this.overlay && this.overlay.isInteractiveTarget(e.target)) {
+            return;
+        }
         e.preventDefault();
         try { this.el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
 
@@ -184,6 +195,11 @@ export class InputController {
         // Check palm-to-erase immediately
         if (this._isPalm(e) || (this.scene.settings.palmErase && this.pointers.size >= 3 && e.pointerType === 'touch')) {
             this._cancelUncommittedDraw();
+            this._cancelUncommittedShape();
+            if (this.mode === 'lasso' && this.lasso) {
+                this.lasso.cancelInteraction();
+                this.mode = 'idle';
+            }
             this.palmActive = true;
             this._startErase(e, sx, sy, true);
             this._emitTelemetry(e, 1);
@@ -202,6 +218,11 @@ export class InputController {
                 this._commitDraw();
             } else if (this.mode === 'erase') {
                 this._finishErase();
+            } else if (this.mode === 'shape') {
+                this._cancelUncommittedShape();
+            } else if (this.mode === 'lasso' && this.lasso) {
+                this.lasso.cancelInteraction();
+                this.mode = 'idle';
             }
             this._startPinch();
             this._startTapCandidate(committedDot);
@@ -244,6 +265,13 @@ export class InputController {
             this.activePointerId = e.pointerId;
             const pt = screenToWorld(sx, sy, this.scene.camera);
             this.surface.addLaserPoint(pt.x, pt.y);
+        } else if (toolState.tool === 'shape') {
+            this._startShape(e, sx, sy, toolState);
+        } else if (toolState.tool === 'lasso' && this.lasso) {
+            this._startLasso(e, sx, sy, toolState);
+        } else if (toolState.tool === 'connector') {
+            const pt = screenToWorld(sx, sy, this.scene.camera);
+            if (this.onConnectorPlace) this.onConnectorPlace(pt.x, pt.y);
         } else if (dismissed) {
             this._startDraw(e, sx, sy, toolState, true);
         } else {
@@ -251,6 +279,42 @@ export class InputController {
         }
 
         this._emitTelemetry(e, 1);
+    }
+
+    _startShape(e, sx, sy, toolState) {
+        const t0 = performance.now();
+        this.mode = 'shape';
+        this.activePointerId = e.pointerId;
+        const startWorld = screenToWorld(sx, sy, this.scene.camera);
+        this.shapeAnchor = {
+            startWorld,
+            endWorld: startWorld,
+            shapeKind: toolState.shapeKind || 'line',
+            styleOpts: {
+                tool: 'pen',
+                color: toolState.penColor,
+                width: toolState.penWidth,
+                style: toolState.penStyle,
+            },
+        };
+        const preview = createShapeStroke(
+            startWorld,
+            startWorld,
+            this.shapeAnchor.shapeKind,
+            this.shapeAnchor.styleOpts
+        );
+        this.surface.setActiveShape(preview);
+        this._emitTelemetry(e, 1, performance.now() - t0);
+    }
+
+    _startLasso(e, sx, sy, toolState) {
+        const t0 = performance.now();
+        this.mode = 'lasso';
+        this.activePointerId = e.pointerId;
+        const wp = screenToWorld(sx, sy, this.scene.camera);
+        const hitPad = Math.max(2, 8 / this.scene.camera.scale);
+        this.lasso.beginInteraction(wp.x, wp.y, toolState.lassoMode || 'lasso', hitPad);
+        this._emitTelemetry(e, 1, performance.now() - t0);
     }
 
     _startDraw(e, sx, sy, toolState, dismissing = false) {
@@ -492,6 +556,24 @@ export class InputController {
             const wp = screenToWorld(sx, sy, this.scene.camera);
             this.surface.addLaserPoint(wp.x, wp.y);
             this._emitTelemetry(e, list.length, performance.now() - t0);
+        } else if (this.mode === 'shape' && this.shapeAnchor) {
+            const wp = screenToWorld(sx, sy, this.scene.camera);
+            this.shapeAnchor.endWorld = wp;
+            const preview = createShapeStroke(
+                this.shapeAnchor.startWorld,
+                wp,
+                this.shapeAnchor.shapeKind,
+                this.shapeAnchor.styleOpts
+            );
+            this.surface.setActiveShape(preview);
+            this._emitTelemetry(e, 1, performance.now() - t0);
+        } else if (this.mode === 'lasso' && this.lasso) {
+            for (let i = 0; i < list.length; i++) {
+                const lp = this._getLocalPoint(list[i]);
+                const wp = screenToWorld(lp.sx, lp.sy, this.scene.camera);
+                this.lasso.updateInteraction(wp.x, wp.y);
+            }
+            this._emitTelemetry(e, list.length, performance.now() - t0);
         }
     }
 
@@ -514,6 +596,43 @@ export class InputController {
             this._commitDraw();
         } else if (this.mode === 'erase') {
             this._finishErase();
+        } else if (this.mode === 'shape') {
+            this._commitShape();
+        } else if (this.mode === 'lasso' && this.lasso) {
+            this.lasso.endInteraction();
+        } else if (this.mode === 'pan') {
+            this.surface.endGesture();
+        }
+
+        this.mode = 'idle';
+        this.activePointerId = null;
+        this.panAnchor = null;
+        this.palmActive = false;
+    }
+
+    _onPointerCancel(e) {
+        this.pointers.delete(e.pointerId);
+
+        if (this.mode === 'pinch') {
+            if (this.pointers.size < 2) {
+                this.tapCandidate = null;
+                this.pinchAnchor = null;
+                this.mode = 'idle';
+                this.surface.endGesture();
+            }
+            return;
+        }
+
+        if (e.pointerId !== this.activePointerId) return;
+
+        if (this.mode === 'draw') {
+            this._cancelUncommittedDraw();
+        } else if (this.mode === 'erase') {
+            this._finishErase();
+        } else if (this.mode === 'shape') {
+            this._cancelUncommittedShape();
+        } else if (this.mode === 'lasso' && this.lasso) {
+            this.lasso.cancelInteraction();
         } else if (this.mode === 'pan') {
             this.surface.endGesture();
         }
@@ -532,6 +651,40 @@ export class InputController {
             this.mode = 'idle';
             this.activePointerId = null;
         }
+    }
+
+    _cancelUncommittedShape() {
+        this.shapeAnchor = null;
+        this.surface.setActiveShape(null);
+        if (this.mode === 'shape') {
+            this.mode = 'idle';
+            this.activePointerId = null;
+        }
+    }
+
+    _commitShape() {
+        const anchor = this.shapeAnchor;
+        this.shapeAnchor = null;
+        this.surface.setActiveShape(null);
+        if (!anchor) return;
+
+        const dist = Math.hypot(
+            anchor.endWorld.x - anchor.startWorld.x,
+            anchor.endWorld.y - anchor.startWorld.y
+        );
+        if (dist < 0.5) return;
+
+        // Bypass _commitDraw()'s simplifyRDP(..., 0.09) so exact corners and ellipses stay crisp
+        const stroke = createShapeStroke(
+            anchor.startWorld,
+            anchor.endWorld,
+            anchor.shapeKind,
+            anchor.styleOpts
+        );
+        this.scene.strokes.push(stroke);
+        this.history.push({ type: 'add', stroke });
+        this.surface.appendStroke(stroke);
+        if (this.onSceneMutated) this.onSceneMutated();
     }
 
     _commitDraw() {

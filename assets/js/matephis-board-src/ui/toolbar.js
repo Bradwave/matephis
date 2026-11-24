@@ -40,6 +40,7 @@ export class BoardToolbar {
         getSettings,
         onSettingChange,
         onToolChange,
+        onLassoAction = null,
         onUndo,
         onRedo,
         onPinTop,
@@ -51,12 +52,14 @@ export class BoardToolbar {
         onPrevPage,
         onNextPage,
         onAddPage,
+        onSelectOpenConnector = null,
     }) {
         this.hostEl = hostEl;
         this.getTheme = getTheme;
         this.getSettings = getSettings || (() => ({}));
         this.onSettingChange = onSettingChange;
         this.onToolChange = onToolChange;
+        this.onLassoAction = onLassoAction;
         this.onUndo = onUndo;
         this.onRedo = onRedo;
         this.onPinTop = onPinTop;
@@ -68,9 +71,10 @@ export class BoardToolbar {
         this.onPrevPage = onPrevPage;
         this.onNextPage = onNextPage;
         this.onAddPage = onAddPage;
+        this.onSelectOpenConnector = onSelectOpenConnector;
 
         this.state = {
-            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser'
+            tool: 'pen',           // 'pen' | 'eraser' | 'highlighter' | 'laser' | 'lasso' | 'shape' | 'connector'
             penColor: 0,
             penWidth: PEN_SIZES[1].width,
             penStyle: 'solid',     // 'solid' | 'dashed' | 'dotted'
@@ -78,7 +82,15 @@ export class BoardToolbar {
             eraserMode: 'partial', // 'partial' | 'stroke'
             highlighterColor: HIGHLIGHTER_COLORS[0].id,
             highlighterWidth: HIGHLIGHTER_SIZES[1].width,
+            lassoMode: 'lasso',    // 'lasso' | 'rect'
+            shapeKind: 'line',     // 'line' | 'arrow' | 'rect' | 'ellipse' | 'triangle'
+            connectorSeries: 'alpha', // 'alpha' | 'num'
+            connectorMode: 'new',     // 'new' | 'link'
         };
+        this._lassoSelectionCount = 0;
+        this.connectorPendingLabel = null;
+        this.connectorPendingPairId = null;
+        this.connectorOpenPairs = [];
 
         this.layout = 'bar';  // 'rail' | 'bar'
         this.side = 'right';  // rail side: 'right' | 'left'
@@ -109,10 +121,42 @@ export class BoardToolbar {
         const insertOpen = this.activeFuturePopover === 'plot'
             || this.activeFuturePopover === 'diagrams'
             || this.activeFuturePopover === 'exercises';
-        this.insertBtn.classList.toggle('active', insertOpen || this.openTray === 'insert'
+        this.insertBtn.classList.toggle('active', this.state.tool === 'shape'
+            || this.state.tool === 'connector'
+            || insertOpen || this.openTray === 'insert'
             || this.openTray === 'shapes' || this.openTray === 'connectors');
         this.cloudBtn.classList.toggle('active', this.activeFuturePopover === 'cloud');
         this._syncPressed();
+    }
+
+    setLassoSelectionCount(count) {
+        this._lassoSelectionCount = Math.max(0, Number(count) || 0);
+        if (!this.lassoActionBtns) return;
+        for (const btn of this.lassoActionBtns) {
+            btn.disabled = this._lassoSelectionCount === 0;
+        }
+    }
+
+    setConnectorState({ mode = null, pendingPair = null, openConnectors = null, activateTool = false } = {}) {
+        if (mode === 'new' || mode === 'link') {
+            this.state.connectorMode = mode;
+        }
+        this.connectorPendingLabel = pendingPair ? pendingPair.label : null;
+        this.connectorPendingPairId = pendingPair ? pendingPair.pairId : null;
+        if (Array.isArray(openConnectors)) {
+            this.connectorOpenPairs = openConnectors;
+        }
+        if (activateTool) {
+            this.state.tool = 'connector';
+            if (pendingPair && (pendingPair.series === 'alpha' || pendingPair.series === 'num')) {
+                this.state.connectorSeries = pendingPair.series;
+            }
+            this._closePopovers();
+            this.render();
+            if (this.onToolChange) this.onToolChange(this.state);
+            return;
+        }
+        this.render();
     }
 
     /** Trigger element a popover should be anchored to. */
@@ -174,8 +218,10 @@ export class BoardToolbar {
 
     selectTool(tool, openTray = false) {
         this.state.tool = tool;
-        if (openTray && (tool === 'pen' || tool === 'eraser' || tool === 'highlighter')) {
+        if (openTray && (tool === 'pen' || tool === 'eraser' || tool === 'highlighter' || tool === 'lasso')) {
             this.openTray = tool;
+        } else if (openTray && tool === 'connector') {
+            this.openTray = 'connectors';
         } else {
             this.openTray = null;
         }
@@ -239,8 +285,64 @@ export class BoardToolbar {
         this.sideTabEl.setAttribute('aria-label', this.sideTabEl.title);
 
         this.railEl.setAttribute('aria-orientation', mode === 'rail' ? 'vertical' : 'horizontal');
+        this._markLineStarts();
         this._placeTray();
         this._placePopover();
+    }
+
+    /**
+     * In the wrapped bar, hide the separator of a group (or a nav divider) that
+     * starts or ends a row: a separator belongs between two things on the same row.
+     */
+    _markLineStarts() {
+        if (!this.chromeEl) return;
+        const groups = Array.from(this.railEl.children).filter((el) => el.classList.contains('board-rail-group'));
+        const dividers = Array.from(this.navEl.querySelectorAll('.board-dock-sep'));
+        for (const el of [...groups, ...dividers]) {
+            el.classList.remove('is-line-start', 'is-line-edge');
+        }
+        this.chromeEl.classList.remove('is-wrapped');
+        if (this.layout !== 'bar') {
+            this.hostEl.style.removeProperty('--board-bar-h');
+            return;
+        }
+
+        // Too wide for one row? Then undo/redo moves up next to the navigation, and tools,
+        // colours and the system buttons fill the next row: two rows instead of three.
+        const parts = [this.navEl, ...groups].filter((el) => el.offsetParent !== null);
+        const cs = getComputedStyle(this.chromeEl);
+        const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2;
+        const maxW = Math.min(window.innerWidth - 24, parseFloat(cs.maxWidth) || Infinity) - pad;
+        const oneRow = parts.reduce((sum, el) => {
+            const m = getComputedStyle(el);
+            return sum + el.getBoundingClientRect().width + parseFloat(m.marginLeft) + parseFloat(m.marginRight) + 2;
+        }, 0);
+        this.chromeEl.classList.toggle('is-wrapped', oneRow > maxW);
+        // Side sheets stop above the bar, however many rows it has.
+        this.hostEl.style.setProperty('--board-bar-h', `${Math.ceil(this.chromeEl.getBoundingClientRect().height)}px`);
+
+        // Everything that sits in the bar's rows, with its box.
+        const items = [this.navEl, ...groups]
+            .filter((el) => el.offsetParent !== null)
+            .map((el) => ({ el, r: el.getBoundingClientRect() }));
+        const sameRow = (a, b) => Math.abs(a.top - b.top) < 4 || (a.top < b.bottom - 4 && b.top < a.bottom - 4);
+        for (const it of items) {
+            if (!it.el.classList.contains('board-rail-group')) continue;
+            const hasLeftNeighbour = items.some((o) => o !== it && sameRow(o.r, it.r) && o.r.right <= it.r.left + 1);
+            if (!hasLeftNeighbour) it.el.classList.add('is-line-start');
+        }
+
+        // Nav dividers: hidden when first or last on their row inside the nav.
+        const navKids = Array.from(this.navEl.children)
+            .filter((el) => el.offsetParent !== null)
+            .map((el) => ({ el, r: el.getBoundingClientRect() }));
+        for (const d of navKids) {
+            if (!d.el.classList.contains('board-dock-sep')) continue;
+            const row = navKids.filter((o) => o !== d && !o.el.classList.contains('board-dock-sep') && sameRow(o.r, d.r));
+            const left = row.some((o) => o.r.right <= d.r.left + 1);
+            const right = row.some((o) => o.r.left >= d.r.right - 1);
+            if (!left || !right) d.el.classList.add('is-line-edge');
+        }
     }
 
     /**
@@ -343,7 +445,7 @@ export class BoardToolbar {
         });
         this.minimalBtn = this._makeToolBtn('', MINIMIZE_ICON, () => this.setMinimal(!this.minimal));
         this.minimalBtn.classList.add('board-minimal-btn');
-        this.optionsBtn.classList.add('board-full-only');
+        // Options stay in the compact bar too: settings must be reachable in every layout.
         const sysGroup = this._makeGroup('is-sys', this.minimalBtn, this.optionsBtn);
 
         // Drawing tools
@@ -356,9 +458,9 @@ export class BoardToolbar {
         this.eraserBtn = this._makeToolBtn('Gomma (E)', BoardIcons.eraser, () => {
             this._activateToolWithTray('eraser');
         });
-        this.lassoBtn = this._makeToolBtn('Selezione lazo (in arrivo)', BoardIcons.lasso, () => {
-            this._toggleTray('lasso');
-        }, true);
+        this.lassoBtn = this._makeToolBtn('Selezione lazo', BoardIcons.lasso, () => {
+            this._activateToolWithTray('lasso');
+        });
         this.laserBtn = this._makeToolBtn('Puntatore laser (L)', BoardIcons.laser, () => {
             this.state.tool = 'laser';
             this.openTray = null;
@@ -417,6 +519,14 @@ export class BoardToolbar {
 
         this.chromeEl.append(this.navEl, this.railEl, this.sideTabEl);
         this.hostEl.appendChild(this.chromeEl);
+        // Rows change when the bar wraps differently (resize, minimal mode, UI size).
+        if (typeof ResizeObserver === 'function') {
+            let raf = 0;
+            new ResizeObserver(() => {
+                cancelAnimationFrame(raf);
+                raf = requestAnimationFrame(() => this._markLineStarts());
+            }).observe(this.chromeEl);
+        }
 
         // ---------- Trays (fixed, anchored to their trigger) ----------
         this.penTray = this._buildPenTray();
@@ -538,25 +648,33 @@ export class BoardToolbar {
         tray.className = 'board-tray board-insert-tray';
         tray.hidden = true;
         const items = [
-            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes },
-            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector },
-            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes },
-            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram },
-            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise },
+            { id: 'shapes', label: 'Forme', icon: BoardIcons.shapes, stub: false },
+            { id: 'connectors', label: 'Connettori', icon: BoardIcons.connector, stub: false },
+            { id: 'plot', label: 'Assi e grafici', icon: BoardIcons.axes, stub: false },
+            { id: 'diagrams', label: 'Diagrammi', icon: BoardIcons.diagram, stub: false },
+            { id: 'exercises', label: 'Esercizio', icon: BoardIcons.exercise, stub: false },
         ];
         const grid = document.createElement('div');
         grid.className = 'board-insert-grid';
         for (const it of items) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'board-insert-item is-stub';
-            btn.title = `${it.label} (in arrivo)`;
+            btn.className = it.stub ? 'board-insert-item is-stub' : 'board-insert-item';
+            btn.title = it.stub ? `${it.label} (in arrivo)` : it.label;
             btn.innerHTML = `${it.icon}<span>${it.label}</span>`;
             btn.addEventListener('click', () => {
-                if (it.id === 'shapes' || it.id === 'connectors') {
-                    this.openTray = it.id;
+                if (it.id === 'shapes') {
+                    this.state.tool = 'shape';
+                    this.openTray = 'shapes';
                     this._closePopovers();
                     this.render();
+                    if (this.onToolChange) this.onToolChange(this.state);
+                } else if (it.id === 'connectors') {
+                    this.state.tool = 'connector';
+                    this.openTray = 'connectors';
+                    this._closePopovers();
+                    this.render();
+                    if (this.onToolChange) this.onToolChange(this.state);
                 } else {
                     this.openTray = null;
                     this.render();
@@ -767,73 +885,174 @@ export class BoardToolbar {
     }
 
     /**
-     * Phase 2 stub tray: Lasso / Rectangle selection & actions.
+     * Lasso / Rectangle selection & actions tray.
      */
     _buildLassoTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-stack-tray board-lasso-tray';
         tray.hidden = true;
-        tray.innerHTML = `
-            <div class="board-stack-section">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Lazo</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Rettangolo</button>
-            </div>
-            <div class="board-stack-section">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Duplica</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Ricolora</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Elimina</button>
-            </div>
-        `;
+
+        const modeWrap = document.createElement('div');
+        modeWrap.className = 'board-stack-section';
+        this.lassoModeBtns = [];
+        for (const m of [
+            { id: 'lasso', label: 'Lazo', title: 'Selezione a mano libera' },
+            { id: 'rect', label: 'Rettangolo', title: 'Selezione rettangolare' },
+        ]) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn board-tray-text-btn';
+            btn.textContent = m.label;
+            btn.title = m.title;
+            btn.dataset.lassoMode = m.id;
+            btn.addEventListener('click', () => {
+                this.state.lassoMode = m.id;
+                this.state.tool = 'lasso';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+            this.lassoModeBtns.push(btn);
+            modeWrap.appendChild(btn);
+        }
+
+        const actionWrap = document.createElement('div');
+        actionWrap.className = 'board-stack-section';
+        this.lassoActionBtns = [];
+        for (const act of [
+            { id: 'duplicate', label: 'Duplica', title: 'Duplica selezione' },
+            { id: 'recolor', label: 'Ricolora', title: 'Ricolora con il colore penna corrente' },
+            { id: 'delete', label: 'Elimina', title: 'Elimina selezione' },
+        ]) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn board-tray-text-btn';
+            btn.textContent = act.label;
+            btn.title = act.title;
+            btn.dataset.lassoAction = act.id;
+            btn.disabled = this._lassoSelectionCount === 0;
+            btn.addEventListener('click', () => {
+                if (this.onLassoAction) this.onLassoAction(act.id, this.state);
+            });
+            this.lassoActionBtns.push(btn);
+            actionWrap.appendChild(btn);
+        }
+
+        tray.append(modeWrap, actionWrap);
         return tray;
     }
 
     /**
-     * Phase 2 stub tray: Basic geometry shapes (no hold-to-snap).
+     * Basic geometry shapes tray (no hold-to-snap).
      */
     _buildShapesTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-shapes-tray';
         tray.hidden = true;
-        tray.innerHTML = `
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn is-stub" title="Linea (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Vettore / Freccia (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="9,4 16,4 16,11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Rettangolo (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><rect x="3" y="4.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Cerchio / Ellisse (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><circle cx="10" cy="10" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </button>
-                <button type="button" class="board-tray-btn is-stub" title="Triangolo (in arrivo)">
-                    <svg viewBox="0 0 20 20" class="board-shape-svg"><polygon points="10,3.5 17,16.5 3,16.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-                </button>
-            </div>
-        `;
+        const group = document.createElement('div');
+        group.className = 'board-tray-group';
+        const shapes = [
+            {
+                id: 'line',
+                title: 'Linea',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+            },
+            {
+                id: 'arrow',
+                title: 'Vettore / Freccia',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><line x1="3" y1="17" x2="16" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="9,4 16,4 16,11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+            },
+            {
+                id: 'rect',
+                title: 'Rettangolo',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><rect x="3" y="4.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+            },
+            {
+                id: 'ellipse',
+                title: 'Cerchio / Ellisse',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><circle cx="10" cy="10" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+            },
+            {
+                id: 'triangle',
+                title: 'Triangolo',
+                svg: '<svg viewBox="0 0 20 20" class="board-shape-svg"><polygon points="10,3.5 17,16.5 3,16.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+            },
+        ];
+
+        this.shapeBtns = [];
+        for (const sh of shapes) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-tray-btn';
+            btn.title = sh.title;
+            btn.setAttribute('aria-label', sh.title);
+            btn.dataset.shapeKind = sh.id;
+            btn.innerHTML = sh.svg;
+            btn.addEventListener('click', () => {
+                this.state.shapeKind = sh.id;
+                this.state.tool = 'shape';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+            this.shapeBtns.push(btn);
+            group.appendChild(btn);
+        }
+
+        tray.appendChild(group);
         return tray;
     }
 
     /**
-     * Phase 2 stub tray: Letter / Number explanation connectors.
+     * Letter / Number explanation connectors tray.
      */
     _buildConnectorsTray() {
         const tray = document.createElement('div');
-        tray.className = 'board-tray board-connectors-tray';
+        tray.className = 'board-tray board-stack-tray board-connectors-tray';
         tray.hidden = true;
         tray.innerHTML = `
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica lettere (A, B, C…)">A, B…</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub" title="Codifica numeri (1, 2, 3…)">1, 2…</button>
+            <div class="board-stack-section">
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="alpha" title="Etichette con lettere">A B C</button>
+                <button type="button" class="board-tray-btn board-tray-text-btn" data-conn-series="num" title="Etichette con numeri">1 2 3</button>
             </div>
-            <span class="board-dock-sep"></span>
-            <div class="board-tray-group">
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Nuovo</button>
-                <button type="button" class="board-tray-btn board-tray-text-btn is-stub">Collega</button>
+            <div class="board-stack-section">
+                <button type="button" class="board-tray-btn board-tray-text-btn board-tray-icon-text" data-conn-mode="new" title="Piazza il primo segnaposto di una nuova coppia">${BoardIcons.add}<span>Nuova</span></button>
+                <button type="button" class="board-tray-btn board-tray-text-btn board-tray-icon-text" data-conn-mode="link" title="Piazza il gemello di un segnaposto aperto">${BoardIcons.link}<span>Collega</span></button>
+            </div>
+            <div class="board-conn-hint" data-conn-hint></div>
+            <div class="board-conn-open" hidden>
+                <div class="board-conn-open-label">Da collegare</div>
+                <div class="board-conn-open-list"></div>
             </div>
         `;
+
+        this.connSeriesBtns = Array.from(tray.querySelectorAll('[data-conn-series]'));
+        for (const btn of this.connSeriesBtns) {
+            btn.addEventListener('click', () => {
+                this.state.connectorSeries = btn.dataset.connSeries === 'num' ? 'num' : 'alpha';
+                this.state.tool = 'connector';
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+        }
+
+        this.connModeBtns = Array.from(tray.querySelectorAll('[data-conn-mode]'));
+        for (const btn of this.connModeBtns) {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.connMode === 'link' ? 'link' : 'new';
+                this.state.connectorMode = mode;
+                this.state.tool = 'connector';
+                if (mode === 'new') {
+                    this.connectorPendingLabel = null;
+                    this.connectorPendingPairId = null;
+                }
+                this.render();
+                if (this.onToolChange) this.onToolChange(this.state);
+            });
+        }
+
+        this.connLinkBtn = tray.querySelector('[data-conn-mode="link"]');
+        this.connHintEl = tray.querySelector('[data-conn-hint]');
+        this.connOpenWrap = tray.querySelector('.board-conn-open');
+        this.connOpenList = tray.querySelector('.board-conn-open-list');
         return tray;
     }
 
@@ -843,7 +1062,7 @@ export class BoardToolbar {
             if (!open && !el.hidden) clearFloating(el);
             el.hidden = !open;
         }
-        this.lassoBtn.classList.toggle('active', this.openTray === 'lasso');
+        this.lassoBtn.classList.toggle('active', this.state.tool === 'lasso' || this.openTray === 'lasso');
         this.pinBtn.classList.toggle('active', this.openTray === 'pin');
         this.setActiveFuturePopover(this.activeFuturePopover);
         this._placeTray();
@@ -899,6 +1118,66 @@ export class BoardToolbar {
         }
         for (const btn of this.hlSizeBtns) {
             btn.classList.toggle('active', Number(btn.dataset.hlWidth) === this.state.highlighterWidth);
+        }
+
+        for (const btn of this.lassoModeBtns) {
+            const active = btn.dataset.lassoMode === this.state.lassoMode;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        }
+        for (const btn of this.shapeBtns) {
+            const active = btn.dataset.shapeKind === this.state.shapeKind;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        }
+        if (this.connSeriesBtns) {
+            for (const btn of this.connSeriesBtns) {
+                btn.classList.toggle('active', btn.dataset.connSeries === this.state.connectorSeries);
+            }
+        }
+        if (this.connModeBtns) {
+            for (const btn of this.connModeBtns) {
+                btn.classList.toggle('active', btn.dataset.connMode === this.state.connectorMode);
+            }
+        }
+        if (this.connLinkBtn) {
+            const openPairs = this.connectorOpenPairs || [];
+            this.connLinkBtn.disabled = openPairs.length === 0;
+        }
+        if (this.connHintEl) {
+            // One short line saying what the next tap on the board does.
+            const series = this.state.connectorSeries === 'num' ? '1, 2…' : 'A, B…';
+            this.connHintEl.textContent = this.state.connectorMode === 'link'
+                ? (this.connectorPendingLabel
+                    ? `Tocca per il gemello di ${this.connectorPendingLabel}`
+                    : 'Scegli quale collegare')
+                : `Tocca per una nuova coppia (${series})`;
+        }
+        if (this.connOpenWrap) {
+            const openPairs = this.connectorOpenPairs || [];
+            this.connOpenList.innerHTML = '';
+            this.connOpenWrap.hidden = openPairs.length === 0;
+            for (const pair of openPairs) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'board-conn-open-row';
+                if (this.connectorPendingPairId === pair.pairId && this.state.connectorMode === 'link') {
+                    btn.classList.add('active');
+                }
+                btn.style.setProperty('--conn-color', resolveInkColor(pair.color, theme));
+                const badge = document.createElement('span');
+                badge.className = 'board-conn-open-badge';
+                badge.textContent = pair.label;
+                const page = document.createElement('span');
+                page.className = 'board-conn-open-page';
+                page.textContent = `pag. ${pair.pageIndex + 1}`;
+                btn.append(badge, page);
+                btn.title = `Collega a ${pair.label} (pagina ${pair.pageIndex + 1})`;
+                btn.addEventListener('click', () => {
+                    if (this.onSelectOpenConnector) this.onSelectOpenConnector(pair);
+                });
+                this.connOpenList.appendChild(btn);
+            }
         }
 
         this._renderTrays();
