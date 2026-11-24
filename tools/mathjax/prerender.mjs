@@ -9,8 +9,8 @@
  * _layouts/Post.html) would draw them: the same TeX packages (the component's defaults plus the
  * extensions it would load on demand), a global font cache, and the hidden MathML that screen
  * readers read. The page is marked with data-mathjax="prerendered" on <html>; Post.html then
- * loads MathJax only where something still typesets in the browser (plot, physics and sets
- * labels, the playground). Pages without maths are not touched.
+ * does not load MathJax (the plot, physics and sets engines load it when a label needs TeX:
+ * renderers/mathjax-bridge.js). Pages without maths are not touched.
  *
  * --check: typeset but do not write; report what would change.
  */

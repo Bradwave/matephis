@@ -3,7 +3,8 @@
  *
  * On page load the engines do not build every block at once (a heavy page
  * would freeze the phone for seconds). Each block gets a placeholder of about
- * its final size right away. Once MathJax has typeset the page:
+ * its final size right away. Blocks whose labels need TeX wait for MathJax
+ * (loaded on demand: mathjax-bridge.js); then:
  *   - the blocks on screen (and the one a link points to) are built first;
  *   - then all the others, top to bottom, in idle time (requestIdleCallback),
  *     so the page is complete after a few seconds without any scrolling;
@@ -24,7 +25,7 @@
  * together, in document order, so they start from the same values as when
  * every block was built at load.
  */
-import { whenMathJaxReady } from '../renderers/mathjax-bridge.js';
+import { loadMathJax, sourceHasTeX } from '../renderers/mathjax-bridge.js';
 
 const VERSION = 1;
 /** Blocks this far above and below the screen go to the front of the queue (1.5 screens). */
@@ -95,6 +96,7 @@ function byDocumentOrder(a, b) {
  * @property {() => number} [measure] - reads the width the block will have (layout read only)
  * @property {(width: number) => void} build - builds the block (no layout reads needed)
  * @property {string} [group] - jobs of a group are built together
+ * @property {boolean} [math] - its labels need TeX: built once MathJax is ready
  */
 export function createScheduler() {
     const pending = new Set();
@@ -251,8 +253,12 @@ export function createScheduler() {
         if (running || !pending.size) return;
         running = true;
         try {
-            if (!mathReady) mathReady = new Promise(resolve => whenMathJaxReady(resolve));
-            await mathReady;
+            // Blocks with TeX are drawn with MathJax from the start (no plain labels first). The
+            // page's MathJax, if it loads one, is waited for too; without either, nothing waits
+            if (!mathReady && (document.getElementById('MathJax-script') || [...pending].some(j => j.math))) {
+                mathReady = loadMathJax();
+            }
+            if (mathReady) await mathReady;
             while (pending.size) {
                 // Blocks on screen or near it: now, with a yield after each batch
                 const urgent = nextUnits(true);
@@ -288,6 +294,8 @@ export function createScheduler() {
         /** Adds a job; it is built when its placeholder comes near the screen. */
         add(job) {
             pending.add(job);
+            // Start loading MathJax now, while the page settles
+            if (job.math) loadMathJax();
             job.el.__matephisJob = job;
             const target = hashTarget();
             observer().observe(job.el);
@@ -381,6 +389,7 @@ export function slidersHeight(cfg) {
  * @param {(cfg: object) => HTMLElement} p.placeholder
  * @param {(cfg: object) => string|null} [p.group]
  * @param {(container: HTMLElement, e: Error) => void} p.fail
+ * @param {(source: string) => boolean} [p.needsMath] - does the block draw TeX? (default: "$" or "\\" in its JSON)
  */
 export function placeBlock(container, source, p) {
     /** Waits for idle time: requestIdleCallback where there is one (not Safari), else a short timer. */
@@ -418,6 +427,7 @@ const now = () => {
     lazyScheduler().add({
         el: container,
         group: p.group ? p.group(cfg) : null,
+        math: p.needsMath ? p.needsMath(source) : sourceHasTeX(source),
         measure: () => (stub ? stub.clientWidth : 0),
         build: (width) => {
             try {
