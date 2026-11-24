@@ -8,10 +8,13 @@ import { MatephisPlot } from './core/plot.js';
 import { MatephisPlotGroup } from './core/group.js';
 import { whenMathJaxReady } from './renderers/mathjax-bridge.js';
 import { lazyEnabled } from './core/lazy-init.js';
+import { SHARED_MODULES } from './shared.js';
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     window.MatephisPlot = MatephisPlot;
     window.MatephisPlotGroup = MatephisPlotGroup;
+    // For the physics and sets bundles, which import these instead of carrying copies (shared.js)
+    window.MatephisPlotModules = SHARED_MODULES;
 
     // Hosts that render content themselves (Obsidian) set this before loading
     if (!window.MATEPHIS_NO_AUTO_INIT) {
