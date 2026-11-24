@@ -14,11 +14,13 @@
     "dev:sets": "esbuild assets/js/matephis-sets-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisSetsBundle --footer:js=\"if(typeof module==='object'&&module.exports){module.exports=MatephisSetsBundle.default;}\" --minify --sourcemap --outfile=assets/js/matephis-sets.js --watch",
     "dev:board": "esbuild assets/js/matephis-board-src/index.js --bundle --target=es2019 --loader:.svg=text --format=iife --global-name=MatephisBoardBundle --minify --sourcemap --outfile=assets/js/matephis-board.js --watch",
     "dev": "concurrently -k -n \"PLOT,PHYSICS,SETS,BOARD,JEKYLL\" -c \"cyan,green,yellow,blue,magenta\" \"npm run dev:js\" \"npm run dev:physics\" \"npm run dev:sets\" \"npm run dev:board\" \"bundle exec jekyll serve\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prerender:math": "node tools/mathjax/prerender.mjs _site"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "esbuild": "^0.21.5",
+    "mathjax-full": "3.2.2",
     "vitest": "^1.6.0"
   }
 }
