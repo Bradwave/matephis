@@ -7,6 +7,7 @@
  */
 
 import { BoardIcons } from './icons.js';
+import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 import {
     hydrateEmbeddedEngines,
     shortNoteTitle,
@@ -1112,7 +1113,9 @@ export class FutureMenus {
                 return;
             }
             metaEl.textContent = [shortNoteTitle(st.parsed.noteTitle), it.section, it.subsection, it.label].filter(Boolean).join(' · ');
-            bodyEl.innerHTML = it.html;
+            bodyEl.replaceChildren();
+            const safe = sanitizeHtmlToFragment(it.html || '');
+            if (safe) bodyEl.appendChild(safe);
             previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
             bodyEl.scrollTop = 0;
             previewEl.scrollTop = 0;
