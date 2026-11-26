@@ -3,6 +3,7 @@
  */
 
 import { HistoryStack } from './ink/history.js';
+import { MAX_SCALE, MIN_SCALE, clamp } from './ink/geometry.js';
 import { InkSurface } from './ink/surface.js';
 import { InputController } from './ink/input.js';
 import { LassoController } from './ink/lasso.js';
@@ -253,6 +254,9 @@ async function initMatephisBoard() {
             if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide' || key === 'toolbarMinimal') {
                 if (toolbar) toolbar.relayout();
             }
+            if (key === 'zoomLock' && toolbar) {
+                toolbar.updateZoom(scene.camera);
+            }
         },
         onPageBackgroundChange: () => {
             surface.requestCommittedRedraw();
@@ -370,8 +374,10 @@ async function initMatephisBoard() {
             scene.settings[key] = value;
             storage.saveSettings(scene.settings);
             optionsMenu.syncFromState();
+            if (key === 'zoomLock') toolbar.updateZoom(scene.camera);
         },
         onToolChange: (toolState) => {
+            root.classList.toggle('is-tool-pan', toolState.tool === 'pan');
             if (toolState.tool !== 'lasso' && lasso) lasso.clearSelection();
             if (toolState.tool !== 'connector' && connectorManager) connectorManager.clearSelection();
             if (toolState.tool === 'connector' && toolState.connectorMode === 'new' && connectorManager) {
@@ -455,6 +461,17 @@ async function initMatephisBoard() {
                 x: centerWx - (surface.width / baseScale) * 0.5,
                 y: centerWy - (surface.height / baseScale) * 0.5,
             }, 180);
+        },
+        onZoomStep: (dir) => {
+            const factor = dir > 0 ? 1.25 : 1 / 1.25;
+            const targetScale = clamp(scene.camera.scale * factor, MIN_SCALE, MAX_SCALE);
+            const centerWx = scene.camera.x + (surface.width / scene.camera.scale) * 0.5;
+            const centerWy = scene.camera.y + (surface.height / scene.camera.scale) * 0.5;
+            surface.animateCameraTo({
+                scale: targetScale,
+                x: centerWx - (surface.width / targetScale) * 0.5,
+                y: centerWy - (surface.height / targetScale) * 0.5,
+            }, 140);
         },
         onPrevPage: () => switchToPage(scene.currentPageIndex - 1),
         onNextPage: () => switchToPage(scene.currentPageIndex + 1),
@@ -598,6 +615,7 @@ async function initMatephisBoard() {
             case 'p': toolbar.selectTool('pen'); break;
             case 'e': toolbar.selectTool('eraser', true); break;
             case 'h': toolbar.selectTool('highlighter'); break;
+            case 'm': toolbar.selectTool('pan'); break;
             case 'l': toolbar.selectTool('laser'); break;
             case 'o':
                 surface.toggleOverview();

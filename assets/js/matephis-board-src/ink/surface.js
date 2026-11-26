@@ -322,6 +322,7 @@ export class InkSurface {
         this.activeShape = null;
         this.lassoOverlay = null; // { selectedStrokes, selectionBBox, marquee, drag }
         this.eraserCursor = null; // { x, y, radius } in world coords
+        this.zoomIndicator = null; // { sx, sy, pct, snapped } while touch pinch-zoom is active
         this.laserPoints = [];    // [{ x, y, t }]
         this.laserRaf = null;
 
@@ -386,6 +387,7 @@ export class InkSurface {
         this.height = h;
         this.dpr = dpr;
 
+        this._activeEmpty = true; // resizing clears the canvases
         for (const c of [this.bgCanvas, this.committedCanvas, this.activeCanvas]) {
             c.width = Math.round(w * dpr);
             c.height = Math.round(h * dpr);
@@ -842,6 +844,13 @@ export class InkSurface {
         const cam = this.scene.camera;
         const dpr = this.dpr;
 
+        // Pan and zoom call this on every finger move: when the layer is already empty and
+        // nothing is to be drawn, skip clearing the whole (4K on the board) canvas again.
+        const hasContent = Boolean(this.activeStroke || this.activeShape || this.lassoOverlay
+            || this.eraserCursor || this.laserPoints.length > 0 || this.zoomIndicator);
+        if (!hasContent && this._activeEmpty) return;
+        this._activeEmpty = !hasContent;
+
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, this.width, this.height);
@@ -884,6 +893,44 @@ export class InkSurface {
             this._drawLaserTrail(ctx, cam);
         }
 
+        if (this.zoomIndicator) {
+            this._drawZoomIndicator(ctx, this.zoomIndicator);
+        }
+
+        ctx.restore();
+    }
+
+    _drawZoomIndicator(ctx, ind) {
+        const isDark = this.theme === 'dark';
+        const label = `${ind.pct}%`;
+        ctx.save();
+        ctx.font = '600 13px "Space Mono", monospace';
+        const textW = ctx.measureText(label).width;
+        const padX = 10;
+        const w = Math.max(54, Math.ceil(textW + padX * 2));
+        const h = 28;
+        const cx = clamp(ind.sx, w * 0.5 + 10, Math.max(w * 0.5 + 10, this.width - w * 0.5 - 10));
+        const cy = clamp(ind.sy - 52, h * 0.5 + 10, Math.max(h * 0.5 + 10, this.height - h * 0.5 - 10));
+        const x = Math.round(cx - w * 0.5);
+        const y = Math.round(cy - h * 0.5);
+
+        if (ind.snapped) {
+            ctx.fillStyle = isDark ? '#ffffff' : '#111111';
+            ctx.strokeStyle = ctx.fillStyle;
+        } else {
+            ctx.fillStyle = isDark ? 'rgba(24, 24, 24, 0.92)' : 'rgba(255, 255, 255, 0.94)';
+            ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.24)';
+        }
+        ctx.lineWidth = 1;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+        ctx.fillStyle = ind.snapped
+            ? (isDark ? '#121212' : '#ffffff')
+            : (isDark ? '#f5f5f5' : '#111111');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + w * 0.5, y + h * 0.5 + 0.5);
         ctx.restore();
     }
 
@@ -1067,6 +1114,12 @@ export class InkSurface {
     setEraserCursor(cursor) {
         this.eraserCursor = cursor;
         this.renderActiveNow();
+    }
+
+    setZoomIndicator(indicator, redraw = true) {
+        if (!indicator && !this.zoomIndicator) return;
+        this.zoomIndicator = indicator;
+        if (redraw) this.renderActiveNow();
     }
 
     /**

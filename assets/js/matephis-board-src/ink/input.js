@@ -27,9 +27,35 @@ const TAP_MAX_MOVE_PX = 14;
 const TAP_DOT_MS = 250;
 // A press that closed a menu becomes a stroke once it moves this far; less is a tap.
 const DISMISS_TAP_MOVE_PX = 6;
-// Two-finger gestures pan only, until the fingers spread or close by this fraction;
-// then they zoom too. Keeps jittery smartboard touch from zooming during a pan.
-const PINCH_ZOOM_LOCK = 0.1;
+// Two-finger gesture classifier (touch / IR smartboards; trackpad wheel is unaffected):
+// - Wait briefly on touchdown so IR contact bloom does not corrupt the starting spread.
+// - Require both an absolute px floor and a relative spread change (and non-parallel motion)
+//   to unlock zoom; otherwise once the midpoint clearly translates, hard-lock to pan-only.
+const PINCH_SETTLE_MS = 45;
+const PINCH_SETTLE_MOVE_PX = 12;
+const PINCH_PAN_COMMIT_PX = 28;
+const PINCH_ZOOM_MIN_PX = 30;
+const PINCH_ZOOM_MIN_REL = 0.16;
+// When 1-finger pan is already active (Hand tool or penOnly), 2 fingers can zoom more eagerly.
+const PINCH_EAGER_MIN_PX = 14;
+const PINCH_EAGER_MIN_REL = 0.08;
+// Low-pass smoothing on finger spread once zooming (tames IR quantization steps).
+const PINCH_DIST_SMOOTH = 0.45;
+// Pan or zoom is decided on the median of the last few spread readings: IR boards send
+// single-frame outliers that would otherwise unlock zoom in the middle of a pan.
+const PINCH_SPREAD_MEDIAN_N = 5;
+// Keep the gesture alive briefly if an IR frame drops one finger mid-pan due to axis occlusion.
+const PINCH_DROP_GRACE_MS = 120;
+// Magnetic detent at 100% writing scale (baseScale) when pinching back toward 100%.
+const ZOOM_DETENT_ENTER = 0.045;
+const ZOOM_DETENT_EXIT = 0.075;
+const ZOOM_DETENT_ARM = 0.08;
+
+function median(values) {
+    const v = values.slice().sort((a, b) => a - b);
+    const m = v.length >> 1;
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) * 0.5;
+}
 
 export class InputController {
     constructor(surface, {
@@ -74,6 +100,8 @@ export class InputController {
 
         this.panAnchor = null;
         this.pinchAnchor = null;
+        this.pinchDropTimer = null;
+        this.lastPinchIntent = null;
 
         this._bindEvents();
     }
@@ -208,6 +236,14 @@ export class InputController {
 
         // Transition to 2-finger pan/pinch-zoom
         if (this.pointers.size === 2 && !this.palmActive) {
+            // If an IR board dropped one finger briefly mid-gesture, resume cleanly without
+            // ending fastPan or forgetting a committed pan-lock.
+            const resumedIntent = this.pinchDropTimer ? this.lastPinchIntent : null;
+            if (this.pinchDropTimer) {
+                clearTimeout(this.pinchDropTimer);
+                this.pinchDropTimer = null;
+                this.lastPinchIntent = null;
+            }
             // Cancel accidental micro-dot if 2nd finger landed right after 1st
             const sinceFirst = performance.now() - this.strokeStartTime;
             let committedDot = false;
@@ -223,9 +259,11 @@ export class InputController {
             } else if (this.mode === 'lasso' && this.lasso) {
                 this.lasso.cancelInteraction();
                 this.mode = 'idle';
+            } else if (this.mode === 'pan') {
+                this.panAnchor = null;
             }
-            this._startPinch();
-            this._startTapCandidate(committedDot);
+            this._startPinch(resumedIntent);
+            if (!resumedIntent) this._startTapCandidate(committedDot);
             this._emitTelemetry(e, 1);
             return;
         }
@@ -233,6 +271,12 @@ export class InputController {
         if (this.pointers.size > 2) {
             this.tapCandidate = null;
             return;
+        }
+
+        // If a previous 2-finger gesture was waiting on an IR finger-drop grace timer and a
+        // fresh single pointer starts after all fingers lifted, end the old gesture cleanly.
+        if (this.pinchDropTimer) {
+            this._finishPinchDrop();
         }
 
         // Space + drag or middle-mouse button pans on desktop
@@ -250,6 +294,13 @@ export class InputController {
         }
 
         const toolState = this.getToolState();
+
+        // Dedicated Hand / Pan tool: 1 pointer always pans cleanly (avoids IR multi-touch issues)
+        if (toolState.tool === 'pan') {
+            this._startPan(e.pointerId, sx, sy);
+            this._emitTelemetry(e, 1);
+            return;
+        }
 
         // Hardware stylus eraser button (button === 5 or buttons === 32)
         if (e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32))) {
@@ -371,22 +422,77 @@ export class InputController {
         };
     }
 
-    _startPinch() {
-        const pts = Array.from(this.pointers.values());
-        if (pts.length < 2) return;
+    _startPinch(preservedIntent = null) {
+        const entries = Array.from(this.pointers.entries());
+        if (entries.length < 2) return;
         this.surface.beginGesture();
         this.mode = 'pinch';
         this.activePointerId = null;
-        const midX = (pts[0].sx + pts[1].sx) * 0.5;
-        const midY = (pts[0].sy + pts[1].sy) * 0.5;
-        const dist = Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy);
+
+        const [id0, p0] = entries[0];
+        const [id1, p1] = entries[1];
+        const midX = (p0.sx + p1.sx) * 0.5;
+        const midY = (p0.sy + p1.sy) * 0.5;
+        const dist = Math.max(16, Math.hypot(p1.sx - p0.sx, p1.sy - p0.sy));
+        const toolState = this.getToolState ? this.getToolState() : {};
+        const zoomLocked = Boolean(this.scene.settings.zoomLock);
+        const eagerZoom = !zoomLocked && (toolState.tool === 'pan' || Boolean(this.scene.settings.penOnly));
+
+        let intent = 'undecided';
+        if (zoomLocked || preservedIntent === 'pan') {
+            intent = 'pan';
+        } else if (preservedIntent === 'zoom') {
+            intent = 'zoom';
+        }
+
+        const base = this.scene.camera.baseScale || 1;
         this.pinchAnchor = {
-            midX,
-            midY,
-            dist: Math.max(10, dist),
+            id0,
+            id1,
+            t0: performance.now(),
+            settled: Boolean(preservedIntent),
+            p0Start: { sx: p0.sx, sy: p0.sy },
+            p1Start: { sx: p1.sx, sy: p1.sy },
+            midStartX: midX,
+            midStartY: midY,
+            startDist: dist,
             worldMid: screenToWorld(midX, midY, this.scene.camera),
             startScale: this.scene.camera.scale,
+            intent,
+            eagerZoom,
+            zoomStartDist: dist,
+            zoomStartScale: this.scene.camera.scale,
+            zoomWorldMid: screenToWorld(midX, midY, this.scene.camera),
+            smoothDist: dist,
+            spreadSamples: [dist],
+            passedAwayFromBase: Math.abs(this.scene.camera.scale / base - 1) > 0.06,
+            snappedToBase: false,
         };
+        if (intent !== 'zoom' && this.surface.setZoomIndicator) {
+            this.surface.setZoomIndicator(null);
+        }
+    }
+
+    _finishPinchDrop() {
+        if (this.pinchDropTimer) {
+            clearTimeout(this.pinchDropTimer);
+            this.pinchDropTimer = null;
+        }
+        this.lastPinchIntent = null;
+        this.pinchAnchor = null;
+        if (this.mode === 'pinch-cooldown' || this.mode === 'pinch') {
+            this.mode = 'idle';
+        }
+        if (this.surface.setZoomIndicator) this.surface.setZoomIndicator(null);
+        this.surface.endGesture();
+        // Hand tool or pen-only touch: the finger still down goes on panning by itself.
+        if (this.pointers.size === 1 && this.mode === 'idle') {
+            const [id, p] = this.pointers.entries().next().value;
+            const tool = this.getToolState ? this.getToolState().tool : null;
+            if (tool === 'pan' || (this.scene.settings.penOnly && p.type === 'touch')) {
+                this._startPan(id, p.sx, p.sy);
+            }
+        }
     }
 
     _startTapCandidate(committedDot) {
@@ -413,9 +519,9 @@ export class InputController {
     _resolveTap() {
         const tc = this.tapCandidate;
         this.tapCandidate = null;
-        if (!tc || tc.moved || !this.onTwoFingerTap) return;
-        if (performance.now() - tc.t0 > TAP_MAX_MS) return;
-        if (this.scene.settings.quickMenu === false) return;
+        if (!tc || tc.moved || !this.onTwoFingerTap) return false;
+        if (performance.now() - tc.t0 > TAP_MAX_MS) return false;
+        if (this.scene.settings.quickMenu === false) return false;
 
         // Undo the tiny pinch drift and any dot the first finger left behind.
         Object.assign(this.scene.camera, tc.camera);
@@ -431,6 +537,7 @@ export class InputController {
         const x = rect.left + (pts[0].sx + pts[1].sx) / 2;
         const y = rect.top + (pts[0].sy + pts[1].sy) / 2;
         this.onTwoFingerTap(x, y);
+        return true;
     }
 
     _onPointerMove(e) {
@@ -454,39 +561,127 @@ export class InputController {
         }
 
         if (this.mode === 'pinch' && this.pointers.size >= 2 && this.pinchAnchor) {
-            const pts = Array.from(this.pointers.values());
+            const anchor = this.pinchAnchor;
+            const p0 = this.pointers.get(anchor.id0);
+            const p1 = this.pointers.get(anchor.id1);
+            const pts = (p0 && p1) ? [p0, p1] : Array.from(this.pointers.values());
             const midX = (pts[0].sx + pts[1].sx) * 0.5;
             const midY = (pts[0].sy + pts[1].sy) * 0.5;
-            const dist = Math.max(10, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
+            const dist = Math.max(16, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
 
-            const anchor = this.pinchAnchor;
-            if (!anchor.zooming) {
-                if (Math.abs(dist / anchor.dist - 1) < PINCH_ZOOM_LOCK) {
-                    // Pan only: the scale stays put while the fingers keep their spread.
-                    this.scene.camera.x = anchor.worldMid.x - midX / anchor.startScale;
-                    this.scene.camera.y = anchor.worldMid.y - midY / anchor.startScale;
-                    this.surface.requestCommittedRedraw();
-                    this.surface.renderActiveNow();
-                    if (this.onCameraChange) this.onCameraChange(this.scene.camera);
-                    this._emitTelemetry(e, 1);
-                    return;
+            // Recent spread readings, filtered below so a one-frame outlier neither decides
+            // pan vs zoom nor jolts the zoom.
+            const samples = anchor.spreadSamples;
+            samples.push(dist);
+            if (samples.length > PINCH_SPREAD_MEDIAN_N) samples.shift();
+            let justEngaged = false;
+
+            if (anchor.intent === 'undecided') {
+                const now = performance.now();
+                const d0x = pts[0].sx - anchor.p0Start.sx;
+                const d0y = pts[0].sy - anchor.p0Start.sy;
+                const d1x = pts[1].sx - anchor.p1Start.sx;
+                const d1y = pts[1].sy - anchor.p1Start.sy;
+                const m0 = Math.hypot(d0x, d0y);
+                const m1 = Math.hypot(d1x, d1y);
+
+                // Brief touchdown settle window so IR contact bloom does not poison startDist.
+                if (!anchor.settled) {
+                    if (now - anchor.t0 < PINCH_SETTLE_MS && Math.max(m0, m1) < PINCH_SETTLE_MOVE_PX) {
+                        anchor.startDist = median(samples);
+                        anchor.p0Start = { sx: pts[0].sx, sy: pts[0].sy };
+                        anchor.p1Start = { sx: pts[1].sx, sy: pts[1].sy };
+                        anchor.midStartX = midX;
+                        anchor.midStartY = midY;
+                        this.scene.camera.x = anchor.worldMid.x - midX / anchor.startScale;
+                        this.scene.camera.y = anchor.worldMid.y - midY / anchor.startScale;
+                        this.surface.requestCommittedRedraw();
+                        this.surface.renderActiveNow();
+                        if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+                        this._emitTelemetry(e, 1);
+                        return;
+                    }
+                    anchor.settled = true;
                 }
-                // Zoom engages from here on, starting from the current spread (no jump).
-                anchor.zooming = true;
-                anchor.dist = dist;
-                anchor.startScale = this.scene.camera.scale;
-                anchor.worldMid = screenToWorld(midX, midY, this.scene.camera);
+
+                const spread = median(samples);
+                const midMove = Math.hypot(midX - anchor.midStartX, midY - anchor.midStartY);
+                const dDist = Math.abs(spread - anchor.startDist);
+                const relDist = dDist / Math.max(1, anchor.startDist);
+                const cosAngle = (m0 > 4 && m1 > 4) ? (d0x * d1x + d0y * d1y) / (m0 * m1) : 0;
+
+                const minPx = anchor.eagerZoom ? PINCH_EAGER_MIN_PX : PINCH_ZOOM_MIN_PX;
+                const minRel = anchor.eagerZoom ? PINCH_EAGER_MIN_REL : PINCH_ZOOM_MIN_REL;
+                const nonParallel = anchor.eagerZoom || cosAngle < 0.5 || dDist > midMove * 0.85;
+
+                if (samples.length >= PINCH_SPREAD_MEDIAN_N && dDist >= minPx && relDist >= minRel && nonParallel) {
+                    // Zoom engages from the current spread (no scale jump).
+                    anchor.intent = 'zoom';
+                    // From the filtered spread: a raw reading here could be an outlier and
+                    // would make the whole zoom go the wrong way.
+                    anchor.zoomStartDist = spread;
+                    anchor.smoothDist = spread;
+                    justEngaged = true;
+                    anchor.zoomStartScale = this.scene.camera.scale;
+                    anchor.zoomWorldMid = screenToWorld(midX, midY, this.scene.camera);
+                    const base = this.scene.camera.baseScale || 1;
+                    anchor.passedAwayFromBase = Math.abs(anchor.zoomStartScale / base - 1) > 0.06;
+                    anchor.snappedToBase = false;
+                } else if (!anchor.eagerZoom && midMove >= PINCH_PAN_COMMIT_PX
+                    && dDist < PINCH_ZOOM_MIN_PX - 4
+                    && (cosAngle > 0.35 || midMove > dDist * 1.8)) {
+                    // Hard-lock this gesture to pan-only until fingers lift.
+                    anchor.intent = 'pan';
+                }
             }
 
-            const newScale = clamp(
-                this.pinchAnchor.startScale * (dist / this.pinchAnchor.dist),
+            if (anchor.intent !== 'zoom') {
+                // Pure pan: scale stays completely frozen.
+                this.scene.camera.x = anchor.worldMid.x - midX / anchor.startScale;
+                this.scene.camera.y = anchor.worldMid.y - midY / anchor.startScale;
+                this.surface.requestCommittedRedraw();
+                this.surface.renderActiveNow();
+                if (this.onCameraChange) this.onCameraChange(this.scene.camera);
+                this._emitTelemetry(e, 1);
+                return;
+            }
+
+            // Smooth finger spread to damp IR quantization jitter (no change on the frame zoom
+            // engages, so it starts without a jump).
+            if (!justEngaged) {
+                anchor.smoothDist += (median(samples) - anchor.smoothDist) * PINCH_DIST_SMOOTH;
+            }
+            const rawScale = clamp(
+                anchor.zoomStartScale * (anchor.smoothDist / anchor.zoomStartDist),
                 MIN_SCALE,
                 MAX_SCALE
             );
-            this.scene.camera.scale = newScale;
-            this.scene.camera.x = this.pinchAnchor.worldMid.x - midX / newScale;
-            this.scene.camera.y = this.pinchAnchor.worldMid.y - midY / newScale;
 
+            // Magnetic detent at 100% writing scale when returning toward baseScale.
+            const base = this.scene.camera.baseScale || 1;
+            const diffFromBase = Math.abs(rawScale / base - 1);
+            if (!anchor.passedAwayFromBase && diffFromBase > ZOOM_DETENT_ARM) {
+                anchor.passedAwayFromBase = true;
+            }
+            let newScale = rawScale;
+            if (anchor.passedAwayFromBase) {
+                if (anchor.snappedToBase) {
+                    if (diffFromBase <= ZOOM_DETENT_EXIT) newScale = base;
+                    else anchor.snappedToBase = false;
+                } else if (diffFromBase <= ZOOM_DETENT_ENTER) {
+                    anchor.snappedToBase = true;
+                    newScale = base;
+                }
+            }
+
+            this.scene.camera.scale = newScale;
+            this.scene.camera.x = anchor.zoomWorldMid.x - midX / newScale;
+            this.scene.camera.y = anchor.zoomWorldMid.y - midY / newScale;
+
+            if (this.surface.setZoomIndicator) {
+                const pct = Math.round((newScale / base) * 100);
+                this.surface.setZoomIndicator({ sx: midX, sy: midY, pct, snapped: anchor.snappedToBase }, false);
+            }
             this.surface.requestCommittedRedraw();
             this.surface.renderActiveNow();
             if (this.onCameraChange) this.onCameraChange(this.scene.camera);
@@ -582,10 +777,30 @@ export class InputController {
 
         if (this.mode === 'pinch') {
             if (this.pointers.size < 2) {
-                this._resolveTap();
+                const openedMenu = this._resolveTap();
+                const prevIntent = this.pinchAnchor ? this.pinchAnchor.intent : null;
                 this.pinchAnchor = null;
-                this.mode = 'idle';
-                this.surface.endGesture();
+                if (this.surface.setZoomIndicator) this.surface.setZoomIndicator(null);
+
+                if (openedMenu || this.pointers.size === 0) {
+                    this.mode = 'idle';
+                    this.lastPinchIntent = null;
+                    this.surface.endGesture();
+                } else {
+                    // One finger still down: keep fastPan alive briefly in case an IR board
+                    // momentarily dropped the second finger due to axis shadowing.
+                    this.mode = 'pinch-cooldown';
+                    this.lastPinchIntent = prevIntent === 'pan' || prevIntent === 'zoom' ? prevIntent : null;
+                    clearTimeout(this.pinchDropTimer);
+                    this.pinchDropTimer = setTimeout(() => this._finishPinchDrop(), PINCH_DROP_GRACE_MS);
+                }
+            }
+            return;
+        }
+
+        if (this.mode === 'pinch-cooldown') {
+            if (this.pointers.size === 0) {
+                this._finishPinchDrop();
             }
             return;
         }
@@ -616,9 +831,26 @@ export class InputController {
         if (this.mode === 'pinch') {
             if (this.pointers.size < 2) {
                 this.tapCandidate = null;
+                const prevIntent = this.pinchAnchor ? this.pinchAnchor.intent : null;
                 this.pinchAnchor = null;
-                this.mode = 'idle';
-                this.surface.endGesture();
+                if (this.surface.setZoomIndicator) this.surface.setZoomIndicator(null);
+                if (this.pointers.size === 0) {
+                    this.mode = 'idle';
+                    this.lastPinchIntent = null;
+                    this.surface.endGesture();
+                } else {
+                    this.mode = 'pinch-cooldown';
+                    this.lastPinchIntent = prevIntent === 'pan' || prevIntent === 'zoom' ? prevIntent : null;
+                    clearTimeout(this.pinchDropTimer);
+                    this.pinchDropTimer = setTimeout(() => this._finishPinchDrop(), PINCH_DROP_GRACE_MS);
+                }
+            }
+            return;
+        }
+
+        if (this.mode === 'pinch-cooldown') {
+            if (this.pointers.size === 0) {
+                this._finishPinchDrop();
             }
             return;
         }
@@ -735,7 +967,8 @@ export class InputController {
 
         const { sx, sy } = this._getLocalPoint(e);
         if (e.ctrlKey || e.metaKey) {
-            // Pinch-zoom on trackpads or Ctrl+wheel
+            if (this.scene.settings.zoomLock) return;
+            // Pinch-zoom on trackpads or Ctrl+wheel (raw & immediate — no touch deadzone)
             const worldBefore = screenToWorld(sx, sy, this.scene.camera);
             const zoomFactor = Math.exp(-e.deltaY * 0.008);
             const newScale = clamp(this.scene.camera.scale * zoomFactor, MIN_SCALE, MAX_SCALE);

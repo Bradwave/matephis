@@ -34,6 +34,16 @@ const SIDE_TAB_ICON = (edge) => (edge === 'left'
 const MINIMIZE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>';
 const EXPAND_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
 
+/** Preview of a pen line style, shared by the pen tray and the toolbar's style button. */
+function lineStyleSvg(styleId) {
+    const dashAttr = styleId === 'dashed'
+        ? 'stroke-dasharray="5 3.5"'
+        : styleId === 'dotted'
+            ? 'stroke-dasharray="0.5 4.5"'
+            : '';
+    return `<svg viewBox="0 0 28 10" class="board-style-svg"><line x1="2" y1="5" x2="26" y2="5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ${dashAttr}/></svg>`;
+}
+
 export class BoardToolbar {
     constructor(hostEl, {
         getTheme,
@@ -49,6 +59,7 @@ export class BoardToolbar {
         onToggleOptions,
         onToggleFuturePopover,
         onResetZoom,
+        onZoomStep = null,
         onPrevPage,
         onNextPage,
         onAddPage,
@@ -68,6 +79,7 @@ export class BoardToolbar {
         this.onToggleOptions = onToggleOptions;
         this.onToggleFuturePopover = onToggleFuturePopover;
         this.onResetZoom = onResetZoom;
+        this.onZoomStep = onZoomStep;
         this.onPrevPage = onPrevPage;
         this.onNextPage = onNextPage;
         this.onAddPage = onAddPage;
@@ -212,8 +224,15 @@ export class BoardToolbar {
     updateZoom(camera) {
         const base = camera.baseScale || 1;
         const pct = Math.round((camera.scale / base) * 100);
-        this.zoomBtn.textContent = `${pct}%`;
+        const locked = Boolean((this.getSettings() || {}).zoomLock);
+        if (this.zoomPctEl) this.zoomPctEl.textContent = `${pct}%`;
+        else this.zoomBtn.textContent = `${pct}%`;
         this.zoomBtn.classList.toggle('is-zoomed', Math.abs(pct - 100) >= 4);
+        this.zoomBtn.classList.toggle('is-zoom-locked', locked);
+        this.zoomBtn.title = locked
+            ? `Zoom bloccato (${pct}%) — apri controlli zoom`
+            : `Zoom (${pct}%) — apri controlli zoom`;
+        this._syncZoomTray();
     }
 
     selectTool(tool, openTray = false) {
@@ -350,7 +369,7 @@ export class BoardToolbar {
      * Leaving a tool that is hidden in this mode falls back to the pen.
      */
     setMinimal(on) {
-        if (on && this.state.tool !== 'pen' && this.state.tool !== 'eraser') {
+        if (on && this.state.tool !== 'pen' && this.state.tool !== 'eraser' && this.state.tool !== 'pan') {
             this.state.tool = 'pen';
             if (this.onToolChange) this.onToolChange(this.state);
         }
@@ -394,10 +413,12 @@ export class BoardToolbar {
         this.zoomBtn = document.createElement('button');
         this.zoomBtn.type = 'button';
         this.zoomBtn.className = 'board-dock-mono-btn board-zoom-btn';
-        this.zoomBtn.textContent = '100%';
-        this.zoomBtn.title = 'Torna allo zoom di scrittura (100%)';
+        this.zoomBtn.innerHTML = `<span class="board-zoom-lock-icon" aria-hidden="true">${BoardIcons.lock}</span><span class="board-zoom-pct">100%</span>`;
+        this.zoomPctEl = this.zoomBtn.querySelector('.board-zoom-pct');
+        this.zoomBtn.title = 'Zoom (100%) — apri controlli zoom';
+        this.zoomBtn.setAttribute('aria-haspopup', 'true');
         this.zoomBtn.addEventListener('click', () => {
-            if (this.onResetZoom) this.onResetZoom();
+            this._toggleTray('zoom');
         });
 
         this.footprintBtn = document.createElement('button');
@@ -461,6 +482,13 @@ export class BoardToolbar {
         this.lassoBtn = this._makeToolBtn('Selezione lazo', BoardIcons.lasso, () => {
             this._activateToolWithTray('lasso');
         });
+        this.panBtn = this._makeToolBtn('Sposta lavagna (M · Spazio)', BoardIcons.pan, () => {
+            this.state.tool = 'pan';
+            this.openTray = null;
+            this._closePopovers();
+            this.render();
+            if (this.onToolChange) this.onToolChange(this.state);
+        });
         this.laserBtn = this._makeToolBtn('Puntatore laser (L)', BoardIcons.laser, () => {
             this.state.tool = 'laser';
             this.openTray = null;
@@ -478,7 +506,8 @@ export class BoardToolbar {
         const toolsGroup = this._makeGroup('is-tools',
             this.penBtn, this.highlighterBtn,
             this.eraserBtn, this.lassoBtn,
-            this.laserBtn, this.insertBtn);
+            this.panBtn, this.laserBtn,
+            this.insertBtn);
 
         // Quick colours
         this.quickSwatchBtns = [];
@@ -496,6 +525,22 @@ export class BoardToolbar {
             this.quickSwatchBtns.push(btn);
             colorsGroup.appendChild(btn);
         }
+
+        // Line style one tap away: each tap moves to the next style (continua → tratteggiata
+        // → punteggiata) and picks the pen. The pen tray still lists all three.
+        this.lineStyleBtn = document.createElement('button');
+        this.lineStyleBtn.type = 'button';
+        this.lineStyleBtn.className = 'board-tool-btn board-line-style-btn';
+        this.lineStyleBtn.addEventListener('click', () => {
+            const i = PEN_STYLES.findIndex((st) => st.id === this.state.penStyle);
+            this.state.penStyle = PEN_STYLES[(i + 1) % PEN_STYLES.length].id;
+            this.state.tool = 'pen';
+            this.openTray = null;
+            this._closePopovers();
+            this.render();
+            if (this.onToolChange) this.onToolChange(this.state);
+        });
+        colorsGroup.appendChild(this.lineStyleBtn);
 
         // History (bottom of the rail: closest to the hand)
         this.undoBtn = this._makeToolBtn('Annulla (Ctrl+Z)', BoardIcons.undo, () => {
@@ -537,6 +582,7 @@ export class BoardToolbar {
         this.connectorsTray = this._buildConnectorsTray();
         this.insertTray = this._buildInsertTray();
         this.pinTray = this._buildPinTray();
+        this.zoomTray = this._buildZoomTray();
 
         this.trays = {
             pen: { el: this.penTray, anchor: this.penBtn },
@@ -547,6 +593,7 @@ export class BoardToolbar {
             connectors: { el: this.connectorsTray, anchor: this.insertBtn },
             insert: { el: this.insertTray, anchor: this.insertBtn },
             pin: { el: this.pinTray, anchor: this.pinBtn },
+            zoom: { el: this.zoomTray, anchor: this.zoomBtn },
         };
         for (const { el } of Object.values(this.trays)) {
             el.addEventListener('pointerdown', stop);
@@ -713,6 +760,72 @@ export class BoardToolbar {
         return tray;
     }
 
+    _buildZoomTray() {
+        const tray = document.createElement('div');
+        tray.className = 'board-tray board-zoom-tray';
+        tray.hidden = true;
+
+        const group = document.createElement('div');
+        group.className = 'board-tray-group';
+
+        const outBtn = document.createElement('button');
+        outBtn.type = 'button';
+        outBtn.className = 'board-tray-btn';
+        outBtn.title = 'Zoom indietro';
+        outBtn.setAttribute('aria-label', 'Zoom indietro');
+        outBtn.innerHTML = BoardIcons.remove;
+        outBtn.addEventListener('click', () => {
+            if (this.onZoomStep) this.onZoomStep(-1);
+        });
+
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'board-tray-btn board-tray-text-btn';
+        resetBtn.textContent = '100%';
+        resetBtn.title = 'Torna allo zoom di scrittura (100%)';
+        resetBtn.addEventListener('click', () => {
+            if (this.onResetZoom) this.onResetZoom();
+            this.closeTrays();
+        });
+
+        const inBtn = document.createElement('button');
+        inBtn.type = 'button';
+        inBtn.className = 'board-tray-btn';
+        inBtn.title = 'Zoom avanti';
+        inBtn.setAttribute('aria-label', 'Zoom avanti');
+        inBtn.innerHTML = BoardIcons.add;
+        inBtn.addEventListener('click', () => {
+            if (this.onZoomStep) this.onZoomStep(1);
+        });
+
+        const lockBtn = document.createElement('button');
+        lockBtn.type = 'button';
+        lockBtn.className = 'board-tray-btn board-tray-text-btn board-tray-icon-text';
+        lockBtn.addEventListener('click', () => {
+            const next = !Boolean((this.getSettings() || {}).zoomLock);
+            if (this.onSettingChange) this.onSettingChange('zoomLock', next);
+            this._syncZoomTray();
+            this.render();
+        });
+        this.zoomLockBtn = lockBtn;
+
+        group.append(outBtn, resetBtn, inBtn, this._makeDivider(), lockBtn);
+        tray.appendChild(group);
+        this._syncZoomTray();
+        return tray;
+    }
+
+    _syncZoomTray() {
+        if (!this.zoomLockBtn) return;
+        const locked = Boolean((this.getSettings() || {}).zoomLock);
+        this.zoomLockBtn.innerHTML = `${locked ? BoardIcons.lock : BoardIcons.lockOpen}<span>Blocca</span>`;
+        this.zoomLockBtn.title = locked
+            ? 'Zoom bloccato: 2 dita spostano soltanto (clicca per sbloccare)'
+            : 'Blocca lo zoom: 2 dita spostano soltanto senza zoomare';
+        this.zoomLockBtn.classList.toggle('active', locked);
+        this.zoomLockBtn.setAttribute('aria-pressed', String(locked));
+    }
+
     _buildPenTray() {
         const tray = document.createElement('div');
         tray.className = 'board-tray board-pen-tray';
@@ -744,12 +857,7 @@ export class BoardToolbar {
             btn.className = 'board-tray-btn board-style-btn';
             btn.title = st.label;
             btn.dataset.styleId = st.id;
-            const dashAttr = st.id === 'dashed'
-                ? 'stroke-dasharray="5 3.5"'
-                : st.id === 'dotted'
-                    ? 'stroke-dasharray="0.5 4.5"'
-                    : '';
-            btn.innerHTML = `<svg viewBox="0 0 28 10" class="board-style-svg"><line x1="2" y1="5" x2="26" y2="5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ${dashAttr}/></svg>`;
+            btn.innerHTML = lineStyleSvg(st.id);
             btn.addEventListener('click', () => {
                 this.state.penStyle = st.id;
                 this.state.tool = 'pen';
@@ -1064,6 +1172,7 @@ export class BoardToolbar {
         }
         this.lassoBtn.classList.toggle('active', this.state.tool === 'lasso' || this.openTray === 'lasso');
         this.pinBtn.classList.toggle('active', this.openTray === 'pin');
+        this.zoomBtn.classList.toggle('active', this.openTray === 'zoom');
         this.setActiveFuturePopover(this.activeFuturePopover);
         this._placeTray();
     }
@@ -1071,14 +1180,15 @@ export class BoardToolbar {
     /** Mirror visual state into ARIA so screen readers and tests can read it. */
     _syncPressed() {
         const toggles = [
-            this.penBtn, this.highlighterBtn, this.eraserBtn, this.laserBtn, this.lassoBtn,
-            this.insertBtn, this.pinBtn, this.optionsBtn, this.cloudBtn,
+            this.penBtn, this.highlighterBtn, this.eraserBtn, this.panBtn, this.laserBtn, this.lassoBtn,
+            this.insertBtn, this.pinBtn, this.zoomBtn, this.optionsBtn, this.cloudBtn,
         ];
         for (const btn of toggles) {
             btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
         }
         this.insertBtn.setAttribute('aria-expanded', String(this.openTray === 'insert'));
         this.pinBtn.setAttribute('aria-expanded', String(this.openTray === 'pin'));
+        this.zoomBtn.setAttribute('aria-expanded', String(this.openTray === 'zoom'));
     }
 
     render() {
@@ -1087,7 +1197,9 @@ export class BoardToolbar {
         this.penBtn.classList.toggle('active', this.state.tool === 'pen');
         this.eraserBtn.classList.toggle('active', this.state.tool === 'eraser');
         this.highlighterBtn.classList.toggle('active', this.state.tool === 'highlighter');
+        this.panBtn.classList.toggle('active', this.state.tool === 'pan');
         this.laserBtn.classList.toggle('active', this.state.tool === 'laser');
+        this._syncZoomTray();
 
         for (const btn of [...this.quickSwatchBtns, ...this.penTraySwatches]) {
             const id = Number(btn.dataset.colorId);
@@ -1099,6 +1211,15 @@ export class BoardToolbar {
 
         for (const btn of this.styleBtns) {
             btn.classList.toggle('active', btn.dataset.styleId === this.state.penStyle);
+        }
+        if (this.lineStyleBtn && this.lineStyleBtn.dataset.styleId !== this.state.penStyle) {
+            const st = PEN_STYLES.find((item) => item.id === this.state.penStyle) || PEN_STYLES[0];
+            const next = PEN_STYLES[(PEN_STYLES.indexOf(st) + 1) % PEN_STYLES.length];
+            this.lineStyleBtn.dataset.styleId = st.id;
+            this.lineStyleBtn.innerHTML = lineStyleSvg(st.id);
+            const title = `Linea ${st.label.toLowerCase()} (tocca: ${next.label.toLowerCase()})`;
+            this.lineStyleBtn.title = title;
+            this.lineStyleBtn.setAttribute('aria-label', title);
         }
         for (const btn of this.penSizeBtns) {
             btn.classList.toggle('active', Number(btn.dataset.sizeWidth) === this.state.penWidth);

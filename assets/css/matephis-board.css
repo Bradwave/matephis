@@ -40,6 +40,14 @@ body.board-body {
     cursor: crosshair;
 }
 
+.board-root.is-tool-pan .board-stage {
+    cursor: grab;
+}
+
+.board-root.is-tool-pan .board-stage:active {
+    cursor: grabbing;
+}
+
 .board-canvas {
     position: absolute;
     inset: 0;
@@ -434,6 +442,27 @@ body.board-body {
 
 .board-zoom-btn {
     min-width: calc(var(--bu) * 1.3);
+    gap: calc(var(--bu) * 0.1);
+}
+
+.board-zoom-lock-icon {
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.board-zoom-lock-icon svg {
+    width: calc(var(--bu) * 0.34);
+    height: calc(var(--bu) * 0.34);
+    display: block;
+}
+
+.board-zoom-btn.is-zoom-locked .board-zoom-lock-icon {
+    display: inline-flex;
+}
+
+.board-zoom-btn.is-zoom-locked:not(.active) {
+    color: var(--title);
 }
 
 .board-tool-btn:hover:not(:disabled),
@@ -505,6 +534,12 @@ body.board-body {
     width: calc(var(--bu) * 0.7);
     height: calc(var(--bu) * 0.3);
     display: block;
+}
+
+/* Toolbar line-style button: same line preview as the pen tray, a little narrower */
+.board-line-style-btn .board-style-svg {
+    width: calc(var(--bu) * 0.56);
+    height: calc(var(--bu) * 0.24);
 }
 
 .board-shape-svg {
@@ -978,23 +1013,53 @@ body.board-body {
     gap: 0.4em;
 }
 
-/* Options in tabs: one section at a time, so the menu never needs scrolling */
-.board-opt-tabs {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    margin-bottom: 0.7em;
-}
-
-.board-opt-tabs .board-bg-btn {
-    font-size: 0.82em;
-    padding: 0 0.15em;
-    white-space: nowrap;
+/* Options in underline tabs. Title and tabs stay put; only the panel area scrolls when the
+ * screen is short. Every panel sits in the same grid cell (inactive ones invisible but still
+ * sized), so the menu keeps the height of its tallest tab and never grows when switching. */
+.board-popover.board-options-popover {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.board-options-list[hidden],
-.board-options-actions[hidden] {
+.board-popover.board-options-popover[hidden] {
     display: none;
+}
+
+.board-options-popover > * {
+    flex-shrink: 0;
+}
+
+.board-opt-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0 -1em;
+    padding: 0 1em 0.1em;
+}
+
+.board-opt-panels > [data-tab-panel] {
+    grid-area: 1 / 1;
+    align-self: start;
+}
+
+.board-opt-panels > .board-options-list[hidden] {
+    display: flex;
+    visibility: hidden;
+}
+
+.board-opt-panels > .board-options-actions[hidden] {
+    display: grid;
+    visibility: hidden;
+}
+
+/* The tab row already draws the divider */
+.board-opt-panels > [data-tab-panel] > .board-opt-bg-row:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 .board-action-btn {
