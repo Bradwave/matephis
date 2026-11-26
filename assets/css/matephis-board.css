@@ -1032,6 +1032,13 @@ body.board-body {
     flex-shrink: 0;
 }
 
+/* The five option tabs always fit: spread them edge to edge instead of leaving a gap on the
+ * right (editor sheets keep left-aligned tabs, which can scroll). */
+.board-options-popover .board-seg-row {
+    justify-content: space-between;
+    gap: 0.6em;
+}
+
 .board-opt-panels {
     flex: 1 1 auto;
     min-height: 0;
