@@ -319,7 +319,7 @@ html.exam-open {
 .exam-card {
   max-width: min(64rem, 100%);
   margin: 0 auto;
-  font-size: clamp(1.2rem, 1.9vw, 2rem);
+  font-size: clamp(1.1rem, 1.45vw, 1.5rem);
 }
 
 .exam-card-head {
