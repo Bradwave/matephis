@@ -1,10 +1,25 @@
 /* Oral exam draw (assets/js/matephis-exam.js), on notes with `exam:` in the front matter. */
 
+/*
+ * Between two horizontal brackets, ticks pointing inward, like the site's collapsible blocks
+ * (details). --rule comes from style.css; the fallbacks are the same greys.
+ */
 .exam-panel {
+  --exam-rule: var(--rule, #c4c4c4);
+  --exam-bracket: linear-gradient(var(--exam-rule), var(--exam-rule));
   margin: var(--space-md) 0;
-  padding: var(--space-sm) 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-sm) 0.75rem;
+  background:
+    var(--exam-bracket) top / 100% 1px no-repeat,
+    var(--exam-bracket) left top / 1px 5px no-repeat,
+    var(--exam-bracket) right top / 1px 5px no-repeat,
+    var(--exam-bracket) bottom / 100% 1px no-repeat,
+    var(--exam-bracket) left bottom / 1px 5px no-repeat,
+    var(--exam-bracket) right bottom / 1px 5px no-repeat;
+}
+
+[data-theme="dark"] .exam-panel {
+  --exam-rule: var(--rule, #3c3c3c);
 }
 
 .exam-actions {
@@ -138,8 +153,8 @@
   padding: 0;
   font-size: var(--scale-sm);
   border-top: 1px solid var(--border);
-  /* Flush with the panel's bottom line, which closes the list: one line, not two */
-  margin-bottom: calc(-1 * var(--space-sm));
+  /* Flush with the panel's bottom bracket, which closes the list: one line, not two */
+  margin-bottom: calc(-1 * var(--space-sm) + 1px);
   max-height: min(24rem, 50vh);
   overflow-y: auto;
   overscroll-behavior: contain;
