@@ -4,6 +4,7 @@
  * Pure parsing, query matching, URL rewriting, and HTML extraction helpers are
  * exported separately so Vitest can test them in Node without jsdom.
  */
+import { AIDS_SELECTOR } from './exercise-steps.js';
 
 export const DEFAULT_TOPICS = ['Dinamica', 'Limiti', 'Elettrostatica', 'Onde', 'Ottica'];
 export const DEFAULT_SECTIONS = ['Quesiti', 'Quiz', 'Problemi'];
@@ -658,7 +659,7 @@ function extractDifficulty(el) {
 
 function hasSolutionMarkup(el) {
     if (!el || !el.querySelector) return false;
-    return Boolean(el.querySelector('.solution-tag, .solution-text, .hint-tag, details.details'));
+    return Boolean(el.querySelector(AIDS_SELECTOR));
 }
 
 function stripOpenDetails(el) {

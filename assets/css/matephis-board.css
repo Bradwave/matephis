@@ -1793,7 +1793,7 @@ body.board-body {
 .board-widget:not(.is-controls-locked) .mps-draggable,
 .board-widget:not(.is-controls-locked) .matephis-circuit-switch,
 .board-widget:not(.is-controls-locked) .matephis-circuit-comp,
-.board-widget:not(.is-controls-locked) .board-widget-sol-toggle,
+.board-widget:not(.is-controls-locked) .board-ex-step,
 .board-widget-resize {
     pointer-events: auto;
     cursor: pointer;
@@ -1811,7 +1811,7 @@ body.board-body {
 .board-widget.is-controls-locked .mps-draggable,
 .board-widget.is-controls-locked .matephis-circuit-switch,
 .board-widget.is-controls-locked .matephis-circuit-comp,
-.board-widget.is-controls-locked .board-widget-sol-toggle {
+.board-widget.is-controls-locked .board-ex-step {
     pointer-events: none !important;
 }
 
@@ -2099,19 +2099,52 @@ body.board-body {
     color: var(--secondary-text);
 }
 
-.board-widget-sol-toggle {
-    appearance: none;
-    background: var(--bg2);
+/* Steps: each hint, the solution, the working. A step shows everything up to it; a red dot
+   marks what is shown. The 1px gaps draw the dividers, also when the buttons wrap. */
+.board-ex-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
     border: 1px solid var(--border);
-    color: var(--title);
-    font-family: var(--font);
-    font-size: 11.5px;
-    padding: 2px 8px;
-    flex-shrink: 0;
+    background: var(--border);
 }
 
-.board-widget-sol-toggle:hover {
+.board-ex-step {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 10px;
+    appearance: none;
+    border: 0;
+    background: var(--bg2);
+    color: var(--secondary-text);
+    font: 600 11.5px var(--font-title);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.board-ex-step::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+}
+
+.board-ex-step[aria-pressed="true"] {
+    background: var(--bg);
+    color: var(--title);
+}
+
+.board-ex-step[aria-pressed="true"]::before {
     border-color: var(--accent);
+    background: var(--accent);
+}
+
+.board-ex-step:hover {
     color: var(--accent);
 }
 
@@ -2130,20 +2163,14 @@ body.board-body {
     margin-bottom: 0;
 }
 
-.board-widget-exercise.is-solution-hidden .solution-text,
-.board-widget-exercise.is-solution-hidden .hint-text,
-.board-ex-preview.is-solution-hidden .solution-text,
-.board-ex-preview.is-solution-hidden .hint-text {
-    filter: blur(5px);
-    opacity: 0.28;
+/* Hidden aids (style.css): the working leaves the card, and answers blur harder for the projector */
+:is(.board-widget-exercise, .board-ex-preview) :is(details.work, details.details):not(.is-revealed) {
+    display: none;
 }
 
-.board-widget-exercise:not(.is-solution-hidden) .solution-text,
-.board-widget-exercise:not(.is-solution-hidden) .hint-text,
-.board-ex-preview:not(.is-solution-hidden) .solution-text,
-.board-ex-preview:not(.is-solution-hidden) .hint-text {
-    filter: none !important;
-    opacity: 1 !important;
+:is(.board-widget-exercise, .board-ex-preview) .solution-tag:not(.is-revealed) .solution-text {
+    filter: blur(5px);
+    opacity: 0.28;
 }
 
 /* Interactive chips, engine cards & Exercise Picker preview */
@@ -3023,8 +3050,8 @@ body.board-body {
  * The notes' own CSS gives paragraphs, lists and problem titles different sizes;
  * on the board every text element inherits the card's font and size. Badges keep
  * theirs, and MathJax (custom elements) is left alone. */
-.board-ex-preview-body :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag),
-.board-widget-ex-content :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag) {
+.board-ex-preview-body :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label):not(.nota):not(.nota *),
+.board-widget-ex-content :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label):not(.nota):not(.nota *) {
     font-family: var(--font);
     font-size: inherit;
     line-height: inherit;

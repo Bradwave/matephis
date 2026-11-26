@@ -158,12 +158,12 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	- La funzione decresce e la sua pendenza diventa sempre più ripida.
 	  [sol: $f^\prime < 0$, $f^{\prime\prime} < 0$]
 	- La funzione cresce in modo costante.
-	  [sol: $f^\prime > 0$, $f^{\prime\prime} = 0]
+	  [sol: $f^\prime > 0$, $f^{\prime\prime} = 0$]
 	- La funzione è costante.
-	  [sol: $f^\prime = 0$, $f^{\prime\prime} = 0]
+	  [sol: $f^\prime = 0$, $f^{\prime\prime} = 0$]
 7. **[F+]** Rispondi ai seguenti quesiti, relativi alla funzione $f$ rappresentata nel grafico.
 	- Quanto vale $f^\prime(x)$ per $x < 0$? E per $x > 1$?
-	  [sol: $f^\prime(x)$ = -1$ per $x < 0$; $f^\prime(x) = +1$ per $x > 0$.]
+	  [sol: $f^\prime(x) = -1$ per $x < 0$; $f^\prime(x) = +1$ per $x > 0$.]
 	- Traccia il grafico di $f^\prime$.
 	- Esiste la tangente a $f$ in $(0,0)$? La funzione è derivabile in $x = 0$? Motiva le risposte.
 	  [sol: No, perché la funzione non si può approssimare con una sola retta in $(0, 0$); zoomando la funzione non assomiglia ad una retta. Pertanto non è derivabile.]

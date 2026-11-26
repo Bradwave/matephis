@@ -99,6 +99,8 @@
   --border: #e1e1e1;
   --secondary-text: #8a8a8a;
   /* Updated to match drawingfourier border */
+  --text-soft: #5a5a5a; /* hints, solutions, working: a step lighter than the text */
+  --rule: #c4c4c4; /* bracket dividers */
 
   --font: "Noto Sans", sans-serif;
   --font-title: 'Space Grotesk', sans-serif;
@@ -157,6 +159,8 @@
   --accent: #ff523d;
   --border: #282828;
   --secondary-text: #8e95a0;
+  --text-soft: #909194;
+  --rule: #3c3c3c;
 
   /* Plot & Canvas in Dark Theme (seamless with background) */
   --plot-bg: var(--bg);
@@ -670,48 +674,67 @@ pre code {
   color: inherit;
 }
 
+/* Collapsible blocks sit between two horizontal brackets: ticks point inward, above and below */
 details {
-  margin-bottom: var(--space-lg);
-  border: 1px solid var(--border);
-  padding: 0;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--bg);
+  --bracket: linear-gradient(var(--rule), var(--rule));
+  margin: var(--space-md) 0;
+  padding: 0 0.75rem;
+  background:
+    var(--bracket) top / 100% 1px no-repeat,
+    var(--bracket) left top / 1px 5px no-repeat,
+    var(--bracket) right top / 1px 5px no-repeat,
+    var(--bracket) bottom / 100% 1px no-repeat,
+    var(--bracket) left bottom / 1px 5px no-repeat,
+    var(--bracket) right bottom / 1px 5px no-repeat;
 }
 
-details>summary {
-  font-weight: 600;
-  padding: .25rem 1rem;
-  cursor: pointer;
-  background: var(--bg2);
+details + details {
+  margin-top: calc(-1 * var(--space-xs));
+}
+
+details > summary {
+  position: relative;
+  padding: 0.55rem 1.5rem 0.55rem 0;
   font-family: var(--font-title);
+  font-weight: 600;
+  color: var(--title);
+  cursor: pointer;
   list-style: none;
-  /* Hide default triangle */
-  display: flex;
-  align-items: center;
 }
 
-details>summary::-webkit-details-marker {
+details > summary::-webkit-details-marker {
   display: none;
 }
 
-details>summary::before {
-  content: "►";
-  font-size: 0.8em;
-  margin-right: 0.75rem;
+details > summary::after {
+  content: "+";
+  position: absolute;
+  top: 0.55rem;
+  right: 0;
+  font-family: var(--font-plot);
+  font-weight: 400;
   color: var(--accent);
-
 }
 
-details[open]>summary::before {
-  transform: rotate(90deg);
+details[open] > summary::after {
+  content: "\2212";
 }
 
+details > summary:hover {
+  color: var(--accent);
+}
 
-details>p {
-  margin: 0;
-  padding: 1rem;
-  border-top: 1px solid var(--border);
+details > summary .aid-label {
+  margin-right: 0.6em;
+}
+
+details[open] {
+  padding-bottom: 0.75rem;
+}
+
+details[open] > :last-child,
+.details-content > :last-child {
+  margin-bottom: 0;
 }
 
 hr {
@@ -1169,46 +1192,194 @@ td {
 
 /* Most Vibrant Red */
 
-/* --- Solution Tags --- */
+/* --- Hints, Solutions, Working, Notes --- */
+/* Markup from _plugins/solution_styler.rb and details_converter.rb, behaviour in
+   assets/js/matephis-aids.js. Whatever lacks .is-revealed stays hidden; the board reveals
+   the same elements with its step buttons. */
 
-@keyframes solution-reveal {
-  0%   { filter: blur(4px); opacity: 0.4; }
-  15%  { filter: blur(0);   opacity: 1;   }
-  85%  { filter: blur(0);   opacity: 1;   }
-  100% { filter: blur(4px); opacity: 0.4; }
+.aid-label {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
 }
 
 .solution-tag,
-.hint-tag {
-  display: block;
-  text-align: right;
-  font-family: var(--font-title);
-  font-size: 0.9em;
-  font-weight: bold;
-  color: var(--secondary-text);
-  margin-top: 0.25em;
-  margin-right: 10px;
-  opacity: 0.75;
+.hint-tag,
+details.work {
+  color: var(--text-soft);
 }
 
-.solution-text,
-.hint-text {
-  filter: blur(4px);
-  opacity: 0.4;
+/* A short solution floats on the exercise's last line, or right-aligned just below it */
+.solution-tag {
+  float: right;
+  max-width: 100%;
+  margin-left: 1.5em;
   cursor: pointer;
-  user-select: none;
-  outline: none;
-  transition: none;
-  font-weight: normal;
 }
 
-.solution-text * {
+.solution-tag .aid-label {
+  margin-right: 0.45em;
+}
+
+.solution-tag:hover .aid-label {
+  color: var(--accent);
+}
+
+.aid-end {
+  display: block;
+  clear: both;
+}
+
+/* Beside a sub-item the label would only repeat itself */
+li li .solution-tag:not(.is-long) .aid-label {
+  display: none;
+}
+
+/* A long one becomes a block, whose rule turns red once revealed */
+.solution-tag.is-long {
+  float: none;
+  display: block;
+  margin: 0.5rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+}
+
+.solution-tag.is-long .aid-label {
+  display: block;
+}
+
+.solution-tag.is-long.is-revealed {
+  border-left-color: var(--accent);
+}
+
+.solution-text {
+  filter: blur(4px);
+  opacity: 0.45;
+  user-select: none;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+}
+
+.solution-tag:not(.is-revealed) .solution-text * {
   pointer-events: none;
 }
 
-.solution-text:focus,
-.hint-text:focus {
-  animation: solution-reveal 10.3s ease forwards;
+.solution-tag.is-revealed .solution-text {
+  filter: none;
+  opacity: 1;
+  user-select: text;
+}
+
+/* Hints: one at a time, each on its own line, with the button below them */
+.hints::before {
+  content: "";
+  display: block;
+}
+
+.hint-tag {
+  display: none;
+  margin-top: 0.4rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+  font-size: var(--scale-sm);
+}
+
+.hint-tag.is-revealed {
+  display: block;
+}
+
+.hint-tag .aid-label {
+  margin-right: 0.45em;
+}
+
+/* A revealed hint hides again on tap, with the ones after it */
+.hints .hint-tag {
+  cursor: pointer;
+}
+
+.hints .hint-tag:hover .aid-label {
+  color: var(--accent);
+}
+
+.hint-next {
+  appearance: none;
+  margin: 0.35rem 1.25em 0 0;
+  padding: 0.15rem 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hint-next:hover .aid-label,
+.hint-next:focus-visible .aid-label {
+  color: var(--accent);
+}
+
+.hint-count {
+  margin-left: 0.4em;
+  font-family: var(--font-plot);
+  font-size: 0.7rem;
+  color: var(--secondary-text);
+}
+
+/* The working: collapsed under its exercise, without brackets */
+/* Pulled up against the paragraph's bottom margin, so it sits as close as the hint row */
+details.work {
+  margin: calc(0.35rem - var(--space-sm)) 0 0;
+  padding: 0;
+  background: none;
+}
+
+/* The +/− follows the label on its baseline instead of sitting at a fixed offset */
+details.work > summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 0.15rem 0;
+}
+
+details.work > summary::after {
+  position: static;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+details.work > summary:hover .aid-label {
+  color: var(--accent);
+}
+
+details.work > .details-content {
+  margin-top: 0.25rem;
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--border);
+  font-size: var(--scale-sm);
+}
+
+details.work li::marker {
+  font-family: var(--font-plot);
+  font-size: 0.8em;
+  color: var(--secondary-text);
+}
+
+/* Notes: short remarks in the plots' monospace voice */
+.nota {
+  margin: var(--space-sm) 0;
+  font-family: var(--font-plot);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--secondary-text);
+}
+
+.nota p {
+  margin: 0 0 0.4em;
+  font: inherit;
+}
+
+.nota > :last-child {
+  margin-bottom: 0;
 }
 
 .tooltip .right::after {
@@ -1701,16 +1872,6 @@ main, .page-layout main {
   background: rgba(255, 255, 255, 0.08);
   color: #ff7b6b;
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] details {
-  background: var(--bg);
-  border-color: var(--border);
-}
-
-[data-theme="dark"] details > summary {
-  background: var(--bg2);
-  color: var(--title);
 }
 
 [data-theme="dark"] blockquote {
