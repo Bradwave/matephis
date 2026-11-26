@@ -127,6 +127,15 @@ export class OptionsMenu {
                         <button type="button" class="board-bg-btn" data-val="pixel">Pixel</button>
                     </div>
                 </div>
+                <!-- EXPERIMENT: when the pan/zoom pictures are freed; delete this row to remove it -->
+                <div class="board-opt-bg-row" title="Dopo quanto tempo fermo la lavagna libera la memoria delle immagini usate per pan e zoom. Più breve: meno memoria, ma il pan successivo deve ricrearle">
+                    <span>Libera memoria pan dopo</span>
+                    <div class="board-bg-seg" data-seg="snapRelease">
+                        <button type="button" class="board-bg-btn" data-val="2000">2 s</button>
+                        <button type="button" class="board-bg-btn" data-val="30000">30 s</button>
+                        <button type="button" class="board-bg-btn" data-val="never">Mai</button>
+                    </div>
+                </div>
                 <label class="board-opt-row">
                     <span>HUD prestazioni e input</span>
                     <input type="checkbox" data-opt="showHud" />

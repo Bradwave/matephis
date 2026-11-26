@@ -174,6 +174,7 @@ async function initMatephisBoard() {
 
     perfHud = new PerfHud(root, {
         scene,
+        getSnapInfo: () => ({ ...surface.snapInfo(), stripBytes: pinnedStrip ? pinnedStrip.snapBytes() : 0 }),
         onStressTest: () => {
             const batch = scene.generateStressStrokes(200);
             for (const s of batch) scene.strokes.push(s);
@@ -237,6 +238,10 @@ async function initMatephisBoard() {
         onSettingChange: (key, value) => {
             storage.saveSettings(scene.settings);
             if (key === 'gestureEffect' || key === 'fastPan') syncPictureNeeds();
+            if (key === 'snapRelease') {
+                surface.snapReleaseSettingChanged();
+                pinnedStrip.snapReleaseSettingChanged();
+            }
             if (key === 'showCropMarks') {
                 surface.requestCommittedRedraw();
                 pinnedStrip.render();
@@ -631,7 +636,11 @@ async function initMatephisBoard() {
     ro.observe(canvasHost);
 
     window.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') storage.saveBoardNow(scene);
+        if (document.visibilityState !== 'hidden') return;
+        storage.saveBoardNow(scene);
+        // Nobody pans a hidden board: free the pan/zoom pictures now (unless set to 'never').
+        surface.releaseSnapCanvases();
+        pinnedStrip.releaseSnapCanvases();
     });
     window.addEventListener('pagehide', () => storage.saveBoardNow(scene));
 
