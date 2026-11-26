@@ -237,18 +237,22 @@
     }
 
     /**
-     * The saved session: { draws, removed }. `removed` holds what the last undo or "new session"
-     * took away ({ kind: 'undo' | 'reset', draws }), so it can be put back, even after a reload,
-     * until the next draw.
+     * The saved session: { draws, removed }.
+     * Each draw is { n, name?, keys, at }: `n` is the student's number, fixed when drawn, so
+     * deleting a draw doesn't renumber the others.
+     * `removed` is what can still be put back with "Ripristina", even after a reload, until the
+     * next draw: { kind: 'delete', items: [{ entry, index }] } (deletions in a row add up), or
+     * { kind: 'reset', draws } for a new session.
      */
     function loadState() {
         try {
             var raw = localStorage.getItem(storageKey());
             var data = raw ? JSON.parse(raw) : null;
-            return {
-                draws: data && Array.isArray(data.draws) ? data.draws : [],
-                removed: data && data.removed && Array.isArray(data.removed.draws) ? data.removed : null
-            };
+            var draws = data && Array.isArray(data.draws) ? data.draws : [];
+            draws.forEach(function (d, i) { if (!d.n) d.n = i + 1; });
+            var r = data && data.removed;
+            var removed = r && ((r.kind === 'delete' && Array.isArray(r.items)) || (r.kind === 'reset' && Array.isArray(r.draws))) ? r : null;
+            return { draws: draws, removed: removed };
         } catch (e) {
             return { draws: [], removed: null };
         }
@@ -301,8 +305,15 @@
     }
 
     /** "Rossi", or "Studente 3" when no name was given. */
-    function studentLabel(draw, index) {
-        return draw.name || 'Studente ' + (index + 1);
+    function studentLabel(draw) {
+        return draw.name || 'Studente ' + draw.n;
+    }
+
+    /** The number for the next student: one more than the highest so far. */
+    function nextNumber(history) {
+        var max = 0;
+        history.forEach(function (d) { if (d.n > max) max = d.n; });
+        return max + 1;
     }
 
     function init() {
@@ -401,11 +412,11 @@
             if (e.key === 'Escape' && !overlay.hidden) closeOverlay();
         });
 
-        function showDraw(draw, index) {
+        function showDraw(draw) {
             restoreQuestions();
             card.innerHTML = '';
             var head = make('div', 'exam-card-head');
-            head.appendChild(make('h2', null, studentLabel(draw, index)));
+            head.appendChild(make('h2', null, studentLabel(draw)));
             var close = iconButton('exam-icon exam-close', 'close', 'Chiudi (Esc)');
             head.appendChild(close);
             card.appendChild(head);
@@ -436,6 +447,36 @@
             if (mj && mj.typesetPromise && /\$|\\\(/.test(card.textContent)) mj.typesetPromise([card]).catch(function () {});
         }
 
+        /** A row of the list: the student, then each question with grade, number and topic. */
+        function logEntry(draw, index) {
+            var li = make('li', 'exam-entry');
+            var open = make('button', 'exam-entry-open');
+            open.type = 'button';
+            open.title = 'Mostra le domande';
+            open.appendChild(make('span', 'exam-entry-name', studentLabel(draw)));
+            var qs = make('span', 'exam-entry-qs');
+            draw.keys.forEach(function (k) {
+                var q = byKey[k];
+                var chip = make('span', 'exam-chip');
+                if (q) {
+                    var tag = q.el.querySelector('.difficulty-tag');
+                    if (tag) chip.appendChild(tag.cloneNode(true));
+                    chip.appendChild(make('span', 'exam-chip-n', String(q.number)));
+                    if (q.topicLabel) chip.appendChild(make('span', 'exam-chip-topic', q.topicLabel));
+                } else {
+                    chip.appendChild(make('span', 'exam-chip-topic', 'domanda rimossa dalla pagina'));
+                }
+                qs.appendChild(chip);
+            });
+            open.appendChild(qs);
+            open.addEventListener('click', function () { showDraw(draw); });
+            var del = iconButton('exam-icon exam-entry-delete', 'close', 'Elimina l\u2019estrazione di ' + studentLabel(draw));
+            del.addEventListener('click', function () { deleteDraw(index); });
+            li.appendChild(open);
+            li.appendChild(del);
+            return li;
+        }
+
         function render() {
             var blocked = blockedKeys(history, opts.cooldown);
             var all = validDraws(questions, opts, null);
@@ -463,12 +504,12 @@
             if (removed) {
                 noticeText.textContent = removed.kind === 'reset'
                     ? 'Sessione cancellata (' + plural(removed.draws.length, 'estrazione', 'estrazioni') + ').'
-                    : removed.draws.length > 1
-                        ? 'Annullate ' + removed.draws.length + ' estrazioni.'
-                        : 'Annullata l\u2019estrazione di ' + studentLabel(removed.draws[0], history.length) + '.';
+                    : removed.items.length > 1
+                        ? 'Eliminate ' + removed.items.length + ' estrazioni.'
+                        : 'Eliminata l\u2019estrazione di ' + studentLabel(removed.items[0].entry) + '.';
             }
             drawBtn.disabled = !!(now && now.length === 0);
-            nameInput.placeholder = 'Studente ' + (history.length + 1) + ' \u00b7 nome facoltativo';
+            nameInput.placeholder = 'Studente ' + nextNumber(history) + ' \u00b7 nome facoltativo';
             undoBtn.disabled = resetBtn.disabled = logBtn.disabled = history.length === 0;
             logCount.textContent = history.length ? String(history.length) : '';
             if (!history.length) {
@@ -476,23 +517,14 @@
                 logBtn.setAttribute('aria-expanded', 'false');
             }
             log.innerHTML = '';
-            history.forEach(function (draw, i) {
-                var li = make('li');
-                var numbers = draw.keys.map(function (k) { return byKey[k] ? byKey[k].number : '?'; });
-                var a = make('button', 'exam-link',
-                    studentLabel(draw, i) + ': ' + (numbers.length === 1 ? 'domanda ' : 'domande ') + numbers.join(', '));
-                a.type = 'button';
-                a.title = draw.keys.map(function (k) { return byKey[k] ? byKey[k].topicLabel : ''; }).filter(Boolean).join(' + ');
-                a.addEventListener('click', function () { showDraw(draw, i); });
-                li.appendChild(a);
-                log.appendChild(li);
-            });
+            // Newest first: the draw just made is on top.
+            for (var i = history.length - 1; i >= 0; i--) log.appendChild(logEntry(history[i], i));
 
             // Marks on the page: who got each question, and the questions resting.
             questions.forEach(function (q) {
                 q.el.classList.toggle('exam-blocked', !!blocked[q.key]);
                 var who = [];
-                history.forEach(function (d, i) { if (d.keys.indexOf(q.key) >= 0) who.push(studentLabel(d, i)); });
+                history.forEach(function (d, i) { if (d.keys.indexOf(q.key) >= 0) who.push(studentLabel(d)); });
                 var mark = q.el.querySelector(':scope > .exam-mark');
                 if (who.length) {
                     // At the end of the question, under any plot, sub-items and solution.
@@ -515,7 +547,7 @@
         function draw() {
             var set = drawSet(questions, opts, blockedKeys(history, opts.cooldown));
             if (!set) { render(); return; }
-            var entry = { at: Date.now(), keys: set.map(function (q) { return q.key; }) };
+            var entry = { n: nextNumber(history), at: Date.now(), keys: set.map(function (q) { return q.key; }) };
             var name = nameInput.value.trim();
             if (name) entry.name = name;
             nameInput.value = '';
@@ -523,7 +555,7 @@
             removed = null; // a new draw makes the last undo final
             save();
             render();
-            showDraw(entry, history.length - 1);
+            showDraw(entry);
         }
 
         drawBtn.addEventListener('click', draw);
@@ -531,15 +563,20 @@
             if (e.key === 'Enter' && !drawBtn.disabled) draw();
         });
         // No confirmation dialogs: undo and "new session" act at once and can be put back.
-        undoBtn.addEventListener('click', function () {
-            if (!history.length) return;
-            var last = history.pop();
-            // Undos in a row add up, so Ripristina brings all of them back.
-            removed = removed && removed.kind === 'undo'
-                ? { kind: 'undo', draws: [last].concat(removed.draws) }
-                : { kind: 'undo', draws: [last] };
+        /** Deletes one draw; deletions in a row add up, so Ripristina brings all of them back. */
+        function deleteDraw(index) {
+            var entry = history.splice(index, 1)[0];
+            if (!entry) return;
+            var item = { entry: entry, index: index };
+            removed = removed && removed.kind === 'delete'
+                ? { kind: 'delete', items: removed.items.concat([item]) }
+                : { kind: 'delete', items: [item] };
             save();
             render();
+        }
+
+        undoBtn.addEventListener('click', function () {
+            if (history.length) deleteDraw(history.length - 1);
         });
         resetBtn.addEventListener('click', function () {
             if (!history.length) return;
@@ -550,7 +587,14 @@
         });
         restoreBtn.addEventListener('click', function () {
             if (!removed) return;
-            history = removed.kind === 'reset' ? removed.draws : history.concat(removed.draws);
+            if (removed.kind === 'reset') {
+                history = removed.draws;
+            } else {
+                // Back in reverse order, each where it was.
+                removed.items.slice().reverse().forEach(function (it) {
+                    history.splice(Math.min(it.index, history.length), 0, it.entry);
+                });
+            }
             removed = null;
             save();
             render();

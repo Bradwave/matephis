@@ -113,23 +113,16 @@ Il sistema riconosce automaticamente queste etichette, le colora e aggiunge un t
 
 ## Estrazione per le interrogazioni
 
-Una pagina di domande diventa un'estrazione per le interrogazioni aggiungendo il blocco `exam:` al front matter. Le domande restano scritte come sempre: ogni elemento di primo livello di un elenco numerato è una domanda, il titolo (`##` o `###`) sopra di essa è il suo argomento, il grado `**[E]**` è la sua difficoltà.
+Una pagina di domande diventa un'estrazione per le interrogazioni aggiungendo il blocco `exam:` al front matter; le domande restano scritte come sempre (argomento = titolo, difficoltà = grado).
 
 ```yaml
 exam:
   pick: 2          # domande per studente
-  level: [EE, F]   # intervallo per la difficoltà media delle domande estratte
+  level: [EE, F]   # intervallo per la difficoltà media
   cooldown: 1      # per quanti studenti successivi una domanda non può riuscire
 ```
 
-Le regole:
-- due domande dello stesso argomento non escono insieme;
-- la media dei gradi delle domande estratte sta nell'intervallo `level` (T = 1, E = 2, EE = 3, EE/F = 4, F = 5, PD = 6, ...; `+` e `-` valgono un terzo di grado). Con `[EE, F]` escono, per esempio, E + PD o EE + F, non E + E o PD + PD. Senza `level` la difficoltà non conta; con `level`, le domande senza grado non escono;
-- una domanda uscita non può riuscire per i `cooldown` studenti successivi (`0`: nessun limite).
-
-Le domande sono numerate su tutta la pagina: ogni elenco riparte da dove finisce il precedente. Possono contenere grafici, diagrammi, slider e sottopunti.
-
-Sulla pagina compaiono un campo per il nome dello studente (facoltativo) e il pulsante «Estrai», che mostra a schermo intero le domande estratte, con il loro numero e argomento e senza le soluzioni; grafici e slider restano interattivi. In fondo a ogni domanda già uscita compaiono i nomi degli studenti che l'hanno avuta (o «Studente 3», se il nome non c'è); le domande ferme per il cooldown appaiono sbiadite. Le estrazioni si salvano solo in questo browser (per pagina e per dispositivo), nomi compresi, e non vengono inviate da nessuna parte: il pulsante ↶ toglie l'ultima estrazione (per esempio di uno studente assente), ☰ mostra l'elenco delle estrazioni, il cestino apre una nuova sessione cancellandole tutte. Entrambe le azioni si possono annullare con «Ripristina», anche dopo aver ricaricato la pagina, fino all'estrazione successiva. Le domande estratte si chiudono solo con la × (o con Esc). Una pagina di prova è l'[[Interrogazione di prova]].
+Regole, uso in classe e correzioni: [[Estrazione delle domande per le interrogazioni]]. Una pagina di prova è l'[[Interrogazione di prova]].
 
 ## Liste opzioni
 

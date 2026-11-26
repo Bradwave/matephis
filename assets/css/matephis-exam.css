@@ -130,9 +130,109 @@
   color: var(--secondary-text);
 }
 
-.exam-log {
-  margin: var(--space-xs) 0 0;
+/* List of the draws: one row per student, newest first */
+/* Scrolls on its own past about eight rows, so a full class doesn't push the questions away */
+.content .exam-log {
+  list-style: none;
+  margin: var(--space-sm) 0 0;
+  padding: 0;
   font-size: var(--scale-sm);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  max-height: min(24rem, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.content .exam-log > li.exam-entry:last-child {
+  border-bottom: none;
+}
+
+.content .exam-log > li.exam-entry {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.exam-entry-open {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  min-width: 0;
+  padding: 0.55rem 0.25rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exam-entry-open:hover {
+  background: var(--bg2);
+}
+
+.exam-entry-name {
+  flex: 0 0 9rem;
+  font-family: var(--font-title);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Questions in columns, aligned from one row to the next */
+.exam-entry-qs {
+  flex: 1 1 16rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.25rem 1rem;
+  min-width: 0;
+}
+
+.exam-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.exam-chip-topic {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-chip .difficulty-tag {
+  margin-right: 0;
+  cursor: inherit;
+}
+
+/* No difficulty tooltips in the list */
+.exam-chip .difficulty-tag::after {
+  display: none;
+}
+
+.exam-chip-n {
+  font-family: var(--font-title);
+  font-weight: var(--weight-bold);
+}
+
+.exam-chip .exam-chip-topic {
+  color: var(--secondary-text);
+}
+
+.exam-entry-delete {
+  color: var(--secondary-text);
+}
+
+.exam-entry-delete .exam-svg {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .exam-log[hidden] {

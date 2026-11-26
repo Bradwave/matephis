@@ -8,7 +8,7 @@ exam:
   level: [EE, F]
   cooldown: 1
 ---
-Pagina di prova per l'estrazione delle domande delle interrogazioni: vedi le [[Funzionalità di matephis]].
+Pagina di prova per l'estrazione delle domande: vedi [[Estrazione delle domande per le interrogazioni]].
 
 ## Dominio e immagine
 
