@@ -13,6 +13,13 @@ export function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
+/** Median of a short list of numbers (pinch spread filtering). */
+export function median(values) {
+    const v = values.slice().sort((a, b) => a - b);
+    const m = v.length >> 1;
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) * 0.5;
+}
+
 export function worldToScreen(wx, wy, cam) {
     return {
         x: (wx - cam.x) * cam.scale,

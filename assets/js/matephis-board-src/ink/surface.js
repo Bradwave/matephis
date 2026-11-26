@@ -336,6 +336,7 @@ export class InkSurface {
         this.activeShape = null;
         this.lassoOverlay = null; // { selectedStrokes, selectionBBox, marquee, drag }
         this.eraserCursor = null; // { x, y, radius } in world coords
+        this.zoomIndicator = null; // { sx, sy, pct, snapped } while touch pinch-zoom is active
         this.laserPoints = [];    // [{ x, y, t }]
         this.laserRaf = null;
 
@@ -403,6 +404,7 @@ export class InkSurface {
         this.height = h;
         this.dpr = dpr;
 
+        this._activeEmpty = true; // resizing clears the canvases
         for (const c of [this.bgCanvas, this.committedCanvas, this.activeCanvas]) {
             c.width = Math.round(w * dpr);
             c.height = Math.round(h * dpr);
@@ -942,6 +944,13 @@ export class InkSurface {
         const cam = this.scene.camera;
         const dpr = this.dpr;
 
+        // Pan and zoom call this on every finger move: when the layer is already empty and
+        // nothing is to be drawn, skip clearing the whole (4K on the board) canvas again.
+        const hasContent = Boolean(this.activeStroke || this.activeShape || this.lassoOverlay
+            || this.eraserCursor || this.laserPoints.length > 0 || this.zoomIndicator);
+        if (!hasContent && this._activeEmpty) return;
+        this._activeEmpty = !hasContent;
+
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, this.width, this.height);
@@ -984,6 +993,44 @@ export class InkSurface {
             this._drawLaserTrail(ctx, cam);
         }
 
+        if (this.zoomIndicator) {
+            this._drawZoomIndicator(ctx, this.zoomIndicator);
+        }
+
+        ctx.restore();
+    }
+
+    _drawZoomIndicator(ctx, ind) {
+        const isDark = this.theme === 'dark';
+        const label = `${ind.pct}%`;
+        ctx.save();
+        ctx.font = '600 13px "Space Mono", monospace';
+        const textW = ctx.measureText(label).width;
+        const padX = 10;
+        const w = Math.max(54, Math.ceil(textW + padX * 2));
+        const h = 28;
+        const cx = clamp(ind.sx, w * 0.5 + 10, Math.max(w * 0.5 + 10, this.width - w * 0.5 - 10));
+        const cy = clamp(ind.sy - 52, h * 0.5 + 10, Math.max(h * 0.5 + 10, this.height - h * 0.5 - 10));
+        const x = Math.round(cx - w * 0.5);
+        const y = Math.round(cy - h * 0.5);
+
+        if (ind.snapped) {
+            ctx.fillStyle = isDark ? '#ffffff' : '#111111';
+            ctx.strokeStyle = ctx.fillStyle;
+        } else {
+            ctx.fillStyle = isDark ? 'rgba(24, 24, 24, 0.92)' : 'rgba(255, 255, 255, 0.94)';
+            ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.24)';
+        }
+        ctx.lineWidth = 1;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+        ctx.fillStyle = ind.snapped
+            ? (isDark ? '#121212' : '#ffffff')
+            : (isDark ? '#f5f5f5' : '#111111');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + w * 0.5, y + h * 0.5 + 0.5);
         ctx.restore();
     }
 
@@ -1169,6 +1216,12 @@ export class InkSurface {
         this.renderActiveNow();
     }
 
+    setZoomIndicator(indicator, redraw = true) {
+        if (!indicator && !this.zoomIndicator) return;
+        this.zoomIndicator = indicator;
+        if (redraw) this.renderActiveNow();
+    }
+
     /**
      * Smoothly animate the camera to target { x, y, scale }.
      */
@@ -1177,14 +1230,21 @@ export class InkSurface {
      * (and its fade or pixel effect) during the glide, one sharp redraw at the end.
      * Ease-in-out, so it starts and stops gently.
      */
-    glideCameraTo(target, durationMs = 420, onDone = null) {
+    /**
+     * Glide the camera to `target` over the fast pan/zoom picture. `easing`: 'inOut' (default,
+     * connector jumps) or 'out', which suits glides restarted by repeated taps (zoom buttons).
+     * A pan or pinch that starts meanwhile stops it (stopGlide) and takes over its gesture.
+     */
+    glideCameraTo(target, durationMs = 420, onDone = null, easing = 'inOut') {
         if (this._glideRaf) cancelAnimationFrame(this._glideRaf);
         const start = { ...this.scene.camera };
         const t0 = performance.now();
         this.beginGesture();
         const step = (now) => {
             const p = clamp((now - t0) / durationMs, 0, 1);
-            const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+            const ease = easing === 'out'
+                ? 1 - Math.pow(1 - p, 3)
+                : (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
             this.scene.camera.x = start.x + (target.x - start.x) * ease;
             this.scene.camera.y = start.y + (target.y - start.y) * ease;
             this.scene.camera.scale = start.scale + (target.scale - start.scale) * ease;
@@ -1201,6 +1261,20 @@ export class InkSurface {
             }
         };
         this._glideRaf = requestAnimationFrame(step);
+    }
+
+    isGliding() {
+        return Boolean(this._glideRaf);
+    }
+
+    /**
+     * Stop a running glide where it is, without its onDone. The gesture it opened stays
+     * open, so a pan or pinch starting now carries on with it and ends it when it ends.
+     */
+    stopGlide() {
+        if (!this._glideRaf) return;
+        cancelAnimationFrame(this._glideRaf);
+        this._glideRaf = null;
     }
 
     animateCameraTo(target, durationMs = 220, onDone = null) {

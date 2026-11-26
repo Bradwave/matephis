@@ -10,7 +10,7 @@ export const PEN_COLORS = [
     { id: 1, name: 'Rosso',      light: '#B01A00', dark: '#ff523d', quick: true },
     { id: 2, name: 'Blu',        light: '#1d4ed8', dark: '#60a5fa', quick: true },
     { id: 3, name: 'Verde',      light: '#15803d', dark: '#4ade80', quick: true },
-    { id: 4, name: 'Arancione',  light: '#c2410c', dark: '#fb923c', quick: true },
+    { id: 4, name: 'Arancione',  light: '#ea580c', dark: '#fb923c', quick: true },
     // Extended colors (1 tap inside the Pen tray)
     { id: 5, name: 'Viola',      light: '#7e22ce', dark: '#c084fc', quick: false },
     { id: 6, name: 'Ottanio',    light: '#0f766e', dark: '#2dd4bf', quick: false },

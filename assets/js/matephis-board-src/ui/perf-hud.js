@@ -41,6 +41,7 @@ export class PerfHud {
                 <div>Ptr: <strong data-hud="ptr">--</strong></div>
                 <div class="board-hud-wide" title="Intera lavagna (tutte le pagine): JSON salvato / compresso gzip">File: <button type="button" class="board-hud-file-btn">Calcola</button> <strong data-hud="file"></strong></div>
                 <div class="board-hud-wide">Area: <strong data-hud="area">--</strong></div>
+                <div class="board-hud-wide" title="Larghezza della pagina in pixel CSS, rapporto pixel del dispositivo e dimensione di un pulsante (--bu): dice se l'interfaccia è grande per la risoluzione">Schermo: <strong data-hud="screen">--</strong></div>
                 <div class="board-hud-wide" title="Memoria delle immagini per pan e zoom: lavagna + striscia fissata">Mem. pan: <strong data-hud="snapMem">--</strong></div>
                 <div title="Quando la memoria delle immagini per pan e zoom viene liberata">Rilascio: <strong data-hud="snapRel">--</strong></div>
                 <div title="Fotogramma più lungo dell'ultimo pan/zoom">Frame max: <strong data-hud="panFrame">--</strong></div>
@@ -113,8 +114,21 @@ export class PerfHud {
         this.fields.points.textContent = String(points);
         this.fields.kb.textContent = `${(estBytes / 1024).toFixed(1)} KB`;
         this.fields.dpr.textContent = `${dpr}×`;
+        this._refreshScreen();
         // The measured file size is now out of date: dim it until "Calcola" is pressed again.
         this.fields.file.classList.add('is-stale');
+    }
+
+    /** Page size in CSS px, device pixel ratio, touch or mouse, and the resulting button size. */
+    _refreshScreen() {
+        const w = window.innerWidth, h = window.innerHeight;
+        const ratio = window.devicePixelRatio || 1;
+        const coarse = window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches;
+        // --bu is a calc() token, so measure a toolbar button instead of reading it.
+        const btn = this.hostEl.querySelector('.board-tool-btn');
+        const bu = btn ? btn.getBoundingClientRect().width : 0;
+        const phys = `${Math.round(w * ratio)}×${Math.round(h * ratio)}`;
+        this.fields.screen.textContent = `${w}×${h} CSS (${phys} px) · DPR ${+ratio.toFixed(2)} · ${coarse ? 'touch' : 'mouse'} · pulsante ${Math.round(bu)} px`;
     }
 
     /*

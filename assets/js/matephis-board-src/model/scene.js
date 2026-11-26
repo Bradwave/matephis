@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
     toolbarSide: 'right',   // rail side: 'right' | 'left'
     toolbarMinimal: false,  // essential toolbar: pen, quick colours, eraser, undo/redo
     quickMenu: true,        // two-finger tap opens the quick menu where you tap
+    zoomLock: false,        // lock pinch/wheel zoom so 2-finger touch only pans
     fastPan: true,          // pan/zoom moves a picture of the board, sharp redraw at the end
     connectorGlide: false,  // jumping to a connector's twin glides the camera (off: instant)
     gestureEffect: 'dim',   // EXPERIMENT: 'dim' | 'pixel' look of the picture while moving

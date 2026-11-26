@@ -41,13 +41,14 @@ export class OptionsMenu {
         this.el.innerHTML = `
             <div class="board-popover-title">Opzioni lavagna</div>
             <button type="button" class="board-action-btn board-fullscreen-btn" data-fullscreen hidden></button>
-            <div class="board-opt-tabs board-bg-seg" role="tablist" aria-label="Sezioni delle opzioni">
-                <button type="button" class="board-bg-btn" role="tab" data-tab="page">Pagina</button>
-                <button type="button" class="board-bg-btn" role="tab" data-tab="touch">Tocco</button>
-                <button type="button" class="board-bg-btn" role="tab" data-tab="ui">Barra</button>
-                <button type="button" class="board-bg-btn" role="tab" data-tab="perf">Velocità</button>
-                <button type="button" class="board-bg-btn" role="tab" data-tab="file">File</button>
+            <div class="board-seg-row" role="tablist" aria-label="Sezioni delle opzioni">
+                <button type="button" class="board-seg-btn" role="tab" data-tab="page">Pagina</button>
+                <button type="button" class="board-seg-btn" role="tab" data-tab="touch">Tocco</button>
+                <button type="button" class="board-seg-btn" role="tab" data-tab="ui">Barra</button>
+                <button type="button" class="board-seg-btn" role="tab" data-tab="perf">Velocità</button>
+                <button type="button" class="board-seg-btn" role="tab" data-tab="file">File</button>
             </div>
+            <div class="board-opt-panels">
             <div class="board-options-list" role="tabpanel" data-tab-panel="page">
                 <div class="board-opt-bg-row">
                     <span>Sfondo pagina</span>
@@ -71,6 +72,10 @@ export class OptionsMenu {
                 <label class="board-opt-row">
                     <span>Solo stilo (1 dito sposta)</span>
                     <input type="checkbox" data-opt="penOnly" />
+                </label>
+                <label class="board-opt-row" title="Blocca lo zoom con le dita: due dita spostano soltanto la lavagna senza zoomare">
+                    <span>Blocca zoom (2 dita solo pan)</span>
+                    <input type="checkbox" data-opt="zoomLock" />
                 </label>
                 <label class="board-opt-row">
                     <span>Palmo come gomma</span>
@@ -161,11 +166,14 @@ export class OptionsMenu {
                     ${BoardIcons.close}<span>Elimina pagina</span>
                 </button>
             </div>
+            </div>
             <input type="file" accept=".json,.mboard.json,.svg" class="board-file-input" hidden />
         `;
 
         this.fileInput = this.el.querySelector('.board-file-input');
-        // Sections as tabs: the menu stays short enough to need no scrolling on a board
+        // Sections as tabs. All panels share one grid cell, so the menu is always as tall as
+        // its tallest tab: switching tabs never resizes it or pushes it off-screen, and on a
+        // short screen only the panel area scrolls under the fixed title and tabs.
         this.tab = 'page';
         this.el.querySelectorAll('[data-tab]').forEach((btn) => {
             btn.addEventListener('click', () => this._showTab(btn.dataset.tab));
@@ -219,7 +227,7 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
@@ -350,7 +358,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;

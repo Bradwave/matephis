@@ -42,6 +42,7 @@ import remove from './icons/remove.svg';
 import link from './icons/link.svg';
 import fullscreen from './icons/fullscreen.svg';
 import fullscreenExit from './icons/fullscreen-exit.svg';
+import pan from './icons/pan.svg';
 
 export const BoardIcons = {
     pen,
@@ -85,4 +86,5 @@ export const BoardIcons = {
     link,
     fullscreen,
     fullscreenExit,
+    pan,
 };
