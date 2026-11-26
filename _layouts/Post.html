@@ -31,7 +31,7 @@
     {%- if site.css_file -%}
     <link href="{{ site.baseurl }}{{ site.css_file }}?v=2.16" rel="stylesheet" media="all" class="default" />
     {%- else -%}
-    <link href="{{ site.baseurl }}/assets/css/style.css?v=2.16" rel="stylesheet" media="all" class="default" />
+    <link href="{{ site.baseurl }}/assets/css/style.css?v=2.17" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
     {%- if page.plot or page.physics or page.sets -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-plot.css?v={{ site.data.engines.plot.css }}" rel="stylesheet" />
@@ -300,6 +300,7 @@
                     }
                 });
             </script>
+            <script src="{{ site.baseurl }}/assets/js/matephis-aids.js?v=1" defer></script>
         </div>
     </div>
     {%- if page.plot -%}

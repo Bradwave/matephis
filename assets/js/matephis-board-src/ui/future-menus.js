@@ -7,6 +7,7 @@
  */
 
 import { BoardIcons } from './icons.js';
+import { exerciseSteps, revealSteps } from './exercise-steps.js';
 import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 import {
     hydrateEmbeddedEngines,
@@ -945,6 +946,11 @@ export class FutureMenus {
         const prevBtn = q('[data-ex-prev]');
         const nextBtn = q('[data-ex-next]');
         const hideSolCheck = q('[data-ex-hide-sol]');
+        // The preview starts like the card will: every aid shown, or none
+        const showAids = () => {
+            const steps = exerciseSteps(bodyEl);
+            revealSteps(steps, hideSolCheck.checked ? -1 : steps.length - 1);
+        };
         const insertBtn = q('[data-ex-insert]');
 
         const POS_KEY = 'matephis_board_exercise_pos';
@@ -1116,7 +1122,7 @@ export class FutureMenus {
             bodyEl.replaceChildren();
             const safe = sanitizeHtmlToFragment(it.html || '');
             if (safe) bodyEl.appendChild(safe);
-            previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
+            showAids();
             bodyEl.scrollTop = 0;
             previewEl.scrollTop = 0;
             if (this.engineLoader) {
@@ -1178,10 +1184,7 @@ export class FutureMenus {
         prevBtn.addEventListener('click', () => step(-1));
         nextBtn.addEventListener('click', () => step(1));
 
-        hideSolCheck.addEventListener('change', () => {
-            previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
-        });
-        previewEl.classList.toggle('is-solution-hidden', hideSolCheck.checked);
+        hideSolCheck.addEventListener('change', showAids);
 
         insertBtn.addEventListener('click', () => {
             const it = st.item;

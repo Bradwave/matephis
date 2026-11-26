@@ -117,7 +117,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	27. $x^2 + 2x - 4 \leq 0$ [sol: $-1 - \sqrt{5} \leq x \leq -1 + \sqrt{5}$]
 	28. $-2x^2 + 6x - 1 \geq 0$ [sol: $\frac{3 - \sqrt{7}}{2} \leq x \leq \frac{3 + \sqrt{7}}{2}$]
 	29. $3x^2 - 5x - 1 < 0$ [sol: $\frac{5 - \sqrt{37}}{6} < x < \frac{5 + \sqrt{37}}{6}$]
-	30. $x^2 - 7x + 5 > 0$ [sol: $x < \frac{7 - \sqrt{29}}{2} \lor x > \frac{7 + \sqrt{29}}{2}$
+	30. $x^2 - 7x + 5 > 0$ [sol: $x < \frac{7 - \sqrt{29}}{2} \lor x > \frac{7 + \sqrt{29}}{2}$]
 	31. $\frac{1}{2}x^2 - 3x + 2 \leq 0$ [sol: $3 - \sqrt{5} \leq x \leq 3 + \sqrt{5}$]
 7. Determina i valori di $x$ per cui $A(x) / B(x) < 0$.
 [sol: $-3 < x < -2 \lor -1 < x < 2 \lor x > 3$]

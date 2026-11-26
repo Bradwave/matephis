@@ -13,6 +13,7 @@
 import { OVERLAY_PX_PER_MM } from './overlay.js';
 import { BoardIcons } from './icons.js';
 import { hydrateEmbeddedEngines } from './exercise-picker.js';
+import { exerciseSteps, revealLevel, revealSteps } from './exercise-steps.js';
 import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 import { nextWidgetId } from '../model/scene.js';
 import { worldToScreen } from '../ink/geometry.js';
@@ -518,7 +519,6 @@ export class WidgetManager {
 
         const card = document.createElement('div');
         card.className = 'board-widget-exercise';
-        if (data.hideSolution) card.classList.add('is-solution-hidden');
 
         const header = document.createElement('div');
         header.className = 'board-widget-ex-header';
@@ -541,32 +541,40 @@ export class WidgetManager {
             content.appendChild(empty);
         }
 
-        const hasSol = Boolean(data.hasSolution) || Boolean(content.querySelector('.solution-tag, .solution-text, .hint-tag, details.details'));
-        if (hasSol) {
-            const solBtn = document.createElement('button');
-            solBtn.type = 'button';
-            solBtn.className = 'board-widget-sol-toggle';
-            solBtn.textContent = data.hideSolution ? 'Mostra soluzione' : 'Nascondi soluzione';
-            solBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-            solBtn.addEventListener('click', (e) => {
+        // One button per step; tapping a step shows everything up to it, tapping it again hides it.
+        entry.steps = exerciseSteps(content);
+        entry.stepButtons = entry.steps.map((step, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'board-ex-step';
+            btn.textContent = step.label;
+            btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+            btn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                const level = revealLevel(w.data, entry.steps);
                 const prevData = cloneData(w.data);
-                w.data = { ...cloneData(w.data), hideSolution: !w.data.hideSolution };
-                const nextData = cloneData(w.data);
-                this.history.push({ type: 'widget-update', id: w.id, prev: { data: prevData }, next: { data: nextData } });
+                const next = cloneData(w.data);
+                delete next.hideSolution; // superseded by the step
+                next.reveal = level === i ? i - 1 : i;
+                w.data = next;
+                this.history.push({ type: 'widget-update', id: w.id, prev: { data: prevData }, next: { data: cloneData(w.data) } });
                 entry.signature = widgetSignature(w);
                 this._syncExerciseSolutionUI(w, entry);
                 if (this.onSceneMutated) this.onSceneMutated();
             });
-            header.appendChild(solBtn);
-            entry.solBtn = solBtn;
-        } else {
-            entry.solBtn = null;
-        }
+            return btn;
+        });
 
         entry.exCard = card;
         card.append(header, content);
+        if (entry.stepButtons.length) {
+            const bar = document.createElement('div');
+            bar.className = 'board-ex-steps';
+            bar.append(...entry.stepButtons);
+            header.after(bar);
+        }
         body.appendChild(card);
+        this._syncExerciseSolutionUI(w, entry);
 
         try {
             const embedded = await hydrateEmbeddedEngines(content, this.engineLoader);
@@ -584,11 +592,9 @@ export class WidgetManager {
 
     _syncExerciseSolutionUI(w, entry) {
         if (!entry || !entry.exCard) return;
-        const hidden = Boolean(w.data && w.data.hideSolution);
-        entry.exCard.classList.toggle('is-solution-hidden', hidden);
-        if (entry.solBtn) {
-            entry.solBtn.textContent = hidden ? 'Mostra soluzione' : 'Nascondi soluzione';
-        }
+        const level = revealLevel(w.data, entry.steps);
+        revealSteps(entry.steps, level);
+        entry.stepButtons.forEach((btn, i) => btn.setAttribute('aria-pressed', String(i <= level)));
     }
 
     _unmountInstances(entry) {
@@ -603,7 +609,8 @@ export class WidgetManager {
         }
         entry.embeddedInstances = [];
         entry.exCard = null;
-        entry.solBtn = null;
+        entry.steps = [];
+        entry.stepButtons = [];
     }
 
     _destroyEntry(entry) {

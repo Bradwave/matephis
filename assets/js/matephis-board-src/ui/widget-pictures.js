@@ -11,6 +11,7 @@
 import { OVERLAY_PX_PER_MM } from './overlay.js';
 import { cloneStyledWidgetSVG } from '../export/svg-export.js';
 import { renderDomPicture } from './dom-picture.js';
+import { exerciseSteps, revealLevel, revealSteps } from './exercise-steps.js';
 import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 
 const PICTURE_SCALE = 1.5;        // bitmap pixels per layout pixel (memory: ~3 MB per large widget)
@@ -202,13 +203,15 @@ export class WidgetPictureCache {
         host.className = 'board-widget';
         host.dataset.widgetKind = 'exercise';
         host.style.width = `${Math.round(widget.w * OVERLAY_PX_PER_MM)}px`;
-        host.innerHTML = `<div class="board-widget-body"><div class="board-widget-exercise${data.hideSolution ? ' is-solution-hidden' : ''}">`
+        host.innerHTML = `<div class="board-widget-body"><div class="board-widget-exercise">`
             + '<div class="board-widget-ex-header"><div class="board-widget-ex-meta"></div></div>'
             + '<div class="board-widget-ex-content"></div></div></div>';
         host.querySelector('.board-widget-ex-meta').textContent = [data.noteTitle || 'Esercizio', data.section, data.label].filter(Boolean).join(' · ');
         const content = host.querySelector('.board-widget-ex-content');
         const safe = data.html ? sanitizeHtmlToFragment(data.html) : null;
         if (safe) content.appendChild(safe);
+        const steps = exerciseSteps(content);
+        revealSteps(steps, revealLevel(data, steps));
         this._offscreenHost().appendChild(host);
         try {
             if (this.engineLoader && typeof this.engineLoader.typeset === 'function') {

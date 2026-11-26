@@ -41,7 +41,7 @@ const INTERACTIVE_SELECTOR = [
     '.board-widget:not(.is-controls-locked) .mps-draggable',
     '.board-widget:not(.is-controls-locked) .matephis-circuit-switch',
     '.board-widget:not(.is-controls-locked) .matephis-circuit-comp',
-    '.board-widget:not(.is-controls-locked) .board-widget-sol-toggle',
+    '.board-widget:not(.is-controls-locked) .board-ex-step',
 ].join(', ');
 
 export class BoardOverlay {
