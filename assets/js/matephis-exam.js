@@ -180,9 +180,13 @@
      * prerendered pages) and plots and diagrams fill their box when they are built, so the key
      * would change from one load to the next.
      */
-    function questionText(li) {
+    var KEY_STRIP = '.solution-tag, .hints, .hint-tag, details.work, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select';
+    // The first release (1.0) kept hints and working in the key: still read, to map saved draws
+    var LEGACY_KEY_STRIP = '.solution-tag, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select';
+
+    function questionText(li, strip) {
         var clone = li.cloneNode(true);
-        clone.querySelectorAll('.solution-tag, .hints, .hint-tag, details.work, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select')
+        clone.querySelectorAll(strip || KEY_STRIP)
             .forEach(function (n) { n.remove(); });
         return clone.textContent
             .replace(/\$\$[\s\S]*?\$\$/g, ' ')
@@ -198,7 +202,7 @@
     function collectQuestions(content) {
         var questions = [];
         var topic = null, topicIndex = 0, untitled = 0;
-        var seen = {};
+        var seen = {}, seenLegacy = {};
         Array.prototype.forEach.call(content.children, function (el) {
             var tag = el.tagName;
             if (tag === 'H2' || tag === 'H3') {
@@ -219,8 +223,12 @@
                 var key = hashText(questionText(li));
                 while (seen[key]) key += '_';
                 seen[key] = true;
+                var legacyKey = hashText(questionText(li, LEGACY_KEY_STRIP));
+                while (seenLegacy[legacyKey]) legacyKey += '_';
+                seenLegacy[legacyKey] = true;
                 questions.push({
                     key: key,
+                    legacyKey: legacyKey,
                     el: li,
                     number: questions.length + 1,
                     // Items before any heading are each a topic of their own.
@@ -239,6 +247,11 @@
         return 'matephis-exam:' + path;
     }
 
+    /** Where 1.0 saved the session: the path as it was, trailing slash included. */
+    function legacyStorageKey() {
+        return 'matephis-exam:' + location.pathname;
+    }
+
     /**
      * The saved session: { draws, removed }.
      * Each draw is { n, name?, keys, at }: `n` is the student's number, fixed when drawn, so
@@ -250,12 +263,17 @@
     function loadState() {
         try {
             var raw = localStorage.getItem(storageKey());
+            var migrated = false;
+            if (raw == null && legacyStorageKey() !== storageKey()) {
+                raw = localStorage.getItem(legacyStorageKey());
+                migrated = raw != null;
+            }
             var data = raw ? JSON.parse(raw) : null;
             var draws = data && Array.isArray(data.draws) ? data.draws : [];
             draws.forEach(function (d, i) { if (!d.n) d.n = i + 1; });
             var r = data && data.removed;
             var removed = r && ((r.kind === 'delete' && Array.isArray(r.items)) || (r.kind === 'reset' && Array.isArray(r.draws))) ? r : null;
-            return { draws: draws, removed: removed };
+            return { draws: draws, removed: removed, migrated: migrated };
         } catch (e) {
             return { draws: [], removed: null };
         }
@@ -264,6 +282,7 @@
     function saveState(draws, removed) {
         try {
             localStorage.setItem(storageKey(), JSON.stringify({ draws: draws, removed: removed }));
+            if (legacyStorageKey() !== storageKey()) localStorage.removeItem(legacyStorageKey());
         } catch (e) { /* private mode: the session lasts as long as the page */ }
     }
 
@@ -319,6 +338,30 @@
         return max + 1;
     }
 
+    /**
+     * Draws saved by 1.0 name questions by their old key: renamed to the current one, so the
+     * cooldown and the list of past draws still know them. Returns true if anything changed.
+     */
+    function migrateKeys(questions, draws, removed) {
+        var current = {}, map = {};
+        questions.forEach(function (q) { current[q.key] = true; });
+        questions.forEach(function (q) {
+            if (q.legacyKey !== q.key && !current[q.legacyKey]) map[q.legacyKey] = q.key;
+        });
+        var changed = false;
+        function fix(entry) {
+            if (!entry || !Array.isArray(entry.keys)) return;
+            entry.keys = entry.keys.map(function (k) {
+                if (map[k]) { changed = true; return map[k]; }
+                return k;
+            });
+        }
+        draws.forEach(fix);
+        if (removed && removed.kind === 'reset') removed.draws.forEach(fix);
+        if (removed && removed.kind === 'delete') removed.items.forEach(function (it) { fix(it && it.entry); });
+        return changed;
+    }
+
     function init() {
         var content = document.querySelector('.content');
         if (!content || !root.MatephisExamOptions) return;
@@ -330,6 +373,7 @@
         var history = state.draws;
         var removed = state.removed;
         function save() { saveState(history, removed); }
+        if (migrateKeys(questions, history, removed) || state.migrated) save();
 
         var panel = make('div', 'exam-panel');
         var actions = make('div', 'exam-actions');

@@ -1299,7 +1299,8 @@ li li .solution-tag:not(.is-long) .aid-label {
   cursor: pointer;
 }
 
-.hints .hint-tag:hover .aid-label {
+.hints .hint-tag:hover .aid-label,
+.hints .hint-tag:focus-visible .aid-label {
   color: var(--accent);
 }
 

@@ -28,6 +28,32 @@ describe('Board HTML sanitiser helpers', () => {
             expect(sanitizeStyle('min-width: 1.5em; color: #c00')).toBe('min-width: 1.5em; color: #c00');
         });
 
+        it('keeps what MathJax 3 SVG output sets inline', () => {
+            // mjx-container with assistive MathML, and the svg's italic correction / display shift
+            expect(sanitizeStyle('position: relative;')).toBe('position: relative;');
+            expect(sanitizeStyle('vertical-align: -0.025ex; margin-left: -0.05ex; min-width: 12.3ex'))
+                .toBe('vertical-align: -0.025ex; margin-left: -0.05ex; min-width: 12.3ex');
+            expect(sanitizeStyle('margin-right: -0.4ex')).toBe('margin-right: -0.4ex');
+        });
+
+        it('keeps common table and diagram styles', () => {
+            expect(sanitizeStyle('border: 1px solid #ccc; white-space: nowrap; background: #f5f5f5'))
+                .toBe('border: 1px solid #ccc; white-space: nowrap; background: #f5f5f5');
+            expect(sanitizeStyle('font-family: serif; stroke-dasharray: 4 2')).toBe('font-family: serif; stroke-dasharray: 4 2');
+        });
+
+        it('allows only position: relative', () => {
+            for (const p of ['fixed', 'absolute', 'sticky']) expect(sanitizeStyle(`position: ${p}`)).toBe('');
+        });
+
+        it('rejects large or non-MathJax negative margins', () => {
+            expect(sanitizeStyle('margin-top: -9999px')).toBe('');
+            expect(sanitizeStyle('margin: 0 0 -50em 0')).toBe('');
+            expect(sanitizeStyle('margin-left: -100%')).toBe('');
+            expect(sanitizeStyle('margin-left: calc(0px - 100vh)')).toBe('');
+            expect(sanitizeStyle('color: red; margin-top: -20vh')).toBe('color: red');
+        });
+
         it('strips overlay/positioning styles that could hijack the board UI', () => {
             expect(sanitizeStyle('position: fixed; inset: 0; z-index: 999999')).toBe('');
             expect(sanitizeStyle('text-align: left; position: fixed; z-index: 9999')).toBe('text-align: left');

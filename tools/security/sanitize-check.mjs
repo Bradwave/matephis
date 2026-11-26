@@ -65,6 +65,7 @@ const PAYLOADS = [
     '<!--<img src=x onerror="window.__xss=1">-->',
     '<mjx-container style="position:fixed;inset:0;z-index:999999;background:#fff"><a href="https://evil.test/">phish</a></mjx-container>',
     '<svg style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999999"></svg>',
+    '<td style="margin-top:-9999px;position:absolute">pull</td>',
     '<p>ok <strong>bold</strong> <a href="https://matephis.com/notes/x">link</a></p>',
 ];
 
@@ -86,7 +87,7 @@ const CHECK_PAGE = `(${(async (payloads) => {
                 if (/href|src|action|data/i.test(a.name) && /^\s*(javascript|data:text|vbscript)/i.test(a.value)) bad.push([p, `${a.name}=${a.value}`]);
                 if (a.name === 'id' && !/^MJX-/.test(a.value)) bad.push([p, `id ${a.value}`]);
                 if (a.name === 'name') bad.push([p, 'name attribute']);
-                if (a.name === 'style' && /url\(|position\s*:|z-index\s*:|inset\s*:/i.test(a.value)) bad.push([p, `unsafe style ${a.value}`]);
+                if (a.name === 'style' && /url\(|position\s*:\s*(?!relative)|z-index\s*:|inset\s*:|margin[a-z-]*\s*:[^;]*-\s*\d{2,}/i.test(a.value)) bad.push([p, `unsafe style ${a.value}`]);
                 if (/href$/.test(a.name) && el.localName === 'use' && !a.value.startsWith('#')) bad.push([p, `external use ${a.value}`]);
             }
         }

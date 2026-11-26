@@ -70,8 +70,8 @@ export function whenMathJaxReady(cb) {
         const mj = window.MathJax;
         if (mj && mj.startup && mj.startup.promise) { mj.startup.promise.then(cb, cb); return; }
         if (mj && mj.tex2svg) { cb(); return; }
-        // Never block rendering forever if MathJax fails to load
-        if (Date.now() - started > 8000) { s.failed = true; cb(); return; }
+        // Never block rendering forever: draw without it (a late MathJax is picked up by watchLate)
+        if (Date.now() - started > 8000) { cb(); return; }
         setTimeout(check, 50);
     };
     check();
@@ -123,9 +123,47 @@ export function loadMathJax() {
     }
     const loading = new Promise(resolve => whenMathJaxReady(() => resolve(hasMathJax())));
     s.loading = loading;
-    // Not there (yet): ask again next time unless loading itself failed (offline / CDN error)
-    loading.then(ok => { if (!ok && !s.failed && s.loading === loading) s.loading = null; });
+    // Not there (yet): ask again next time, and keep watching for a slow MathJax, unless
+    // loading itself failed (offline / CDN error: the script's onerror)
+    loading.then(ok => {
+        if (ok || s.failed || s.loading !== loading) return;
+        s.loading = null;
+        watchLate(s);
+    });
     return loading;
+}
+
+const LATE_POLL_MS = 500;
+const LATE_GIVE_UP_MS = 120000;
+
+/**
+ * MathJax slower than the 8 s wait (a slow network): blocks drew plain text and captions
+ * stayed raw. Once it is there, those blocks draw again and those captions are typeset.
+ */
+function watchLate(s) {
+    if (s.lateWatch) return;
+    s.lateWatch = true;
+    const started = Date.now();
+    const poll = () => {
+        if (hasMathJax()) {
+            s.lateWatch = false;
+            const owners = [...(s.lateRedraw || [])];
+            const els = (s.lateTypeset || []).filter(el => el.isConnected !== false);
+            if (s.lateRedraw) s.lateRedraw.clear();
+            s.lateTypeset = [];
+            owners.forEach(o => { if (!o._destroyed) o.requestDraw(); });
+            if (els.length) typesetElements(els);
+            return;
+        }
+        if (s.failed || Date.now() - started > LATE_GIVE_UP_MS) {
+            s.lateWatch = false;
+            if (s.lateRedraw) s.lateRedraw.clear();
+            s.lateTypeset = [];
+            return;
+        }
+        setTimeout(poll, LATE_POLL_MS);
+    };
+    setTimeout(poll, LATE_POLL_MS);
 }
 
 /**
@@ -147,6 +185,11 @@ export function texReady(owner) {
             const owners = [...s.redraw];
             s.redraw.clear();
             if (ok) owners.forEach(o => { if (!o._destroyed) o.requestDraw(); });
+            else if (!s.failed) {
+                // Late, not failed: drawn again by watchLate once MathJax is there
+                if (!s.lateRedraw) s.lateRedraw = new Set();
+                owners.forEach(o => s.lateRedraw.add(o));
+            }
         });
     }
     return false;
@@ -204,6 +247,8 @@ function flushTypeset(s) {
     if (!batch.length) return;
     const mj = window.MathJax;
     if (!mj || !mj.typesetPromise) {
+        // Late, not failed: typeset by watchLate once MathJax is there
+        if (!s.failed && s.lateWatch) s.lateTypeset = (s.lateTypeset || []).concat(batch.flatMap(b => b.els));
         batch.forEach(b => b.resolve(false));
         return;
     }

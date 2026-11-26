@@ -93,13 +93,35 @@ const UNSAFE_STYLE = /url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding
 // Only layout-neutral properties used by tables, MathJax SVG and SVG diagrams: blocks
 // position/inset/z-index overlays that could cover or hijack the board UI.
 const ALLOWED_STYLE_PROPS = words(`
-    text-align vertical-align
+    text-align vertical-align white-space line-height direction
     width height min-width max-width min-height max-height
     margin margin-top margin-right margin-bottom margin-left
     padding padding-top padding-right padding-bottom padding-left
-    font-size font-weight font-style color background-color
-    fill stroke stroke-width opacity
+    font-family font-size font-weight font-style text-decoration
+    color background background-color
+    border border-top border-right border-bottom border-left
+    border-color border-style border-width border-collapse
+    fill fill-opacity stroke stroke-width stroke-opacity stroke-dasharray
+    stroke-linecap stroke-linejoin paint-order opacity
+    position
 `);
+const MARGIN_PROPS = words('margin margin-top margin-right margin-bottom margin-left');
+// MathJax's negative margins are small and in ex/em (italic corrections, display shifts).
+const MAX_NEGATIVE_MARGIN = 5;
+
+/** Is this value safe for this (allowlisted) property? */
+function styleValueAllowed(prop, val) {
+    // MathJax sets position: relative on every formula (its hidden MathML is placed against it)
+    if (prop === 'position') return /^relative(\s*!important)?$/i.test(val);
+    if (MARGIN_PROPS.has(prop)) {
+        if (/[a-z-]+\s*\(/i.test(val)) return false; // calc(), var(), …: no computed escapes
+        // A negative margin could pull content over its neighbours: only MathJax-sized ones pass.
+        for (const m of val.matchAll(/-\s*(\d*\.?\d+)\s*([a-z%]*)/gi)) {
+            if (!/^(em|ex)$/i.test(m[2]) || Number(m[1]) > MAX_NEGATIVE_MARGIN) return false;
+        }
+    }
+    return true;
+}
 
 /**
  * Clean an inline style attribute to allowlisted CSS properties with safe values.
@@ -118,7 +140,7 @@ export function sanitizeStyle(value) {
         if (colon <= 0) { dropped = true; continue; }
         const prop = trimmed.slice(0, colon).trim().toLowerCase();
         const val = trimmed.slice(colon + 1).trim();
-        if (!val || !ALLOWED_STYLE_PROPS.has(prop)) { dropped = true; continue; }
+        if (!val || !ALLOWED_STYLE_PROPS.has(prop) || !styleValueAllowed(prop, val)) { dropped = true; continue; }
         kept.push(`${prop}: ${val}`);
     }
     if (!kept.length) return '';

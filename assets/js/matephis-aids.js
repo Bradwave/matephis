@@ -8,9 +8,17 @@
         if (!group) return;
         var hints = group.querySelectorAll('.hint-tag');
         var shown = group.querySelectorAll('.hint-tag.is-revealed').length;
+        // A revealed hint is a button: Enter, Space or a tap hides it (and the ones after it)
         hints.forEach(function (h) {
-            if (h.classList.contains('is-revealed')) h.setAttribute('tabindex', '0');
-            else h.removeAttribute('tabindex');
+            if (h.classList.contains('is-revealed')) {
+                h.setAttribute('tabindex', '0');
+                h.setAttribute('role', 'button');
+                h.setAttribute('aria-expanded', 'true');
+            } else {
+                h.removeAttribute('tabindex');
+                h.removeAttribute('role');
+                h.removeAttribute('aria-expanded');
+            }
         });
         var button = group.nextElementSibling;
         if (!button || !button.classList.contains('hint-next')) return;
@@ -75,7 +83,11 @@
             toggleSolution(sol);
         } else if (e.target.matches('.hints .hint-tag.is-revealed')) {
             e.preventDefault();
+            var group = e.target.parentElement;
             hideFrom(e.target);
+            // The hint is gone: keep the keyboard on the button that shows it again
+            var next = group && group.nextElementSibling;
+            if (next && next.classList.contains('hint-next')) next.focus();
         }
     });
 
