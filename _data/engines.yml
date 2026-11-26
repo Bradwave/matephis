@@ -20,3 +20,6 @@ slides:
 draw:
   js: "1.0"
   css: "1.0"
+exam:
+  js: "1.0"
+  css: "1.0"

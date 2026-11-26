@@ -51,6 +51,9 @@
     {%- if page.draw -%}
     <link href="{{ site.baseurl }}/assets/css/matephis-draw.css?v={{ site.data.engines.draw.css }}" rel="stylesheet" />
     {%- endif -%}
+    {%- if page.exam -%}
+    <link href="{{ site.baseurl }}/assets/css/matephis-exam.css?v={{ site.data.engines.exam.css }}" rel="stylesheet" />
+    {%- endif -%}
     {%- if site.mathjax -%}
     {%- comment -%}
     The deployed site is typeset at build time (tools/mathjax/prerender.mjs marks such pages with
@@ -323,6 +326,11 @@
     {%- endif -%}
     {%- if page.draw -%}
     <script src="{{ site.baseurl }}/assets/js/matephis-draw.js?v={{ site.data.engines.draw.js }}"></script>
+    {%- endif -%}
+    {%- if page.exam -%}
+    {%- comment -%} Oral exam draw: the rules come from the `exam:` block of the front matter {%- endcomment -%}
+    <script>window.MatephisExamOptions = {{ page.exam | jsonify }};</script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-exam.js?v={{ site.data.engines.exam.js }}"></script>
     {%- endif -%}
     {%- if page.draw -%}
     <div class="draw-ui">

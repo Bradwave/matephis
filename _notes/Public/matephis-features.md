@@ -111,6 +111,19 @@ Il sistema riconosce automaticamente queste etichette, le colora e aggiunge un t
 *   `**[F]**`: Facile (alpinismo) **[F]**
 *   `**[D+]**`: Difficile superiore **[D+]**
 
+## Estrazione per le interrogazioni
+
+Una pagina di domande diventa un'estrazione per le interrogazioni aggiungendo il blocco `exam:` al front matter; le domande restano scritte come sempre (argomento = titolo, difficoltà = grado).
+
+```yaml
+exam:
+  pick: 2          # domande per studente
+  level: [EE, F]   # intervallo per la difficoltà media
+  cooldown: 1      # per quanti studenti successivi una domanda non può riuscire
+```
+
+Regole, uso in classe e correzioni: [[Estrazione delle domande per le interrogazioni]]. Una pagina di prova è l'[[Interrogazione di prova]].
+
 ## Liste opzioni
 
 Per creare liste di opzioni (es. parametri di una funzione o menu), usa il grassetto con parentesi tonde all'inizio di un elemento di lista.
