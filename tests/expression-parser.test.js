@@ -314,3 +314,22 @@ describe('ExpressionParser: riscrittura di un\'espressione', () => {
         }
     });
 });
+
+describe('Variable names from configs cannot inject code', () => {
+    const attacks = ['{a=globalThis.__pwn=1}', '[a=globalThis.__pwn=1]', 'a=globalThis.__pwn=1', 't){globalThis.__pwn=1}//', '...a', ''];
+    it.each(attacks)('rejects %j', (name) => {
+        globalThis.__pwn = 0;
+        expect(() => compileExpression('1', { vars: [name] })).toThrow(/Invalid variable name/);
+        expect(globalThis.__pwn).toBe(0);
+    });
+    it('rejects them through ExpressionCompiler (a curve "param") too', () => {
+        globalThis.__pwn = 0;
+        expect(() => compiler().fn('1', ['{b=globalThis.__pwn=2}'])).toThrow(/Invalid variable name/);
+        expect(globalThis.__pwn).toBe(0);
+    });
+    it('still accepts ordinary names', () => {
+        for (const v of ['x', 't', 'theta', 'θ', 'u_1', 'T2']) {
+            expect(compileExpression(`2*${v}`, { vars: [v] })({}, {}, 3)).toBe(6);
+        }
+    });
+});

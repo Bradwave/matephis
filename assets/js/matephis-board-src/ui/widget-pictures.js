@@ -12,6 +12,7 @@ import { OVERLAY_PX_PER_MM } from './overlay.js';
 import { cloneStyledWidgetSVG } from '../export/svg-export.js';
 import { renderDomPicture } from './dom-picture.js';
 import { exerciseSteps, revealLevel, revealSteps } from './exercise-steps.js';
+import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 
 const PICTURE_SCALE = 1.5;        // bitmap pixels per layout pixel (memory: ~3 MB per large widget)
 const MAX_SIDE_PX = 2400;
@@ -207,7 +208,8 @@ export class WidgetPictureCache {
             + '<div class="board-widget-ex-content"></div></div></div>';
         host.querySelector('.board-widget-ex-meta').textContent = [data.noteTitle || 'Esercizio', data.section, data.label].filter(Boolean).join(' · ');
         const content = host.querySelector('.board-widget-ex-content');
-        content.innerHTML = data.html || '';
+        const safe = data.html ? sanitizeHtmlToFragment(data.html) : null;
+        if (safe) content.appendChild(safe);
         const steps = exerciseSteps(content);
         revealSteps(steps, revealLevel(data, steps));
         this._offscreenHost().appendChild(host);
@@ -323,8 +325,10 @@ export class WidgetPictureCache {
         ctx.fillStyle = dark ? '#a1a1aa' : '#71717a';
         ctx.font = '11.5px "Space Mono", monospace';
         ctx.fillText([data.noteTitle || 'Esercizio', data.section, data.label].filter(Boolean).join(' · '), 10, 20);
+        // A detached element still loads images (and runs their onerror): sanitise first.
         const tmp = document.createElement('div');
-        tmp.innerHTML = data.html || '';
+        const safe = data.html ? sanitizeHtmlToFragment(data.html) : null;
+        if (safe) tmp.appendChild(safe);
         for (const sol of tmp.querySelectorAll('.solution-text, .hint-text, details')) sol.remove();
         ctx.fillStyle = dark ? '#e4e4e7' : '#27272a';
         ctx.font = '14.5px "Noto Sans", sans-serif';

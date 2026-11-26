@@ -35,7 +35,7 @@ Il progetto è cambiato parecchio in un anno. In breve:
 
 **Settembre 2025: il blog.** Parto dal template [Jekyll Garden](https://github.com/Jekyll-Garden/jekyll-garden) (la licenza MIT del repository è la sua), pubblicato su GitHub Pages. Le prime settimane sono tentativi con l'URL, MathJax e i primi appunti ed esercizi sulle funzioni e sulle equazioni di secondo grado.
 
-**Fine 2025: i contenuti crescono.** Aggiungo energia, elettrostatica, limiti, parabola, esponenziali, la serie di Fourier. A novembre arriva il dominio matephis.com. A dicembre un CMS (Sveltia, in `admin/`) per scrivere dal browser, e un restyling completo: sidebar con indice, pagine correlate, sfondo a puntini, lightbox per le immagini.
+**Fine 2025: i contenuti crescono.** Aggiungo energia, elettrostatica, limiti, parabola, esponenziali, la serie di Fourier. A novembre arriva il dominio matephis.com. A dicembre un CMS (Sveltia, in `admin/`) per scrivere dal browser (rimosso a novembre 2026: per una correzione urgente basta l'editor di GitHub), e un restyling completo: sidebar con indice, pagine correlate, sfondo a puntini, lightbox per le immagini.
 
 **Gennaio 2026: i grafici.** Parte come uno script per tracciare funzioni a partire da un blocco JSON e in poche settimane diventa `matephis-plot`: slider, griglia adattiva, zoom e pan, campionamento adattivo per gestire asintoti e discontinuità, legende con MathJax, selezione di punti e tangenti, interpolazione. Funziona anche in anteprima dentro Obsidian.
 
@@ -101,7 +101,6 @@ _notes/Public/        le note: matematica/, fisica/, interdisciplinare/
                       più le pagine di collaudo test-plot.md e test-physics.md
 _posts/               il blog
 pages/                pagine principali (matematica, fisica, playground, crediti, ...)
-admin/                configurazione del CMS
 assets/css/           stili del sito, dei grafici e dei diagrammi di fisica
 assets/js/
   matephis-plot-src/      sorgenti dei grafici (core, parser, renderers, interactions, ui)

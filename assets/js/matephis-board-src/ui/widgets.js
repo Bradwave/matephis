@@ -14,6 +14,7 @@ import { OVERLAY_PX_PER_MM } from './overlay.js';
 import { BoardIcons } from './icons.js';
 import { hydrateEmbeddedEngines } from './exercise-picker.js';
 import { exerciseSteps, revealLevel, revealSteps } from './exercise-steps.js';
+import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 import { nextWidgetId } from '../model/scene.js';
 import { worldToScreen } from '../ink/geometry.js';
 import { refreshStrokeBBox } from '../ink/stroke.js';
@@ -530,7 +531,15 @@ export class WidgetManager {
 
         const content = document.createElement('div');
         content.className = 'board-widget-ex-content';
-        content.innerHTML = data.html || '<p>Nessun contenuto.</p>';
+        // The HTML comes from the board file, which may not be ours: allowlisted nodes only.
+        const safe = data.html ? sanitizeHtmlToFragment(data.html) : null;
+        if (safe && safe.childNodes.length > 0) {
+            content.appendChild(safe);
+        } else {
+            const empty = document.createElement('p');
+            empty.textContent = 'Nessun contenuto.';
+            content.appendChild(empty);
+        }
 
         // One button per step; tapping a step shows everything up to it, tapping it again hides it.
         entry.steps = exerciseSteps(content);

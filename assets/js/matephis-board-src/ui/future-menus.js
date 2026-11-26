@@ -8,6 +8,7 @@
 
 import { BoardIcons } from './icons.js';
 import { exerciseSteps, revealSteps } from './exercise-steps.js';
+import { sanitizeHtmlToFragment } from '../model/sanitize-html.js';
 import {
     hydrateEmbeddedEngines,
     shortNoteTitle,
@@ -1118,7 +1119,9 @@ export class FutureMenus {
                 return;
             }
             metaEl.textContent = [shortNoteTitle(st.parsed.noteTitle), it.section, it.subsection, it.label].filter(Boolean).join(' · ');
-            bodyEl.innerHTML = it.html;
+            bodyEl.replaceChildren();
+            const safe = sanitizeHtmlToFragment(it.html || '');
+            if (safe) bodyEl.appendChild(safe);
             showAids();
             bodyEl.scrollTop = 0;
             previewEl.scrollTop = 0;
