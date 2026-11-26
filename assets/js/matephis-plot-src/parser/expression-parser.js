@@ -654,6 +654,9 @@ export function parseExpression(src, { vars = ['x'], params = [], points = [], p
     return new Parser(tokenize(String(src)), scope, String(src)).parseTop();
 }
 
+/** A variable name: an identifier as the tokenizer reads it, and nothing else. */
+const VAR_NAME = /^[A-Za-z_πθ][A-Za-z0-9_θ]*$/;
+
 /** Source names of the constants (uppercase: a param called "e" or "pi" cannot hide them). */
 const CONSTANT_SOURCE = {
     'Math.PI': 'PI', '(2*Math.PI)': '(2*PI)', 'Math.E': 'E', 'Infinity': 'Infinity', '(Math.PI/180)': '(PI/180)',
@@ -703,6 +706,14 @@ export function substituteVariable(src, name, by, { params = [], vars = [] } = {
  */
 export function compileExpression(src, options = {}) {
     const { vars = ['x'], complex = false } = options;
+    // Variable names become parameter names of the generated function, and some come from
+    // the config (a curve's "param"). A name such as "{a=alert(1)}" would be a destructuring
+    // default that runs code, so only plain identifiers, as the tokenizer reads them, pass.
+    for (const v of vars) {
+        if (typeof v !== 'string' || !VAR_NAME.test(v)) {
+            throw new Error(`Invalid variable name ${JSON.stringify(String(v)).slice(0, 40)}`);
+        }
+    }
     const ast = parseExpression(src, options);
     let code = complex ? genComplex(ast) : genReal(ast);
     if (complex) code = `$C.toC(${code})`;

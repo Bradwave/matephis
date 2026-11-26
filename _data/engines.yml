@@ -3,7 +3,7 @@
 # Read by _layouts/Post.html (pages) and by _layouts/Board.html and BoardBench.html, which hand
 # them to the board's engine loader (assets/js/matephis-board-src/ui/engine-loader.js).
 plot:
-  js: "2.25"
+  js: "2.26"
   css: "2.4"
 physics:
   js: "1.22"

@@ -3,6 +3,15 @@
 
 <head>
     <meta charset="utf-8" />
+    {%- comment -%}
+    Content-Security-Policy: board files can come from outside (file import, and later the
+    cloud archive), so no inline or foreign script may run here. MathJax is the only script
+    from another host, restricted to its own path. 'unsafe-eval' is needed by the plot
+    engine, which compiles each expression to a function once for speed (the compiler only
+    emits code from its own parsed tokens). Styles stay 'unsafe-inline' because the engines
+    and MathJax set inline styles. frame-ancestors only works as an HTTP header.
+    {%- endcomment %}
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/mathjax@3/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>{%- if page.title -%}{{ page.title }} - {%- endif -%}{{ site.heading }}</title>
     <link rel="canonical" href="{{ site.url }}{{ page.url }}" />
@@ -12,15 +21,7 @@
     {%- if site.favicon -%}
     <link rel="icon" href="{{ site.baseurl }}{{ site.favicon }}" type="image/svg+xml" sizes="any" />
     {%- endif -%}
-    <script>
-        (function () {
-            try {
-                if (localStorage.getItem('matephis_theme') === 'dark') {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                }
-            } catch (e) {}
-        })();
-    </script>
+    <script src="{{ site.baseurl }}/assets/js/board-theme.js?v=1"></script>
     {%- if site.css_file -%}
     <link href="{{ site.baseurl }}{{ site.css_file }}?v=2.16" rel="stylesheet" media="all" class="default" />
     {%- else -%}
@@ -31,9 +32,10 @@
 
 <body class="board-body" data-baseurl="{{ site.baseurl }}">
     {{ content }}
-    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml) {%- endcomment -%}
-    <script>window.MatephisEngineVersions = {{ site.data.engines | jsonify }};</script>
-    <script type="module" src="{{ site.baseurl }}/assets/js/matephis-board/board.js?v=0.19"></script>
+    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml), as data:
+    a JSON block never runs, so the board's CSP needs no inline script for it {%- endcomment -%}
+    <script type="application/json" id="matephis-engine-versions">{{ site.data.engines | jsonify }}</script>
+    <script type="module" src="{{ site.baseurl }}/assets/js/matephis-board/board.js?v=0.20"></script>
 </body>
 
 </html>

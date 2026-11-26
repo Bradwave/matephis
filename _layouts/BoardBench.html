@@ -19,9 +19,10 @@
 
 <body class="bench-body" data-baseurl="{{ site.baseurl }}">
     {{ content }}
-    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml) {%- endcomment -%}
-    <script>window.MatephisEngineVersions = {{ site.data.engines | jsonify }};</script>
-    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=2"></script>
+    {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml), as data:
+    a JSON block never runs, so the board's CSP needs no inline script for it {%- endcomment -%}
+    <script type="application/json" id="matephis-engine-versions">{{ site.data.engines | jsonify }}</script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=3"></script>
 </body>
 
 </html>

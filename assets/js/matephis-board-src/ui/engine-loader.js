@@ -36,6 +36,26 @@ const ENGINE_SPECS = {
     },
 };
 
+let versionsFromPage;
+
+/**
+ * The versions table the layout put in the page. The board layouts write it as a JSON block
+ * (<script type="application/json" id="matephis-engine-versions">), which the board's CSP
+ * allows because it never runs; `window.MatephisEngineVersions` still wins when set.
+ */
+function pageEngineVersions() {
+    if (typeof window === 'undefined') return null;
+    if (window.MatephisEngineVersions) return window.MatephisEngineVersions;
+    if (versionsFromPage === undefined) {
+        versionsFromPage = null;
+        const el = typeof document !== 'undefined' && document.getElementById('matephis-engine-versions');
+        if (el) {
+            try { versionsFromPage = JSON.parse(el.textContent); } catch (_) { /* no versions */ }
+        }
+    }
+    return versionsFromPage;
+}
+
 /**
  * Append the engine's cache version (from _data/engines.yml) to an asset path.
  * @param {string} path
@@ -44,7 +64,7 @@ const ENGINE_SPECS = {
  * @param {object} [versions]
  */
 export function versionedPath(path, kind, type, versions) {
-    const table = versions || (typeof window !== 'undefined' ? window.MatephisEngineVersions : null);
+    const table = versions || pageEngineVersions();
     const v = table && table[kind] && table[kind][type];
     if (!v) return path;
     return `${path}${path.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(v))}`;
