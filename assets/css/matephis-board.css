@@ -195,7 +195,6 @@ body.board-body {
 
 .board-root {
     --bu-n: 40;
-    --bu-k: 1;
     --bu: calc(var(--bu-n) * var(--bu-k) * 1px);
     --bu-font: max(12.5px, calc(var(--bu) * 0.31));
     --chrome-shadow: 0 4px 16px rgba(0, 0, 0, 0.09);
@@ -218,8 +217,11 @@ body.board-body {
     .board-root { --bu-n: 88; }
 }
 
-.board-root[data-ui-size="s"] { --bu-k: 0.8; }
-.board-root[data-ui-size="l"] { --bu-k: 1.3; }
+/* Piccola / Normale / Grande. Normale is a little under the auto size (it felt big on the
+ * smartboard); Grande is about the old Normale. */
+.board-root { --bu-k: 0.85; }
+.board-root[data-ui-size="s"] { --bu-k: 0.7; }
+.board-root[data-ui-size="l"] { --bu-k: 1.05; }
 
 /* --- Chrome surfaces: tool rail, navigation pill, trays ------------------------ */
 

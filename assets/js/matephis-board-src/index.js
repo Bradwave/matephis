@@ -258,6 +258,7 @@ async function initMatephisBoard() {
             }
             if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide' || key === 'toolbarMinimal') {
                 if (toolbar) toolbar.relayout();
+                if (key === 'uiSize') requestAnimationFrame(() => perfHud.refreshSceneStats(surface.dpr));
             }
             if (key === 'zoomLock' && toolbar) {
                 toolbar.updateZoom(scene.camera);
