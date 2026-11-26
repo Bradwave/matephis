@@ -13,7 +13,7 @@
  */
 
 import { MAX_SCALE, MIN_SCALE, clamp, screenToWorld } from '../ink/geometry.js';
-import { renderPageToContext, GESTURE_DIM, PIXEL_BLOCK_PX } from '../ink/surface.js';
+import { renderPageToContext, GESTURE_DIM, PIXEL_BLOCK_PX, snapReleaseDelay } from '../ink/surface.js';
 
 // Pan/zoom in the strip moves a picture of it, like the board (setting `fastPan`).
 const STRIP_SNAP_MARGIN = 0.15;
@@ -543,6 +543,7 @@ export class PinnedStrip {
     }
 
     _beginGesture() {
+        this._cancelSnapRelease();
         this._gesture = { lastSnap: 0, cost: 0 };
         this._snapPicture();
     }
@@ -554,6 +555,54 @@ export class PinnedStrip {
         this._gesture = null;
         this._snap = null;
         this.render();
+        this._scheduleSnapRelease();
+    }
+
+    _cancelSnapRelease() {
+        if (this._snapReleaseTimer) {
+            clearTimeout(this._snapReleaseTimer);
+            this._snapReleaseTimer = null;
+        }
+    }
+
+    _scheduleSnapRelease() {
+        this._cancelSnapRelease();
+        const delay = snapReleaseDelay(this.scene.settings);
+        if (delay === null || this.snapBytes() === 0) return;
+        this._snapReleaseTimer = setTimeout(() => {
+            this._snapReleaseTimer = null;
+            this.releaseSnapCanvases();
+        }, delay);
+    }
+
+    /** The release setting changed: restart the idle countdown under the new delay. */
+    snapReleaseSettingChanged() {
+        if (!this._gesture) this._scheduleSnapRelease();
+    }
+
+    /** Memory held by the strip's pan/zoom pictures (for the HUD). */
+    snapBytes() {
+        const b = (c) => (c ? c.width * c.height * 4 : 0);
+        return b(this._snapCanvas) + b(this._tinyCanvas);
+    }
+
+    /** Free the pan/zoom pictures while idle; kept with the setting 'never'. */
+    releaseSnapCanvases() {
+        if (snapReleaseDelay(this.scene.settings) === null) return;
+        this._freeSnapCanvases();
+    }
+
+    _freeSnapCanvases() {
+        this._cancelSnapRelease();
+        if (this._gesture) return;
+        if (this._snapCanvas) {
+            this._snapCanvas.width = 0;
+            this._snapCanvas.height = 0;
+        }
+        if (this._tinyCanvas) {
+            this._tinyCanvas.width = 0;
+            this._tinyCanvas.height = 0;
+        }
     }
 
     /** Sharp picture of the strip with a margin around it, so a pan rarely shows an edge. */
@@ -637,11 +686,19 @@ export class PinnedStrip {
     }
 
     close() {
+        clearTimeout(this._wheelEndTimer);
+        if (this._gestureRaf) cancelAnimationFrame(this._gestureRaf);
+        this._gestureRaf = null;
+        this._gesture = null;
+        this._snap = null;
+        this._freeSnapCanvases();
         this.active = false;
         this.pinnedPageId = null;
         if (this.onPinChange) this.onPinChange();
         this.pointers.clear();
         this.el.hidden = true;
+        this.canvas.width = 0;
+        this.canvas.height = 0;
         this._publishInset();
     }
 }

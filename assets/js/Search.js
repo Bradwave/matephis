@@ -69,48 +69,65 @@
 
     async function getSearchData(dataUrl) {
         let response = await fetch(dataUrl);
-        let responseText = response.text();
-        return responseText;
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.text();
     }
 
-    function searchInit() {
-        var dataUrl = "/SearchData.json";
-
-        getSearchData(dataUrl)
-            .then(function (responseText) {
-                var docs = JSON.parse(responseText);
-
-                lunr.tokenizer.separator = /[\s/]+/;
-
-                var index = lunr(function () {
-                    this.ref('id');
-                    this.field('title', { boost: 500 });
-                    this.field('content', { boost: 1 });
-                    this.field('url');
-                    this.metadataWhitelist = ['position']
-
-                    for (var i in docs) {
-                        this.add({
-                            id: i,
-                            title: docs[i].title,
-                            content: docs[i].content,
-                            url: docs[i].url
-                        });
-                    }
-                });
-                searchLoaded(index, docs);
-            }).catch(function (err) {
-                console.warn("Error processing the search-data for lunrjs", err);
-            });
-    }
-
-    function searchLoaded(index, docs) {
-        var index = index;
-        var docs = docs;
+    function setupSearch() {
         var searchInput = document.getElementById('search-input');
         var searchResults = document.getElementById('search-results');
+        if (!searchInput || !searchResults) return;
+
+        var dataUrl = searchInput.getAttribute('data-search-url') || "/SearchData.json";
+        var index = null;
+        var docs = null;
+        var loadPromise = null;
         var currentInput;
         var currentSearchIndex = 0;
+
+        function ensureLoaded() {
+            if (index) return Promise.resolve(true);
+            if (loadPromise) return loadPromise;
+
+            loadPromise = getSearchData(dataUrl)
+                .then(function (responseText) {
+                    var parsedDocs = JSON.parse(responseText);
+
+                    lunr.tokenizer.separator = /[\s/]+/;
+
+                    var builtIndex = lunr(function () {
+                        this.ref('id');
+                        this.field('title', { boost: 500 });
+                        this.field('content', { boost: 1 });
+                        this.field('url');
+                        this.metadataWhitelist = ['position'];
+
+                        for (var i in parsedDocs) {
+                            this.add({
+                                id: i,
+                                title: parsedDocs[i].title,
+                                content: parsedDocs[i].content,
+                                url: parsedDocs[i].url
+                            });
+                        }
+                    });
+
+                    docs = parsedDocs;
+                    index = builtIndex;
+                    if (searchInput.value !== '') {
+                        currentInput = undefined;
+                        update();
+                    }
+                    return true;
+                })
+                .catch(function (err) {
+                    loadPromise = null;
+                    console.warn("Error processing the search-data for lunrjs", err);
+                    return false;
+                });
+
+            return loadPromise;
+        }
 
         function showSearch() {
             document.documentElement.classList.add('search-active');
@@ -139,6 +156,15 @@
             currentInput = input;
             searchResults.innerHTML = '';
             if (input === '') {
+                return;
+            }
+
+            if (!index) {
+                var loadingDiv = document.createElement('div');
+                loadingDiv.classList.add('search-no-result');
+                loadingDiv.innerText = 'Caricamento ricerca...';
+                searchResults.appendChild(loadingDiv);
+                ensureLoaded();
                 return;
             }
 
@@ -218,7 +244,7 @@
 
                 if (doc.doc != doc.title) {
 
-                    resultDoc.classList.add('search-result-doc-parent');
+                    resultDocTitle.classList.add('search-result-doc-parent');
                     var resultSection = document.createElement('div');
                     resultSection.classList.add('search-result-section');
                     resultSection.innerHTML = doc.title;
@@ -362,6 +388,7 @@
         }
 
         sj.addEvent(searchInput, 'focus', function () {
+            ensureLoaded();
             setTimeout(update, 0);
         });
 
@@ -441,7 +468,7 @@
             var evt = window.event || e;
             let searchInput = document.getElementById("search-input");
             let key = evt.keyCode || evt.which;
-            if (e.shiftKey && key == 83) {
+            if (e.shiftKey && key == 83 && searchInput) {
                 searchInput.focus();
             }
         };
@@ -450,7 +477,7 @@
 
     sj.onReady(function () {
         searchInitListener();
-        searchInit();
+        setupSearch();
     });
 })(window.sj = window.sj || {});
 

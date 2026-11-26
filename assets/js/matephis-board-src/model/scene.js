@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS = {
     fastPan: true,          // pan/zoom moves a picture of the board, sharp redraw at the end
     connectorGlide: false,  // jumping to a connector's twin glides the camera (off: instant)
     gestureEffect: 'dim',   // EXPERIMENT: 'dim' | 'pixel' look of the picture while moving
+    snapRelease: '30000',   // EXPERIMENT: free the pan/zoom pictures after this idle time: '2000' | '30000' | 'never'
 };
 
 let pageCounter = 1;

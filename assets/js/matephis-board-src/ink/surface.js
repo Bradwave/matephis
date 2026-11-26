@@ -28,6 +28,20 @@ const REFRESH_COST_FACTOR = 8;     // ...and spaced by 8× the measured redraw c
 const SETTLE_MS = 120;             // soft → sharp fade when the gesture ends
 export const PIXEL_BLOCK_PX = 6;          // EXPERIMENT: block size of the pixelated gesture effect
 const PIXEL_SETTLE_MS = 160;       // EXPERIMENT: blocks shrink to sharp over this time
+const SNAP_RELEASE_DEFAULT_MS = 30000; // idle time before the gesture pictures are freed
+
+/**
+ * Idle time before the pan/zoom pictures are freed (setting `snapRelease`):
+ * '2000' | '30000' ms, or 'never' to keep them like before. Returns null for never.
+ */
+export function snapReleaseDelay(settings) {
+    const v = settings && settings.snapRelease;
+    if (v === 'never') return null;
+    const ms = Number(v);
+    return Number.isFinite(ms) && ms > 0 ? ms : SNAP_RELEASE_DEFAULT_MS;
+}
+
+const canvasBytes = (c) => (c ? c.width * c.height * 4 : 0);
 
 /**
  * Shared helper: draws faint landscape A4 borders + subtle corner ticks.
@@ -335,6 +349,9 @@ export class InkSurface {
         this.snap = null;         // { canvas, cam, margin, cssW, cssH }: transparent ink picture
         this._snapCanvases = [document.createElement('canvas'), document.createElement('canvas')];
         this._settleRaf = null;
+        this._snapReleaseTimer = null;
+        this._snapReleaseAt = 0;  // when the pending release fires (performance.now() clock)
+        this.gestureStats = null; // last gesture: picture costs and whether canvases were allocated
 
         this._createCanvases();
         this.resize();
@@ -398,6 +415,7 @@ export class InkSurface {
         this.scene.updateViewportBaseScale(w, h);
         this.renderCommittedNow();
         this.renderActiveNow();
+        if (!this.gesture && !this._settleRaf) this.releaseSnapCanvases();
     }
 
     requestCommittedRedraw() {
@@ -473,7 +491,9 @@ export class InkSurface {
         if (this.gesture) return;
         if (this._committedDirty) this.renderCommittedNow();
         this._cancelSettle();
+        this._cancelSnapRelease();
         this.gesture = { lastRefresh: performance.now(), refreshTimer: null };
+        this.gestureStats = { startMs: null, startAlloc: false, pictureMs: null, pictureAlloc: false };
         // Widgets get the same treatment as the ink. Fade: the overlay moves as a cached
         // GPU picture, dimmed like the ink. Pixel: the widgets' pictures are drawn into the
         // ink picture (so they pixelate with it) and the live overlay is hidden meanwhile.
@@ -494,6 +514,7 @@ export class InkSurface {
         if (!this.snap) {
             if (this.overlay) this.overlay.setGesture(false);
             this.renderCommittedNow();
+            this._scheduleSnapRelease();
             return;
         }
 
@@ -528,6 +549,7 @@ export class InkSurface {
                     this._settleRaf = null;
                     // Sharp: the live widgets come back and the ink layer drops their pictures.
                     this._endWidgetPictures();
+                    this._scheduleSnapRelease();
                 }
             };
             this._settleRaf = requestAnimationFrame(pixelStep);
@@ -549,6 +571,7 @@ export class InkSurface {
                 this._settleRaf = requestAnimationFrame(step);
             } else {
                 this._settleRaf = null;
+                this._scheduleSnapRelease();
             }
         };
         this._settleRaf = requestAnimationFrame(step);
@@ -571,6 +594,7 @@ export class InkSurface {
         if (this._settleRaf) {
             cancelAnimationFrame(this._settleRaf);
             this._settleRaf = null;
+            if (!this.gesture) this._scheduleSnapRelease();
         }
     }
 
@@ -660,17 +684,25 @@ export class InkSurface {
             this.snap = this._renderPicture(SNAP_MARGIN);
             return;
         }
+        const t0 = performance.now();
         const canvas = this._takeSnapCanvas();
+        const alloc = canvas.width !== this.committedCanvas.width || canvas.height !== this.committedCanvas.height;
         canvas.width = this.committedCanvas.width;
         canvas.height = this.committedCanvas.height;
         const sctx = canvas.getContext('2d', { alpha: true });
         sctx.clearRect(0, 0, canvas.width, canvas.height);
         sctx.drawImage(this.committedCanvas, 0, 0);
         this.snap = { canvas, cam: { ...this.scene.camera }, margin: 0, cssW: this.width, cssH: this.height };
+        const st = this.gestureStats;
+        if (this.gesture && st && st.startMs === null) {
+            st.startMs = performance.now() - t0;
+            st.startAlloc = alloc;
+        }
     }
 
     /** Full sharp render of the ink layer under the current camera into a spare canvas. */
     _renderPicture(marginRatio) {
+        const t0 = performance.now();
         const cam = this.scene.camera;
         const margin = Math.round(Math.max(this.width, this.height) * marginRatio);
         const cssW = this.width;
@@ -678,17 +710,85 @@ export class InkSurface {
         const canvas = this._takeSnapCanvas();
         const pxW = Math.round((cssW + margin * 2) * this.dpr);
         const pxH = Math.round((cssH + margin * 2) * this.dpr);
+        const alloc = canvas.width !== pxW || canvas.height !== pxH;
         if (canvas.width !== pxW) canvas.width = pxW;
         if (canvas.height !== pxH) canvas.height = pxH;
         const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
         this._renderInkTo(canvas.getContext('2d', { alpha: true }), cssW + margin * 2, cssH + margin * 2, this.dpr, shifted, this._gesturePictures);
+        // First sharp picture of a gesture: the frame that pays for a freed canvas.
+        const st = this.gestureStats;
+        if (this.gesture && st && st.pictureMs === null) {
+            st.pictureMs = performance.now() - t0;
+            st.pictureAlloc = alloc;
+        }
         return { canvas, cam: { ...cam }, margin, cssW, cssH };
     }
 
     /** The snapshot canvas not currently shown (two are reused, no per-frame allocation). */
     _takeSnapCanvas() {
+        this._cancelSnapRelease();
         const [a, b] = this._snapCanvases;
         return this.snap && this.snap.canvas === a ? b : a;
+    }
+
+    _cancelSnapRelease() {
+        if (this._snapReleaseTimer) {
+            clearTimeout(this._snapReleaseTimer);
+            this._snapReleaseTimer = null;
+        }
+        this._snapReleaseAt = 0;
+    }
+
+    _scheduleSnapRelease() {
+        this._cancelSnapRelease();
+        const delay = snapReleaseDelay(this.scene.settings);
+        if (delay === null || this._snapBytes() === 0) return;
+        this._snapReleaseAt = performance.now() + delay;
+        this._snapReleaseTimer = setTimeout(() => {
+            this._snapReleaseTimer = null;
+            this._snapReleaseAt = 0;
+            this.releaseSnapCanvases();
+        }, delay);
+    }
+
+    /** The release setting changed: restart the idle countdown under the new delay. */
+    snapReleaseSettingChanged() {
+        if (!this.gesture && !this._settleRaf) this._scheduleSnapRelease();
+    }
+
+    _snapBytes() {
+        return this._snapCanvases.reduce((n, c) => n + canvasBytes(c), 0) + canvasBytes(this._pixelCanvas);
+    }
+
+    /** Debug info for the HUD: memory held by the gesture pictures and the last gesture's costs. */
+    snapInfo() {
+        return {
+            bytes: this._snapBytes(),
+            delayMs: snapReleaseDelay(this.scene.settings),
+            releaseInMs: this._snapReleaseAt ? Math.max(0, this._snapReleaseAt - performance.now()) : null,
+            gestureActive: Boolean(this.gesture),
+            last: this.gestureStats,
+        };
+    }
+
+    /**
+     * Free the offscreen gesture pictures so they do not hold memory while idle. Kept while a
+     * gesture or its settle runs, and always kept with the setting 'never'.
+     */
+    releaseSnapCanvases() {
+        this._cancelSnapRelease();
+        if (this.gesture || this._settleRaf) return;
+        if (snapReleaseDelay(this.scene.settings) === null) return;
+        this.snap = null;
+        for (const c of this._snapCanvases) {
+            if (c.width !== 0) c.width = 0;
+            if (c.height !== 0) c.height = 0;
+        }
+        if (this._pixelCanvas) {
+            this._pixelCanvas.width = 0;
+            this._pixelCanvas.height = 0;
+            this._pixelCanvas = null;
+        }
     }
 
     _renderBackgroundTo(ctx, width, height, dpr, cam) {
