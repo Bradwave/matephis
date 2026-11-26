@@ -62,14 +62,16 @@ export function hasMathJax() {
 
 /** Calls cb once MathJax is ready (or right away when the page, or loadMathJax, does not load it). */
 export function whenMathJaxReady(cb) {
-    if (!document.getElementById('MathJax-script')) { cb(); return; }
+    const s = shared();
+    if (s.failed || !document.getElementById('MathJax-script')) { cb(); return; }
     const started = Date.now();
     const check = () => {
+        if (s.failed) { cb(); return; }
         const mj = window.MathJax;
         if (mj && mj.startup && mj.startup.promise) { mj.startup.promise.then(cb, cb); return; }
         if (mj && mj.tex2svg) { cb(); return; }
         // Never block rendering forever if MathJax fails to load
-        if (Date.now() - started > 8000) { cb(); return; }
+        if (Date.now() - started > 8000) { s.failed = true; cb(); return; }
         setTimeout(check, 50);
     };
     check();
@@ -86,7 +88,9 @@ function mayLoad() {
 /** Will MathJax be there: ready, being loaded, or loadable by the engines? */
 export function mathJaxAvailable() {
     if (typeof window === 'undefined' || typeof document === 'undefined') return false;
-    return hasMathJax() || !!window.MathJax || !!document.getElementById('MathJax-script') || mayLoad();
+    if (hasMathJax()) return true;
+    if (shared().failed) return false;
+    return !!window.MathJax || !!document.getElementById('MathJax-script') || mayLoad();
 }
 
 /**
@@ -99,6 +103,8 @@ export function loadMathJax() {
     if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(false);
     const s = shared();
     if (s.loading) return s.loading;
+    if (hasMathJax()) return Promise.resolve(true);
+    if (s.failed) return Promise.resolve(false);
     if (mayLoad()) {
         window.MathJax = {
             tex: {
@@ -112,12 +118,13 @@ export function loadMathJax() {
         script.id = 'MathJax-script';
         script.async = true;
         script.src = MATHJAX_SRC;
+        script.onerror = () => { s.failed = true; };
         document.head.appendChild(script);
     }
     const loading = new Promise(resolve => whenMathJaxReady(() => resolve(hasMathJax())));
     s.loading = loading;
-    // Not there (yet): ask again next time (a host may load it later)
-    loading.then(ok => { if (!ok && s.loading === loading) s.loading = null; });
+    // Not there (yet): ask again next time unless loading itself failed (offline / CDN error)
+    loading.then(ok => { if (!ok && !s.failed && s.loading === loading) s.loading = null; });
     return loading;
 }
 

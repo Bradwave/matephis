@@ -316,11 +316,16 @@ describe('ExpressionParser: riscrittura di un\'espressione', () => {
 });
 
 describe('Variable names from configs cannot inject code', () => {
-    const attacks = ['{a=globalThis.__pwn=1}', '[a=globalThis.__pwn=1]', 'a=globalThis.__pwn=1', 't){globalThis.__pwn=1}//', '...a', ''];
+    const attacks = ['{a=globalThis.__pwn=1}', '[a=globalThis.__pwn=1]', 'a=globalThis.__pwn=1', 't){globalThis.__pwn=1}//', '...a', '', 'return', 'class', 'eval', 'arguments'];
     it.each(attacks)('rejects %j', (name) => {
         globalThis.__pwn = 0;
         expect(() => compileExpression('1', { vars: [name] })).toThrow(/Invalid variable name/);
         expect(globalThis.__pwn).toBe(0);
+    });
+    it('rejects Object.prototype names as function calls', () => {
+        for (const expr of ['constructor()', 'toString()', 'valueOf()', '__proto__()']) {
+            expect(() => compileExpression(expr)).toThrow(/Unknown/);
+        }
     });
     it('rejects them through ExpressionCompiler (a curve "param") too', () => {
         globalThis.__pwn = 0;

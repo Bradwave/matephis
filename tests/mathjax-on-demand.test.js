@@ -85,4 +85,16 @@ describe('MathJax on demand (#68)', () => {
         finishLoading();
         expect(await p).toBe(true);
     });
+
+    it('stops retrying after a script load error (offline / CDN failure)', async () => {
+        const p1 = loadMathJax();
+        expect(document.added).toHaveLength(1);
+        const script = document.added[0];
+        expect(typeof script.onerror).toBe('function');
+        script.onerror();
+        expect(await p1).toBe(false);
+        expect(texReady({ requestDraw() {} })).toBe(false);
+        expect(await loadMathJax()).toBe(false);
+        expect(document.added).toHaveLength(1);
+    });
 });
