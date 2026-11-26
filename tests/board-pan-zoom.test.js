@@ -31,6 +31,7 @@ function createHarness({ tool = 'pen', settings = {}, initialScale = 4, baseScal
         requestCommittedRedraw: vi.fn(),
         beginGesture: vi.fn(),
         endGesture: vi.fn(),
+        stopGlide: vi.fn(),
     };
 
     let nowMs = 1000;
@@ -273,6 +274,77 @@ describe('Board pan/zoom classifier, Hand tool, zoomLock and trackpad wheel', ()
             expect(h.scene.camera.scale).toBe(lockedScale);
         } finally {
             h.restore();
+        }
+    });
+
+    it('hands off smoothly from 2-finger zoom to 1-finger pan in Hand/penOnly without ending the gesture', () => {
+        vi.useFakeTimers();
+        const h = createHarness({ tool: 'pan', initialScale: 4, baseScale: 4 });
+        try {
+            h.dispatch('pointerdown', { pointerId: 1, clientX: 450, clientY: 300 });
+            h.advance(10);
+            h.dispatch('pointerdown', { pointerId: 2, clientX: 550, clientY: 300 });
+            h.advance(60);
+            stream(h, [1, 2], [[450, 300], [550, 300]], [[420, 300], [580, 300]], 5);
+            expect(h.input.pinchAnchor.intent).toBe('zoom');
+
+            // Lift finger 2, leave finger 1 down past the 120 ms grace window
+            h.dispatch('pointerup', { pointerId: 2, clientX: 580, clientY: 300 });
+            vi.advanceTimersByTime(150);
+            h.advance(150);
+
+            // Must hand off inside the running gesture (no endGesture mid-drag)
+            expect(h.surface.endGesture).not.toHaveBeenCalled();
+            expect(h.input.mode).toBe('pan');
+
+            const camXBefore = h.scene.camera.x;
+            h.dispatch('pointermove', { pointerId: 1, clientX: 500, clientY: 300 });
+            expect(h.scene.camera.x).toBeLessThan(camXBefore);
+
+            // Lifting the last finger ends the gesture once
+            h.dispatch('pointerup', { pointerId: 1, clientX: 500, clientY: 300 });
+            expect(h.surface.endGesture).toHaveBeenCalledTimes(1);
+        } finally {
+            h.restore();
+            vi.useRealTimers();
+        }
+    });
+
+    it('stops a running glide (zoom buttons, connector jump) when fingers start a pan or pinch', () => {
+        const h = createHarness({ tool: 'pan', initialScale: 4, baseScale: 4 });
+        try {
+            h.dispatch('pointerdown', { pointerId: 1, clientX: 400, clientY: 300 });
+            expect(h.surface.stopGlide).toHaveBeenCalledTimes(1);
+            expect(h.surface.stopGlide.mock.invocationCallOrder[0])
+                .toBeLessThan(h.surface.beginGesture.mock.invocationCallOrder[0]);
+            h.dispatch('pointerdown', { pointerId: 2, clientX: 500, clientY: 300 });
+            expect(h.surface.stopGlide).toHaveBeenCalledTimes(2);
+        } finally {
+            h.restore();
+        }
+    });
+
+    it('cleanly tears down pinch state and gesture when palm-to-erase interrupts a 2-finger gesture', () => {
+        vi.useFakeTimers();
+        const h = createHarness({ settings: { palmErase: true }, initialScale: 4, baseScale: 4 });
+        try {
+            h.dispatch('pointerdown', { pointerId: 1, clientX: 460, clientY: 400 });
+            h.advance(10);
+            h.dispatch('pointerdown', { pointerId: 2, clientX: 540, clientY: 400 });
+            h.advance(60);
+            stream(h, [1, 2], [[460, 400], [540, 400]], [[420, 400], [580, 400]], 5);
+            expect(h.input.pinchAnchor.intent).toBe('zoom');
+
+            // 3rd finger triggers palm-to-erase while zooming
+            h.dispatch('pointerdown', { pointerId: 3, clientX: 500, clientY: 420 });
+            expect(h.input.mode).toBe('erase');
+            expect(h.input.pinchAnchor).toBeNull();
+            expect(h.input.pinchDropTimer).toBeNull();
+            expect(h.surface.endGesture).toHaveBeenCalledTimes(1);
+            expect(h.surface.setZoomIndicator).toHaveBeenLastCalledWith(null);
+        } finally {
+            h.restore();
+            vi.useRealTimers();
         }
     });
 });

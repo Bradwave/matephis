@@ -12,15 +12,16 @@
  * - Jump button (or double-tap): jump main board to that page & region
  */
 
-import { MAX_SCALE, MIN_SCALE, clamp, screenToWorld } from '../ink/geometry.js';
+import { MAX_SCALE, MIN_SCALE, clamp, median, screenToWorld } from '../ink/geometry.js';
 import { renderPageToContext, GESTURE_DIM, PIXEL_BLOCK_PX, snapReleaseDelay } from '../ink/surface.js';
+import { BoardIcons } from './icons.js';
 
 // Pan/zoom in the strip moves a picture of it, like the board (setting `fastPan`).
 const STRIP_SNAP_MARGIN = 0.15;
 const STRIP_REFRESH_RATIO = 1.2;
 const STRIP_REFRESH_MIN_MS = 150;
 const STRIP_WHEEL_END_MS = 160;
-import { BoardIcons } from './icons.js';
+const STRIP_SPREAD_MEDIAN_N = 5;  // pinch spread judged on a short median, like the board
 
 export class PinnedStrip {
     constructor(hostEl, { surface, scene, onJumpToPage = null, getWidgetPictures = null, onPinChange = null }) {
@@ -410,13 +411,14 @@ export class PinnedStrip {
             const pts = Array.from(this.pointers.values());
             const midX = (pts[0].sx + pts[1].sx) * 0.5;
             const midY = (pts[0].sy + pts[1].sy) * 0.5;
-            const dist = Math.max(10, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
+            const dist = Math.max(16, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
             this.pinchAnchor = {
                 dist,
                 worldMid: screenToWorld(midX, midY, this.stripCamera),
                 startScale: this.stripCamera.scale,
                 zooming: false,
                 smoothDist: dist,
+                spreadSamples: [dist],
             };
             this.panAnchor = null;
         }
@@ -447,22 +449,31 @@ export class PinnedStrip {
                 return;
             }
 
+            const samples = anchor.spreadSamples;
+            samples.push(dist);
+            if (samples.length > STRIP_SPREAD_MEDIAN_N) samples.shift();
+            const spread = median(samples);
+            let justEngaged = false;
+
             if (!anchor.zooming) {
-                const dDist = Math.abs(dist - anchor.dist);
-                if (dDist < 16 || dDist / Math.max(1, anchor.dist) < 0.1) {
+                const dDist = Math.abs(spread - anchor.dist);
+                if (samples.length < STRIP_SPREAD_MEDIAN_N || dDist < 16 || dDist / Math.max(1, anchor.dist) < 0.1) {
                     this.stripCamera.x = anchor.worldMid.x - midX / anchor.startScale;
                     this.stripCamera.y = anchor.worldMid.y - midY / anchor.startScale;
                     this._gestureMoved();
                     return;
                 }
                 anchor.zooming = true;
-                anchor.dist = dist;
-                anchor.smoothDist = dist;
+                anchor.dist = spread;
+                anchor.smoothDist = spread;
+                justEngaged = true;
                 anchor.startScale = this.stripCamera.scale;
                 anchor.worldMid = screenToWorld(midX, midY, this.stripCamera);
             }
 
-            anchor.smoothDist += (dist - anchor.smoothDist) * 0.45;
+            if (!justEngaged) {
+                anchor.smoothDist += (spread - anchor.smoothDist) * 0.45;
+            }
             const newScale = clamp(
                 anchor.startScale * (anchor.smoothDist / anchor.dist),
                 MIN_SCALE * 0.5,

@@ -1230,14 +1230,21 @@ export class InkSurface {
      * (and its fade or pixel effect) during the glide, one sharp redraw at the end.
      * Ease-in-out, so it starts and stops gently.
      */
-    glideCameraTo(target, durationMs = 420, onDone = null) {
+    /**
+     * Glide the camera to `target` over the fast pan/zoom picture. `easing`: 'inOut' (default,
+     * connector jumps) or 'out', which suits glides restarted by repeated taps (zoom buttons).
+     * A pan or pinch that starts meanwhile stops it (stopGlide) and takes over its gesture.
+     */
+    glideCameraTo(target, durationMs = 420, onDone = null, easing = 'inOut') {
         if (this._glideRaf) cancelAnimationFrame(this._glideRaf);
         const start = { ...this.scene.camera };
         const t0 = performance.now();
         this.beginGesture();
         const step = (now) => {
             const p = clamp((now - t0) / durationMs, 0, 1);
-            const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+            const ease = easing === 'out'
+                ? 1 - Math.pow(1 - p, 3)
+                : (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
             this.scene.camera.x = start.x + (target.x - start.x) * ease;
             this.scene.camera.y = start.y + (target.y - start.y) * ease;
             this.scene.camera.scale = start.scale + (target.scale - start.scale) * ease;
@@ -1254,6 +1261,20 @@ export class InkSurface {
             }
         };
         this._glideRaf = requestAnimationFrame(step);
+    }
+
+    isGliding() {
+        return Boolean(this._glideRaf);
+    }
+
+    /**
+     * Stop a running glide where it is, without its onDone. The gesture it opened stays
+     * open, so a pan or pinch starting now carries on with it and ends it when it ends.
+     */
+    stopGlide() {
+        if (!this._glideRaf) return;
+        cancelAnimationFrame(this._glideRaf);
+        this._glideRaf = null;
     }
 
     animateCameraTo(target, durationMs = 220, onDone = null) {

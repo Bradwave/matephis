@@ -67,6 +67,7 @@ async function initMatephisBoard() {
     let connectorManager = null;
     let widgetManager = null;
     let lastDismissAt = 0;
+    let zoomAnimTarget = null;
     let syncPictureNeeds = () => {}; // set once the picture cache exists
 
     const applyTheme = (nextTheme) => {
@@ -459,25 +460,29 @@ async function initMatephisBoard() {
             }
         },
         onResetZoom: () => {
+            zoomAnimTarget = null;
             const baseScale = scene.camera.baseScale;
             const centerWx = scene.camera.x + (surface.width / scene.camera.scale) * 0.5;
             const centerWy = scene.camera.y + (surface.height / scene.camera.scale) * 0.5;
-            surface.animateCameraTo({
+            surface.glideCameraTo({
                 scale: baseScale,
                 x: centerWx - (surface.width / baseScale) * 0.5,
                 y: centerWy - (surface.height / baseScale) * 0.5,
-            }, 180);
+            }, 180, null, 'out');
         },
         onZoomStep: (dir) => {
             const factor = dir > 0 ? 1.25 : 1 / 1.25;
-            const targetScale = clamp(scene.camera.scale * factor, MIN_SCALE, MAX_SCALE);
+            // Repeated taps build on the pending target, not on the halfway camera.
+            const fromScale = (surface.isGliding() && zoomAnimTarget != null) ? zoomAnimTarget : scene.camera.scale;
+            const targetScale = clamp(fromScale * factor, MIN_SCALE, MAX_SCALE);
+            zoomAnimTarget = targetScale;
             const centerWx = scene.camera.x + (surface.width / scene.camera.scale) * 0.5;
             const centerWy = scene.camera.y + (surface.height / scene.camera.scale) * 0.5;
-            surface.animateCameraTo({
+            surface.glideCameraTo({
                 scale: targetScale,
                 x: centerWx - (surface.width / targetScale) * 0.5,
                 y: centerWy - (surface.height / targetScale) * 0.5,
-            }, 140);
+            }, 140, () => { zoomAnimTarget = null; }, 'out');
         },
         onPrevPage: () => switchToPage(scene.currentPageIndex - 1),
         onNextPage: () => switchToPage(scene.currentPageIndex + 1),

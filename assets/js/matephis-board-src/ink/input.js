@@ -14,6 +14,7 @@ import {
     clamp,
     screenToWorld,
     simplifyRDP,
+    median,
 } from './geometry.js';
 import { createStroke, refreshStrokeBBox } from './stroke.js';
 import { EraseGesture } from './eraser.js';
@@ -50,12 +51,6 @@ const PINCH_DROP_GRACE_MS = 120;
 const ZOOM_DETENT_ENTER = 0.045;
 const ZOOM_DETENT_EXIT = 0.075;
 const ZOOM_DETENT_ARM = 0.08;
-
-function median(values) {
-    const v = values.slice().sort((a, b) => a - b);
-    const m = v.length >> 1;
-    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) * 0.5;
-}
 
 export class InputController {
     constructor(surface, {
@@ -228,6 +223,13 @@ export class InputController {
                 this.lasso.cancelInteraction();
                 this.mode = 'idle';
             }
+            if (this.mode === 'pinch' || this.mode === 'pinch-cooldown' || this.pinchDropTimer) {
+                this._finishPinchDrop({ allowPanHandoff: false });
+            } else if (this.mode === 'pan') {
+                this.panAnchor = null;
+                this.mode = 'idle';
+                this.surface.endGesture();
+            }
             this.palmActive = true;
             this._startErase(e, sx, sy, true);
             this._emitTelemetry(e, 1);
@@ -276,7 +278,7 @@ export class InputController {
         // If a previous 2-finger gesture was waiting on an IR finger-drop grace timer and a
         // fresh single pointer starts after all fingers lifted, end the old gesture cleanly.
         if (this.pinchDropTimer) {
-            this._finishPinchDrop();
+            this._finishPinchDrop({ allowPanHandoff: false });
         }
 
         // Space + drag or middle-mouse button pans on desktop
@@ -411,6 +413,8 @@ export class InputController {
     }
 
     _startPan(pointerId, sx, sy) {
+        // Fingers win over a zoom-button or connector glide still running.
+        if (this.surface.stopGlide) this.surface.stopGlide();
         this.surface.beginGesture();
         this.mode = 'pan';
         this.activePointerId = pointerId;
@@ -425,6 +429,7 @@ export class InputController {
     _startPinch(preservedIntent = null) {
         const entries = Array.from(this.pointers.entries());
         if (entries.length < 2) return;
+        if (this.surface.stopGlide) this.surface.stopGlide();
         this.surface.beginGesture();
         this.mode = 'pinch';
         this.activePointerId = null;
@@ -473,7 +478,7 @@ export class InputController {
         }
     }
 
-    _finishPinchDrop() {
+    _finishPinchDrop({ allowPanHandoff = true } = {}) {
         if (this.pinchDropTimer) {
             clearTimeout(this.pinchDropTimer);
             this.pinchDropTimer = null;
@@ -484,15 +489,18 @@ export class InputController {
             this.mode = 'idle';
         }
         if (this.surface.setZoomIndicator) this.surface.setZoomIndicator(null);
-        this.surface.endGesture();
-        // Hand tool or pen-only touch: the finger still down goes on panning by itself.
-        if (this.pointers.size === 1 && this.mode === 'idle') {
+        // Hand tool or pen-only touch: keep the running gesture alive and hand off straight
+        // to single-finger pan (calling endGesture first would waste a sharp redraw and
+        // re-snapshot the still-dimmed/pixelated canvas).
+        if (allowPanHandoff && this.pointers.size === 1 && this.mode === 'idle') {
             const [id, p] = this.pointers.entries().next().value;
             const tool = this.getToolState ? this.getToolState().tool : null;
             if (tool === 'pan' || (this.scene.settings.penOnly && p.type === 'touch')) {
                 this._startPan(id, p.sx, p.sy);
+                return;
             }
         }
+        this.surface.endGesture();
     }
 
     _startTapCandidate(committedDot) {
