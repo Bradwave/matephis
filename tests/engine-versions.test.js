@@ -21,10 +21,12 @@ describe('engine cache versions (#67)', () => {
         const yml = read('_data/engines.yml');
         for (const layout of ['_layouts/Post.html', '_layouts/Board.html', '_layouts/BoardBench.html']) {
             const html = read(layout);
-            expect(html).not.toMatch(/matephis-(plot|physics|sets|circuit|slides|draw)\.(js|css)\?v=\d/);
+            expect(html).not.toMatch(/matephis-(plot|physics|sets|circuit|slides|draw|exam)\.(js|css)\?v=\d/);
+            const styleVersions = [...html.matchAll(/(?:site\.css_file|style\.css)\?v=([\d.]+)/g)].map((m) => m[1]);
+            expect(new Set(styleVersions).size).toBe(1);
         }
         expect(read('assets/js/matephis-board-src/ui/engine-loader.js')).not.toMatch(/\.(js|css)\?v=/);
-        for (const engine of ['plot', 'physics', 'sets', 'circuit']) {
+        for (const engine of ['plot', 'physics', 'sets', 'circuit', 'exam']) {
             expect(yml).toMatch(new RegExp(`^${engine}:\\n  js: "[\\d.]+"\\n  css: "[\\d.]+"`, 'm'));
         }
     });

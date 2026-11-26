@@ -182,7 +182,7 @@
      */
     function questionText(li) {
         var clone = li.cloneNode(true);
-        clone.querySelectorAll('.solution-tag, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select')
+        clone.querySelectorAll('.solution-tag, .hints, .hint-tag, details.work, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select')
             .forEach(function (n) { n.remove(); });
         return clone.textContent
             .replace(/\$\$[\s\S]*?\$\$/g, ' ')
@@ -212,6 +212,8 @@
                 if (li.tagName !== 'LI') return;
                 var diffEl = null;
                 var first = li.firstElementChild;
+                // Loose lists (items separated by a blank line or containing block elements) wrap text in <p>.
+                if (first && first.tagName === 'P') first = first.firstElementChild;
                 if (first && first.tagName === 'STRONG') diffEl = first.querySelector('.difficulty-tag');
                 var code = diffEl ? diffEl.textContent.trim() : null;
                 var key = hashText(questionText(li));
@@ -233,7 +235,8 @@
     }
 
     function storageKey() {
-        return 'matephis-exam:' + location.pathname;
+        var path = (location.pathname || '/').replace(/\/+$/, '') || '/';
+        return 'matephis-exam:' + path;
     }
 
     /**
@@ -374,6 +377,7 @@
         overlay.hidden = true;
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'exam-dialog-title');
         var card = make('div', 'exam-card');
         overlay.appendChild(card);
         document.body.appendChild(overlay);
@@ -427,7 +431,9 @@
             restoreQuestions();
             card.innerHTML = '';
             var head = make('div', 'exam-card-head');
-            head.appendChild(make('h2', null, studentLabel(draw)));
+            var heading = make('h2', null, studentLabel(draw));
+            heading.id = 'exam-dialog-title';
+            head.appendChild(heading);
             var close = iconButton('exam-icon exam-close', 'close', 'Chiudi (Esc)');
             head.appendChild(close);
             card.appendChild(head);
@@ -489,6 +495,8 @@
             return li;
         }
 
+        var drawFailed = false;
+
         function render() {
             var blocked = blockedKeys(history, opts.cooldown);
             var all = validDraws(questions, opts, null);
@@ -510,6 +518,8 @@
                 msg += all && all.length
                     ? ' Con le domande appena uscite non resta nessuna estrazione valida: aggiungi domande o riduci "cooldown".'
                     : ' Nessuna estrazione rispetta le regole: aggiungi domande o allarga "level".';
+            } else if (drawFailed) {
+                msg += ' Nessuna estrazione valida trovata con queste regole: aggiungi domande, allarga "level" o riduci "cooldown".';
             }
             info.textContent = msg;
             notice.hidden = !removed;
@@ -558,7 +568,8 @@
 
         function draw() {
             var set = drawSet(questions, opts, blockedKeys(history, opts.cooldown));
-            if (!set) { render(); return; }
+            if (!set) { drawFailed = true; render(); return; }
+            drawFailed = false;
             var entry = { n: nextNumber(history), at: Date.now(), keys: set.map(function (q) { return q.key; }) };
             var name = nameInput.value.trim();
             if (name) entry.name = name;
@@ -579,6 +590,7 @@
         function deleteDraw(index) {
             var entry = history.splice(index, 1)[0];
             if (!entry) return;
+            drawFailed = false;
             var item = { entry: entry, index: index };
             removed = removed && removed.kind === 'delete'
                 ? { kind: 'delete', items: removed.items.concat([item]) }
@@ -592,6 +604,7 @@
         });
         resetBtn.addEventListener('click', function () {
             if (!history.length) return;
+            drawFailed = false;
             removed = { kind: 'reset', draws: history };
             history = [];
             save();
@@ -599,6 +612,7 @@
         });
         restoreBtn.addEventListener('click', function () {
             if (!removed) return;
+            drawFailed = false;
             if (removed.kind === 'reset') {
                 history = removed.draws;
             } else {

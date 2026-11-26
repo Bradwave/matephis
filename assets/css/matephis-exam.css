@@ -344,8 +344,12 @@ html.exam-open {
   margin-bottom: var(--space-lg);
 }
 
-/* The question's own nodes are shown here: no solutions, no marks */
+/* The question's own nodes are shown here: no aids (solutions, hints, working) and no marks */
 .exam-question .solution-tag,
+.exam-question .hints,
+.exam-question .hint-next,
+.exam-question details.work,
+.exam-question .aid-end,
 .exam-question .exam-mark {
   display: none;
 }
@@ -373,6 +377,12 @@ html.exam-open {
   max-width: min(100%, 33.6rem, calc(85vh / var(--exam-zoom, 1)));
   margin-left: auto;
   margin-right: auto;
+}
+
+/* Nested plot containers (linked plots in sets, derivative plots, physics graphs) are already zoomed by their parent */
+.exam-question-body .matephis-plot-container .matephis-plot-container {
+  zoom: 1;
+  max-width: none;
 }
 
 .exam-question-body > *:first-child {
