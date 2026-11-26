@@ -360,12 +360,17 @@ html.exam-open {
 }
 
 /*
- * Plots no wider than half the screen height, so a drawn pair of questions fits on one screen.
- * The plot engine redraws at the new width (its text keeps its size); this sheet only overrides
- * the engine's own 70% width, it doesn't change the engine.
+ * Plots, sets diagrams and physics scenes look as on the page, enlarged by the same factor as
+ * the text (--exam-zoom, set by the script), so they keep their proportions with the question.
+ * The engines are untouched: each figure is drawn at its page width (70% of the 48rem column)
+ * and CSS zoom enlarges the result, lines, labels and sliders alike.
+ * Under zoom, a percentage is the size on screen, a length is multiplied by the zoom: so the
+ * three limits are the card's width, the page width, and 85% of the screen height.
  */
 .exam-question-body .matephis-plot-container {
-  max-width: min(100%, 50vh);
+  zoom: var(--exam-zoom, 1);
+  width: 100%;
+  max-width: min(100%, 33.6rem, calc(85vh / var(--exam-zoom, 1)));
   margin-left: auto;
   margin-right: auto;
 }

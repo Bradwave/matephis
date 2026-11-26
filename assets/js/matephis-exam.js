@@ -399,6 +399,8 @@
             if (overlay.hidden) return;
             restoreQuestions();
             overlay.hidden = true;
+            // Back on the page, figures redraw at their page width.
+            try { root.dispatchEvent(new Event('resize')); } catch (e) { /* old browsers */ }
             document.documentElement.classList.remove('exam-open');
             setPageInert(false);
             // Ready for the next student; without scrolling the page back to the panel.
@@ -410,6 +412,15 @@
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && !overlay.hidden) closeOverlay();
+        });
+
+        /** Figures grow with the text: the draw view's font size over the page's. */
+        function setFigureZoom() {
+            var f = parseFloat(getComputedStyle(card).fontSize) / parseFloat(getComputedStyle(content).fontSize);
+            card.style.setProperty('--exam-zoom', isFinite(f) && f > 0 ? f.toFixed(3) : '1');
+        }
+        root.addEventListener('resize', function () {
+            if (!overlay.hidden) setFigureZoom();
         });
 
         function showDraw(draw) {
@@ -440,6 +451,7 @@
             document.documentElement.classList.add('exam-open');
             setPageInert(true);
             close.focus();
+            setFigureZoom();
             // Engines that size themselves on resize (plots) adapt to the new width.
             try { root.dispatchEvent(new Event('resize')); } catch (e) { /* old browsers */ }
             // Opened before MathJax had typeset the page: typeset the questions now.

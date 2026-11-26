@@ -71,7 +71,7 @@ La regola riguarda solo la media: con tre domande, E + E + AD (media 3,67) va be
 ## In classe
 
 1. **Scrivi il nome** dello studente nel campo in alto (facoltativo: senza nome diventa «Studente 3»).
-2. **Premi «Estrai»** (o Invio nel campo del nome). Le domande estratte si aprono a schermo intero, grandi, con il loro numero e argomento, senza le soluzioni. Grafici, slider e diagrammi funzionano come nella pagina.
+2. **Premi «Estrai»** (o Invio nel campo del nome). Le domande estratte si aprono a schermo intero, grandi, con il loro numero e argomento, senza le soluzioni. Grafici, slider e diagrammi funzionano come nella pagina, ingranditi quanto il testo.
 3. **Chiudi con la ×** (o con Esc). Toccare altrove non chiude nulla, così un tocco sulla lavagna non fa sparire le domande. Il cursore torna nel campo del nome, pronto per lo studente successivo.
 
 Sotto il pulsante una riga dice quante domande, argomenti ed estrazioni valide ci sono. Se le regole non permettono nessuna estrazione, la riga lo spiega e il pulsante si disattiva: servono più domande, un intervallo `level` più largo o un `cooldown` più breve.
