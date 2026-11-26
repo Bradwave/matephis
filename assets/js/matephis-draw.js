@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let eraserSize = 20;
     let isScrollLocked = true;
     let drawingEnabled = false;
+    let canvasInitialized = false;
 
     const colors = ["#000000", "#B01A00", "#2e4a9e", "#257fbe", "#0dacc2", "#d1b854", "#ff912a", "#4ebf62"];
     let currentColorIndex = 0;
@@ -55,14 +56,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    window.addEventListener('resize', () => {
+        if (canvasInitialized) resizeCanvas();
+    });
 
     // Toggle Drawing Mode / Tool
     stylusBtn.addEventListener('click', () => {
         if (!drawingEnabled) {
             // Enter Draw Mode
             drawingEnabled = true;
+            canvasInitialized = true;
             isEraser = false;
             ctx.globalCompositeOperation = 'source-over';
             
