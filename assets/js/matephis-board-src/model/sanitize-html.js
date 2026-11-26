@@ -90,6 +90,62 @@ const SAFE_DATA_IMAGE = /^data:image\/(png|gif|jpe?g|webp|svg\+xml)[;,]/i;
 const SAFE_ID = /^MJX-[A-Za-z0-9-]+$/;
 // No resource loads or legacy script hooks from inline styles.
 const UNSAFE_STYLE = /url\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding|javascript:|\\/i;
+// Only layout-neutral properties used by tables, MathJax SVG and SVG diagrams: blocks
+// position/inset/z-index overlays that could cover or hijack the board UI.
+const ALLOWED_STYLE_PROPS = words(`
+    text-align vertical-align white-space line-height direction
+    width height min-width max-width min-height max-height
+    margin margin-top margin-right margin-bottom margin-left
+    padding padding-top padding-right padding-bottom padding-left
+    font-family font-size font-weight font-style text-decoration
+    color background background-color
+    border border-top border-right border-bottom border-left
+    border-color border-style border-width border-collapse
+    fill fill-opacity stroke stroke-width stroke-opacity stroke-dasharray
+    stroke-linecap stroke-linejoin paint-order opacity
+    position
+`);
+const MARGIN_PROPS = words('margin margin-top margin-right margin-bottom margin-left');
+// MathJax's negative margins are small and in ex/em (italic corrections, display shifts).
+const MAX_NEGATIVE_MARGIN = 5;
+
+/** Is this value safe for this (allowlisted) property? */
+function styleValueAllowed(prop, val) {
+    // MathJax sets position: relative on every formula (its hidden MathML is placed against it)
+    if (prop === 'position') return /^relative(\s*!important)?$/i.test(val);
+    if (MARGIN_PROPS.has(prop)) {
+        if (/[a-z-]+\s*\(/i.test(val)) return false; // calc(), var(), …: no computed escapes
+        // A negative margin could pull content over its neighbours: only MathJax-sized ones pass.
+        for (const m of val.matchAll(/-\s*(\d*\.?\d+)\s*([a-z%]*)/gi)) {
+            if (!/^(em|ex)$/i.test(m[2]) || Number(m[1]) > MAX_NEGATIVE_MARGIN) return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Clean an inline style attribute to allowlisted CSS properties with safe values.
+ * Returns the original string untouched when every declaration is already allowed,
+ * or the filtered declarations (empty string when nothing safe remains).
+ */
+export function sanitizeStyle(value) {
+    const raw = String(value || '');
+    if (!raw || UNSAFE_STYLE.test(raw)) return '';
+    const kept = [];
+    let dropped = false;
+    for (const part of raw.split(';')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const colon = trimmed.indexOf(':');
+        if (colon <= 0) { dropped = true; continue; }
+        const prop = trimmed.slice(0, colon).trim().toLowerCase();
+        const val = trimmed.slice(colon + 1).trim();
+        if (!val || !ALLOWED_STYLE_PROPS.has(prop) || !styleValueAllowed(prop, val)) { dropped = true; continue; }
+        kept.push(`${prop}: ${val}`);
+    }
+    if (!kept.length) return '';
+    return dropped ? kept.join('; ') : raw;
+}
 
 function baseUrl() {
     return (typeof location !== 'undefined' && location.href) || 'https://matephis.com/';
@@ -135,7 +191,13 @@ function cleanAttributes(el, ns, tag) {
         } else if (name === 'src') {
             keep = ns === HTML_NS && tag === 'img' && isSafeUrl(value, 'image');
         } else if (name === 'style') {
-            keep = attrAllowed(el, ns, tag, name) && !UNSAFE_STYLE.test(value);
+            const cleaned = attrAllowed(el, ns, tag, name) ? sanitizeStyle(value) : '';
+            if (cleaned) {
+                if (cleaned !== value) el.setAttribute('style', cleaned);
+                keep = true;
+            } else {
+                keep = false;
+            }
         } else {
             keep = attrAllowed(el, ns, tag, name);
         }

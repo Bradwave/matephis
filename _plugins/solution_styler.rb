@@ -81,8 +81,7 @@ module MatephisAids
       when '\\' then i += 1
       when '$' # skip the maths; a dollar that doesn't close ($…$ on one line) is a character
         fence = text[i + 1] == '$' ? '$$' : '$'
-        close = text.index(fence, i + fence.length)
-        close = nil if close && fence == '$' && text[i...close].include?("\n")
+        close = find_math_close(text, i + fence.length, fence)
         i = close + fence.length - 1 if close
       when '[' then depth += 1
       when ']'
@@ -94,10 +93,26 @@ module MatephisAids
     nil
   end
 
+  def find_math_close(text, from, fence)
+    j = from
+    while j < text.length
+      return nil if fence == '$' && text[j] == "\n"
+
+      if text[j] == '\\'
+        j += 2
+        next
+      end
+      return j if text[j, fence.length] == fence
+
+      j += 1
+    end
+    nil
+  end
+
   def solution(body)
     long = visible_length(body) > SHORT_MAX
     %(<span class="solution-tag#{' is-long' if long}"><span class="aid-label">Soluzione</span> ) +
-      %(<span class="solution-text" tabindex="0" role="button">#{body}</span></span><span class="aid-end"></span>)
+      %(<span class="solution-text" tabindex="0" role="button" aria-expanded="false">#{body}</span></span><span class="aid-end"></span>)
   end
 
   def hint(body, number)

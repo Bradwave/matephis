@@ -180,9 +180,13 @@
      * prerendered pages) and plots and diagrams fill their box when they are built, so the key
      * would change from one load to the next.
      */
-    function questionText(li) {
+    var KEY_STRIP = '.solution-tag, .hints, .hint-tag, details.work, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select';
+    // The first release (1.0) kept hints and working in the key: still read, to map saved draws
+    var LEGACY_KEY_STRIP = '.solution-tag, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select';
+
+    function questionText(li, strip) {
         var clone = li.cloneNode(true);
-        clone.querySelectorAll('.solution-tag, .difficulty-tag, .exam-mark, mjx-container, div, pre, figure, svg, canvas, button, input, select')
+        clone.querySelectorAll(strip || KEY_STRIP)
             .forEach(function (n) { n.remove(); });
         return clone.textContent
             .replace(/\$\$[\s\S]*?\$\$/g, ' ')
@@ -198,7 +202,7 @@
     function collectQuestions(content) {
         var questions = [];
         var topic = null, topicIndex = 0, untitled = 0;
-        var seen = {};
+        var seen = {}, seenLegacy = {};
         Array.prototype.forEach.call(content.children, function (el) {
             var tag = el.tagName;
             if (tag === 'H2' || tag === 'H3') {
@@ -212,13 +216,19 @@
                 if (li.tagName !== 'LI') return;
                 var diffEl = null;
                 var first = li.firstElementChild;
+                // Loose lists (items separated by a blank line or containing block elements) wrap text in <p>.
+                if (first && first.tagName === 'P') first = first.firstElementChild;
                 if (first && first.tagName === 'STRONG') diffEl = first.querySelector('.difficulty-tag');
                 var code = diffEl ? diffEl.textContent.trim() : null;
                 var key = hashText(questionText(li));
                 while (seen[key]) key += '_';
                 seen[key] = true;
+                var legacyKey = hashText(questionText(li, LEGACY_KEY_STRIP));
+                while (seenLegacy[legacyKey]) legacyKey += '_';
+                seenLegacy[legacyKey] = true;
                 questions.push({
                     key: key,
+                    legacyKey: legacyKey,
                     el: li,
                     number: questions.length + 1,
                     // Items before any heading are each a topic of their own.
@@ -233,6 +243,12 @@
     }
 
     function storageKey() {
+        var path = (location.pathname || '/').replace(/\/+$/, '') || '/';
+        return 'matephis-exam:' + path;
+    }
+
+    /** Where 1.0 saved the session: the path as it was, trailing slash included. */
+    function legacyStorageKey() {
         return 'matephis-exam:' + location.pathname;
     }
 
@@ -247,12 +263,17 @@
     function loadState() {
         try {
             var raw = localStorage.getItem(storageKey());
+            var migrated = false;
+            if (raw == null && legacyStorageKey() !== storageKey()) {
+                raw = localStorage.getItem(legacyStorageKey());
+                migrated = raw != null;
+            }
             var data = raw ? JSON.parse(raw) : null;
             var draws = data && Array.isArray(data.draws) ? data.draws : [];
             draws.forEach(function (d, i) { if (!d.n) d.n = i + 1; });
             var r = data && data.removed;
             var removed = r && ((r.kind === 'delete' && Array.isArray(r.items)) || (r.kind === 'reset' && Array.isArray(r.draws))) ? r : null;
-            return { draws: draws, removed: removed };
+            return { draws: draws, removed: removed, migrated: migrated };
         } catch (e) {
             return { draws: [], removed: null };
         }
@@ -261,6 +282,7 @@
     function saveState(draws, removed) {
         try {
             localStorage.setItem(storageKey(), JSON.stringify({ draws: draws, removed: removed }));
+            if (legacyStorageKey() !== storageKey()) localStorage.removeItem(legacyStorageKey());
         } catch (e) { /* private mode: the session lasts as long as the page */ }
     }
 
@@ -316,6 +338,30 @@
         return max + 1;
     }
 
+    /**
+     * Draws saved by 1.0 name questions by their old key: renamed to the current one, so the
+     * cooldown and the list of past draws still know them. Returns true if anything changed.
+     */
+    function migrateKeys(questions, draws, removed) {
+        var current = {}, map = {};
+        questions.forEach(function (q) { current[q.key] = true; });
+        questions.forEach(function (q) {
+            if (q.legacyKey !== q.key && !current[q.legacyKey]) map[q.legacyKey] = q.key;
+        });
+        var changed = false;
+        function fix(entry) {
+            if (!entry || !Array.isArray(entry.keys)) return;
+            entry.keys = entry.keys.map(function (k) {
+                if (map[k]) { changed = true; return map[k]; }
+                return k;
+            });
+        }
+        draws.forEach(fix);
+        if (removed && removed.kind === 'reset') removed.draws.forEach(fix);
+        if (removed && removed.kind === 'delete') removed.items.forEach(function (it) { fix(it && it.entry); });
+        return changed;
+    }
+
     function init() {
         var content = document.querySelector('.content');
         if (!content || !root.MatephisExamOptions) return;
@@ -327,6 +373,7 @@
         var history = state.draws;
         var removed = state.removed;
         function save() { saveState(history, removed); }
+        if (migrateKeys(questions, history, removed) || state.migrated) save();
 
         var panel = make('div', 'exam-panel');
         var actions = make('div', 'exam-actions');
@@ -374,6 +421,7 @@
         overlay.hidden = true;
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'exam-dialog-title');
         var card = make('div', 'exam-card');
         overlay.appendChild(card);
         document.body.appendChild(overlay);
@@ -427,7 +475,9 @@
             restoreQuestions();
             card.innerHTML = '';
             var head = make('div', 'exam-card-head');
-            head.appendChild(make('h2', null, studentLabel(draw)));
+            var heading = make('h2', null, studentLabel(draw));
+            heading.id = 'exam-dialog-title';
+            head.appendChild(heading);
             var close = iconButton('exam-icon exam-close', 'close', 'Chiudi (Esc)');
             head.appendChild(close);
             card.appendChild(head);
@@ -489,6 +539,8 @@
             return li;
         }
 
+        var drawFailed = false;
+
         function render() {
             var blocked = blockedKeys(history, opts.cooldown);
             var all = validDraws(questions, opts, null);
@@ -510,6 +562,8 @@
                 msg += all && all.length
                     ? ' Con le domande appena uscite non resta nessuna estrazione valida: aggiungi domande o riduci "cooldown".'
                     : ' Nessuna estrazione rispetta le regole: aggiungi domande o allarga "level".';
+            } else if (drawFailed) {
+                msg += ' Nessuna estrazione valida trovata con queste regole: aggiungi domande, allarga "level" o riduci "cooldown".';
             }
             info.textContent = msg;
             notice.hidden = !removed;
@@ -558,7 +612,8 @@
 
         function draw() {
             var set = drawSet(questions, opts, blockedKeys(history, opts.cooldown));
-            if (!set) { render(); return; }
+            if (!set) { drawFailed = true; render(); return; }
+            drawFailed = false;
             var entry = { n: nextNumber(history), at: Date.now(), keys: set.map(function (q) { return q.key; }) };
             var name = nameInput.value.trim();
             if (name) entry.name = name;
@@ -579,6 +634,7 @@
         function deleteDraw(index) {
             var entry = history.splice(index, 1)[0];
             if (!entry) return;
+            drawFailed = false;
             var item = { entry: entry, index: index };
             removed = removed && removed.kind === 'delete'
                 ? { kind: 'delete', items: removed.items.concat([item]) }
@@ -592,6 +648,7 @@
         });
         resetBtn.addEventListener('click', function () {
             if (!history.length) return;
+            drawFailed = false;
             removed = { kind: 'reset', draws: history };
             history = [];
             save();
@@ -599,6 +656,7 @@
         });
         restoreBtn.addEventListener('click', function () {
             if (!removed) return;
+            drawFailed = false;
             if (removed.kind === 'reset') {
                 history = removed.draws;
             } else {

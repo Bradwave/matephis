@@ -152,7 +152,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	10. $f(x) = \sin x - x \cos x$ [sol: $f^\prime(x) = \cos x - \cos x + x \cdot \sin x = x \cdot \sin x$]
 6. **[PD-]** Per ciascuna delle seguenti descrizioni, stabilisci se la derivata prima e la derivata seconda sono positive, negative o nulle.
 	- La funzione decresce e la sua pendenza diventa sempre meno ripida.
-	  [sol: $f^\prime < 0$, $f^{\prime\prime} > 0]
+	  [sol: $f^\prime < 0$, $f^{\prime\prime} > 0$]
 	- La funzione cresce e la sua pendenza diventa sempre più ripida.
 	  [sol: $f^\prime > 0$, $f^{\prime\prime} > 0$]
 	- La funzione decresce e la sua pendenza diventa sempre più ripida.
@@ -166,7 +166,7 @@ Cosa significano E, F, ecc.? Consulta la [[scala di difficoltà degli esercizi]]
 	  [sol: $f^\prime(x) = -1$ per $x < 0$; $f^\prime(x) = +1$ per $x > 0$.]
 	- Traccia il grafico di $f^\prime$.
 	- Esiste la tangente a $f$ in $(0,0)$? La funzione è derivabile in $x = 0$? Motiva le risposte.
-	  [sol: No, perché la funzione non si può approssimare con una sola retta in $(0, 0$); zoomando la funzione non assomiglia ad una retta. Pertanto non è derivabile.]
+	  [sol: No, perché la funzione non si può approssimare con una sola retta in $(0, 0)$; zoomando la funzione non assomiglia ad una retta. Pertanto non è derivabile.]
 	- Traccia il grafico della derivata seconda di $f$.
 	  [sol: Funzione costante nulla, non definita in $x = 0$.]
 ```matephis

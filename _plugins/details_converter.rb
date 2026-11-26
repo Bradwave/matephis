@@ -28,9 +28,16 @@ module MatephisCallouts
       end
 
       first, rest = html[m.end(0)...close].split('</p>', 2)
-      title, more = first.split("\n", 2)
-      body = more ? "<p>#{more}</p>#{rest}" : rest.to_s
-      out << html[pos...m.begin(0)] << callout(type, title.to_s.strip, render(body))
+      if type == 'NOTA'
+        # A note has no separate title line: keep a wrapped first paragraph intact
+        first_p = first.to_s.strip
+        body = (first_p.empty? ? '' : "<p>#{first_p}</p>") + rest.to_s
+        out << html[pos...m.begin(0)] << callout(type, '', render(body))
+      else
+        title, more = first.split("\n", 2)
+        body = more ? "<p>#{more}</p>#{rest}" : rest.to_s
+        out << html[pos...m.begin(0)] << callout(type, title.to_s.strip, render(body))
+      end
       pos = close + '</blockquote>'.length
     end
     out << html[pos..]
@@ -50,10 +57,11 @@ module MatephisCallouts
   def callout(type, title, body)
     case type
     when 'SVOLGIMENTO'
-      %(<details class="work"><summary><span class="aid-label">Svolgimento</span></summary>) +
+      extra = title.empty? ? '' : " #{title}"
+      %(<details class="work"><summary><span class="aid-label">Svolgimento</span>#{extra}</summary>) +
         %(<div class="details-content">#{body}</div></details>)
     when 'NOTA'
-      %(<div class="nota">#{"<p>#{title}</p>" unless title.empty?}#{body}</div>)
+      %(<div class="nota">#{body}</div>)
     else
       label = LABELS[type] && %(<span class="aid-label">#{LABELS[type]}</span> )
       %(<details class="details"><summary>#{label}#{title}</summary>) +

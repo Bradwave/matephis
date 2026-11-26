@@ -5,9 +5,23 @@
  */
 (function () {
     function update(group) {
+        if (!group) return;
         var hints = group.querySelectorAll('.hint-tag');
         var shown = group.querySelectorAll('.hint-tag.is-revealed').length;
+        // A revealed hint is a button: Enter, Space or a tap hides it (and the ones after it)
+        hints.forEach(function (h) {
+            if (h.classList.contains('is-revealed')) {
+                h.setAttribute('tabindex', '0');
+                h.setAttribute('role', 'button');
+                h.setAttribute('aria-expanded', 'true');
+            } else {
+                h.removeAttribute('tabindex');
+                h.removeAttribute('role');
+                h.removeAttribute('aria-expanded');
+            }
+        });
         var button = group.nextElementSibling;
+        if (!button || !button.classList.contains('hint-next')) return;
         var count = button.querySelector('.hint-count');
         button.hidden = shown === hints.length;
         if (count) count.textContent = (shown + 1) + '/' + hints.length;
@@ -15,7 +29,9 @@
 
     function revealNext(button) {
         var group = button.previousElementSibling;
-        group.querySelector('.hint-tag:not(.is-revealed)').classList.add('is-revealed');
+        if (!group || !group.classList.contains('hints')) return;
+        var nextHint = group.querySelector('.hint-tag:not(.is-revealed)');
+        if (nextHint) nextHint.classList.add('is-revealed');
         update(group);
     }
 
@@ -24,25 +40,54 @@
         update(hint.parentElement);
     }
 
-    // Links and text selection inside revealed text are left alone
-    function isReading(e) {
-        return e.target.closest('a') || String(window.getSelection());
+    function toggleSolution(solution) {
+        var revealed = solution.classList.toggle('is-revealed');
+        var text = solution.querySelector('.solution-text');
+        if (text) text.setAttribute('aria-expanded', String(revealed));
+    }
+
+    // Links and text selected inside the clicked aid are left alone.
+    // Checking containment prevents an unrelated selection elsewhere on the page
+    // from blocking clicks on blurred .solution-text (user-select: none).
+    function isReading(e, scope) {
+        if (e.target.closest('a')) return true;
+        var sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return false;
+        return Boolean(scope && ((sel.anchorNode && scope.contains(sel.anchorNode))
+            || (sel.focusNode && scope.contains(sel.focusNode))));
     }
 
     document.addEventListener('click', function (e) {
+        if (!(e.target instanceof Element)) return;
         var next = e.target.closest('.hint-next');
         if (next) return revealNext(next);
-        if (isReading(e)) return;
         var hint = e.target.closest('.hints .hint-tag.is-revealed');
-        if (hint) return hideFrom(hint);
+        if (hint) {
+            if (isReading(e, hint)) return;
+            return hideFrom(hint);
+        }
         var solution = e.target.closest('.solution-tag');
-        if (solution) solution.classList.toggle('is-revealed');
+        if (solution) {
+            if (isReading(e, solution)) return;
+            toggleSolution(solution);
+        }
     });
 
     document.addEventListener('keydown', function (e) {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('solution-text')) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (!(e.target instanceof Element)) return;
+        if (e.target.classList.contains('solution-text')) {
+            var sol = e.target.closest('.solution-tag');
+            if (!sol) return;
             e.preventDefault();
-            e.target.parentElement.classList.toggle('is-revealed');
+            toggleSolution(sol);
+        } else if (e.target.matches('.hints .hint-tag.is-revealed')) {
+            e.preventDefault();
+            var group = e.target.parentElement;
+            hideFrom(e.target);
+            // The hint is gone: keep the keyboard on the button that shows it again
+            var next = group && group.nextElementSibling;
+            if (next && next.classList.contains('hint-next')) next.focus();
         }
     });
 

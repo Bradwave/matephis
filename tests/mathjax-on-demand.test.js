@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { loadMathJax, texReady, sourceHasTeX, renderMathJaxLabel } from '../assets/js/matephis-plot-src/renderers/mathjax-bridge.js';
 
 /** A page whose <head> collects the scripts added to it. */
@@ -84,5 +84,38 @@ describe('MathJax on demand (#68)', () => {
         expect(document.added).toEqual([own]);
         finishLoading();
         expect(await p).toBe(true);
+    });
+
+    it('stops retrying after a script load error (offline / CDN failure)', async () => {
+        const p1 = loadMathJax();
+        expect(document.added).toHaveLength(1);
+        const script = document.added[0];
+        expect(typeof script.onerror).toBe('function');
+        script.onerror();
+        expect(await p1).toBe(false);
+        expect(texReady({ requestDraw() {} })).toBe(false);
+        expect(await loadMathJax()).toBe(false);
+        expect(document.added).toHaveLength(1);
+    });
+
+    it('a MathJax slower than the 8 s wait is not a failure: its blocks draw again once it arrives', async () => {
+        vi.useFakeTimers();
+        try {
+            let redraws = 0;
+            const owner = { requestDraw: () => { redraws++; } };
+            expect(texReady(owner)).toBe(false);
+            const p1 = loadMathJax();
+            await vi.advanceTimersByTimeAsync(8100);
+            expect(await p1).toBe(false);
+            expect(redraws).toBe(0);
+            finishLoading();
+            await vi.advanceTimersByTimeAsync(600);
+            expect(redraws).toBe(1);
+            expect(texReady(owner)).toBe(true);
+            expect(await loadMathJax()).toBe(true);
+            expect(document.added).toHaveLength(1);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

@@ -98,7 +98,7 @@ const csc = (x) => 1 / Math.sin(x);
 const cot = (x) => 1 / Math.tan(x);
 
 /** Real-mode functions: name -> JS expression prefix. */
-const REAL_FUNCTIONS = {
+const REAL_FUNCTIONS = Object.assign(Object.create(null), {
     sin: 'Math.sin', cos: 'Math.cos', tan: 'Math.tan',
     asin: 'Math.asin', acos: 'Math.acos', atan: 'Math.atan', atan2: 'Math.atan2',
     arcsin: 'Math.asin', arccos: 'Math.acos', arctan: 'Math.atan',
@@ -111,20 +111,20 @@ const REAL_FUNCTIONS = {
     sign: 'Math.sign', sgn: 'Math.sign', min: 'Math.min', max: 'Math.max',
     pow: 'Math.pow', hypot: 'Math.hypot', mod: '$R.mod',
     deg: '$R.deg', rad: '$R.rad',
-};
+});
 
 /** Complex-mode functions (also accept plain numbers). */
-const COMPLEX_FUNCTIONS = {
+const COMPLEX_FUNCTIONS = Object.assign(Object.create(null), {
     sin: '$C.sin', cos: '$C.cos', tan: '$C.tan', sinh: '$C.sinh', cosh: '$C.cosh',
     exp: '$C.exp', log: '$C.log', ln: '$C.log', sqrt: '$C.sqrt', pow: '$C.pow',
     abs: '$C.abs', arg: '$C.arg', conj: '$C.conj', re: '$C.re', Re: '$C.re', im: '$C.im', Im: '$C.im',
     cis: '$C.cis',
-};
+});
 
-const CONSTANTS = {
+const CONSTANTS = Object.assign(Object.create(null), {
     pi: 'Math.PI', PI: 'Math.PI', 'π': 'Math.PI', tau: '(2*Math.PI)',
     e: 'Math.E', E: 'Math.E', inf: 'Infinity', infinity: 'Infinity', Infinity: 'Infinity',
-};
+});
 
 const POINT_PROPS = ['x', 'y', 'r', 'theta', 'rad', 'deg', 'len'];
 
@@ -649,13 +649,22 @@ export function parseExpression(src, { vars = ['x'], params = [], points = [], p
         params: params instanceof Set ? params : new Set(params),
         points: points instanceof Set ? points : new Set(points),
         complex,
-        functions: complex ? { ...REAL_FUNCTIONS, ...COMPLEX_FUNCTIONS } : REAL_FUNCTIONS,
+        functions: complex ? Object.assign(Object.create(null), REAL_FUNCTIONS, COMPLEX_FUNCTIONS) : REAL_FUNCTIONS,
     };
     return new Parser(tokenize(String(src)), scope, String(src)).parseTop();
 }
 
 /** A variable name: an identifier as the tokenizer reads it, and nothing else. */
 const VAR_NAME = /^[A-Za-z_πθ][A-Za-z0-9_θ]*$/;
+/** JS keywords / restricted parameter names that cannot be used as function parameters. */
+const RESERVED_VAR_NAMES = new Set([
+    'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default',
+    'delete', 'do', 'else', 'enum', 'export', 'extends', 'false', 'finally', 'for', 'function',
+    'if', 'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'new', 'null',
+    'package', 'private', 'protected', 'public', 'return', 'static', 'super', 'switch',
+    'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield',
+    'arguments', 'eval',
+]);
 
 /** Source names of the constants (uppercase: a param called "e" or "pi" cannot hide them). */
 const CONSTANT_SOURCE = {
@@ -710,7 +719,7 @@ export function compileExpression(src, options = {}) {
     // the config (a curve's "param"). A name such as "{a=alert(1)}" would be a destructuring
     // default that runs code, so only plain identifiers, as the tokenizer reads them, pass.
     for (const v of vars) {
-        if (typeof v !== 'string' || !VAR_NAME.test(v)) {
+        if (typeof v !== 'string' || !VAR_NAME.test(v) || RESERVED_VAR_NAMES.has(v)) {
             throw new Error(`Invalid variable name ${JSON.stringify(String(v)).slice(0, 40)}`);
         }
     }
