@@ -660,11 +660,16 @@ async function initMatephisBoard() {
     ro.observe(canvasHost);
 
     window.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'hidden') return;
-        storage.saveBoardNow(scene);
-        // Nobody pans a hidden board: free the pan/zoom pictures now (unless set to 'never').
-        surface.releaseSnapCanvases();
-        pinnedStrip.releaseSnapCanvases();
+        if (document.visibilityState === 'hidden') {
+            storage.saveBoardNow(scene);
+            // Nobody pans a hidden board: free the pan/zoom pictures now (unless set to 'never').
+            surface.releaseSnapCanvases();
+            pinnedStrip.releaseSnapCanvases();
+        } else if (document.visibilityState === 'visible') {
+            // Mobile browsers can discard GPU canvas backing stores while backgrounded.
+            surface.requestCommittedRedraw();
+            if (pinnedStrip && pinnedStrip.active) pinnedStrip.render();
+        }
     });
     window.addEventListener('pagehide', () => storage.saveBoardNow(scene));
 

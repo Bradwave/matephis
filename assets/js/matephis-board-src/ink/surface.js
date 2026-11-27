@@ -3,8 +3,8 @@
  *
  * Layer 1 (committed): background crop marks + highlighter underlay + pen strokes.
  *   Redrawn ONLY on stroke commit, erase, camera pan/zoom, undo/redo, or theme change.
- * Layer 2 (active): desynchronized low-latency overlay for the single in-flight stroke,
- *   eraser cursor ring, and fading laser pointer trail.
+ * Layer 2 (active): lightweight overlay for the single in-flight stroke,
+ *   eraser cursor ring, zoom indicator, and fading laser pointer trail.
  */
 
 import {
@@ -376,10 +376,22 @@ export class InkSurface {
 
         this.activeCanvas = document.createElement('canvas');
         this.activeCanvas.className = 'board-canvas board-canvas-active';
-        // Request desynchronized context for lowest possible pointer-to-glass latency
-        this.activeCtx =
-            this.activeCanvas.getContext('2d', { alpha: true, desynchronized: true }) ||
-            this.activeCanvas.getContext('2d', { alpha: true });
+        // Keep activeCanvas synchronized: on Android Chrome, `desynchronized: true` combined
+        // with `alpha: true` and overlapping DOM/canvas layers can lose alpha compositing when
+        // underlying layers repaint during pan/zoom, turning the cleared canvas opaque black.
+        this.activeCtx = this.activeCanvas.getContext('2d', { alpha: true });
+
+        for (const c of [this.bgCanvas, this.committedCanvas]) {
+            if (typeof c.addEventListener === 'function') {
+                c.addEventListener('contextrestored', () => this.requestCommittedRedraw());
+            }
+        }
+        if (typeof this.activeCanvas.addEventListener === 'function') {
+            this.activeCanvas.addEventListener('contextrestored', () => {
+                this._activeEmpty = false;
+                this.renderActiveNow();
+            });
+        }
 
         this.container.appendChild(this.bgCanvas);
         this.container.appendChild(this.committedCanvas);
@@ -1189,16 +1201,12 @@ export class InkSurface {
     }
 
     /**
-     * Hand a finished stroke from the live layer to the committed layer without a gap.
-     * The live layer is desynchronized, so clearing it shows at once, while the committed
-     * layer only shows at the browser's next frame: clearing both in the same task left a
-     * frame or two (longer on slow boards) with the stroke on neither layer. The live copy
-     * stays until the committed picture has been presented, then goes.
+     * Hand a finished stroke from the live layer to the committed layer in the same frame.
      */
     commitActiveStroke(stroke) {
         this.appendStroke(stroke);
         if (this.activeStroke === stroke) this.activeStroke = null;
-        requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
+        this.renderActiveNow();
     }
 
     setActiveShape(stroke) {

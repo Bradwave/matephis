@@ -5,7 +5,7 @@
  *   z-index 0: bgCanvas        (opaque page fill, grid/dots/ruled pattern, A4 borders)
  *   z-index 1: overlay         (world-space widgets — bodies are write-through `pointer-events: none`)
  *   z-index 2: committedCanvas (transparent ink layer — renders ink ABOVE widgets)
- *   z-index 3: activeCanvas    (desynchronized in-flight stroke / lasso / shape / laser)
+ *   z-index 3: activeCanvas    (in-flight stroke / lasso / shape / laser / zoom indicator)
  *   z-index 4: topOverlay      (screen-space connector badges & active widget edit chrome)
  *
  * Because committedCanvas and activeCanvas both carry `pointer-events: none`,
