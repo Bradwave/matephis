@@ -286,28 +286,71 @@ export function drawStroke(ctx, stroke, theme = 'light', { cache = true } = {}) 
 }
 
 /**
- * Draw only the newly appended tail of an in-flight opaque solid pen stroke onto the active
- * canvas (avoids clearing and re-tracing the whole stroke on every pointermove).
+ * Draw only the newly finalized corner-aware smooth segments of an opaque solid pen stroke
+ * (up to vertex `pts.length - 2`). Because each vertex's tangent pull (<= 0.45 * len) depends
+ * only on (prev, curr, next), every drawn segment is mathematically identical to `traceStroke()`
+ * with zero full-canvas clearRect and zero jagged polygon residue.
  */
-export function drawStrokeTail(ctx, stroke, drawnCount, theme = 'light') {
+export function drawStrokeSmoothProgress(ctx, stroke, state, theme = 'light') {
     const pts = stroke && stroke.points;
-    if (!pts || pts.length <= drawnCount) return;
+    if (!pts || pts.length < 3) return null;
+    const endVertex = pts.length - 2;
+    const startVertex = state && state.vertex >= 1 ? state.vertex + 1 : 1;
+    if (startVertex > endVertex) return null;
+
+    let curX = state && Number.isFinite(state.x) ? state.x : pts[0].x;
+    let curY = state && Number.isFinite(state.y) ? state.y : pts[0].y;
 
     const color = resolveInkColor(stroke.color, theme);
     const width = stroke.width;
-    const startIdx = Math.max(0, drawnCount - 2);
-    const slice = pts.slice(startIdx);
 
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
-    ctx.fillStyle = color;
     ctx.setLineDash([]);
     ctx.beginPath();
-    traceStroke(ctx, slice, width);
-    if (slice.length === 1) ctx.fill();
-    else ctx.stroke();
+    ctx.moveTo(curX, curY);
+
+    for (let i = startVertex; i <= endVertex; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const next = pts[i + 1];
+
+        const ax = curr.x - prev.x;
+        const ay = curr.y - prev.y;
+        const bx = next.x - curr.x;
+        const by = next.y - curr.y;
+        const lenA = Math.hypot(ax, ay);
+        const lenB = Math.hypot(bx, by);
+
+        if (lenA < 1e-4 || lenB < 1e-4) {
+            ctx.lineTo(curr.x, curr.y);
+            curX = curr.x;
+            curY = curr.y;
+            continue;
+        }
+
+        const cosTheta = (ax * bx + ay * by) / (lenA * lenB);
+        if (cosTheta < SHARP_COS_THRESHOLD) {
+            ctx.lineTo(curr.x, curr.y);
+            curX = curr.x;
+            curY = curr.y;
+        } else {
+            const pull = Math.min(lenA * 0.45, lenB * 0.45, MAX_PULL_MM);
+            const inX = curr.x - (ax / lenA) * pull;
+            const inY = curr.y - (ay / lenA) * pull;
+            const outX = curr.x + (bx / lenB) * pull;
+            const outY = curr.y + (by / lenB) * pull;
+            ctx.lineTo(inX, inY);
+            ctx.quadraticCurveTo(curr.x, curr.y, outX, outY);
+            curX = outX;
+            curY = outY;
+        }
+    }
+    ctx.stroke();
     ctx.restore();
+
+    return { vertex: endVertex, x: curX, y: curY };
 }
