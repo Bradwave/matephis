@@ -6,6 +6,18 @@
 import { BoardIcons } from './icons.js';
 import { extractBoardDataFromSVG } from '../export/svg-export.js';
 
+const OPTION_TOGGLES = [
+    'showCropMarks',
+    'penOnly',
+    'zoomLock',
+    'palmErase',
+    'quickMenu',
+    'fastPan',
+    'connectorGlide',
+    'lowDpr',
+    'showHud',
+];
+
 export class OptionsMenu {
     constructor(hostEl, {
         scene,
@@ -251,8 +263,9 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'desyncCanvas', 'showHud']) {
+        for (const key of OPTION_TOGGLES) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
+            if (!cb) continue;
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
                 this._syncPalmSliderVisibility();
@@ -437,8 +450,9 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
-            this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
+        for (const key of OPTION_TOGGLES) {
+            const cb = this.el.querySelector(`[data-opt="${key}"]`);
+            if (cb) cb.checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;
         this.el.querySelector('[data-opt="palmThreshold"]').value = String(th);

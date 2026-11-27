@@ -133,4 +133,16 @@ describe('InkSurface context, GPU recovery & incremental active ink', () => {
         const clearsAfterProgress = clearRectCalls.filter((c) => c.className.includes('board-canvas-active')).length;
         expect(clearsAfterProgress).toBe(1);
     });
+
+    it('keeps OptionsMenu toggle list aligned with its rendered HTML markup', async () => {
+        const fs = await import('node:fs');
+        const src = fs.readFileSync(new URL('../assets/js/matephis-board-src/ui/options.js', import.meta.url), 'utf8');
+        const m = src.match(/const OPTION_TOGGLES = \[([\s\S]*?)\];/);
+        expect(m).not.toBeNull();
+        const keys = Array.from(m[1].matchAll(/'([^']+)'/g), (x) => x[1]);
+        expect(keys.length).toBeGreaterThan(5);
+        for (const key of keys) {
+            expect(src).toContain(`data-opt="${key}"`);
+        }
+    });
 });
