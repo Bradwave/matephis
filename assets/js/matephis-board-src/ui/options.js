@@ -19,6 +19,9 @@ export class OptionsMenu {
         onExportPDF = null,
         onClearBoard,
         onDeletePage,
+        onResetBoard = null,
+        onClearCache = null,
+        onClearHistory = null,
     }) {
         this.hostEl = hostEl;
         this.scene = scene;
@@ -32,8 +35,13 @@ export class OptionsMenu {
         this.onExportPDF = onExportPDF;
         this.onClearBoard = onClearBoard;
         this.onDeletePage = onDeletePage;
+        this.onResetBoard = onResetBoard;
+        this.onClearCache = onClearCache;
+        this.onClearHistory = onClearHistory;
 
         this.open = false;
+        this._resetArmed = false;
+        this._resetArmTimer = null;
 
         this.el = document.createElement('div');
         this.el.className = 'board-popover board-options-popover';
@@ -120,6 +128,10 @@ export class OptionsMenu {
                     <span>Modalità veloce (1× DPR)</span>
                     <input type="checkbox" data-opt="lowDpr" />
                 </label>
+                <label class="board-opt-row" title="Tela attiva a bassa latenza (desynchronized): disattiva se su Chrome mobile lo schermo diventa nero o compaiono artefatti">
+                    <span>Scrittura bassa latenza (desync)</span>
+                    <input type="checkbox" data-opt="desyncCanvas" />
+                </label>
                 <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
                     <span>Pan e zoom fluidi</span>
                     <input type="checkbox" data-opt="fastPan" />
@@ -139,6 +151,17 @@ export class OptionsMenu {
                         <button type="button" class="board-bg-btn" data-val="2000">2 s</button>
                         <button type="button" class="board-bg-btn" data-val="30000">30 s</button>
                         <button type="button" class="board-bg-btn" data-val="never">Mai</button>
+                    </div>
+                </div>
+                <div class="board-opt-bg-row">
+                    <span>Cache e memoria</span>
+                    <div class="board-opt-btn-row">
+                        <button type="button" class="board-action-btn" data-action="clear-cache" title="Libera immagini pan/zoom, cache esercizi e cronologia delle altre pagine">
+                            <span>Svuota cache</span>
+                        </button>
+                        <button type="button" class="board-action-btn" data-action="clear-history" title="Svuota la cronologia annulla/ripeti di tutte le pagine">
+                            <span>Svuota cronologia</span>
+                        </button>
                     </div>
                 </div>
                 <label class="board-opt-row">
@@ -165,6 +188,11 @@ export class OptionsMenu {
                 <button type="button" class="board-action-btn is-danger" data-action="delete-page">
                     ${BoardIcons.close}<span>Elimina pagina</span>
                 </button>
+                <div class="board-opt-reset-wrap">
+                    <button type="button" class="board-action-btn is-danger is-reset-board" data-action="reset-board" title="Cancella tutte le pagine e ricomincia da una lavagna vuota (mantiene le opzioni)">
+                        ${BoardIcons.refresh}<span>Nuova lavagna</span>
+                    </button>
+                </div>
             </div>
             </div>
             <input type="file" accept=".json,.mboard.json,.svg" class="board-file-input" hidden />
@@ -227,7 +255,7 @@ export class OptionsMenu {
             if (this.onToggleTheme) this.onToggleTheme(darkCb.checked ? 'dark' : 'light');
         });
 
-        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'desyncCanvas', 'showHud']) {
             const cb = this.el.querySelector(`[data-opt="${key}"]`);
             cb.addEventListener('change', () => {
                 this.scene.settings[key] = cb.checked;
@@ -317,6 +345,60 @@ export class OptionsMenu {
             if (this.onDeletePage) this.onDeletePage();
             this.hide();
         });
+
+        const flashLabel = (btn, doneText) => {
+            const span = btn.querySelector('span');
+            if (!span) return;
+            if (!btn.dataset.origLabel) btn.dataset.origLabel = span.textContent;
+            clearTimeout(btn._flashTimer);
+            span.textContent = doneText;
+            btn.classList.add('is-done');
+            btn._flashTimer = setTimeout(() => {
+                span.textContent = btn.dataset.origLabel;
+                btn.classList.remove('is-done');
+            }, 1400);
+        };
+
+        const clearCacheBtn = this.el.querySelector('[data-action="clear-cache"]');
+        clearCacheBtn.addEventListener('click', () => {
+            if (this.onClearCache) this.onClearCache();
+            flashLabel(clearCacheBtn, 'Cache svuotata');
+        });
+
+        const clearHistBtn = this.el.querySelector('[data-action="clear-history"]');
+        clearHistBtn.addEventListener('click', () => {
+            if (this.onClearHistory) this.onClearHistory();
+            flashLabel(clearHistBtn, 'Cronologia vuota');
+        });
+
+        // Two-tap reset: first tap arms confirmation, second tap wipes all pages (no dialog).
+        this.resetBoardBtn = this.el.querySelector('[data-action="reset-board"]');
+        this.resetBoardBtn.addEventListener('click', () => {
+            if (!this._resetArmed) {
+                this._armReset(true);
+                return;
+            }
+            this._armReset(false);
+            if (this.onResetBoard) this.onResetBoard();
+            this.hide();
+        });
+    }
+
+    _armReset(armed) {
+        clearTimeout(this._resetArmTimer);
+        this._resetArmTimer = null;
+        this._resetArmed = Boolean(armed);
+        if (!this.resetBoardBtn) return;
+        const span = this.resetBoardBtn.querySelector('span');
+        this.resetBoardBtn.classList.toggle('is-confirming', this._resetArmed);
+        if (span) {
+            span.textContent = this._resetArmed
+                ? 'Conferma: azzera tutte le pagine'
+                : 'Nuova lavagna';
+        }
+        if (this._resetArmed) {
+            this._resetArmTimer = setTimeout(() => this._armReset(false), 4000);
+        }
     }
 
     _syncSegments() {
@@ -345,6 +427,7 @@ export class OptionsMenu {
     }
 
     _showTab(name) {
+        this._armReset(false);
         this.tab = name;
         this.el.querySelectorAll('[data-tab]').forEach((btn) => {
             const on = btn.dataset.tab === name;
@@ -358,7 +441,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'desyncCanvas', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;
@@ -378,12 +461,14 @@ export class OptionsMenu {
     }
 
     show() {
+        this._armReset(false);
         this.syncFromState();
         this.open = true;
         this.el.hidden = false;
     }
 
     hide() {
+        this._armReset(false);
         this.open = false;
         this.el.hidden = true;
     }

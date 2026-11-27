@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
     palmErase: false,
     palmThreshold: 42,
     lowDpr: false,
+    desyncCanvas: true,     // desynchronized active canvas for lowest writing latency (off if mobile Chrome glitches)
     showHud: false,
     uiSize: 'm',            // 's' | 'm' | 'l' — multiplier on the auto-sized --bu token
     toolbarLayout: 'auto',  // 'auto' | 'rail' | 'bar'
@@ -249,6 +250,16 @@ export class BoardScene {
         this.camera.y = init.y;
         this.camera.scale = init.scale;
         this.camera.baseScale = init.baseScale;
+    }
+
+    /** Reset the entire multi-page board back to one clean blank page (keeps settings). */
+    resetAll() {
+        this.id = `b_${Date.now().toString(36)}`;
+        this.title = 'Lavagna';
+        this.createdAt = Math.floor(Date.now() / 1000);
+        this.updatedAt = this.createdAt;
+        this.pages = [this._createPage(this.viewportW, this.viewportH, 'blank')];
+        this.currentPageIndex = 0;
     }
 
     getFootprint(pageIndex = this.currentPageIndex) {

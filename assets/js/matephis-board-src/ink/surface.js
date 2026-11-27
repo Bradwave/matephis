@@ -374,16 +374,43 @@ export class InkSurface {
         this.committedCanvas.className = 'board-canvas board-canvas-committed';
         this.committedCtx = this.committedCanvas.getContext('2d', { alpha: true });
 
-        this.activeCanvas = document.createElement('canvas');
-        this.activeCanvas.className = 'board-canvas board-canvas-active';
-        // Request desynchronized context for lowest possible pointer-to-glass latency
-        this.activeCtx =
-            this.activeCanvas.getContext('2d', { alpha: true, desynchronized: true }) ||
-            this.activeCanvas.getContext('2d', { alpha: true });
-
         this.container.appendChild(this.bgCanvas);
         this.container.appendChild(this.committedCanvas);
-        this.container.appendChild(this.activeCanvas);
+        this._mountActiveCanvas(this.scene.settings.desyncCanvas !== false);
+    }
+
+    _mountActiveCanvas(desync) {
+        const wantDesync = Boolean(desync);
+        const canvas = document.createElement('canvas');
+        canvas.className = 'board-canvas board-canvas-active';
+        // Request desynchronized context for lowest possible pointer-to-glass latency when enabled.
+        const ctx = wantDesync
+            ? (canvas.getContext('2d', { alpha: true, desynchronized: true }) || canvas.getContext('2d', { alpha: true }))
+            : canvas.getContext('2d', { alpha: true });
+        const attrs = ctx && typeof ctx.getContextAttributes === 'function' ? ctx.getContextAttributes() : null;
+        this._desyncActive = Boolean(wantDesync && (attrs ? attrs.desynchronized : true));
+        if (this.width > 0 && this.height > 0) {
+            canvas.width = Math.round(this.width * this.dpr);
+            canvas.height = Math.round(this.height * this.dpr);
+            canvas.style.width = `${this.width}px`;
+            canvas.style.height = `${this.height}px`;
+        }
+        if (this.activeCanvas && this.activeCanvas.parentNode) {
+            this.activeCanvas.width = 0;
+            this.activeCanvas.height = 0;
+            this.activeCanvas.replaceWith(canvas);
+        } else {
+            this.container.appendChild(canvas);
+        }
+        this.activeCanvas = canvas;
+        this.activeCtx = ctx;
+        this._activeEmpty = true;
+    }
+
+    /** Switch the active canvas between desynchronized and standard composited mode live. */
+    setDesynchronized(enabled) {
+        this._mountActiveCanvas(Boolean(enabled));
+        this.renderActiveNow();
     }
 
     setTheme(theme) {
@@ -775,10 +802,10 @@ export class InkSurface {
      * Free the offscreen gesture pictures so they do not hold memory while idle. Kept while a
      * gesture or its settle runs, and always kept with the setting 'never'.
      */
-    releaseSnapCanvases() {
+    releaseSnapCanvases({ force = false } = {}) {
         this._cancelSnapRelease();
         if (this.gesture || this._settleRaf) return;
-        if (snapReleaseDelay(this.scene.settings) === null) return;
+        if (!force && snapReleaseDelay(this.scene.settings) === null) return;
         this.snap = null;
         for (const c of this._snapCanvases) {
             if (c.width !== 0) c.width = 0;
@@ -1198,7 +1225,11 @@ export class InkSurface {
     commitActiveStroke(stroke) {
         this.appendStroke(stroke);
         if (this.activeStroke === stroke) this.activeStroke = null;
-        requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
+        if (this._desyncActive) {
+            requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
+        } else {
+            this.renderActiveNow();
+        }
     }
 
     setActiveShape(stroke) {

@@ -202,6 +202,7 @@ export class FutureMenus {
 
     _destroyAllPreviews() {
         for (const slot of Object.keys(this._previews || {})) this._destroyPreview(slot);
+        this._clearPreviewInstances();
     }
 
     // =========================================================================

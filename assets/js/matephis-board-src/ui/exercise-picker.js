@@ -1081,9 +1081,11 @@ export class ExercisePicker {
         this.DOMParserImpl = DOMParserImpl;
 
         this._manifest = null;
+        this._manifestPromise = null;
         this._searchData = null;
         this._loadPromise = null;
         this._noteCache = new Map();
+        this._parsedNotes = new Map();
     }
 
     _url(path) {
@@ -1093,6 +1095,25 @@ export class ExercisePicker {
             return `${this.baseurl}${p}`;
         }
         return p;
+    }
+
+    async ensureManifest() {
+        if (this._manifest !== null) return this._manifest;
+        if (this._manifestPromise) return this._manifestPromise;
+        this._manifestPromise = (async () => {
+            if (!this.fetchImpl) {
+                this._manifest = [];
+                return this._manifest;
+            }
+            try {
+                const res = await this.fetchImpl(this._url('/exercises-manifest.json'));
+                this._manifest = res && res.ok ? normalizeManifest(await res.json()) : [];
+            } catch (_) {
+                this._manifest = [];
+            }
+            return this._manifest;
+        })();
+        return this._manifestPromise;
     }
 
     async ensureLoaded() {
@@ -1107,20 +1128,13 @@ export class ExercisePicker {
                 this._searchData = [];
                 return { manifest: this._manifest, searchData: this._searchData };
             }
-            const [mRes, sRes] = await Promise.allSettled([
-                this.fetchImpl(this._url('/exercises-manifest.json')),
-                this.fetchImpl(this._url('/SearchData.json')),
+            const [manifest, sRes] = await Promise.all([
+                this.ensureManifest(),
+                this.fetchImpl(this._url('/SearchData.json')).then(
+                    (value) => ({ status: 'fulfilled', value }),
+                    (reason) => ({ status: 'rejected', reason })
+                ),
             ]);
-
-            if (mRes.status === 'fulfilled' && mRes.value && mRes.value.ok) {
-                try {
-                    this._manifest = normalizeManifest(await mRes.value.json());
-                } catch (_) {
-                    this._manifest = [];
-                }
-            } else {
-                this._manifest = [];
-            }
 
             if (sRes.status === 'fulfilled' && sRes.value && sRes.value.ok) {
                 try {
@@ -1132,16 +1146,16 @@ export class ExercisePicker {
                 this._searchData = [];
             }
 
-            return { manifest: this._manifest, searchData: this._searchData };
+            return { manifest, searchData: this._searchData };
         })();
 
         return this._loadPromise;
     }
 
-    /** Subjects → topics → notes (see buildExerciseCatalog). */
+    /** Subjects → topics → notes (see buildExerciseCatalog). Does not fetch SearchData.json. */
     async loadCatalog() {
         if (this._catalog) return this._catalog;
-        const { manifest } = await this.ensureLoaded();
+        const manifest = await this.ensureManifest();
         let raw = [];
         if (this.fetchImpl) {
             try {
@@ -1153,11 +1167,19 @@ export class ExercisePicker {
         return this._catalog;
     }
 
-    /** All exercises of a note, parsed once: { noteTitle, items }. */
+    /** All exercises of a note, parsed once (LRU-capped to bound RAM across a lesson). */
     async loadNote(note) {
-        if (!this._parsedNotes) this._parsedNotes = new Map();
-        if (this._parsedNotes.has(note.url)) return this._parsedNotes.get(note.url);
+        const MAX_CACHED_NOTES = 6;
+        if (this._parsedNotes.has(note.url)) {
+            const hit = this._parsedNotes.get(note.url);
+            this._parsedNotes.delete(note.url);
+            this._parsedNotes.set(note.url, hit);
+            return hit;
+        }
+        const url = this._url(note.url);
         const html = await this.fetchNoteHtml(note.url);
+        // Raw HTML is no longer needed once parsed into exercise items.
+        this._noteCache.delete(url);
         const extracted = extractExercisesFromHtml(html, {
             noteUrl: note.url,
             noteTitle: note.title,
@@ -1166,11 +1188,23 @@ export class ExercisePicker {
         });
         const out = { noteTitle: extracted.noteTitle || note.title, items: extracted.items || [] };
         this._parsedNotes.set(note.url, out);
+        while (this._parsedNotes.size > MAX_CACHED_NOTES) {
+            const oldest = this._parsedNotes.keys().next().value;
+            this._parsedNotes.delete(oldest);
+        }
         return out;
     }
 
     getTopics() {
         return extractTopicsFromManifest(this._manifest || [], DEFAULT_TOPICS);
+    }
+
+    /** Drop cached note HTML, parsed exercises, and search corpus to reclaim RAM. */
+    clearCache() {
+        this._noteCache.clear();
+        this._parsedNotes.clear();
+        this._searchData = null;
+        this._loadPromise = null;
     }
 
     async fetchNoteHtml(noteUrl) {

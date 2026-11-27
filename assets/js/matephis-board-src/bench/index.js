@@ -171,6 +171,10 @@ class Stage {
     async addWidget(kind, data, w = 135) {
         const widget = this.widgets.insertWidget(kind, data, { w });
         this.widgets.clearSelection();
+        if (kind === 'exercise') {
+            await sleep(300);
+            return widget;
+        }
         // Wait for the engine to load and the widget to draw
         for (let i = 0; i < 100; i++) {
             const entry = this.widgets.mounted.get(widget.id);
@@ -270,6 +274,38 @@ const SCENARIOS = [
         },
     },
     {
+        id: 'inkExercise',
+        label: 'Scrittura con esercizio',
+        what: 'Come Scrittura, ma con una scheda esercizio (soluzione nascosta e formule) sulla pagina.',
+        async run(host) {
+            const st = new Stage(host);
+            st.addStrokes(300);
+            await st.addWidget('exercise', {
+                noteTitle: 'Esercizi sulle funzioni',
+                section: 'Problemi',
+                label: '#4',
+                hideSolution: true,
+                html: '<div class="board-ex-item"><p>Determina il dominio, gli zeri e il segno della funzione $f(x) = \\frac{x^2 - 4}{x^2 - 1}$ e studia i limiti agli estremi del dominio.</p>'
+                    + '<p><span class="solution-tag"><span class="aid-label">Soluzione</span> <span class="solution-text">$D = \\mathbb{R} \\setminus \\{\\pm 1\\}$; zeri $x = \\pm 2$; $f(x) > 0$ per $x < -2 \\lor -1 < x < 1 \\lor x > 2$.</span></span><span class="aid-end"></span></p></div>',
+            }, 155);
+            await sleep(200);
+            const w = st.rect.width, h = st.rect.height;
+            let down = false;
+            const r = await measureFrames(SCENARIO_MS, (i) => {
+                const k = i % 40;
+                const p = scribble(i, w, h);
+                if (k === 0) { st.pointer('pointerdown', 1, p.x, p.y); down = true; }
+                else if (k === 39) { st.pointer('pointerup', 1, p.x, p.y); down = false; }
+                else st.pointer('pointermove', 1, p.x, p.y);
+            });
+            if (down) st.pointer('pointerup', 1, 0, 0);
+            r.committedRedrawMs = +st.surface.lastCommittedRedrawMs.toFixed(2);
+            r.strokesDrawn = st.scene.strokes.length - 300;
+            st.destroy();
+            return r;
+        },
+    },
+    {
         id: 'pan',
         label: 'Spostamento e zoom',
         what: 'Due dita che spostano e ingrandiscono una pagina con 600 tratti, un grafico e una scena di fisica.',
@@ -290,8 +326,10 @@ const SCENARIOS = [
                     seen.minScale = Math.min(seen.minScale, cam.scale); seen.maxScale = Math.max(seen.maxScale, cam.scale);
                     seen.minX = Math.min(seen.minX, cam.x); seen.maxX = Math.max(seen.maxX, cam.x);
                     const t = i / 60;
-                    const dx = 140 * Math.sin(t * 2), dy = 80 * Math.sin(t * 1.3);
-                    const spread = 120 * (1 + 0.35 * Math.sin(t * 1.7)); // pans, and zooms past the lock
+                    // Spread clearly first so the gesture unlocks zoom, then pan and zoom together.
+                    const panRamp = Math.min(1, Math.max(0, (i - 8) / 15));
+                    const dx = panRamp * 140 * Math.sin(t * 2), dy = panRamp * 80 * Math.sin(t * 1.3);
+                    const spread = 120 * (1 + 0.45 * Math.sin(t * 2.2));
                     st.pointer('pointermove', 11, cx - spread + dx, cy + dy);
                     st.pointer('pointermove', 12, cx + spread + dx, cy + dy);
                 });
@@ -378,6 +416,7 @@ function summary(id, r) {
         case 'cpu': return `${r.ms.med} ms`;
         case 'fill': return `schermo: ${f(r.device)} · a 1×: ${f(r.dpr1)}`;
         case 'ink': return f(r);
+        case 'inkExercise': return f(r);
         case 'pan': return `immagine: ${f(r.fastPan)} · ridisegno: ${f(r.fullRedraw)} · immagine 1×: ${f(r.fastPanDpr1)}`;
         case 'plot': return `funzioni: ${f(r.functions)}, disegno ${r.functions.drawMs} ms · implicite: ${f(r.implicit)}, disegno ${r.implicit.drawMs} ms`;
         case 'physics': return `riproduzione: ${f(r.playback)} · cursore: ${f(r.slider)}, disegno ${r.slider.drawMs} ms`;

@@ -107,4 +107,23 @@ describe('board history & multi-frame atomic erase gesture', () => {
         // Cannot delete the last remaining page
         expect(restored.deleteCurrentPage()).toBe(false);
     });
+
+    it('resetAll wipes all pages and content while preserving settings', () => {
+        const scene = new BoardScene(1280, 624, { lowDpr: true, desyncCanvas: false });
+        scene.strokes.push(createStroke({ id: 'a', points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] }));
+        scene.addPage(true);
+        scene.pageBackground = 'grid';
+        scene.widgets.push({ id: 'w1', kind: 'plot', x: 0, y: 0, w: 100, h: 80, data: {} });
+        expect(scene.pageCount).toBe(2);
+
+        scene.resetAll();
+        expect(scene.pageCount).toBe(1);
+        expect(scene.currentPageIndex).toBe(0);
+        expect(scene.strokes).toHaveLength(0);
+        expect(scene.widgets).toHaveLength(0);
+        expect(scene.connectors).toHaveLength(0);
+        expect(scene.pageBackground).toBe('blank');
+        expect(scene.settings.lowDpr).toBe(true);
+        expect(scene.settings.desyncCanvas).toBe(false);
+    });
 });
