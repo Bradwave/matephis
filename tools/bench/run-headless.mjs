@@ -34,8 +34,8 @@ try {
         all[`cpu x${rate}`] = res;
         const s = res.scenarios;
         const fps = (x) => (x && x.fps !== undefined ? `${x.fps} fps` : '—');
-        console.log(`cpu x${rate}: cpu ${s.cpu ? s.cpu.ms.med + ' ms' : '—'} | fill ${s.fill ? fps(s.fill.device) : '—'} | ink ${fps(s.ink)}`
-            + ` | pan ${s.pan ? fps(s.pan.fastPan) : '—'} | plot ${s.plot ? `${s.plot.functions.drawMs}/${s.plot.implicit.drawMs} ms` : '—'}`
+        console.log(`cpu x${rate}: cpu ${s.cpu ? s.cpu.ms.med + ' ms' : '—'} | fill ${s.fill ? fps(s.fill.device) : '—'} | ink ${fps(s.ink)} | inkEx ${fps(s.inkExercise)}`
+            + ` | pan ${s.pan ? `${fps(s.pan.fastPan)} (zoom ${s.pan.fastPan.zoomRange}×)` : '—'} | plot ${s.plot ? `${s.plot.functions.drawMs}/${s.plot.implicit.drawMs} ms` : '—'}`
             + ` | physics ${s.physics ? `${fps(s.physics.playback)}, slider ${s.physics.slider.drawMs} ms` : '—'}`);
     }
 } finally {

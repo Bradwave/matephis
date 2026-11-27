@@ -32,16 +32,16 @@ const DISMISS_TAP_MOVE_PX = 6;
 // - Wait briefly on touchdown so IR contact bloom does not corrupt the starting spread.
 // - Require both an absolute px floor and a relative spread change (and non-parallel motion)
 //   to unlock zoom; otherwise once the midpoint clearly translates, hard-lock to pan-only.
-const PINCH_SETTLE_MS = 45;
-const PINCH_SETTLE_MOVE_PX = 12;
-const PINCH_PAN_COMMIT_PX = 28;
-const PINCH_ZOOM_MIN_PX = 30;
-const PINCH_ZOOM_MIN_REL = 0.16;
+const PINCH_SETTLE_MS = 35;
+const PINCH_SETTLE_MOVE_PX = 10;
+const PINCH_PAN_COMMIT_PX = 34;
+const PINCH_ZOOM_MIN_PX = 28;
+const PINCH_ZOOM_MIN_REL = 0.11;
 // When 1-finger pan is already active (Hand tool or penOnly), 2 fingers can zoom more eagerly.
-const PINCH_EAGER_MIN_PX = 14;
-const PINCH_EAGER_MIN_REL = 0.08;
+const PINCH_EAGER_MIN_PX = 12;
+const PINCH_EAGER_MIN_REL = 0.07;
 // Low-pass smoothing on finger spread once zooming (tames IR quantization steps).
-const PINCH_DIST_SMOOTH = 0.45;
+const PINCH_DIST_SMOOTH = 0.55;
 // Pan or zoom is decided on the median of the last few spread readings: IR boards send
 // single-frame outliers that would otherwise unlock zoom in the middle of a pan.
 const PINCH_SPREAD_MEDIAN_N = 5;
@@ -636,8 +636,9 @@ export class InputController {
                     anchor.passedAwayFromBase = Math.abs(anchor.zoomStartScale / base - 1) > 0.06;
                     anchor.snappedToBase = false;
                 } else if (!anchor.eagerZoom && midMove >= PINCH_PAN_COMMIT_PX
-                    && dDist < PINCH_ZOOM_MIN_PX - 4
-                    && (cosAngle > 0.35 || midMove > dDist * 1.8)) {
+                    && dDist < PINCH_ZOOM_MIN_PX * 0.65
+                    && m0 > 12 && m1 > 12 && cosAngle > 0.6
+                    && midMove > dDist * 2.2) {
                     // Hard-lock this gesture to pan-only until fingers lift.
                     anchor.intent = 'pan';
                 }

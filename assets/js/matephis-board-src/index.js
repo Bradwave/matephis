@@ -50,6 +50,11 @@ async function initMatephisBoard() {
         undo(target = scene.currentPage) { return getCurrentHistory().undo(target); },
         redo(target = scene.currentPage) { return getCurrentHistory().redo(target); },
         clearAll() { pageHistories.clear(); },
+        clearOtherPages(keepId) {
+            for (const pid of Array.from(pageHistories.keys())) {
+                if (pid !== keepId) pageHistories.delete(pid);
+            }
+        },
     };
 
     const getTheme = () => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
@@ -252,6 +257,10 @@ async function initMatephisBoard() {
                 surface.resize();
                 pinnedStrip.render();
                 perfHud.refreshSceneStats(surface.dpr);
+                perfHud.refreshScreen();
+            }
+            if (key === 'desyncCanvas') {
+                surface.setDesynchronized(Boolean(value));
             }
             if (key === 'showHud') {
                 perfHud.setVisible(value);
@@ -259,7 +268,7 @@ async function initMatephisBoard() {
             }
             if (key === 'uiSize' || key === 'toolbarLayout' || key === 'toolbarSide' || key === 'toolbarMinimal') {
                 if (toolbar) toolbar.relayout();
-                if (key === 'uiSize') requestAnimationFrame(() => perfHud.refreshSceneStats(surface.dpr));
+                requestAnimationFrame(() => perfHud.refreshScreen());
             }
             if (key === 'zoomLock' && toolbar) {
                 toolbar.updateZoom(scene.camera);
@@ -335,6 +344,44 @@ async function initMatephisBoard() {
                 syncUI();
                 storage.saveBoardNow(scene);
             }
+        },
+        onClearCache: () => {
+            surface.releaseSnapCanvases({ force: true });
+            pinnedStrip.releaseSnapCanvases({ force: true });
+            widgetPictures.clear();
+            exercisePicker.clearCache();
+            historyProxy.clearOtherPages(scene.currentPage.id);
+            syncPictureNeeds();
+            syncUI();
+        },
+        onClearHistory: () => {
+            historyProxy.clearAll();
+            syncUI();
+        },
+        onResetBoard: () => {
+            if (surface.overviewMode) {
+                surface.overviewMode = false;
+                surface.savedCamera = null;
+                overlay.setOverviewMode(false);
+            }
+            if (lasso) lasso.clearSelection();
+            if (connectorManager) {
+                connectorManager.clearSelection();
+                connectorManager.clearPending();
+            }
+            if (widgetManager) widgetManager.clearSelection();
+            pinnedStrip.close();
+            historyProxy.clearAll();
+            widgetPictures.clear();
+            exercisePicker.clearCache();
+            surface.releaseSnapCanvases({ force: true });
+            scene.resetAll();
+            surface.renderCommittedNow();
+            surface.renderActiveNow();
+            if (connectorManager) connectorManager.syncFromScene();
+            if (widgetManager) widgetManager.syncFromScene();
+            syncUI();
+            storage.saveBoardNow(scene);
         },
     });
 
@@ -656,6 +703,7 @@ async function initMatephisBoard() {
         toolbar.updateZoom(scene.camera);
         toolbar.relayout();
         perfHud.refreshSceneStats(surface.dpr);
+        perfHud.refreshScreen();
     });
     ro.observe(canvasHost);
 

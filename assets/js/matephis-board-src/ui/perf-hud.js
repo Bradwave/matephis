@@ -66,7 +66,10 @@ export class PerfHud {
         });
 
         this.hostEl.appendChild(this.el);
-        if (this.visible) this._startLoop();
+        if (this.visible) {
+            this._startLoop();
+            this.refreshScreen();
+        }
     }
 
     setVisible(visible) {
@@ -75,6 +78,7 @@ export class PerfHud {
         if (this.visible) {
             this._startLoop();
             this.refreshSceneStats();
+            this.refreshScreen();
         } else {
             this._stopLoop();
         }
@@ -114,13 +118,13 @@ export class PerfHud {
         this.fields.points.textContent = String(points);
         this.fields.kb.textContent = `${(estBytes / 1024).toFixed(1)} KB`;
         this.fields.dpr.textContent = `${dpr}×`;
-        this._refreshScreen();
         // The measured file size is now out of date: dim it until "Calcola" is pressed again.
         this.fields.file.classList.add('is-stale');
     }
 
     /** Page size in CSS px, device pixel ratio, touch or mouse, and the resulting button size. */
-    _refreshScreen() {
+    refreshScreen() {
+        if (!this.visible) return;
         const w = window.innerWidth, h = window.innerHeight;
         const ratio = window.devicePixelRatio || 1;
         const coarse = window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches;

@@ -597,9 +597,9 @@ export class PinnedStrip {
         return b(this._snapCanvas) + b(this._tinyCanvas);
     }
 
-    /** Free the pan/zoom pictures while idle; kept with the setting 'never'. */
-    releaseSnapCanvases() {
-        if (snapReleaseDelay(this.scene.settings) === null) return;
+    /** Free the pan/zoom pictures while idle; kept with the setting 'never' unless forced. */
+    releaseSnapCanvases({ force = false } = {}) {
+        if (!force && snapReleaseDelay(this.scene.settings) === null) return;
         this._freeSnapCanvases();
     }
 

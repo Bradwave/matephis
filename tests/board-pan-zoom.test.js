@@ -148,10 +148,21 @@ describe('Board pan/zoom classifier, Hand tool, zoomLock and trackpad wheel', ()
 
             // After settle window, spread fingers in opposite directions (80 px -> 120 px: +40 px, +50%)
             h.advance(60);
-            stream(h, [1, 2], [[460, 400], [540, 400]], [[440, 400], [560, 400]], 4);
+            let scaleAtUnlock = null;
+            for (let i = 1; i <= 4; i++) {
+                h.advance(16);
+                const f = i / 4;
+                for (let k = 0; k < 2; k++) {
+                    const x = k === 0 ? 460 - 20 * f : 540 + 20 * f;
+                    h.dispatch('pointermove', { pointerId: k + 1, clientX: x, clientY: 400 });
+                    if (scaleAtUnlock === null && h.input.pinchAnchor.intent === 'zoom') {
+                        scaleAtUnlock = h.scene.camera.scale;
+                    }
+                }
+            }
             expect(h.input.pinchAnchor.intent).toBe('zoom');
             // Zero jump on unlock frame
-            expect(h.scene.camera.scale).toBeCloseTo(4, 4);
+            expect(scaleAtUnlock).toBeCloseTo(4, 4);
 
             // Continue spreading -> zooms smoothly and emits zoom indicator
             h.advance(20);
@@ -160,6 +171,25 @@ describe('Board pan/zoom classifier, Hand tool, zoomLock and trackpad wheel', ()
             expect(h.scene.camera.scale).toBeGreaterThan(4.2);
             const lastInd = h.surface.setZoomIndicator.mock.calls.at(-1)[0];
             expect(lastInd).toMatchObject({ pct: expect.any(Number) });
+        } finally {
+            h.restore();
+        }
+    });
+
+    it('unlocks zoom when one finger stays anchored while the other spreads out', () => {
+        const h = createHarness({ initialScale: 4, baseScale: 4 });
+        try {
+            h.dispatch('pointerdown', { pointerId: 1, clientX: 400, clientY: 300 });
+            h.advance(10);
+            h.dispatch('pointerdown', { pointerId: 2, clientX: 580, clientY: 300 });
+
+            // Finger 1 stays anchored, finger 2 moves outward by 90 px (midpoint moves 45 px!)
+            h.advance(50);
+            stream(h, [1, 2], [[400, 300], [580, 300]], [[400, 300], [670, 300]], 6);
+            expect(h.input.pinchAnchor.intent).toBe('zoom');
+
+            stream(h, [1, 2], [[400, 300], [670, 300]], [[400, 300], [740, 300]], 4);
+            expect(h.scene.camera.scale).toBeGreaterThan(4.2);
         } finally {
             h.restore();
         }

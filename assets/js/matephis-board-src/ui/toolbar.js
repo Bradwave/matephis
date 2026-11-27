@@ -225,13 +225,17 @@ export class BoardToolbar {
         const base = camera.baseScale || 1;
         const pct = Math.round((camera.scale / base) * 100);
         const locked = Boolean((this.getSettings() || {}).zoomLock);
-        if (this.zoomPctEl) this.zoomPctEl.textContent = `${pct}%`;
-        else this.zoomBtn.textContent = `${pct}%`;
-        this.zoomBtn.classList.toggle('is-zoomed', Math.abs(pct - 100) >= 4);
-        this.zoomBtn.classList.toggle('is-zoom-locked', locked);
-        this.zoomBtn.title = locked
-            ? `Zoom bloccato (${pct}%) — apri controlli zoom`
-            : `Zoom (${pct}%) — apri controlli zoom`;
+        if (pct !== this._lastZoomPct || locked !== this._lastZoomLocked) {
+            this._lastZoomPct = pct;
+            this._lastZoomLocked = locked;
+            if (this.zoomPctEl) this.zoomPctEl.textContent = `${pct}%`;
+            else this.zoomBtn.textContent = `${pct}%`;
+            this.zoomBtn.classList.toggle('is-zoomed', Math.abs(pct - 100) >= 4);
+            this.zoomBtn.classList.toggle('is-zoom-locked', locked);
+            this.zoomBtn.title = locked
+                ? `Zoom bloccato (${pct}%) — apri controlli zoom`
+                : `Zoom (${pct}%) — apri controlli zoom`;
+        }
         this._syncZoomTray();
     }
 
@@ -818,6 +822,8 @@ export class BoardToolbar {
     _syncZoomTray() {
         if (!this.zoomLockBtn) return;
         const locked = Boolean((this.getSettings() || {}).zoomLock);
+        if (locked === this._lastTrayLocked) return;
+        this._lastTrayLocked = locked;
         this.zoomLockBtn.innerHTML = `${locked ? BoardIcons.lock : BoardIcons.lockOpen}<span>Blocca</span>`;
         this.zoomLockBtn.title = locked
             ? 'Zoom bloccato: 2 dita spostano soltanto (clicca per sbloccare)'

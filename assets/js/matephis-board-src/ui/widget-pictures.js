@@ -154,8 +154,20 @@ export class WidgetPictureCache {
 
     forget(id) {
         const e = this.entries.get(id);
-        if (e) clearTimeout(e.touchTimer);
+        if (e) {
+            clearTimeout(e.touchTimer);
+            if (e.canvas) { e.canvas.width = 0; e.canvas.height = 0; e.canvas = null; }
+        }
         this.entries.delete(id);
+    }
+
+    /** Free every cached widget bitmap immediately. */
+    clear() {
+        for (const e of this.entries.values()) {
+            clearTimeout(e.touchTimer);
+            if (e.canvas) { e.canvas.width = 0; e.canvas.height = 0; e.canvas = null; }
+        }
+        this.entries.clear();
     }
 
     async _build(widget) {
