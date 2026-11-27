@@ -14,7 +14,7 @@
     {%- else -%}
     <link href="{{ site.baseurl }}/assets/css/style.css?v=2.18" rel="stylesheet" media="all" class="default" />
     {%- endif -%}
-    <link href="{{ site.baseurl }}/assets/css/matephis-board.css?v=0.21" rel="stylesheet" />
+    <link href="{{ site.baseurl }}/assets/css/matephis-board.css?v=0.22" rel="stylesheet" />
 </head>
 
 <body class="bench-body" data-baseurl="{{ site.baseurl }}">
@@ -22,7 +22,7 @@
     {%- comment -%} Engine cache versions for the board's engine loader (_data/engines.yml), as data:
     a JSON block never runs, so the board's CSP needs no inline script for it {%- endcomment -%}
     <script type="application/json" id="matephis-engine-versions">{{ site.data.engines | jsonify }}</script>
-    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=6"></script>
+    <script src="{{ site.baseurl }}/assets/js/matephis-board-bench.js?v=7"></script>
 </body>
 
 </html>

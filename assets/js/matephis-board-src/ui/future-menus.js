@@ -142,6 +142,9 @@ export class FutureMenus {
         if (!this.engineLoader || !box) return;
         box.classList.add('is-loading');
         try {
+            if (kind === 'plot' || kind === 'physics' || kind === 'sets') {
+                this.engineLoader.loadMathJax();
+            }
             const Engine = await this.engineLoader.loadEngine(kind);
             if ((kind === 'physics' && cfg.graphs) || (kind === 'sets' && cfg.plot)) {
                 await this.engineLoader.loadEngine('plot');

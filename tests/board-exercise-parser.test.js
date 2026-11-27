@@ -397,3 +397,125 @@ describe('Exercise sheet catalog', () => {
         expect(shortNoteTitle('Esercizi introduttivi sulle funzioni')).toBe('Funzioni');
     });
 });
+
+describe('Pre-rendered MathJax in board exercises', () => {
+    it('inlines #MJX-SVG-global-cache glyphs into extracted items, sub-items, and Problemi without duplicate IDs', async () => {
+        const { prerenderPage } = await import('../tools/mathjax/prerender.mjs');
+        const rawHtml = `<!DOCTYPE html><html lang="it"><head></head><body><main>
+            <h1>Esercizi sui limiti</h1>
+            <div class="content">
+                <h2>Quesiti</h2>
+                <ol>
+                    <li>Calcola $\\lim_{x \\to 0} \\frac{\\sin x}{x}$ e $x^2 + 1$.</li>
+                    <li>
+                        Calcola i limiti:
+                        <ol>
+                            <li>$\\lim_{x \\to +\\infty} \\frac{x^2}{2x^4}$</li>
+                        </ol>
+                    </li>
+                </ol>
+                <h2>Problemi</h2>
+                <p><strong>Problema test <span class="difficulty-tag diff-ee">EE</span></strong> Dato $F_P = mg$, trova $a$.</p>
+                <ol><li>Calcola $F_P$.</li></ol>
+            </div>
+        </main></body></html>`;
+
+        const pre = prerenderPage(rawHtml);
+        expect(pre).not.toBeNull();
+        expect(pre.html).toContain('id="MJX-SVG-global-cache"');
+        expect(pre.html).toContain('<use ');
+
+        const res = extractExercisesFromHtml(pre.html, {
+            noteUrl: '/notes/esercizi-limiti',
+            itemNumber: 1,
+        });
+        expect(res.match).not.toBeNull();
+        expect(res.match.html).toContain('<mjx-container');
+        expect(res.match.html).toContain('<path ');
+        expect(res.match.html).not.toContain('<use ');
+        expect(res.match.html).not.toContain('xlink:href="#MJX-');
+        expect(res.match.html).not.toContain('id="MJX-');
+        // Preserves data-c (for stroke-width: 3) and glyph transforms (e.g. "lim", "sin")
+        expect(res.match.html).toContain('data-c=');
+        expect(res.match.html).toContain('transform="translate(');
+
+        // Nested sub-item 2.1 also has self-contained <path> glyphs
+        const sub = extractExercisesFromHtml(pre.html, {
+            noteUrl: '/notes/esercizi-limiti',
+            itemNumber: 2,
+            subItemNumber: 1,
+        });
+        expect(sub.match.html).toContain('<path ');
+        expect(sub.match.html).not.toContain('<use ');
+
+        // Unnumbered Problemi block also has self-contained <path> glyphs
+        const prob = extractExercisesFromHtml(pre.html, {
+            noteUrl: '/notes/esercizi-limiti',
+            section: 'problemi',
+            itemNumber: 1,
+        });
+        expect(prob.match.html).toContain('<path ');
+        expect(prob.match.html).not.toContain('<use ');
+    });
+
+    it('detects raw TeX vs pre-rendered math and serializes concurrent EngineLoader.typeset() calls', async () => {
+        const {
+            EngineLoader,
+            elementNeedsMathJax,
+            htmlNeedsMathJax,
+        } = await import('../assets/js/matephis-board-src/ui/engine-loader.js');
+        const { parseMiniHtml } = await import('../assets/js/matephis-board-src/ui/exercise-picker.js');
+
+        const preHtml = '<div class="board-ex-item">Testo <mjx-container class="MathJax" jax="SVG"><svg><path data-c="78" d="M0 0"></path></svg><mjx-assistive-mml>$x$</mjx-assistive-mml></mjx-container> fine.</div>';
+        const rawHtml = '<div class="board-ex-item">Calcola $x^2 + 1$.</div>';
+
+        expect(htmlNeedsMathJax(preHtml)).toBe(false);
+        expect(htmlNeedsMathJax(rawHtml)).toBe(true);
+        expect(elementNeedsMathJax(parseMiniHtml(preHtml).body)).toBe(false);
+        expect(elementNeedsMathJax(parseMiniHtml(rawHtml).body)).toBe(true);
+
+        // Pre-rendered exercise skips loading MathJax; raw TeX serializes typesetPromise calls
+        const prevWindow = globalThis.window;
+        const order = [];
+        let loadCalls = 0;
+        let releaseFirst;
+        try {
+            let callNum = 0;
+            globalThis.window = {
+                MathJax: {
+                    startup: { promise: Promise.resolve() },
+                    typesetPromise: (els) => {
+                        const n = ++callNum;
+                        order.push(`start-${n}`);
+                        if (n === 1) {
+                            return new Promise((r) => {
+                                releaseFirst = () => { order.push(`end-${n}`); r(); };
+                            });
+                        }
+                        order.push(`end-${n}`);
+                        return Promise.resolve(els);
+                    },
+                },
+            };
+            const loader = new EngineLoader('');
+            const origLoad = loader.loadMathJax.bind(loader);
+            loader.loadMathJax = () => { loadCalls++; return origLoad(); };
+
+            // Pre-rendered node must not trigger MathJax
+            await loader.typeset([parseMiniHtml(preHtml).body]);
+            expect(loadCalls).toBe(0);
+            expect(order).toEqual([]);
+
+            // Two concurrent raw TeX typesets must run sequentially, never overlapping
+            const p1 = loader.typeset([parseMiniHtml(rawHtml).body]);
+            const p2 = loader.typeset([parseMiniHtml('<p>\\(y = 2\\)</p>').body]);
+            await new Promise((r) => setTimeout(r, 0));
+            expect(order).toEqual(['start-1']);
+            releaseFirst();
+            await Promise.all([p1, p2]);
+            expect(order).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+        } finally {
+            globalThis.window = prevWindow;
+        }
+    });
+});
