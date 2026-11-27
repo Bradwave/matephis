@@ -143,7 +143,13 @@ export class InputController {
         this.el.addEventListener('pointerup', (e) => this._onPointerUp(e));
         this.el.addEventListener('pointercancel', (e) => this._onPointerCancel(e));
         this.el.addEventListener('lostpointercapture', (e) => {
-            if (this.pointers.has(e.pointerId)) this._onPointerCancel(e);
+            const pid = e.pointerId;
+            // Chromium/WebView may fire lostpointercapture before pointerup on normal release.
+            // Wait briefly so normal pointerup commits first; if no pointerup ever arrives
+            // (orphaned IR touch), commit/finish cleanly instead of discarding the stroke.
+            setTimeout(() => {
+                if (this.pointers.has(pid)) this._onPointerUp({ pointerId: pid });
+            }, 60);
         });
         this.el.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
         this.el.addEventListener('contextmenu', (e) => {
@@ -165,6 +171,9 @@ export class InputController {
         });
         window.addEventListener('blur', () => {
             this.spaceHeld = false;
+            if (this.mode === 'draw') this._commitDraw();
+            else if (this.mode === 'erase') this._finishErase();
+            else if (this.mode === 'shape') this._commitShape();
             if (this.pointers.size > 0 || this.mode !== 'idle') this.cancelActive();
         });
     }

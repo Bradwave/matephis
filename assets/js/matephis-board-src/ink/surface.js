@@ -14,7 +14,7 @@ import {
     clamp,
     worldToScreen,
 } from './geometry.js';
-import { drawStroke, drawStrokeTail } from './stroke.js';
+import { drawStroke, drawStrokeSmoothProgress } from './stroke.js';
 
 const LASER_LIFETIME_MS = 1250;
 
@@ -403,7 +403,7 @@ export class InkSurface {
 
     _resetActiveIncremental() {
         this._activeDrawnStroke = null;
-        this._activeDrawnCount = 0;
+        this._activeSmoothState = null;
         this._activeDrawnTheme = null;
         this._activeDrawnCam = null;
     }
@@ -984,14 +984,24 @@ export class InkSurface {
             ctx.save();
             ctx.scale(cam.scale, cam.scale);
             ctx.translate(-cam.x, -cam.y);
-            drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
-            ctx.restore();
-            if (this._canDrawIncremental(this.activeStroke)) {
+            const pts = this.activeStroke.points || [];
+            if (this._canDrawIncremental(this.activeStroke) && pts.length > 0) {
+                let state = { vertex: 0, x: pts[0].x, y: pts[0].y };
+                if (pts.length >= 3) {
+                    const next = drawStrokeSmoothProgress(ctx, this.activeStroke, state, this.theme);
+                    if (next) state = next;
+                } else {
+                    // Draw only the starting dot; wait for point 3 so no unsmoothed straight tip is left behind.
+                    drawStroke(ctx, { ...this.activeStroke, points: [pts[0]] }, this.theme, { cache: false });
+                }
                 this._activeDrawnStroke = this.activeStroke;
-                this._activeDrawnCount = this.activeStroke.points ? this.activeStroke.points.length : 0;
+                this._activeSmoothState = state;
                 this._activeDrawnTheme = this.theme;
                 this._activeDrawnCam = { x: cam.x, y: cam.y, scale: cam.scale };
+            } else {
+                drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
             }
+            ctx.restore();
         }
 
         if (this.activeShape) {
@@ -1229,9 +1239,8 @@ export class InkSurface {
 
     /**
      * Fast path for pointermove while drawing a solid pen stroke: appends only the newly
-     * added tail onto activeCanvas instead of clearing the full 4K canvas and re-tracing
-     * from point 0. Falls back to renderActiveNow() for translucent/dashed strokes or when
-     * camera/overlays changed.
+     * finalized smooth quadratic segments onto activeCanvas instead of clearing the full
+     * 4K canvas and re-tracing from point 0. Identical smoothing to traceStroke().
      */
     drawActiveStrokeProgress() {
         const s = this.activeStroke;
@@ -1240,23 +1249,24 @@ export class InkSurface {
         if (
             this._canDrawIncremental(s)
             && this._activeDrawnStroke === s
-            && this._activeDrawnCount > 0
+            && this._activeSmoothState
             && this._activeDrawnTheme === this.theme
             && prevCam
             && prevCam.x === cam.x
             && prevCam.y === cam.y
             && prevCam.scale === cam.scale
             && s.points
-            && s.points.length > this._activeDrawnCount
         ) {
+            if (s.points.length < 3) return;
+            if (s.points.length - 2 <= this._activeSmoothState.vertex) return;
             const ctx = this.activeCtx;
             ctx.save();
             ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
             ctx.scale(cam.scale, cam.scale);
             ctx.translate(-cam.x, -cam.y);
-            drawStrokeTail(ctx, s, this._activeDrawnCount, this.theme);
+            const next = drawStrokeSmoothProgress(ctx, s, this._activeSmoothState, this.theme);
             ctx.restore();
-            this._activeDrawnCount = s.points.length;
+            if (next) this._activeSmoothState = next;
             this._activeEmpty = false;
             return;
         }

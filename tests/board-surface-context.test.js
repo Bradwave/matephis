@@ -107,9 +107,12 @@ describe('InkSurface context, GPU recovery & incremental active ink', () => {
         expect(activeSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('draws solid pen stroke progress incrementally without clearing the full activeCanvas', () => {
+    it('draws solid pen stroke progress incrementally with smooth quadratic curves and without clearing activeCanvas', () => {
         const scene = new BoardScene(412, 915);
         const surface = new InkSurface(fakeEl('div', contextCalls), { scene });
+        const quadCalls = [];
+        surface.activeCtx.quadraticCurveTo = (...args) => quadCalls.push(args);
+
         const stroke = {
             id: 's1',
             tool: 'pen',
@@ -124,13 +127,26 @@ describe('InkSurface context, GPU recovery & incremental active ink', () => {
         const clearsAfterStart = clearRectCalls.filter((c) => c.className.includes('board-canvas-active')).length;
         expect(clearsAfterStart).toBe(1);
 
-        stroke.points.push({ x: 12, y: 11 }, { x: 15, y: 13 });
+        stroke.points.push({ x: 14, y: 11 }, { x: 18, y: 13 });
         surface.drawActiveStrokeProgress();
-        stroke.points.push({ x: 18, y: 14 });
+        stroke.points.push({ x: 22, y: 16 });
         surface.drawActiveStrokeProgress();
 
-        // Incremental tail draws must not clear the full activeCanvas again
+        // Incremental smooth segments must not clear the full activeCanvas again and must emit quadratic curves
         const clearsAfterProgress = clearRectCalls.filter((c) => c.className.includes('board-canvas-active')).length;
         expect(clearsAfterProgress).toBe(1);
+        expect(quadCalls.length).toBe(2);
+    });
+
+    it('keeps OptionsMenu toggle list aligned with its rendered HTML markup', async () => {
+        const fs = await import('node:fs');
+        const src = fs.readFileSync(new URL('../assets/js/matephis-board-src/ui/options.js', import.meta.url), 'utf8');
+        const m = src.match(/const OPTION_TOGGLES = \[([\s\S]*?)\];/);
+        expect(m).not.toBeNull();
+        const keys = Array.from(m[1].matchAll(/'([^']+)'/g), (x) => x[1]);
+        expect(keys.length).toBeGreaterThan(5);
+        for (const key of keys) {
+            expect(src).toContain(`data-opt="${key}"`);
+        }
     });
 });
