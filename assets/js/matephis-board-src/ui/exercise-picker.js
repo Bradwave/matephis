@@ -361,6 +361,9 @@ class MiniElement {
     get id() { return this._attrs.id || ''; }
     get className() { return this._attrs.class || ''; }
     set className(val) { this._attrs.class = String(val || ''); }
+    get attributes() {
+        return Object.entries(this._attrs).map(([name, value]) => ({ name, value }));
+    }
 
     get classList() {
         const el = this;
@@ -412,6 +415,15 @@ class MiniElement {
         node.parentNode = this;
         this.childNodes.push(node);
         return node;
+    }
+
+    replaceChild(newNode, oldNode) {
+        const idx = this.childNodes.indexOf(oldNode);
+        if (idx === -1) return oldNode;
+        newNode.parentNode = this;
+        oldNode.parentNode = null;
+        this.childNodes[idx] = newNode;
+        return oldNode;
     }
 
     get textContent() {
@@ -670,6 +682,71 @@ function stripOpenDetails(el) {
 }
 
 /**
+ * Build a map of glyph id -> <path> element from a pre-rendered page's
+ * `#MJX-SVG-global-cache` (created at build time by tools/mathjax/prerender.mjs).
+ */
+function buildMathGlyphMap(doc) {
+    const map = new Map();
+    if (!doc || typeof doc.querySelector !== 'function') return map;
+    const cache = doc.querySelector('#MJX-SVG-global-cache');
+    if (!cache || typeof cache.querySelectorAll !== 'function') return map;
+    const paths = cache.querySelectorAll('path');
+    for (let i = 0; i < paths.length; i++) {
+        const p = paths[i];
+        const id = p && typeof p.getAttribute === 'function' ? p.getAttribute('id') : null;
+        const d = p && typeof p.getAttribute === 'function' ? p.getAttribute('d') : null;
+        if (id && d !== null) map.set(id, p);
+    }
+    return map;
+}
+
+/**
+ * Make pre-rendered MathJax SVG formulas self-contained by replacing each
+ * `<use xlink:href="#MJX-...">` with the referenced `<path>` from the note's
+ * global font cache. Extracted exercises then render on /board/ (and survive
+ * IndexedDB reloads, dom-picture bitmaps, sanitizer passes, and SVG export)
+ * without depending on the source page's `#MJX-SVG-global-cache` or colliding
+ * on duplicate IDs.
+ */
+function inlinePrerenderedMathGlyphs(rootEl, glyphMap) {
+    if (!rootEl || !glyphMap || glyphMap.size === 0 || typeof rootEl.querySelectorAll !== 'function') return;
+    const uses = Array.from(rootEl.querySelectorAll('use'));
+    for (const use of uses) {
+        const href = use.getAttribute('xlink:href') || use.getAttribute('href');
+        if (!href || !href.startsWith('#')) continue;
+        const glyph = glyphMap.get(href.slice(1));
+        if (!glyph || typeof glyph.cloneNode !== 'function') continue;
+
+        const path = glyph.cloneNode(false);
+        if (typeof path.removeAttribute === 'function') path.removeAttribute('id');
+
+        const attrs = use.attributes ? Array.from(use.attributes) : [];
+        let transform = '';
+        let ux = null;
+        let uy = null;
+        for (const attr of attrs) {
+            const name = attr.name;
+            const lower = name.toLowerCase();
+            if (lower === 'xlink:href' || lower === 'href') continue;
+            if (lower === 'x') { ux = attr.value; continue; }
+            if (lower === 'y') { uy = attr.value; continue; }
+            if (lower === 'transform') { transform = attr.value; continue; }
+            path.setAttribute(name, attr.value);
+        }
+        if (ux !== null || uy !== null) {
+            const tx = ux || '0';
+            const ty = uy || '0';
+            transform = transform ? `translate(${tx},${ty}) ${transform}` : `translate(${tx},${ty})`;
+        }
+        if (transform) path.setAttribute('transform', transform);
+
+        if (use.parentNode && typeof use.parentNode.replaceChild === 'function') {
+            use.parentNode.replaceChild(path, use);
+        }
+    }
+}
+
+/**
  * Extracts all structured exercises from an exercise note's HTML document,
  * and returns the best match for `{ section, itemNumber, subItemNumber, searchText }`.
  */
@@ -686,6 +763,7 @@ export function extractExercisesFromHtml(html, opts = {}) {
     } = opts;
 
     const doc = parseHtmlToDocument(html, DOMParserImpl);
+    const mathGlyphs = buildMathGlyphMap(doc);
     const contentRoot = doc.querySelector('.content')
         || doc.querySelector('main')
         || doc.body
@@ -732,6 +810,7 @@ export function extractExercisesFromHtml(html, opts = {}) {
                 const clone = lis[liIdx].cloneNode(true);
                 rewriteUrlsInElement(clone, noteUrl, baseurl);
                 stripOpenDetails(clone);
+                inlinePrerenderedMathGlyphs(clone, mathGlyphs);
 
                 const itemHtml = `<div class="board-ex-item">${clone.innerHTML}</div>`;
                 const itemText = cleanText(clone.textContent);
@@ -817,6 +896,7 @@ export function extractExercisesFromHtml(html, opts = {}) {
                 for (const g of groupEls) {
                     rewriteUrlsInElement(g, noteUrl, baseurl);
                     stripOpenDetails(g);
+                    inlinePrerenderedMathGlyphs(g, mathGlyphs);
                     if (!problemDiff) problemDiff = extractDifficulty(g);
                     if (!problemHasSol && (hasSolutionMarkup(g) || (g.classList && (g.classList.contains('details') || g.classList.contains('solution-tag'))))) {
                         problemHasSol = true;
@@ -903,6 +983,12 @@ export async function hydrateEmbeddedEngines(containerEl, engineLoader) {
         const codes = Array.from(containerEl.querySelectorAll(sp.codeSel));
         const boxes = Array.from(containerEl.querySelectorAll(sp.boxSel));
         if (codes.length === 0 && boxes.length === 0) continue;
+
+        if ((sp.kind === 'plot' || sp.kind === 'physics' || sp.kind === 'sets')
+            && typeof engineLoader.loadMathJax === 'function') {
+            // Start loading MathJax so embedded engine labels wait via #MathJax-script
+            engineLoader.loadMathJax();
+        }
 
         const Engine = await engineLoader.loadEngine(sp.kind);
         if (!Engine) continue;

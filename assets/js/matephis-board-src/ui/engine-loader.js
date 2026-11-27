@@ -71,6 +71,35 @@ export function versionedPath(path, kind, type, versions) {
 }
 
 const MATHJAX_SRC = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+const MATH_DELIM_RE = /\$|\\\(|\\\[/;
+const MATH_SKIP_TAGS = new Set(['MJX-CONTAINER', 'SCRIPT', 'STYLE', 'CODE', 'PRE', 'TEXTAREA', 'SVG']);
+
+/**
+ * True when `root` contains raw TeX math delimiters outside already-typeset
+ * `<mjx-container>` nodes and code/SVG subtrees.
+ */
+export function elementNeedsMathJax(root) {
+    if (!root) return false;
+    if (root.nodeType === 3) return MATH_DELIM_RE.test(root.data || root.textContent || '');
+    if (root.nodeType === 1 && MATH_SKIP_TAGS.has(String(root.tagName || '').toUpperCase())) return false;
+    const kids = root.childNodes;
+    if (kids && kids.length) {
+        for (let i = 0; i < kids.length; i++) {
+            if (elementNeedsMathJax(kids[i])) return true;
+        }
+        return false;
+    }
+    return MATH_DELIM_RE.test(root.textContent || '');
+}
+
+/** True when an HTML fragment has raw TeX delimiters outside pre-rendered math/code/SVG. */
+export function htmlNeedsMathJax(html) {
+    if (!html || typeof html !== 'string') return false;
+    const stripped = html
+        .replace(/<mjx-container\b[\s\S]*?<\/mjx-container>/gi, '')
+        .replace(/<(code|pre|script|style|svg)\b[\s\S]*?<\/\1>/gi, '');
+    return MATH_DELIM_RE.test(stripped);
+}
 
 export class EngineLoader {
     constructor(baseurl = null) {
@@ -120,7 +149,7 @@ export class EngineLoader {
         return promise;
     }
 
-    loadScript(path) {
+    loadScript(path, { id = null } = {}) {
         const src = this.resolveUrl(path);
         if (this._scriptPromises.has(src)) return this._scriptPromises.get(src);
 
@@ -131,10 +160,12 @@ export class EngineLoader {
             }
             const existing = document.querySelector(`script[src="${src}"]`);
             if (existing) {
+                if (id && !existing.id) existing.id = id;
                 resolve();
                 return;
             }
             const script = document.createElement('script');
+            if (id) script.id = id;
             script.src = src;
             script.async = true;
             script.onload = () => resolve();
@@ -201,7 +232,7 @@ export class EngineLoader {
                     startup: { typeset: false },
                 };
             }
-            await this.loadScript(MATHJAX_SRC);
+            await this.loadScript(MATHJAX_SRC, { id: 'MathJax-script' });
             if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
                 await window.MathJax.startup.promise;
             }
@@ -216,11 +247,22 @@ export class EngineLoader {
 
     async typeset(elements) {
         const list = Array.isArray(elements) ? elements : [elements];
-        const valid = list.filter(Boolean);
+        const valid = list.filter((el) => el && elementNeedsMathJax(el));
         if (valid.length === 0) return;
         const mj = await this.loadMathJax();
-        if (mj && typeof mj.typesetPromise === 'function') {
-            await mj.typesetPromise(valid);
+        if (!mj || typeof mj.typesetPromise !== 'function') return;
+        // Chain through startup.promise so concurrent typesets (multiple widgets,
+        // picker preview, offscreen pictures, engine labels) never overlap.
+        const run = () => {
+            const live = valid.filter((el) => typeof el.isConnected !== 'boolean' || el.isConnected);
+            return live.length > 0 ? mj.typesetPromise(live) : Promise.resolve();
+        };
+        if (mj.startup && mj.startup.promise) {
+            const next = mj.startup.promise.then(run, run);
+            mj.startup.promise = next.catch(() => {});
+            await next;
+        } else {
+            await run();
         }
     }
 
@@ -244,6 +286,7 @@ export class EngineLoader {
         if (!page || !Array.isArray(page.widgets) || page.widgets.length === 0) return;
         const kinds = new Set(page.widgets.map((w) => w.kind));
         const tasks = [];
+        let needMathJax = kinds.has('plot') || kinds.has('physics') || kinds.has('sets');
         for (const kind of kinds) {
             if (ENGINE_SPECS[kind]) tasks.push(this.loadEngine(kind));
         }
@@ -253,9 +296,13 @@ export class EngineLoader {
             }
             if (w.kind === 'exercise' && w.data && w.data.html) {
                 tasks.push(this.ensureForExerciseHtml(w.data.html));
+                if (!needMathJax && (htmlNeedsMathJax(w.data.html)
+                    || /language-(?:matephis|physics|sets)|matephis-(?:plot|physics|sets)/.test(w.data.html))) {
+                    needMathJax = true;
+                }
             }
         }
-        if (kinds.has('exercise') || kinds.has('plot') || kinds.has('physics') || kinds.has('sets')) {
+        if (needMathJax) {
             tasks.push(this.loadMathJax());
         }
         await Promise.allSettled(tasks);

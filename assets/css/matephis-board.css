@@ -3159,6 +3159,105 @@ body.board-body {
     overflow-wrap: anywhere;
 }
 
+/* === Pre-rendered MathJax SVG styles (matches MathJax 3 tex-svg #MJX-SVG-styles) ===
+ * Notes on the deployed site are typeset at build time (tools/mathjax/prerender.mjs),
+ * so /board/ may display <mjx-container jax="SVG"> without loading MathJax at runtime. */
+mjx-container[jax="SVG"] {
+    direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+    overflow: visible;
+    min-height: 1px;
+    min-width: 1px;
+}
+
+mjx-container[jax="SVG"] > svg a {
+    fill: blue;
+    stroke: blue;
+}
+
+mjx-assistive-mml {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    padding: 1px 0 0 0 !important;
+    border: 0 !important;
+    display: block !important;
+    width: auto !important;
+    overflow: hidden !important;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+    width: 100% !important;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+    display: block;
+    text-align: center;
+    margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][display="true"][width="full"] {
+    display: flex;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+    text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+    text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+    fill: red;
+    stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+    fill: yellow;
+    stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line],
+svg[data-table] > g > line[data-line],
+g[data-mml-node="mtable"] > rect[data-frame],
+svg[data-table] > g > rect[data-frame] {
+    stroke-width: 70px;
+    fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed,
+svg[data-table] > g > .mjx-dashed {
+    stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted,
+svg[data-table] > g > .mjx-dotted {
+    stroke-linecap: round;
+    stroke-dasharray: 0, 140;
+}
+
+g[data-mml-node="mtable"] > g > svg {
+    overflow: visible;
+}
+
+foreignObject[data-mjx-xml] {
+    font-family: initial;
+    line-height: normal;
+    overflow: visible;
+}
+
+mjx-container[jax="SVG"] path[data-c],
+mjx-container[jax="SVG"] use[data-c] {
+    stroke-width: 3;
+}
+
 /* === Connector tray: label style, mode, one-line hint, open connectors === */
 .board-connectors-tray {
     min-width: calc(var(--bu) * 5.5);
