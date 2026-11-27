@@ -40,12 +40,18 @@ export const PLOT_TEMPLATES = [
 
 const SUBSCRIPTS = { 2: '₂', 3: '₃', 4: '₄', 5: '₅', 6: '₆', 7: '₇', 8: '₈', 9: '₉' };
 
+function escapeRegExp(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function exprUsesName(expr, name) {
-    return new RegExp(`(^|[^A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(String(expr || ''));
+    if (!name) return false;
+    return new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(name)}(?![A-Za-z0-9_])`).test(String(expr || ''));
 }
 
 function renameInExpr(expr, from, to) {
-    return String(expr).replace(new RegExp(`(^|[^A-Za-z0-9_])${from}(?![A-Za-z0-9_])`, 'g'), `$1${to}`);
+    if (!from) return String(expr);
+    return String(expr).replace(new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(from)}(?![A-Za-z0-9_])`, 'g'), `$1${to}`);
 }
 
 /** A template's fn and slider params, with names that do not clash with `taken`. */

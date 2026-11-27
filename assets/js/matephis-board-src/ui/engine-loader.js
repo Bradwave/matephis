@@ -142,7 +142,12 @@ export class EngineLoader {
             link.rel = 'stylesheet';
             link.href = href;
             link.onload = () => resolve();
-            link.onerror = () => resolve(); // non-fatal
+            link.onerror = () => {
+                // Allow retry after a transient offline blip instead of caching failure forever.
+                this._cssPromises.delete(href);
+                if (link.parentNode) link.parentNode.removeChild(link);
+                resolve(); // non-fatal
+            };
             document.head.appendChild(link);
         });
         this._cssPromises.set(href, promise);
@@ -169,7 +174,12 @@ export class EngineLoader {
             script.src = src;
             script.async = true;
             script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+            script.onerror = () => {
+                // Evict failed cache entry & script tag so later retries work once online.
+                this._scriptPromises.delete(src);
+                if (script.parentNode) script.parentNode.removeChild(script);
+                reject(new Error(`Failed to load script: ${src}`));
+            };
             document.head.appendChild(script);
         });
         this._scriptPromises.set(src, promise);
@@ -237,12 +247,12 @@ export class EngineLoader {
                 await window.MathJax.startup.promise;
             }
             return window.MathJax || null;
-        })();
-
-        return this._mathJaxPromise.catch(() => {
+        })().catch(() => {
             this._mathJaxPromise = null;
             return null;
         });
+
+        return this._mathJaxPromise;
     }
 
     async typeset(elements) {

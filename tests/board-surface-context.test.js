@@ -43,10 +43,11 @@ function fakeEl(tag = 'div', contextCalls = []) {
     return el;
 }
 
-describe('InkSurface desync toggle', () => {
+describe('InkSurface context, GPU recovery & incremental active ink', () => {
     let saved;
     let raf;
     let contextCalls;
+    let clearRectCalls;
 
     beforeEach(() => {
         saved = {
@@ -57,9 +58,19 @@ describe('InkSurface desync toggle', () => {
         };
         raf = [];
         contextCalls = [];
+        clearRectCalls = [];
         globalThis.document = {
             documentElement: fakeEl('html', contextCalls),
-            createElement: (t) => fakeEl(t, contextCalls),
+            createElement: (t) => {
+                const el = fakeEl(t, contextCalls);
+                const origGetCtx = el.getContext.bind(el);
+                el.getContext = (type, opts) => {
+                    const ctx = origGetCtx(type, opts);
+                    ctx.clearRect = (...args) => clearRectCalls.push({ className: el.className, args });
+                    return ctx;
+                };
+                return el;
+            },
         };
         globalThis.window = { devicePixelRatio: 2 };
         globalThis.requestAnimationFrame = (cb) => { raf.push(cb); return raf.length; };
@@ -73,23 +84,53 @@ describe('InkSurface desync toggle', () => {
         globalThis.cancelAnimationFrame = saved.caf;
     });
 
-    it('defaults to desynchronized activeCanvas and swaps context cleanly when toggled', () => {
+    it('always creates activeCanvas with standard composited { alpha: true } (no desynchronized)', () => {
+        const scene = new BoardScene(412, 915);
+        new InkSurface(fakeEl('div', contextCalls), { scene });
+
+        const activeCall = contextCalls.find((c) => c.className.includes('board-canvas-active'));
+        expect(activeCall).toBeDefined();
+        expect(activeCall.opts).toEqual({ alpha: true });
+    });
+
+    it('redraws committed and active layers on GPU contextrestored', () => {
         const scene = new BoardScene(412, 915);
         const surface = new InkSurface(fakeEl('div', contextCalls), { scene });
+        const committedSpy = vi.spyOn(surface, 'renderCommittedNow');
+        const activeSpy = vi.spyOn(surface, 'renderActiveNow');
 
-        const firstActive = contextCalls.find((c) => c.className.includes('board-canvas-active'));
-        expect(firstActive).toBeDefined();
-        expect(firstActive.opts).toEqual({ alpha: true, desynchronized: true });
+        surface.committedCanvas.dispatch('contextrestored');
+        surface.bgCanvas.dispatch('contextrestored');
+        expect(committedSpy).toHaveBeenCalledTimes(2);
 
-        const oldCanvas = surface.activeCanvas;
-        surface.setDesynchronized(false);
-        expect(surface.activeCanvas).not.toBe(oldCanvas);
-        expect(oldCanvas.width).toBe(0);
-        const lastActive = contextCalls.filter((c) => c.className.includes('board-canvas-active')).at(-1);
-        expect(lastActive.opts).toEqual({ alpha: true });
+        surface.activeCanvas.dispatch('contextrestored');
+        expect(activeSpy).toHaveBeenCalledTimes(1);
+    });
 
-        surface.setDesynchronized(true);
-        const backActive = contextCalls.filter((c) => c.className.includes('board-canvas-active')).at(-1);
-        expect(backActive.opts).toEqual({ alpha: true, desynchronized: true });
+    it('draws solid pen stroke progress incrementally without clearing the full activeCanvas', () => {
+        const scene = new BoardScene(412, 915);
+        const surface = new InkSurface(fakeEl('div', contextCalls), { scene });
+        const stroke = {
+            id: 's1',
+            tool: 'pen',
+            color: 0,
+            width: 0.45,
+            style: 'solid',
+            points: [{ x: 10, y: 10 }],
+        };
+        clearRectCalls.length = 0;
+
+        surface.setActiveStroke(stroke);
+        const clearsAfterStart = clearRectCalls.filter((c) => c.className.includes('board-canvas-active')).length;
+        expect(clearsAfterStart).toBe(1);
+
+        stroke.points.push({ x: 12, y: 11 }, { x: 15, y: 13 });
+        surface.drawActiveStrokeProgress();
+        stroke.points.push({ x: 18, y: 14 });
+        surface.drawActiveStrokeProgress();
+
+        // Incremental tail draws must not clear the full activeCanvas again
+        const clearsAfterProgress = clearRectCalls.filter((c) => c.className.includes('board-canvas-active')).length;
+        expect(clearsAfterProgress).toBe(1);
     });
 });

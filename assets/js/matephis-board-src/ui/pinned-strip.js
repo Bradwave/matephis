@@ -128,12 +128,18 @@ export class PinnedStrip {
         this.canvas.addEventListener('pointermove', (e) => this._onPointerMove(e));
         this.canvas.addEventListener('pointerup', (e) => this._onPointerUp(e));
         this.canvas.addEventListener('pointercancel', (e) => this._onPointerUp(e));
+        this.canvas.addEventListener('lostpointercapture', (e) => {
+            if (this.pointers.has(e.pointerId)) this._onPointerUp(e);
+        });
         this.canvas.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
 
         this.resizerEl.addEventListener('pointerdown', (e) => this._onResizeDown(e));
         this.resizerEl.addEventListener('pointermove', (e) => this._onResizeMove(e));
         this.resizerEl.addEventListener('pointerup', (e) => this._onResizeUp(e));
         this.resizerEl.addEventListener('pointercancel', (e) => this._onResizeUp(e));
+        this.resizerEl.addEventListener('lostpointercapture', (e) => {
+            if (this.resizeDrag && this.resizeDrag.pointerId === e.pointerId) this._onResizeUp(e);
+        });
     }
 
     _applyStoredSize() {
@@ -624,22 +630,29 @@ export class PinnedStrip {
         const w = parseFloat(this.canvas.style.width) || this.canvas.width;
         const h = parseFloat(this.canvas.style.height) || this.canvas.height;
         const dpr = this.canvas.width / Math.max(1, w);
-        const margin = Math.round(Math.max(w, h) * STRIP_SNAP_MARGIN);
+        // Scale margin per axis (not Math.max(w, h) for both!) to avoid 100+ MB canvases on 4K top strips.
+        const marginX = Math.round(w * STRIP_SNAP_MARGIN);
+        const marginY = Math.round(h * STRIP_SNAP_MARGIN);
         if (!this._snapCanvas) this._snapCanvas = document.createElement('canvas');
         const c = this._snapCanvas;
-        const pw = Math.round((w + margin * 2) * dpr);
-        const ph = Math.round((h + margin * 2) * dpr);
-        if (c.width !== pw) c.width = pw;
-        if (c.height !== ph) c.height = ph;
+        const pw = Math.min(4096, Math.round((w + marginX * 2) * dpr));
+        const ph = Math.min(4096, Math.round((h + marginY * 2) * dpr));
+        const effDprX = pw / Math.max(1, w + marginX * 2);
+        const effDprY = ph / Math.max(1, h + marginY * 2);
+        const effDpr = Math.min(effDprX, effDprY);
+        const finalPw = Math.max(1, Math.round((w + marginX * 2) * effDpr));
+        const finalPh = Math.max(1, Math.round((h + marginY * 2) * effDpr));
+        if (c.width !== finalPw) c.width = finalPw;
+        if (c.height !== finalPh) c.height = finalPh;
         const cam = { ...this.stripCamera };
-        const shifted = { ...cam, x: cam.x - margin / cam.scale, y: cam.y - margin / cam.scale };
+        const shifted = { ...cam, x: cam.x - marginX / cam.scale, y: cam.y - marginY / cam.scale };
         renderPageToContext(
-            c.getContext('2d'), w + margin * 2, h + margin * 2, dpr,
+            c.getContext('2d'), w + marginX * 2, h + marginY * 2, effDpr,
             info.page.strokes, shifted, this.surface.theme,
             this.scene.settings.showCropMarks, info.page.background,
             this.getWidgetPictures ? this.getWidgetPictures(info.page) : null
         );
-        this._snap = { cam, margin, w, h };
+        this._snap = { cam, marginX, marginY, w, h };
         if (this._gesture) {
             this._gesture.lastSnap = performance.now();
             this._gesture.cost = this._gesture.lastSnap - t0;
@@ -651,20 +664,20 @@ export class PinnedStrip {
         const cam = this.stripCamera;
         let snap = this._snap;
         const k = cam.scale / snap.cam.scale;
-        let dx = -snap.margin * k + (snap.cam.x - cam.x) * cam.scale;
-        let dy = -snap.margin * k + (snap.cam.y - cam.y) * cam.scale;
-        let dw = (snap.w + snap.margin * 2) * k;
-        let dh = (snap.h + snap.margin * 2) * k;
+        let dx = -snap.marginX * k + (snap.cam.x - cam.x) * cam.scale;
+        let dy = -snap.marginY * k + (snap.cam.y - cam.y) * cam.scale;
+        let dw = (snap.w + snap.marginX * 2) * k;
+        let dh = (snap.h + snap.marginY * 2) * k;
         const uncovered = dx > 0.5 || dy > 0.5 || dx + dw < snap.w - 0.5 || dy + dh < snap.h - 0.5;
         const stale = uncovered || k > STRIP_REFRESH_RATIO || k < 1 / STRIP_REFRESH_RATIO;
         const wait = Math.max(STRIP_REFRESH_MIN_MS, this._gesture.cost * 8);
         if (stale && performance.now() - this._gesture.lastSnap >= wait) {
             this._snapPicture();
             snap = this._snap;
-            dx = -snap.margin;
-            dy = -snap.margin;
-            dw = snap.w + snap.margin * 2;
-            dh = snap.h + snap.margin * 2;
+            dx = -snap.marginX;
+            dy = -snap.marginY;
+            dw = snap.w + snap.marginX * 2;
+            dh = snap.h + snap.marginY * 2;
         }
 
         const ctx = this.ctx;

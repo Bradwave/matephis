@@ -109,7 +109,7 @@ describe('board history & multi-frame atomic erase gesture', () => {
     });
 
     it('resetAll wipes all pages and content while preserving settings', () => {
-        const scene = new BoardScene(1280, 624, { lowDpr: true, desyncCanvas: false });
+        const scene = new BoardScene(1280, 624, { lowDpr: true, fastPan: false });
         scene.strokes.push(createStroke({ id: 'a', points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] }));
         scene.addPage(true);
         scene.pageBackground = 'grid';
@@ -124,6 +124,25 @@ describe('board history & multi-frame atomic erase gesture', () => {
         expect(scene.connectors).toHaveLength(0);
         expect(scene.pageBackground).toBe('blank');
         expect(scene.settings.lowDpr).toBe(true);
-        expect(scene.settings.desyncCanvas).toBe(false);
+        expect(scene.settings.fastPan).toBe(false);
+    });
+
+    it('rejects non-board JSON in loadJSON without wiping existing pages and protects widget commands on stroke-only undo', () => {
+        const scene = new BoardScene(1280, 624);
+        scene.strokes.push(createStroke({ id: 'keep', points: [{ x: 1, y: 1 }, { x: 5, y: 5 }] }));
+        expect(scene.loadJSON({ unrelated: true })).toBe(false);
+        expect(scene.strokes.map((s) => s.id)).toEqual(['keep']);
+
+        const history = new HistoryStack();
+        const w = { id: 'w1', kind: 'plot', x: 10, y: 10, w: 100, h: 80, data: {} };
+        scene.widgets.push(w);
+        history.push({ type: 'widget-add', widget: w });
+
+        // Passing a bare strokes array must not pop a widget command without undoing it
+        expect(history.undo(scene.strokes)).toBe(false);
+        expect(scene.widgets).toHaveLength(1);
+        expect(history.canUndo).toBe(true);
+        expect(history.undo(scene.currentPage)).toBe(true);
+        expect(scene.widgets).toHaveLength(0);
     });
 });

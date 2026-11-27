@@ -14,7 +14,7 @@ import {
     clamp,
     worldToScreen,
 } from './geometry.js';
-import { drawStroke } from './stroke.js';
+import { drawStroke, drawStrokeTail } from './stroke.js';
 
 const LASER_LIFETIME_MS = 1250;
 
@@ -374,43 +374,38 @@ export class InkSurface {
         this.committedCanvas.className = 'board-canvas board-canvas-committed';
         this.committedCtx = this.committedCanvas.getContext('2d', { alpha: true });
 
+        // Always use standard composited { alpha: true } on activeCanvas:
+        // combining desynchronized: true with alpha: true below topOverlay/chrome causes
+        // opaque-black compositing glitches on Android Chrome during pan/zoom.
+        this.activeCanvas = document.createElement('canvas');
+        this.activeCanvas.className = 'board-canvas board-canvas-active';
+        this.activeCtx = this.activeCanvas.getContext('2d', { alpha: true });
+        this._activeEmpty = true;
+        this._resetActiveIncremental();
+
         this.container.appendChild(this.bgCanvas);
         this.container.appendChild(this.committedCanvas);
-        this._mountActiveCanvas(this.scene.settings.desyncCanvas !== false);
+        this.container.appendChild(this.activeCanvas);
+
+        // Recover cleanly when Android/Mali GPU backing stores are evicted.
+        const onCommittedRestored = () => {
+            this.renderCommittedNow();
+        };
+        const onActiveRestored = () => {
+            this._activeEmpty = false;
+            this._resetActiveIncremental();
+            this.renderActiveNow();
+        };
+        this.bgCanvas.addEventListener('contextrestored', onCommittedRestored);
+        this.committedCanvas.addEventListener('contextrestored', onCommittedRestored);
+        this.activeCanvas.addEventListener('contextrestored', onActiveRestored);
     }
 
-    _mountActiveCanvas(desync) {
-        const wantDesync = Boolean(desync);
-        const canvas = document.createElement('canvas');
-        canvas.className = 'board-canvas board-canvas-active';
-        // Request desynchronized context for lowest possible pointer-to-glass latency when enabled.
-        const ctx = wantDesync
-            ? (canvas.getContext('2d', { alpha: true, desynchronized: true }) || canvas.getContext('2d', { alpha: true }))
-            : canvas.getContext('2d', { alpha: true });
-        const attrs = ctx && typeof ctx.getContextAttributes === 'function' ? ctx.getContextAttributes() : null;
-        this._desyncActive = Boolean(wantDesync && (attrs ? attrs.desynchronized : true));
-        if (this.width > 0 && this.height > 0) {
-            canvas.width = Math.round(this.width * this.dpr);
-            canvas.height = Math.round(this.height * this.dpr);
-            canvas.style.width = `${this.width}px`;
-            canvas.style.height = `${this.height}px`;
-        }
-        if (this.activeCanvas && this.activeCanvas.parentNode) {
-            this.activeCanvas.width = 0;
-            this.activeCanvas.height = 0;
-            this.activeCanvas.replaceWith(canvas);
-        } else {
-            this.container.appendChild(canvas);
-        }
-        this.activeCanvas = canvas;
-        this.activeCtx = ctx;
-        this._activeEmpty = true;
-    }
-
-    /** Switch the active canvas between desynchronized and standard composited mode live. */
-    setDesynchronized(enabled) {
-        this._mountActiveCanvas(Boolean(enabled));
-        this.renderActiveNow();
+    _resetActiveIncremental() {
+        this._activeDrawnStroke = null;
+        this._activeDrawnCount = 0;
+        this._activeDrawnTheme = null;
+        this._activeDrawnCam = null;
     }
 
     setTheme(theme) {
@@ -432,6 +427,7 @@ export class InkSurface {
         this.dpr = dpr;
 
         this._activeEmpty = true; // resizing clears the canvases
+        this._resetActiveIncremental();
         for (const c of [this.bgCanvas, this.committedCanvas, this.activeCanvas]) {
             c.width = Math.round(w * dpr);
             c.height = Math.round(h * dpr);
@@ -525,10 +521,11 @@ export class InkSurface {
         // GPU picture, dimmed like the ink. Pixel: the widgets' pictures are drawn into the
         // ink picture (so they pixelate with it) and the live overlay is hidden meanwhile.
         const effect = this.scene.settings.gestureEffect;
-        this._gesturePictures = effect === 'pixel' && this.getWidgetPictures ? this.getWidgetPictures() : null;
+        const pics = effect === 'pixel' && this.getWidgetPictures ? this.getWidgetPictures() : null;
+        this._gesturePictures = pics && pics.length ? pics : null;
         this._snapFromCommitted();
         if (this.overlay) {
-            this.overlay.setGesture(true, effect, GESTURE_DIM, { hideWidgets: Boolean(this._gesturePictures && this._gesturePictures.length) });
+            this.overlay.setGesture(true, effect, GESTURE_DIM, { hideWidgets: Boolean(this._gesturePictures) });
         }
     }
 
@@ -977,6 +974,7 @@ export class InkSurface {
             || this.eraserCursor || this.laserPoints.length > 0 || this.zoomIndicator);
         if (!hasContent && this._activeEmpty) return;
         this._activeEmpty = !hasContent;
+        this._resetActiveIncremental();
 
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -988,6 +986,12 @@ export class InkSurface {
             ctx.translate(-cam.x, -cam.y);
             drawStroke(ctx, this.activeStroke, this.theme, { cache: false });
             ctx.restore();
+            if (this._canDrawIncremental(this.activeStroke)) {
+                this._activeDrawnStroke = this.activeStroke;
+                this._activeDrawnCount = this.activeStroke.points ? this.activeStroke.points.length : 0;
+                this._activeDrawnTheme = this.theme;
+                this._activeDrawnCam = { x: cam.x, y: cam.y, scale: cam.scale };
+            }
         }
 
         if (this.activeShape) {
@@ -1210,26 +1214,67 @@ export class InkSurface {
         this.laserRaf = requestAnimationFrame(tick);
     }
 
+    _canDrawIncremental(stroke) {
+        return Boolean(
+            stroke
+            && stroke.tool === 'pen'
+            && (!stroke.style || stroke.style === 'solid')
+            && !this.activeShape
+            && !this.lassoOverlay
+            && !this.eraserCursor
+            && this.laserPoints.length === 0
+            && !this.zoomIndicator
+        );
+    }
+
+    /**
+     * Fast path for pointermove while drawing a solid pen stroke: appends only the newly
+     * added tail onto activeCanvas instead of clearing the full 4K canvas and re-tracing
+     * from point 0. Falls back to renderActiveNow() for translucent/dashed strokes or when
+     * camera/overlays changed.
+     */
+    drawActiveStrokeProgress() {
+        const s = this.activeStroke;
+        const cam = this.scene.camera;
+        const prevCam = this._activeDrawnCam;
+        if (
+            this._canDrawIncremental(s)
+            && this._activeDrawnStroke === s
+            && this._activeDrawnCount > 0
+            && this._activeDrawnTheme === this.theme
+            && prevCam
+            && prevCam.x === cam.x
+            && prevCam.y === cam.y
+            && prevCam.scale === cam.scale
+            && s.points
+            && s.points.length > this._activeDrawnCount
+        ) {
+            const ctx = this.activeCtx;
+            ctx.save();
+            ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+            ctx.scale(cam.scale, cam.scale);
+            ctx.translate(-cam.x, -cam.y);
+            drawStrokeTail(ctx, s, this._activeDrawnCount, this.theme);
+            ctx.restore();
+            this._activeDrawnCount = s.points.length;
+            this._activeEmpty = false;
+            return;
+        }
+        this.renderActiveNow();
+    }
+
     setActiveStroke(stroke) {
         this.activeStroke = stroke;
         this.renderActiveNow();
     }
 
     /**
-     * Hand a finished stroke from the live layer to the committed layer without a gap.
-     * The live layer is desynchronized, so clearing it shows at once, while the committed
-     * layer only shows at the browser's next frame: clearing both in the same task left a
-     * frame or two (longer on slow boards) with the stroke on neither layer. The live copy
-     * stays until the committed picture has been presented, then goes.
+     * Hand a finished stroke from the live layer to the committed layer in the same frame.
      */
     commitActiveStroke(stroke) {
         this.appendStroke(stroke);
         if (this.activeStroke === stroke) this.activeStroke = null;
-        if (this._desyncActive) {
-            requestAnimationFrame(() => requestAnimationFrame(() => this.renderActiveNow()));
-        } else {
-            this.renderActiveNow();
-        }
+        this.renderActiveNow();
     }
 
     setActiveShape(stroke) {
@@ -1267,6 +1312,10 @@ export class InkSurface {
      * A pan or pinch that starts meanwhile stops it (stopGlide) and takes over its gesture.
      */
     glideCameraTo(target, durationMs = 420, onDone = null, easing = 'inOut') {
+        if (this.cameraAnim) {
+            cancelAnimationFrame(this.cameraAnim);
+            this.cameraAnim = null;
+        }
         if (this._glideRaf) cancelAnimationFrame(this._glideRaf);
         const start = { ...this.scene.camera };
         const t0 = performance.now();
@@ -1308,7 +1357,37 @@ export class InkSurface {
         this._glideRaf = null;
     }
 
+    /** Cancel any running camera glide/animation, gesture, settle, or laser trail (e.g. page switch). */
+    cancelCameraMotion() {
+        if (this._glideRaf) {
+            cancelAnimationFrame(this._glideRaf);
+            this._glideRaf = null;
+        }
+        if (this.cameraAnim) {
+            cancelAnimationFrame(this.cameraAnim);
+            this.cameraAnim = null;
+        }
+        if (this.gesture) {
+            clearTimeout(this.gesture.refreshTimer);
+            this.gesture = null;
+            this._gesturePictures = null;
+            if (this.overlay) this.overlay.setGesture(false);
+        }
+        this._cancelSettle();
+        if (this.laserRaf) {
+            cancelAnimationFrame(this.laserRaf);
+            this.laserRaf = null;
+        }
+        this.laserPoints.length = 0;
+        this.zoomIndicator = null;
+    }
+
     animateCameraTo(target, durationMs = 220, onDone = null) {
+        if (this._glideRaf) {
+            cancelAnimationFrame(this._glideRaf);
+            this._glideRaf = null;
+        }
+        if (this.gesture) this.endGesture();
         if (this.cameraAnim) cancelAnimationFrame(this.cameraAnim);
         const start = { ...this.scene.camera };
         const t0 = performance.now();

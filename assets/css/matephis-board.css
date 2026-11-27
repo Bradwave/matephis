@@ -2,7 +2,7 @@
  * Zero UI transitions or animations anywhere inside /board/.
  */
 
-html:has(.board-body),
+html.board-html,
 body.board-body {
     width: 100%;
     height: 100%;
@@ -73,7 +73,6 @@ body.board-body {
     top: 0;
     left: 0;
     transform-origin: 0 0;
-    will-change: transform;
     pointer-events: none;
 }
 
@@ -333,6 +332,7 @@ body.board-body {
     display: flex;
     flex-direction: column;
     padding: 2px 4px;
+    max-height: calc(100vh - 24px);
     max-height: calc(100dvh - 24px);
     overflow-y: auto;
     scrollbar-width: thin;
@@ -946,7 +946,7 @@ body.board-body {
 
 /* Wall-mounted touch boards: the top of the screen is out of reach, so sheets (plot,
    diagram and exercise editors) start a third of the way down; their content scrolls inside */
-@media (pointer: coarse) and (min-height: 700px) {
+@media (any-pointer: coarse) and (min-height: 700px) {
     .board-popover.board-sheet {
         top: max(12px, env(safe-area-inset-top), 32vh);
     }
@@ -2274,12 +2274,17 @@ body.board-body {
 }
 
 /* Hidden aids on the board: working leaves the card; answers are covered with a flat fill
- * instead of CSS filter: blur() (which forces an expensive offscreen blur pass on Mali GPUs). */
-:is(.board-widget-exercise, .board-ex-preview) :is(details.work, details.details):not(.is-revealed) {
+ * instead of CSS filter: blur() (which forces an expensive offscreen blur pass on Mali GPUs).
+ * Plain comma-separated selectors (no :is()) for Android 8 / older Chromium compatibility. */
+.board-widget-exercise details.work:not(.is-revealed),
+.board-widget-exercise details.details:not(.is-revealed),
+.board-ex-preview details.work:not(.is-revealed),
+.board-ex-preview details.details:not(.is-revealed) {
     display: none;
 }
 
-:is(.board-widget-exercise, .board-ex-preview) .solution-tag:not(.is-revealed) .solution-text {
+.board-widget-exercise .solution-tag:not(.is-revealed) .solution-text,
+.board-ex-preview .solution-tag:not(.is-revealed) .solution-text {
     filter: none;
     opacity: 1;
     color: transparent;
@@ -2290,7 +2295,8 @@ body.board-body {
     -webkit-box-decoration-break: clone;
 }
 
-:is(.board-widget-exercise, .board-ex-preview) .solution-tag:not(.is-revealed) .solution-text * {
+.board-widget-exercise .solution-tag:not(.is-revealed) .solution-text *,
+.board-ex-preview .solution-tag:not(.is-revealed) .solution-text * {
     visibility: hidden;
 }
 
@@ -2746,10 +2752,20 @@ body.board-body {
     margin-bottom: 0.65em;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     min-height: 8em;
 }
 
+.board-preview .matephis-plot-container,
+.board-preview .matephis-circuit-container {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+}
+
 .board-plot-popover .board-preview {
+    height: 36vh;
+    min-height: 11em;
     max-height: 42%;
 }
 
@@ -2949,7 +2965,7 @@ body.board-body {
     .board-editor-sheet > .board-popover-title { grid-area: title; }
     .board-editor-sheet > .board-popover-footer { grid-area: footer; }
     .board-editor-sheet > .board-sheet-scroll { grid-area: scroll; margin: 0; padding: 0 0.2em 0.4em 0; }
-    .board-editor-sheet > .board-preview { grid-area: preview; max-height: none; align-self: stretch; margin-bottom: 0.65em; }
+    .board-editor-sheet > .board-preview { grid-area: preview; height: auto; max-height: none; align-self: stretch; margin-bottom: 0.65em; }
     .board-editor-sheet > .board-diag-sections { grid-area: sections; }
     .board-editor-sheet > .board-preset-list { grid-area: list; }
     .board-editor-sheet > .board-diag-json { grid-area: json; }
@@ -3167,12 +3183,70 @@ body.board-body {
     }
 }
 
+.board-ex-subhead {
+    grid-column: 1 / -1;
+    width: 100%;
+    flex-basis: 100%;
+    font-family: var(--font-plot);
+    font-size: 0.78em;
+    color: var(--secondary-text);
+    margin-top: 0.35em;
+    padding-top: 0.2em;
+    border-top: 1px solid var(--border);
+}
+
+.board-ex-subhead:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
 /* === Exercise text (panel preview and widget): one font, one size ===
  * The notes' own CSS gives paragraphs, lists and problem titles different sizes;
  * on the board every text element inherits the card's font and size. Badges keep
- * theirs, and MathJax (custom elements) is left alone. */
-.board-ex-preview-body :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label):not(.nota):not(.nota *),
-.board-widget-ex-content :where(p, li, ol, ul, strong, b, em, i, span, div, blockquote, td, th, h1, h2, h3, h4, h5, h6, summary, details):not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label):not(.nota):not(.nota *) {
+ * theirs, and MathJax (custom elements) is left alone. Plain selectors for Android 8. */
+.board-ex-preview-body p,
+.board-ex-preview-body li,
+.board-ex-preview-body ol,
+.board-ex-preview-body ul,
+.board-ex-preview-body strong,
+.board-ex-preview-body b,
+.board-ex-preview-body em,
+.board-ex-preview-body i,
+.board-ex-preview-body span:not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label),
+.board-ex-preview-body div:not(.nota),
+.board-ex-preview-body blockquote,
+.board-ex-preview-body td,
+.board-ex-preview-body th,
+.board-ex-preview-body h1,
+.board-ex-preview-body h2,
+.board-ex-preview-body h3,
+.board-ex-preview-body h4,
+.board-ex-preview-body h5,
+.board-ex-preview-body h6,
+.board-ex-preview-body summary,
+.board-ex-preview-body details,
+.board-widget-ex-content p,
+.board-widget-ex-content li,
+.board-widget-ex-content ol,
+.board-widget-ex-content ul,
+.board-widget-ex-content strong,
+.board-widget-ex-content b,
+.board-widget-ex-content em,
+.board-widget-ex-content i,
+.board-widget-ex-content span:not(.difficulty-tag):not(.solution-tag):not(.hint-tag):not(.aid-label),
+.board-widget-ex-content div:not(.nota),
+.board-widget-ex-content blockquote,
+.board-widget-ex-content td,
+.board-widget-ex-content th,
+.board-widget-ex-content h1,
+.board-widget-ex-content h2,
+.board-widget-ex-content h3,
+.board-widget-ex-content h4,
+.board-widget-ex-content h5,
+.board-widget-ex-content h6,
+.board-widget-ex-content summary,
+.board-widget-ex-content details {
     font-family: var(--font);
     font-size: inherit;
     line-height: inherit;
@@ -3183,7 +3257,9 @@ body.board-body {
     line-height: 1.45;
 }
 
-.board-ex-preview-body :where(p, ol, ul) {
+.board-ex-preview-body p,
+.board-ex-preview-body ol,
+.board-ex-preview-body ul {
     margin: 0.45em 0;
 }
 

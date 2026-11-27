@@ -762,7 +762,9 @@ export class WidgetManager {
 
     _renderChrome() {
         const layer = this.overlay.chromeLayer;
-        layer.innerHTML = '';
+        if (this._chromeEl && this._chromeEl.parentNode) {
+            this._chromeEl.parentNode.removeChild(this._chromeEl);
+        }
         this._chromeEl = null;
         if (!this.editingId) return;
 

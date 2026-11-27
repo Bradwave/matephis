@@ -77,8 +77,13 @@ export class HistoryStack {
      */
     undo(target) {
         if (!this.canUndo) return false;
+        const resolved = resolveTarget(target);
+        const top = this.undoStack[this.undoStack.length - 1];
+        if (!resolved.widgets && top && (top.type.startsWith('widget-') || top.type.startsWith('connector-'))) {
+            return false;
+        }
         const cmd = this.undoStack.pop();
-        this._applyInverse(cmd, resolveTarget(target));
+        this._applyInverse(cmd, resolved);
         this.redoStack.push(cmd);
         return true;
     }
@@ -89,8 +94,13 @@ export class HistoryStack {
      */
     redo(target) {
         if (!this.canRedo) return false;
+        const resolved = resolveTarget(target);
+        const top = this.redoStack[this.redoStack.length - 1];
+        if (!resolved.widgets && top && (top.type.startsWith('widget-') || top.type.startsWith('connector-'))) {
+            return false;
+        }
         const cmd = this.redoStack.pop();
-        this._applyForward(cmd, resolveTarget(target));
+        this._applyForward(cmd, resolved);
         this.undoStack.push(cmd);
         return true;
     }

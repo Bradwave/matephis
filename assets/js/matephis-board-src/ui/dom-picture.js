@@ -56,7 +56,11 @@ async function inlineFontFace(rule, baseHref) {
  */
 function pageCss() {
     const sheets = Array.from(document.styleSheets);
-    const key = sheets.map((s) => `${s.href || 'inline'}:${s.cssRules ? s.cssRules.length : 0}`).join('|');
+    const key = sheets.map((s) => {
+        let len = 0;
+        try { len = s.cssRules ? s.cssRules.length : 0; } catch (_) { len = -1; }
+        return `${s.href || 'inline'}:${len}`;
+    }).join('|');
     if (cssCache.key === key && cssCache.promise) return cssCache.promise;
     cssCache = {
         key,
