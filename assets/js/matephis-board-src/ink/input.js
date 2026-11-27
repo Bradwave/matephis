@@ -97,8 +97,44 @@ export class InputController {
         this.pinchAnchor = null;
         this.pinchDropTimer = null;
         this.lastPinchIntent = null;
+        this._cachedRect = null;
 
         this._bindEvents();
+    }
+
+    invalidateRect() {
+        this._cachedRect = null;
+    }
+
+    cancelActive() {
+        if (this.pinchDropTimer) {
+            clearTimeout(this.pinchDropTimer);
+            this.pinchDropTimer = null;
+        }
+        if (this.wheelEndTimer) {
+            clearTimeout(this.wheelEndTimer);
+            this.wheelEndTimer = null;
+        }
+        if (this.mode === 'draw') this._cancelUncommittedDraw();
+        else if (this.mode === 'shape') this._cancelUncommittedShape();
+        else if (this.mode === 'erase') {
+            this.currentErase = null;
+            this.surface.setEraserCursor(null);
+        } else if (this.mode === 'lasso' && this.lasso) {
+            this.lasso.cancelInteraction();
+        } else if (this.mode === 'pan' || this.mode === 'pinch' || this.mode === 'pinch-cooldown') {
+            this.surface.endGesture();
+        }
+        if (this.surface.setZoomIndicator) this.surface.setZoomIndicator(null);
+        this.pointers.clear();
+        this.mode = 'idle';
+        this.activePointerId = null;
+        this.panAnchor = null;
+        this.pinchAnchor = null;
+        this.lastPinchIntent = null;
+        this.tapCandidate = null;
+        this.dismissPress = null;
+        this.palmActive = false;
     }
 
     _bindEvents() {
@@ -106,6 +142,9 @@ export class InputController {
         this.el.addEventListener('pointermove', (e) => this._onPointerMove(e));
         this.el.addEventListener('pointerup', (e) => this._onPointerUp(e));
         this.el.addEventListener('pointercancel', (e) => this._onPointerCancel(e));
+        this.el.addEventListener('lostpointercapture', (e) => {
+            if (this.pointers.has(e.pointerId)) this._onPointerCancel(e);
+        });
         this.el.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
         this.el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
@@ -124,6 +163,10 @@ export class InputController {
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Space') this.spaceHeld = false;
         });
+        window.addEventListener('blur', () => {
+            this.spaceHeld = false;
+            if (this.pointers.size > 0 || this.mode !== 'idle') this.cancelActive();
+        });
     }
 
     _isTypingTarget(target) {
@@ -133,7 +176,7 @@ export class InputController {
     }
 
     _getLocalPoint(e) {
-        const rect = this.el.getBoundingClientRect();
+        const rect = this._cachedRect || (this._cachedRect = this.el.getBoundingClientRect());
         return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
     }
 
@@ -252,8 +295,8 @@ export class InputController {
             if (this.mode === 'draw' && sinceFirst < GESTURE_CANCEL_MS) {
                 this._cancelUncommittedDraw();
             } else if (this.mode === 'draw') {
-                committedDot = sinceFirst < TAP_DOT_MS;
-                this._commitDraw();
+                const pushed = this._commitDraw();
+                committedDot = pushed && sinceFirst < TAP_DOT_MS;
             } else if (this.mode === 'erase') {
                 this._finishErase();
             } else if (this.mode === 'shape') {
@@ -533,7 +576,7 @@ export class InputController {
 
         // Undo the tiny pinch drift and any dot the first finger left behind.
         Object.assign(this.scene.camera, tc.camera);
-        if (tc.committedDot && this.history.undo(this.scene.strokes)) {
+        if (tc.committedDot && this.history.undo(this.scene.currentPage)) {
             if (this.onSceneMutated) this.onSceneMutated();
         }
         this.surface.requestCommittedRedraw();
@@ -569,10 +612,17 @@ export class InputController {
         }
 
         if (this.mode === 'pinch' && this.pointers.size >= 2 && this.pinchAnchor) {
-            const anchor = this.pinchAnchor;
+            let anchor = this.pinchAnchor;
             const p0 = this.pointers.get(anchor.id0);
             const p1 = this.pointers.get(anchor.id1);
-            const pts = (p0 && p1) ? [p0, p1] : Array.from(this.pointers.values());
+            if (!p0 || !p1) {
+                // One of the tracked fingers lifted while a 3rd finger remained: re-anchor cleanly.
+                const prevIntent = anchor.intent === 'pan' || anchor.intent === 'zoom' ? anchor.intent : null;
+                this._startPinch(prevIntent);
+                anchor = this.pinchAnchor;
+                if (!anchor) return;
+            }
+            const pts = [this.pointers.get(anchor.id0), this.pointers.get(anchor.id1)];
             const midX = (pts[0].sx + pts[1].sx) * 0.5;
             const midY = (pts[0].sy + pts[1].sy) * 0.5;
             const dist = Math.max(16, Math.hypot(pts[1].sx - pts[0].sx, pts[1].sy - pts[0].sy));
@@ -735,7 +785,11 @@ export class InputController {
                 dp.moved = true;
                 this.surface.setActiveStroke(this.currentStroke);
             } else if (added && !(dp && !dp.moved)) {
-                this.surface.renderActiveNow();
+                if (typeof this.surface.drawActiveStrokeProgress === 'function') {
+                    this.surface.drawActiveStrokeProgress();
+                } else {
+                    this.surface.renderActiveNow();
+                }
             }
             this._emitTelemetry(e, list.length, performance.now() - t0);
         } else if (this.mode === 'erase' && this.currentErase) {
@@ -936,7 +990,7 @@ export class InputController {
         // A tap that only closed a menu leaves no dot (a real stroke from it is kept).
         if (!stroke || stroke.points.length === 0 || (dismissing && !dismissing.moved)) {
             this.surface.setActiveStroke(null);
-            return;
+            return false;
         }
 
         // Simplify curve in world mm for compact storage while preserving fine handwriting hooks
@@ -949,6 +1003,7 @@ export class InputController {
         this.history.push({ type: 'add', stroke });
         this.surface.commitActiveStroke(stroke);
         if (this.onSceneMutated) this.onSceneMutated();
+        return true;
     }
 
     _finishErase() {
@@ -968,7 +1023,9 @@ export class InputController {
     _onWheel(e) {
         if (this.surface.overviewMode) return;
         e.preventDefault();
+        if ((e.ctrlKey || e.metaKey) && this.scene.settings.zoomLock) return;
 
+        if (this.surface.stopGlide) this.surface.stopGlide();
         // Wheel / trackpad scrolling has no start or end event: the gesture ends after a pause.
         this.surface.beginGesture();
         clearTimeout(this.wheelEndTimer);
@@ -976,7 +1033,6 @@ export class InputController {
 
         const { sx, sy } = this._getLocalPoint(e);
         if (e.ctrlKey || e.metaKey) {
-            if (this.scene.settings.zoomLock) return;
             // Pinch-zoom on trackpads or Ctrl+wheel (raw & immediate — no touch deadzone)
             const worldBefore = screenToWorld(sx, sy, this.scene.camera);
             const zoomFactor = Math.exp(-e.deltaY * 0.008);

@@ -14,6 +14,7 @@ import {
     createStroke,
     encodeStroke,
     decodeStroke,
+    strokeToSVGPath,
 } from '../assets/js/matephis-board-src/ink/stroke.js';
 import { resolveInkColor } from '../assets/js/matephis-board-src/ink/palette.js';
 
@@ -66,20 +67,37 @@ describe('board geometry & coordinate transforms', () => {
         expect(resDot.pieces.length).toBe(0);
     });
 
-    it('leaves untouched strokes unmodified', () => {
+    it('leaves untouched strokes unmodified and preserves segments on tangential endpoint contact', () => {
         const pts = [{ x: 0, y: 0 }, { x: 50, y: 0 }];
         expect(circleHitsStroke(pts, 25, 20, 5)).toBe(false);
         const res = eraseCircleFromStroke(pts, 25, 20, 5);
         expect(res.changed).toBe(false);
         expect(res.pieces.length).toBe(1);
+
+        // Tangential graze at endpoint (100, 0) by disk centered at (100, 10), r=10 must not wipe the segment
+        const longSeg = [{ x: 0, y: 0 }, { x: 100, y: 0 }];
+        const graze = eraseCircleFromStroke(longSeg, 100, 10, 10);
+        expect(graze.pieces.length).toBe(1);
+        expect(graze.pieces[0][0]).toEqual({ x: 0, y: 0 });
+        expect(graze.pieces[0][graze.pieces[0].length - 1]).toEqual({ x: 100, y: 0 });
     });
 
-    it('computes landscape A4 footprint and flags wide/tall overflow', () => {
+    it('computes landscape A4 footprint, respects exact boundaries, and guards malformed coords', () => {
         const s1 = createStroke({ points: [{ x: 10, y: 10 }, { x: 100, y: 50 }] });
         const fp1 = computeA4Footprint([s1]);
         expect(fp1.cols).toBe(1);
         expect(fp1.rows).toBe(1);
         expect(fp1.warning).toBe(false);
+
+        // A widget ending flush at x = A4_W stays inside column 0 (no extra blank page)
+        const flush = computeA4Footprint([], [{ x: 0, y: 0, w: A4_W, h: A4_H }]);
+        expect(flush.cols).toBe(1);
+        expect(flush.rows).toBe(1);
+
+        // Non-finite coords are ignored safely
+        const bad = computeA4Footprint([], [{ x: Infinity, y: NaN, w: 100, h: 80 }]);
+        expect(bad.cols).toBe(1);
+        expect(bad.rows).toBe(1);
 
         const s2 = createStroke({ points: [{ x: A4_W + 25, y: A4_H + 30 }, { x: A4_W + 60, y: A4_H + 50 }] });
         const fp2 = computeA4Footprint([s1, s2]);
@@ -91,6 +109,14 @@ describe('board geometry & coordinate transforms', () => {
 });
 
 describe('stroke delta codec & semantic palette', () => {
+    it('guards malformed strokes in decodeStroke and preserves integer zeros in strokeToSVGPath(pts, 0)', () => {
+        expect(decodeStroke(null)).toBeNull();
+        const sanitized = decodeStroke({ w: -5, p: [10, 20, null, NaN, 5, 5] });
+        expect(sanitized.width).toBeGreaterThan(0);
+        expect(sanitized.points).toEqual([{ x: 1, y: 2 }, { x: 1.5, y: 2.5 }]);
+
+        expect(strokeToSVGPath([{ x: 10, y: 20 }, { x: 100, y: 200 }], 0)).toBe('M 10 20 L 100 200');
+    });
     it('round-trips strokes at 0.1 mm precision with compact delta encoding', () => {
         const orig = createStroke({
             tool: 'pen',

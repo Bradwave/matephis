@@ -128,10 +128,6 @@ export class OptionsMenu {
                     <span>Modalità veloce (1× DPR)</span>
                     <input type="checkbox" data-opt="lowDpr" />
                 </label>
-                <label class="board-opt-row" title="Tela attiva a bassa latenza (desynchronized): disattiva se su Chrome mobile lo schermo diventa nero o compaiono artefatti">
-                    <span>Scrittura bassa latenza (desync)</span>
-                    <input type="checkbox" data-opt="desyncCanvas" />
-                </label>
                 <label class="board-opt-row" title="Durante pan e zoom sposta un'immagine della lavagna e la ridisegna nitida alla fine: fluido anche con molti tratti">
                     <span>Pan e zoom fluidi</span>
                     <input type="checkbox" data-opt="fastPan" />
@@ -441,7 +437,7 @@ export class OptionsMenu {
 
     syncFromState() {
         this.el.querySelector('[data-opt="darkTheme"]').checked = this.getTheme() === 'dark';
-        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'desyncCanvas', 'showHud']) {
+        for (const key of ['showCropMarks', 'penOnly', 'zoomLock', 'palmErase', 'quickMenu', 'fastPan', 'connectorGlide', 'lowDpr', 'showHud']) {
             this.el.querySelector(`[data-opt="${key}"]`).checked = Boolean(this.scene.settings[key]);
         }
         const th = this.scene.settings.palmThreshold || 42;

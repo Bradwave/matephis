@@ -657,6 +657,33 @@ function getLiStemHtml(liEl) {
     return parts.join('').trim();
 }
 
+function getLiStemText(liEl) {
+    const parts = [];
+    for (const child of liEl.childNodes || []) {
+        if (child.nodeType === 1) {
+            const t = child.tagName.toLowerCase();
+            if (t === 'ol' || t === 'ul') break;
+            parts.push(child.textContent || '');
+        } else if (child.nodeType === 3) {
+            parts.push(child.data || child.textContent || '');
+        }
+    }
+    return cleanText(parts.join(' '));
+}
+
+function liStemHasSolution(liEl) {
+    for (const child of liEl.childNodes || []) {
+        if (child.nodeType !== 1) continue;
+        const t = child.tagName.toLowerCase();
+        if (t === 'ol' || t === 'ul') break;
+        if (hasSolutionMarkup(child)) return true;
+        if (child.classList && (child.classList.contains('solution-tag') || child.classList.contains('hint-tag') || child.classList.contains('details') || child.classList.contains('work'))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function cleanText(str) {
     return String(str || '').replace(/\s+/g, ' ').trim();
 }
@@ -675,7 +702,11 @@ function hasSolutionMarkup(el) {
 }
 
 function stripOpenDetails(el) {
-    if (!el || !el.querySelectorAll) return;
+    if (!el) return;
+    if (el.tagName && el.tagName.toLowerCase() === 'details' && typeof el.removeAttribute === 'function') {
+        el.removeAttribute('open');
+    }
+    if (!el.querySelectorAll) return;
     for (const d of el.querySelectorAll('details')) {
         d.removeAttribute('open');
     }
@@ -736,7 +767,7 @@ function inlinePrerenderedMathGlyphs(rootEl, glyphMap) {
         if (ux !== null || uy !== null) {
             const tx = ux || '0';
             const ty = uy || '0';
-            transform = transform ? `translate(${tx},${ty}) ${transform}` : `translate(${tx},${ty})`;
+            transform = transform ? `${transform} translate(${tx},${ty})` : `translate(${tx},${ty})`;
         }
         if (transform) path.setAttribute('transform', transform);
 
@@ -776,6 +807,7 @@ export function extractExercisesFromHtml(html, opts = {}) {
     let currentSectionKey = '';
     let currentSubsection = '';
     let problemCounter = 0;
+    let uidCounter = 0;
 
     const items = [];
     const children = contentRoot.children || [];
@@ -806,17 +838,31 @@ export function extractExercisesFromHtml(html, opts = {}) {
             const lis = directChildrenByTag(node, 'li');
 
             for (let liIdx = 0; liIdx < lis.length; liIdx++) {
+                const rawLi = lis[liIdx];
                 const num = startNum + liIdx;
-                const clone = lis[liIdx].cloneNode(true);
-                rewriteUrlsInElement(clone, noteUrl, baseurl);
-                stripOpenDetails(clone);
-                inlinePrerenderedMathGlyphs(clone, mathGlyphs);
+                const parentUid = `i${++uidCounter}`;
+                const itemText = cleanText(rawLi.textContent);
+                const diff = extractDifficulty(rawLi);
+                const parentHasSol = hasSolutionMarkup(rawLi);
 
-                const itemHtml = `<div class="board-ex-item">${clone.innerHTML}</div>`;
-                const itemText = cleanText(clone.textContent);
-                const diff = extractDifficulty(clone);
+                // Materialize cloned HTML & inline pre-rendered MathJax glyphs lazily on first read:
+                // opening a 400-item note no longer clones/inlines tens of thousands of <use> nodes upfront.
+                let parentClone = null;
+                let parentHtml = null;
+                let stemHtmlCache = null;
+                const ensureParentClone = () => {
+                    if (!parentClone) {
+                        parentClone = rawLi.cloneNode(true);
+                        rewriteUrlsInElement(parentClone, noteUrl, baseurl);
+                        stripOpenDetails(parentClone);
+                        inlinePrerenderedMathGlyphs(parentClone, mathGlyphs);
+                    }
+                    return parentClone;
+                };
 
                 const parentEntry = {
+                    uid: parentUid,
+                    parentUid: null,
                     section: currentSection || 'Esercizi',
                     sectionKey: currentSectionKey || 'esercizi',
                     subsection: currentSubsection,
@@ -824,39 +870,62 @@ export function extractExercisesFromHtml(html, opts = {}) {
                     subItemNumber: null,
                     label: `#${num}`,
                     difficulty: diff,
-                    hasSolution: hasSolutionMarkup(clone),
-                    html: itemHtml,
+                    hasSolution: parentHasSol,
+                    get html() {
+                        if (parentHtml === null) {
+                            parentHtml = `<div class="board-ex-item">${ensureParentClone().innerHTML}</div>`;
+                        }
+                        return parentHtml;
+                    },
                     text: itemText,
                 };
                 pushItem(parentEntry);
 
                 // Nested <ol> sub-items (e.g. 2.7)
-                const nestedOls = directChildrenByTag(clone, 'ol');
+                const nestedOls = directChildrenByTag(rawLi, 'ol');
                 if (nestedOls.length > 0) {
-                    const stemHtml = getLiStemHtml(clone);
+                    const stemText = getLiStemText(rawLi);
+                    const stemHasSol = liStemHasSolution(rawLi);
                     let subOffset = 0;
-                    for (const subOl of nestedOls) {
+                    for (let olIdx = 0; olIdx < nestedOls.length; olIdx++) {
+                        const subOl = nestedOls[olIdx];
                         const subStartAttr = Number(subOl.getAttribute('start'));
                         const subStart = Number.isFinite(subStartAttr) && subStartAttr > 0 ? subStartAttr : (subOffset + 1);
                         const subLis = directChildrenByTag(subOl, 'li');
                         for (let sIdx = 0; sIdx < subLis.length; sIdx++) {
+                            const rawSubLi = subLis[sIdx];
                             const subNum = subStart + sIdx;
-                            const subClone = subLis[sIdx].cloneNode(true);
-                            const subHtml = [
-                                stemHtml ? `<div class="board-ex-stem">${stemHtml}</div>` : '',
-                                `<div class="board-ex-subitem"><span class="board-ex-subnum">${num}.${subNum})</span> ${subClone.innerHTML}</div>`,
-                            ].filter(Boolean).join('');
+                            const subUid = `i${++uidCounter}`;
+                            let subHtml = null;
+                            const capturedOlIdx = olIdx;
+                            const capturedSIdx = sIdx;
                             pushItem({
+                                uid: subUid,
+                                parentUid,
                                 section: currentSection || 'Esercizi',
                                 sectionKey: currentSectionKey || 'esercizi',
                                 subsection: currentSubsection,
                                 itemNumber: num,
                                 subItemNumber: subNum,
                                 label: `#${num}.${subNum}`,
-                                difficulty: diff || extractDifficulty(subClone),
-                                hasSolution: hasSolutionMarkup(subClone) || parentEntry.hasSolution,
-                                html: subHtml,
-                                text: cleanText(`${stemHtml ? `${cleanText(parseMiniHtml(stemHtml).body.textContent)} ` : ''}${subClone.textContent}`),
+                                difficulty: diff || extractDifficulty(rawSubLi),
+                                hasSolution: hasSolutionMarkup(rawSubLi) || stemHasSol,
+                                get html() {
+                                    if (subHtml === null) {
+                                        const pClone = ensureParentClone();
+                                        if (stemHtmlCache === null) stemHtmlCache = getLiStemHtml(pClone);
+                                        const clonedOls = directChildrenByTag(pClone, 'ol');
+                                        const clonedSubOl = clonedOls[capturedOlIdx];
+                                        const clonedSubLis = clonedSubOl ? directChildrenByTag(clonedSubOl, 'li') : [];
+                                        const subClone = clonedSubLis[capturedSIdx] || rawSubLi;
+                                        subHtml = [
+                                            stemHtmlCache ? `<div class="board-ex-stem">${stemHtmlCache}</div>` : '',
+                                            `<div class="board-ex-subitem"><span class="board-ex-subnum">${num}.${subNum})</span> ${subClone.innerHTML}</div>`,
+                                        ].filter(Boolean).join('');
+                                    }
+                                    return subHtml;
+                                },
+                                text: cleanText(`${stemText ? `${stemText} ` : ''}${rawSubLi.textContent || ''}`),
                             });
                         }
                         subOffset += subLis.length;
@@ -873,7 +942,7 @@ export function extractExercisesFromHtml(html, opts = {}) {
             const isProblemSection = currentSectionKey.includes('problem');
             if (startsWithStrong && (isProblemSection || extractDifficulty(node))) {
                 problemCounter++;
-                const groupEls = [node.cloneNode(true)];
+                const rawGroup = [node];
                 let j = i + 1;
                 while (j < children.length) {
                     const sib = children[j];
@@ -884,27 +953,25 @@ export function extractExercisesFromHtml(html, opts = {}) {
                         const sibStartsStrong = sFirst && sFirst.tagName && sFirst.tagName.toLowerCase() === 'strong';
                         if (sibStartsStrong && (isProblemSection || extractDifficulty(sib))) break;
                     }
-                    groupEls.push(sib.cloneNode(true));
+                    rawGroup.push(sib);
                     j++;
                 }
                 i = j - 1;
 
-                const partsHtml = [];
                 const partsText = [];
                 let problemHasSol = false;
                 let problemDiff = '';
-                for (const g of groupEls) {
-                    rewriteUrlsInElement(g, noteUrl, baseurl);
-                    stripOpenDetails(g);
-                    inlinePrerenderedMathGlyphs(g, mathGlyphs);
+                for (const g of rawGroup) {
                     if (!problemDiff) problemDiff = extractDifficulty(g);
-                    if (!problemHasSol && (hasSolutionMarkup(g) || (g.classList && (g.classList.contains('details') || g.classList.contains('solution-tag'))))) {
+                    if (!problemHasSol && (hasSolutionMarkup(g) || (g.classList && (g.classList.contains('details') || g.classList.contains('work') || g.classList.contains('solution-tag') || g.classList.contains('hint-tag'))))) {
                         problemHasSol = true;
                     }
-                    partsHtml.push(g.outerHTML);
                     partsText.push(g.textContent || '');
                 }
+                let probHtml = null;
                 pushItem({
+                    uid: `i${++uidCounter}`,
+                    parentUid: null,
                     section: currentSection || 'Problemi',
                     sectionKey: currentSectionKey || 'problemi',
                     subsection: currentSubsection,
@@ -913,7 +980,20 @@ export function extractExercisesFromHtml(html, opts = {}) {
                     label: `#${problemCounter}`,
                     difficulty: problemDiff,
                     hasSolution: problemHasSol,
-                    html: `<div class="board-ex-problem">${partsHtml.join('')}</div>`,
+                    get html() {
+                        if (probHtml === null) {
+                            const partsHtml = [];
+                            for (const rawG of rawGroup) {
+                                const g = rawG.cloneNode(true);
+                                rewriteUrlsInElement(g, noteUrl, baseurl);
+                                stripOpenDetails(g);
+                                inlinePrerenderedMathGlyphs(g, mathGlyphs);
+                                partsHtml.push(g.outerHTML);
+                            }
+                            probHtml = `<div class="board-ex-problem">${partsHtml.join('')}</div>`;
+                        }
+                        return probHtml;
+                    },
                     text: cleanText(partsText.join(' ')),
                 });
             }
@@ -1023,8 +1103,10 @@ export async function hydrateEmbeddedEngines(containerEl, engineLoader) {
         }
 
         for (const code of codes) {
-            const target = code.closest(sp.wrapSel) || code.closest('pre') || code.parentElement;
-            if (!target || target.getAttribute('data-processed')) continue;
+            let target = code.closest(sp.wrapSel) || code.closest('pre');
+            // Never hide the exercise container itself if a bare <code> is a direct child.
+            if (!target) target = code;
+            if (!target || target === containerEl || target.getAttribute('data-processed')) continue;
             target.setAttribute('data-processed', 'true');
             const host = document.createElement('div');
             host.className = sp.boxSel.slice(1);
@@ -1101,17 +1183,19 @@ export class ExercisePicker {
         if (this._manifest !== null) return this._manifest;
         if (this._manifestPromise) return this._manifestPromise;
         this._manifestPromise = (async () => {
-            if (!this.fetchImpl) {
-                this._manifest = [];
-                return this._manifest;
-            }
+            if (!this.fetchImpl) return [];
             try {
                 const res = await this.fetchImpl(this._url('/exercises-manifest.json'));
-                this._manifest = res && res.ok ? normalizeManifest(await res.json()) : [];
+                if (res && res.ok) {
+                    const list = normalizeManifest(await res.json());
+                    this._manifest = list;
+                    return list;
+                }
             } catch (_) {
-                this._manifest = [];
+                // Transient offline failure: leave _manifest null so a later open retries.
             }
-            return this._manifest;
+            this._manifestPromise = null;
+            return [];
         })();
         return this._manifestPromise;
     }
@@ -1155,16 +1239,23 @@ export class ExercisePicker {
     /** Subjects → topics → notes (see buildExerciseCatalog). Does not fetch SearchData.json. */
     async loadCatalog() {
         if (this._catalog) return this._catalog;
-        const manifest = await this.ensureManifest();
-        let raw = [];
-        if (this.fetchImpl) {
-            try {
-                const res = await this.fetchImpl(this._url('/board-exercises.json'));
-                if (res && res.ok) raw = await res.json();
-            } catch (_) { /* everything goes to "Altro" */ }
-        }
-        this._catalog = buildExerciseCatalog(raw, manifest);
-        return this._catalog;
+        if (this._catalogPromise) return this._catalogPromise;
+        this._catalogPromise = (async () => {
+            const rawPromise = this.fetchImpl
+                ? this.fetchImpl(this._url('/board-exercises.json'))
+                    .then((res) => (res && res.ok ? res.json() : []))
+                    .catch(() => [])
+                : Promise.resolve([]);
+            const [manifest, raw] = await Promise.all([this.ensureManifest(), rawPromise]);
+            const built = buildExerciseCatalog(raw, manifest);
+            if (manifest.length > 0) {
+                this._catalog = built;
+            } else {
+                this._catalogPromise = null;
+            }
+            return built;
+        })();
+        return this._catalogPromise;
     }
 
     /** All exercises of a note, parsed once (LRU-capped to bound RAM across a lesson). */
@@ -1203,6 +1294,10 @@ export class ExercisePicker {
     clearCache() {
         this._noteCache.clear();
         this._parsedNotes.clear();
+        this._manifest = null;
+        this._manifestPromise = null;
+        this._catalog = null;
+        this._catalogPromise = null;
         this._searchData = null;
         this._loadPromise = null;
     }

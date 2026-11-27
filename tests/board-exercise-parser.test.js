@@ -518,4 +518,47 @@ describe('Pre-rendered MathJax in board exercises', () => {
             globalThis.window = prevWindow;
         }
     });
+
+    it('disambiguates duplicate item numbers across <h3> subsections with unique uid/parentUid and retries catalog after offline failure', async () => {
+        const { ExercisePicker } = await import('../assets/js/matephis-board-src/ui/exercise-picker.js');
+        const multiSubHtml = `<html><body><div class="content">
+            <h2>Esercizi</h2>
+            <h3>Dominio</h3>
+            <ol>
+                <li>Dom 1</li>
+                <li>Dom 2:<ol><li>Dom 2.1</li><li>Dom 2.2</li></ol></li>
+            </ol>
+            <h3>Segno</h3>
+            <ol>
+                <li>Seg 1</li>
+                <li>Seg 2:<ol><li>Seg 2.1</li></ol></li>
+            </ol>
+        </div></body></html>`;
+        const parsed = extractExercisesFromHtml(multiSubHtml, { noteUrl: '/notes/esercizi-funzioni' });
+        const parentsNamed2 = parsed.items.filter((it) => it.itemNumber === 2 && it.subItemNumber === null);
+        expect(parentsNamed2).toHaveLength(2);
+        expect(parentsNamed2[0].uid).not.toBe(parentsNamed2[1].uid);
+
+        const domParts = parsed.items.filter((it) => it.parentUid === parentsNamed2[0].uid);
+        const segParts = parsed.items.filter((it) => it.parentUid === parentsNamed2[1].uid);
+        expect(domParts.map((p) => p.text)).toEqual(['Dom 2: Dom 2.1', 'Dom 2: Dom 2.2']);
+        expect(segParts.map((p) => p.text)).toEqual(['Seg 2: Seg 2.1']);
+
+        // Transient offline failure must not permanently lock ExercisePicker to []
+        let online = false;
+        const picker = new ExercisePicker({
+            fetchImpl: async (url) => {
+                if (!online) throw new Error('offline');
+                if (url.includes('exercises-manifest')) {
+                    return { ok: true, json: async () => [{ title: 'Esercizi sui limiti', slug: 'esercizi-limiti', url: '/notes/esercizi-limiti', tags: ['esercizi'] }] };
+                }
+                return { ok: true, json: async () => [{ subject: 'Matematica', topics: [{ label: 'Limiti', notes: ['esercizi-limiti'] }] }] };
+            },
+        });
+        expect(await picker.loadCatalog()).toEqual([]);
+        online = true;
+        const recovered = await picker.loadCatalog();
+        expect(recovered).toHaveLength(1);
+        expect(recovered[0].subject).toBe('Matematica');
+    });
 });

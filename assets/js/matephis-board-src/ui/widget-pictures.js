@@ -147,7 +147,7 @@ export class WidgetPictureCache {
         for (const [id, e] of this.entries) {
             if (ids.has(id)) continue;
             clearTimeout(e.touchTimer);
-            e.canvas = null;
+            if (e.canvas) { e.canvas.width = 0; e.canvas.height = 0; e.canvas = null; }
             this.entries.delete(id);
         }
     }

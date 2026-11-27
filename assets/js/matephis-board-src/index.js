@@ -71,9 +71,20 @@ async function initMatephisBoard() {
     let quickMenu = null;
     let connectorManager = null;
     let widgetManager = null;
+    let inputController = null;
     let lastDismissAt = 0;
     let zoomAnimTarget = null;
+    let boardLoaded = false;
     let syncPictureNeeds = () => {}; // set once the picture cache exists
+
+    const scheduleSaveSafe = (delayMs) => {
+        if (!boardLoaded) return;
+        storage.scheduleSave(scene, delayMs);
+    };
+    const saveBoardNowSafe = () => {
+        if (!boardLoaded) return;
+        storage.saveBoardNow(scene);
+    };
 
     const applyTheme = (nextTheme) => {
         const theme = nextTheme === 'dark' ? 'dark' : 'light';
@@ -101,6 +112,8 @@ async function initMatephisBoard() {
     };
 
     const switchToPage = (targetIndex, targetCamera = null) => {
+        if (inputController) inputController.cancelActive();
+        surface.cancelCameraMotion();
         if (surface.overviewMode) {
             surface.overviewMode = false;
             surface.savedCamera = null;
@@ -114,13 +127,15 @@ async function initMatephisBoard() {
         }
         if (changed || targetCamera) {
             if (lasso) lasso.clearSelection();
+            if (connectorManager) connectorManager.clearSelection();
+            if (widgetManager) widgetManager.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
             if (connectorManager) connectorManager.syncFromScene();
             if (widgetManager) widgetManager.syncFromScene();
             if (pinnedStrip) pinnedStrip.render();
             syncUI();
-            storage.scheduleSave(scene, 400);
+            scheduleSaveSafe(400);
             engineLoader.ensureForPage(scene.currentPage);
             syncPictureNeeds();
         }
@@ -134,7 +149,7 @@ async function initMatephisBoard() {
         },
         onCameraChange: (cam) => {
             if (toolbar) toolbar.updateZoom(cam);
-            storage.scheduleSave(scene, 500);
+            scheduleSaveSafe(500);
         },
     });
 
@@ -259,9 +274,6 @@ async function initMatephisBoard() {
                 perfHud.refreshSceneStats(surface.dpr);
                 perfHud.refreshScreen();
             }
-            if (key === 'desyncCanvas') {
-                surface.setDesynchronized(Boolean(value));
-            }
             if (key === 'showHud') {
                 perfHud.setVisible(value);
                 perfHud.refreshSceneStats(surface.dpr);
@@ -294,14 +306,29 @@ async function initMatephisBoard() {
         })),
         onImportJSON: (data) => {
             if (scene.loadJSON(data)) {
+                if (inputController) inputController.cancelActive();
+                surface.cancelCameraMotion();
+                if (surface.overviewMode) {
+                    surface.overviewMode = false;
+                    surface.savedCamera = null;
+                    overlay.setOverviewMode(false);
+                }
                 historyProxy.clearAll();
                 if (lasso) lasso.clearSelection();
+                if (connectorManager) {
+                    connectorManager.clearSelection();
+                    connectorManager.clearPending();
+                }
+                if (widgetManager) widgetManager.clearSelection();
                 pinnedStrip.close();
+                widgetPictures.clear();
                 surface.renderCommittedNow();
+                surface.renderActiveNow();
                 if (connectorManager) connectorManager.syncFromScene();
                 if (widgetManager) widgetManager.syncFromScene();
+                syncPictureNeeds();
                 syncUI();
-                storage.saveBoardNow(scene);
+                saveBoardNowSafe();
                 engineLoader.ensureForPage(scene.currentPage);
             }
         },
@@ -320,29 +347,42 @@ async function initMatephisBoard() {
                 connectors: prevConnectors,
             });
             if (lasso) lasso.clearSelection();
+            if (connectorManager) {
+                connectorManager.clearSelection();
+                connectorManager.clearPending();
+            }
+            if (widgetManager) widgetManager.clearSelection();
             surface.renderCommittedNow();
             if (connectorManager) connectorManager.syncFromScene();
             if (widgetManager) widgetManager.syncFromScene();
+            syncPictureNeeds();
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
-            storage.scheduleSave(scene);
+            scheduleSaveSafe();
         },
         onDeletePage: () => {
             const deletedId = scene.currentPage.id;
             if (scene.deleteCurrentPage()) {
+                if (inputController) inputController.cancelActive();
+                surface.cancelCameraMotion();
                 pageHistories.delete(deletedId);
                 if (lasso) lasso.clearSelection();
+                if (connectorManager) connectorManager.clearSelection();
+                if (widgetManager) widgetManager.clearSelection();
                 if (surface.overviewMode) {
                     surface.overviewMode = false;
                     surface.savedCamera = null;
                     overlay.setOverviewMode(false);
                 }
                 surface.renderCommittedNow();
+                surface.renderActiveNow();
                 if (connectorManager) connectorManager.syncFromScene();
                 if (widgetManager) widgetManager.syncFromScene();
                 pinnedStrip.render();
+                syncPictureNeeds();
                 syncUI();
-                storage.saveBoardNow(scene);
+                saveBoardNowSafe();
+                engineLoader.ensureForPage(scene.currentPage);
             }
         },
         onClearCache: () => {
@@ -359,6 +399,8 @@ async function initMatephisBoard() {
             syncUI();
         },
         onResetBoard: () => {
+            if (inputController) inputController.cancelActive();
+            surface.cancelCameraMotion();
             if (surface.overviewMode) {
                 surface.overviewMode = false;
                 surface.savedCamera = null;
@@ -381,7 +423,7 @@ async function initMatephisBoard() {
             if (connectorManager) connectorManager.syncFromScene();
             if (widgetManager) widgetManager.syncFromScene();
             syncUI();
-            storage.saveBoardNow(scene);
+            saveBoardNowSafe();
         },
     });
 
@@ -534,6 +576,8 @@ async function initMatephisBoard() {
         onPrevPage: () => switchToPage(scene.currentPageIndex - 1),
         onNextPage: () => switchToPage(scene.currentPageIndex + 1),
         onAddPage: () => {
+            if (inputController) inputController.cancelActive();
+            surface.cancelCameraMotion();
             if (surface.overviewMode) {
                 surface.overviewMode = false;
                 surface.savedCamera = null;
@@ -541,13 +585,16 @@ async function initMatephisBoard() {
             }
             scene.addPage(true);
             if (lasso) lasso.clearSelection();
+            if (connectorManager) connectorManager.clearSelection();
+            if (widgetManager) widgetManager.clearSelection();
             surface.renderCommittedNow();
             surface.renderActiveNow();
             if (connectorManager) connectorManager.syncFromScene();
             if (widgetManager) widgetManager.syncFromScene();
             pinnedStrip.render();
+            syncPictureNeeds();
             syncUI();
-            storage.saveBoardNow(scene);
+            saveBoardNowSafe();
         },
     });
 
@@ -557,7 +604,7 @@ async function initMatephisBoard() {
         onUndo: () => toolbar.onUndo && toolbar.onUndo(),
     });
 
-    new InputController(surface, {
+    inputController = new InputController(surface, {
         scene,
         history: historyProxy,
         overlay,
@@ -565,16 +612,25 @@ async function initMatephisBoard() {
         getToolState: () => toolbar.getToolState(),
         onCanvasTouch: () => {
             const hadPopover = Boolean(optionsMenu.open || futureMenus.activePopover || quickMenu.isOpen);
-            quickMenu.hide();
-            toolbar.closeTrays();
-            optionsMenu.hide();
-            futureMenus.hideAll();
-            toolbar.setActiveFuturePopover(null);
-            toolbar.anchorPopover(null);
-            if (connectorManager) connectorManager.clearSelection();
-            if (widgetManager) widgetManager.clearSelection();
-            // The second finger of a two-finger tap that closed a menu must not draw either.
+            const hasTray = Boolean(toolbar.openTray);
+            const hasConnSel = Boolean(connectorManager && connectorManager.selectedId);
+            const hasWidgetSel = Boolean(widgetManager && widgetManager.editingId);
             const now = performance.now();
+            // Fast path on normal writing: avoid touching DOM at all when nothing is open.
+            if (!hadPopover && !hasTray && !hasConnSel && !hasWidgetSel) {
+                return now - lastDismissAt < 200;
+            }
+            if (quickMenu.isOpen) quickMenu.hide();
+            if (hasTray) toolbar.closeTrays();
+            if (optionsMenu.open) optionsMenu.hide();
+            if (futureMenus.activePopover) {
+                futureMenus.hideAll();
+                toolbar.setActiveFuturePopover(null);
+            }
+            if (toolbar.anchoredPopover) toolbar.anchorPopover(null);
+            if (hasConnSel) connectorManager.clearSelection();
+            if (hasWidgetSel) widgetManager.clearSelection();
+            // The second finger of a two-finger tap that closed a menu must not draw either.
             if (hadPopover) lastDismissAt = now;
             return hadPopover || now - lastDismissAt < 200;
         },
@@ -584,11 +640,11 @@ async function initMatephisBoard() {
         onSceneMutated: () => {
             pinnedStrip.syncIfShowingPage(scene.currentPage.id);
             syncUI();
-            storage.scheduleSave(scene);
+            scheduleSaveSafe();
         },
         onCameraChange: (cam) => {
             toolbar.updateZoom(cam);
-            storage.scheduleSave(scene, 500);
+            scheduleSaveSafe(500);
         },
         onOverviewPick: () => syncUI(),
         onTelemetry: (info) => perfHud.recordTelemetry(info),
@@ -699,6 +755,7 @@ async function initMatephisBoard() {
     // Resize & lifecycle autosave
     const ro = new ResizeObserver(() => {
         surface.resize();
+        if (inputController) inputController.invalidateRect();
         pinnedStrip.render();
         toolbar.updateZoom(scene.camera);
         toolbar.relayout();
@@ -708,16 +765,22 @@ async function initMatephisBoard() {
     ro.observe(canvasHost);
 
     window.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'hidden') return;
-        storage.saveBoardNow(scene);
-        // Nobody pans a hidden board: free the pan/zoom pictures now (unless set to 'never').
-        surface.releaseSnapCanvases();
-        pinnedStrip.releaseSnapCanvases();
+        if (document.visibilityState === 'hidden') {
+            saveBoardNowSafe();
+            // Nobody pans a hidden board: free the pan/zoom pictures now (unless set to 'never').
+            surface.releaseSnapCanvases();
+            pinnedStrip.releaseSnapCanvases();
+        } else if (document.visibilityState === 'visible') {
+            // Repaint cleanly when returning from background / screen wake (Android GPU eviction).
+            surface.renderCommittedNow();
+            surface.renderActiveNow();
+        }
     });
-    window.addEventListener('pagehide', () => storage.saveBoardNow(scene));
+    window.addEventListener('pagehide', () => saveBoardNowSafe());
 
     // Restore persisted board from IndexedDB if available
     const saved = await storage.loadBoard();
+    boardLoaded = true;
     if (saved) {
         scene.loadJSON(saved);
         surface.renderCommittedNow();
@@ -725,6 +788,7 @@ async function initMatephisBoard() {
         engineLoader.ensureForPage(scene.currentPage);
     }
     if (connectorManager) connectorManager.syncFromScene();
+    syncPictureNeeds();
     syncUI();
 }
 

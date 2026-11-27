@@ -239,13 +239,10 @@ export function eraseCircleFromStroke(points, cx, cy, r, minPieceLength = 0.25) 
         const disc = B * B - 4 * A * C;
 
         if (disc <= 0) {
-            // Segment never enters the disk (unless completely inside, handled by disc > 0)
-            if (!aInside && !bInside) {
-                pushPoint(a);
-                pushPoint(b);
-            } else {
-                flushCurrent();
-            }
+            // Segment never enters the open disk (at most grazes the boundary tangentially):
+            // keep the whole segment intact.
+            pushPoint(a);
+            pushPoint(b);
             continue;
         }
 
@@ -307,24 +304,34 @@ export function computeA4Footprint(strokes = [], widgets = [], connectors = []) 
     let hasContent = false;
 
     const includeBox = (x0, y0, x1, y1) => {
+        if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) return;
         hasContent = true;
         if (x0 < contentMinX) contentMinX = x0;
         if (y0 < contentMinY) contentMinY = y0;
         if (x1 > contentMaxX) contentMaxX = x1;
         if (y1 > contentMaxY) contentMaxY = y1;
 
+        // Treat exact right/bottom tile edges (e.g. x1 === A4_W) as belonging to the previous tile.
+        const ex1 = x1 > x0 ? x1 - 1e-6 : x1;
+        const ey1 = y1 > y0 ? y1 - 1e-6 : y1;
         const c0 = Math.floor(x0 / A4_W);
-        const c1 = Math.floor(x1 / A4_W);
+        const c1 = Math.floor(ex1 / A4_W);
         const r0 = Math.floor(y0 / A4_H);
-        const r1 = Math.floor(y1 / A4_H);
+        const r1 = Math.floor(ey1 / A4_H);
 
         if (c0 < minCol) minCol = c0;
         if (c1 > maxCol) maxCol = c1;
         if (r0 < minRow) minRow = r0;
         if (r1 > maxRow) maxRow = r1;
 
-        for (let r = r0; r <= r1; r++) {
-            for (let c = c0; c <= c1; c++) {
+        // Guard against extreme/malformed coordinates freezing the tab.
+        const maxSpan = 20;
+        const rc0 = Math.max(c0, c0);
+        const rc1 = Math.min(c1, rc0 + maxSpan - 1);
+        const rr0 = Math.max(r0, r0);
+        const rr1 = Math.min(r1, rr0 + maxSpan - 1);
+        for (let r = rr0; r <= rr1; r++) {
+            for (let c = rc0; c <= rc1; c++) {
                 occupied.add(`${c},${r}`);
             }
         }

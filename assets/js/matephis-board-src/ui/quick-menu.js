@@ -86,10 +86,11 @@ export class QuickMenu {
 
         hostEl.appendChild(this.el);
 
-        // Close on any press outside the menu that the canvas does not handle itself
-        // (the canvas closes it through onCanvasTouch so that tap does not draw).
+        // Close on any press outside the menu that the canvas stage does not handle itself
+        // (the stage closes it through onCanvasTouch so that tap does not draw).
         document.addEventListener('pointerdown', (e) => {
-            if (this.isOpen && !this.el.contains(e.target) && e.target.tagName !== 'CANVAS') this.hide();
+            const onStage = e.target && typeof e.target.closest === 'function' && e.target.closest('.board-stage');
+            if (this.isOpen && !this.el.contains(e.target) && !onStage) this.hide();
         }, true);
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isOpen) this.hide();

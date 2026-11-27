@@ -20,7 +20,6 @@ export const DEFAULT_SETTINGS = {
     palmErase: false,
     palmThreshold: 42,
     lowDpr: false,
-    desyncCanvas: true,     // desynchronized active canvas for lowest writing latency (off if mobile Chrome glitches)
     showHud: false,
     uiSize: 'm',            // 's' | 'm' | 'l' — multiplier on the auto-sized --bu token
     toolbarLayout: 'auto',  // 'auto' | 'rail' | 'bar'
@@ -54,15 +53,20 @@ function normalizeBackground(bg) {
     return PAGE_BACKGROUNDS.includes(bg) ? bg : 'blank';
 }
 
+function finiteNum(val, fallback = 0) {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : fallback;
+}
+
 function normalizeWidget(raw) {
     if (!raw || typeof raw !== 'object') return null;
     return {
         id: raw.id || nextWidgetId(),
         kind: String(raw.kind || 'plot'),
-        x: Number(raw.x) || 0,
-        y: Number(raw.y) || 0,
-        w: Math.max(20, Number(raw.w) || 120),
-        h: Math.max(16, Number(raw.h) || 85),
+        x: finiteNum(raw.x, 0),
+        y: finiteNum(raw.y, 0),
+        w: Math.max(20, finiteNum(raw.w, 120)),
+        h: Math.max(16, finiteNum(raw.h, 85)),
         lockedControls: Boolean(raw.lockedControls),
         data: raw.data && typeof raw.data === 'object' ? JSON.parse(JSON.stringify(raw.data)) : {},
     };
@@ -76,9 +80,9 @@ function normalizeConnector(raw) {
         pairId: String(raw.pairId || raw.id || nextConnectorId()),
         series,
         label: String(raw.label || (series === 'num' ? '1' : 'A')),
-        x: Number(raw.x) || 0,
-        y: Number(raw.y) || 0,
-        color: typeof raw.color === 'number' ? raw.color : 1,
+        x: finiteNum(raw.x, 0),
+        y: finiteNum(raw.y, 0),
+        color: typeof raw.color === 'number' && Number.isFinite(raw.color) ? raw.color : 1,
     };
 }
 
@@ -331,47 +335,52 @@ export class BoardScene {
 
     loadJSON(data) {
         if (!data || typeof data !== 'object') return false;
-        this.id = data.id || this.id;
-        this.title = data.title || 'Lavagna';
-        this.createdAt = data.createdAt || Math.floor(Date.now() / 1000);
-        this.updatedAt = data.updatedAt || this.createdAt;
+        const hasPages = Array.isArray(data.pages) && data.pages.length > 0;
+        const hasLegacy = Array.isArray(data.strokes) || Array.isArray(data.widgets) || Array.isArray(data.connectors);
+        if (!hasPages && !hasLegacy) return false;
+
+        this.id = typeof data.id === 'string' && data.id ? data.id : this.id;
+        this.title = typeof data.title === 'string' && data.title ? data.title : 'Lavagna';
+        this.createdAt = finiteNum(data.createdAt, Math.floor(Date.now() / 1000));
+        this.updatedAt = finiteNum(data.updatedAt, this.createdAt);
 
         const baseScale = computeBaseScale(this.viewportW, this.viewportH);
 
-        if (Array.isArray(data.pages) && data.pages.length > 0) {
+        if (hasPages) {
             this.pages = data.pages.map((rawPage) => {
+                const p = rawPage && typeof rawPage === 'object' ? rawPage : {};
                 const initCam = createInitialCamera(this.viewportW, this.viewportH);
-                if (rawPage.camera && typeof rawPage.camera.x === 'number' && typeof rawPage.camera.y === 'number') {
-                    initCam.x = rawPage.camera.x;
-                    initCam.y = rawPage.camera.y;
-                    if (typeof rawPage.camera.scale === 'number' && rawPage.camera.scale > 0.2) {
-                        initCam.scale = rawPage.camera.scale;
+                if (p.camera && Number.isFinite(p.camera.x) && Number.isFinite(p.camera.y)) {
+                    initCam.x = p.camera.x;
+                    initCam.y = p.camera.y;
+                    if (Number.isFinite(p.camera.scale) && p.camera.scale > 0.2 && p.camera.scale <= 40) {
+                        initCam.scale = p.camera.scale;
                     }
                 }
                 initCam.baseScale = baseScale;
                 return {
-                    id: rawPage.id || nextPageId(),
-                    background: normalizeBackground(rawPage.bg || rawPage.background),
+                    id: p.id || nextPageId(),
+                    background: normalizeBackground(p.bg || p.background),
                     camera: initCam,
-                    strokes: Array.isArray(rawPage.strokes) ? rawPage.strokes.map(decodeStroke) : [],
-                    widgets: Array.isArray(rawPage.widgets) ? rawPage.widgets.map(normalizeWidget).filter(Boolean) : [],
-                    connectors: Array.isArray(rawPage.connectors) ? rawPage.connectors.map(normalizeConnector).filter(Boolean) : [],
+                    strokes: Array.isArray(p.strokes) ? p.strokes.map(decodeStroke).filter(Boolean) : [],
+                    widgets: Array.isArray(p.widgets) ? p.widgets.map(normalizeWidget).filter(Boolean) : [],
+                    connectors: Array.isArray(p.connectors) ? p.connectors.map(normalizeConnector).filter(Boolean) : [],
                 };
             });
-            const idx = Number(data.currentPageIndex) || 0;
+            const idx = Math.trunc(finiteNum(data.currentPageIndex, 0));
             this.currentPageIndex = Math.max(0, Math.min(this.pages.length - 1, idx));
             return true;
         }
 
         // Fallback for minimal single-page JSON
         const page = this._createPage(this.viewportW, this.viewportH, data.bg || data.background);
-        page.strokes = Array.isArray(data.strokes) ? data.strokes.map(decodeStroke) : [];
+        page.strokes = Array.isArray(data.strokes) ? data.strokes.map(decodeStroke).filter(Boolean) : [];
         page.widgets = Array.isArray(data.widgets) ? data.widgets.map(normalizeWidget).filter(Boolean) : [];
         page.connectors = Array.isArray(data.connectors) ? data.connectors.map(normalizeConnector).filter(Boolean) : [];
-        if (data.camera && typeof data.camera.x === 'number' && typeof data.camera.y === 'number') {
+        if (data.camera && Number.isFinite(data.camera.x) && Number.isFinite(data.camera.y)) {
             page.camera.x = data.camera.x;
             page.camera.y = data.camera.y;
-            if (typeof data.camera.scale === 'number' && data.camera.scale > 0.2) {
+            if (Number.isFinite(data.camera.scale) && data.camera.scale > 0.2 && data.camera.scale <= 40) {
                 page.camera.scale = data.camera.scale;
             }
         }

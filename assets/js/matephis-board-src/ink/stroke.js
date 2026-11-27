@@ -32,6 +32,7 @@ export function createStroke({
 
 export function refreshStrokeBBox(stroke) {
     stroke.bbox = computeBBox(stroke.points, stroke.width * 0.6);
+    pathCache.delete(stroke);
     return stroke;
 }
 
@@ -72,31 +73,38 @@ export function encodeStroke(stroke) {
 }
 
 export function decodeStroke(raw) {
-    const flat = raw.p || [];
+    if (!raw || typeof raw !== 'object') return null;
+    const flat = Array.isArray(raw.p) ? raw.p : [];
     const count = Math.floor(flat.length / 2);
-    const points = new Array(count);
+    const points = [];
     let qx = 0;
     let qy = 0;
     for (let i = 0; i < count; i++) {
-        if (i === 0) {
-            qx = flat[0];
-            qy = flat[1];
+        const dx = Number(flat[i * 2]);
+        const dy = Number(flat[i * 2 + 1]);
+        if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
+        if (points.length === 0) {
+            qx = dx;
+            qy = dy;
         } else {
-            qx += flat[i * 2];
-            qy += flat[i * 2 + 1];
+            qx += dx;
+            qy += dy;
         }
-        points[i] = { x: qx / 10, y: qy / 10 };
+        points.push({ x: qx / 10, y: qy / 10 });
     }
 
     let style = 'solid';
     if (raw.s === 'da' || raw.s === 'dashed') style = 'dashed';
     else if (raw.s === 'do' || raw.s === 'dotted') style = 'dotted';
 
+    const parsedW = Number(raw.w);
+    const width = Number.isFinite(parsedW) && parsedW > 0 ? Math.min(parsedW, 100) : 0.75;
+
     return createStroke({
-        id: raw.id || nextStrokeId(),
+        id: typeof raw.id === 'string' && raw.id ? raw.id : nextStrokeId(),
         tool: raw.t === 'h' || raw.t === 'highlighter' ? 'highlighter' : 'pen',
         color: raw.c ?? 0,
-        width: Number(raw.w) || 0.75,
+        width,
         style,
         points,
     });
@@ -205,7 +213,8 @@ export function strokeToSVGPath(stroke, precision = 3) {
     if (cmds.length === 0) return '';
     const f = (n) => {
         const s = Number(n).toFixed(precision);
-        return s.replace(/\.?0+$/, '') || '0';
+        const trimmed = precision > 0 ? s.replace(/\.?0+$/, '') : s;
+        return !trimmed || trimmed === '-0' ? '0' : trimmed;
     };
     const parts = new Array(cmds.length);
     for (let i = 0; i < cmds.length; i++) {
@@ -273,5 +282,32 @@ export function drawStroke(ctx, stroke, theme = 'light', { cache = true } = {}) 
         if (isDot) ctx.fill();
         else ctx.stroke();
     }
+    ctx.restore();
+}
+
+/**
+ * Draw only the newly appended tail of an in-flight opaque solid pen stroke onto the active
+ * canvas (avoids clearing and re-tracing the whole stroke on every pointermove).
+ */
+export function drawStrokeTail(ctx, stroke, drawnCount, theme = 'light') {
+    const pts = stroke && stroke.points;
+    if (!pts || pts.length <= drawnCount) return;
+
+    const color = resolveInkColor(stroke.color, theme);
+    const width = stroke.width;
+    const startIdx = Math.max(0, drawnCount - 2);
+    const slice = pts.slice(startIdx);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    traceStroke(ctx, slice, width);
+    if (slice.length === 1) ctx.fill();
+    else ctx.stroke();
     ctx.restore();
 }

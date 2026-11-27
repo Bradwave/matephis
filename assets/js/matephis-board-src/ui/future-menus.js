@@ -137,8 +137,7 @@ export class FutureMenus {
         this._previews = this._previews || {};
         const prev = this._previews[slot] || { seq: 0, inst: null };
         const seq = prev.seq + 1;
-        this._destroyPreview(slot);
-        this._previews[slot] = { seq, inst: null };
+        this._previews[slot] = { seq, inst: prev.inst };
         if (!this.engineLoader || !box) return;
         box.classList.add('is-loading');
         try {
@@ -150,23 +149,40 @@ export class FutureMenus {
                 await this.engineLoader.loadEngine('plot');
             }
             if (!this._previews[slot] || this._previews[slot].seq !== seq) return;
-            box.innerHTML = '';
             const c = cloneJson(cfg);
             c.cssWidth = '100%';
             c.fullWidth = true;
             c.border = false;
             const width = Math.max(200, Math.round(box.clientWidth - 2));
+            // Keep plot previews from growing taller than their container and resizing the sheet.
+            if (kind === 'plot' && !c.aspectRatio && !c.height && box.clientHeight > 140) {
+                const sliderReserve = c.params && Object.keys(c.params).length ? 56 : 0;
+                const targetH = Math.max(150, Math.min(width, Math.round(box.clientHeight - 6 - sliderReserve)));
+                c.aspectRatio = `${width}:${targetH}`;
+            }
+            // Swap atomically: destroy previous instance only right before rendering the new one.
+            if (this._previews[slot].inst && typeof this._previews[slot].inst.destroy === 'function') {
+                try { this._previews[slot].inst.destroy(); } catch (_) { /* ignore */ }
+            }
+            this._previews[slot].inst = null;
+            box.innerHTML = '';
             const inst = Engine.render(box, c, { noLightbox: true, observeResize: false, width });
             this._previews[slot].inst = inst || null;
         } catch (err) {
             if (!this._previews[slot] || this._previews[slot].seq !== seq) return;
+            if (this._previews[slot].inst && typeof this._previews[slot].inst.destroy === 'function') {
+                try { this._previews[slot].inst.destroy(); } catch (_) { /* ignore */ }
+            }
+            this._previews[slot].inst = null;
             box.innerHTML = '';
             const msg = document.createElement('div');
             msg.className = 'board-preview-msg';
             msg.textContent = `Anteprima non disponibile: ${err && err.message ? err.message : err}`;
             box.appendChild(msg);
         } finally {
-            box.classList.remove('is-loading');
+            if (this._previews[slot] && this._previews[slot].seq === seq) {
+                box.classList.remove('is-loading');
+            }
         }
     }
 
@@ -194,10 +210,13 @@ export class FutureMenus {
 
     _destroyPreview(slot) {
         const p = this._previews && this._previews[slot];
-        if (p && p.inst && typeof p.inst.destroy === 'function') {
+        if (!p) return;
+        // Bump seq so any in-flight async loadEngine() cannot mount into a hidden popover.
+        p.seq = (p.seq || 0) + 1;
+        if (p.inst && typeof p.inst.destroy === 'function') {
             try { p.inst.destroy(); } catch (_) { /* ignore */ }
         }
-        if (p) p.inst = null;
+        p.inst = null;
     }
 
     _destroyAllPreviews() {
@@ -535,22 +554,27 @@ export class FutureMenus {
         };
 
         let previewTimer = null;
-        const schedulePreview = () => {
-            clearTimeout(previewTimer);
-            previewTimer = setTimeout(() => {
-                if (el.hidden) return;
-                let cfg;
-                if (st.showJson) {
-                    try { cfg = JSON.parse(jsonArea.value); } catch (_) { return; }
-                } else {
-                    cfg = buildConfig({ withDraft: true });
-                }
-                this._renderPreview('plot', previewBox, 'plot', cfg);
-            }, 220);
+        const runPreview = () => {
+            if (el.hidden) return;
+            let cfg;
+            if (st.showJson) {
+                try { cfg = JSON.parse(jsonArea.value); } catch (_) { return; }
+            } else {
+                cfg = buildConfig({ withDraft: true });
+            }
+            this._renderPreview('plot', previewBox, 'plot', cfg);
         };
-        jsonArea.addEventListener('input', schedulePreview);
+        const schedulePreview = (immediate = false) => {
+            clearTimeout(previewTimer);
+            if (immediate) {
+                requestAnimationFrame(runPreview);
+            } else {
+                previewTimer = setTimeout(runPreview, 180);
+            }
+        };
+        jsonArea.addEventListener('input', () => schedulePreview(false));
 
-        const render = () => {
+        const render = (immediatePreview = false) => {
             errBox.hidden = true;
             const editing = Boolean(st.editId);
             titleEl.textContent = editing ? 'Modifica grafico' : 'Nuovo grafico';
@@ -558,7 +582,7 @@ export class FutureMenus {
             mainPane.hidden = st.showJson;
             jsonPane.hidden = !st.showJson;
             jsonToggle.classList.toggle('active', st.showJson);
-            schedulePreview();
+            schedulePreview(immediatePreview);
             if (st.showJson) return;
             for (const b of windowsRow.children) {
                 const win = PLOT_WINDOWS.find((w) => w.label === b.textContent);
@@ -586,14 +610,23 @@ export class FutureMenus {
             }
         });
 
-        const loadConfig = (cfg, editId) => {
+        const loadConfig = (cfg, editId, immediatePreview = false) => {
             st = fresh();
             st.editId = editId || null;
             keypadWrap.hidden = true;
             const data = cfg && typeof cfg === 'object' ? cloneJson(cfg) : {};
             const xl = Array.isArray(data.xlim) ? data.xlim : [-5, 5];
             const yl = Array.isArray(data.ylim) ? data.ylim : [-4, 4];
-            st.view = { xMin: Number(xl[0]), xMax: Number(xl[1]), yMin: Number(yl[0]), yMax: Number(yl[1]) };
+            const x0 = Number(xl[0]);
+            const x1 = Number(xl[1]);
+            const y0 = Number(yl[0]);
+            const y1 = Number(yl[1]);
+            st.view = {
+                xMin: Number.isFinite(x0) && Number.isFinite(x1) && x0 < x1 ? x0 : -5,
+                xMax: Number.isFinite(x0) && Number.isFinite(x1) && x0 < x1 ? x1 : 5,
+                yMin: Number.isFinite(y0) && Number.isFinite(y1) && y0 < y1 ? y0 : -4,
+                yMax: Number.isFinite(y0) && Number.isFinite(y1) && y0 < y1 ? y1 : 4,
+            };
             const params = data.params || {};
             const claimed = new Set();
             for (const d of Array.isArray(data.data) ? data.data : []) {
@@ -611,7 +644,7 @@ export class FutureMenus {
             delete base.xlim; delete base.ylim; delete base.data;
             base.params = Object.fromEntries(Object.entries(params).filter(([k]) => !claimed.has(k)));
             st.base = base;
-            render();
+            render(immediatePreview);
         };
 
         submitBtn.addEventListener('click', () => {
@@ -641,15 +674,15 @@ export class FutureMenus {
 
         this._plotEditor = {
             reset: () => {
-                loadConfig(createQuickPlotConfig({ xMin: -5, xMax: 5, yMin: -4, yMax: 4 }), null);
+                loadConfig(createQuickPlotConfig({ xMin: -5, xMax: 5, yMin: -4, yMax: 4 }), null, true);
                 fnEditor.setValue('');
             },
             load: (widget) => {
-                loadConfig(widget.data, widget.id);
+                loadConfig(widget.data, widget.id, true);
                 fnEditor.setValue('');
             },
         };
-        loadConfig(createQuickPlotConfig({ xMin: -5, xMax: 5, yMin: -4, yMax: 4 }), null);
+        loadConfig(createQuickPlotConfig({ xMin: -5, xMax: 5, yMin: -4, yMax: 4 }), null, false);
         return el;
     }
 
@@ -702,7 +735,7 @@ export class FutureMenus {
 
         const catalog = { physics: [], sets: [] };
         let ready = false;
-        const st = { kind: 'physics', section: {}, selected: {}, editId: null, showJson: false };
+        const st = { kind: 'physics', section: {}, selected: {}, editId: null, editData: null, showJson: false };
         // The presets arrive after start-up; opened before that, the editor waits for them
         const whenReady = () => loadPresets().then((c) => {
             catalog.physics = c.physics;
@@ -731,8 +764,12 @@ export class FutureMenus {
                 if (st.showJson) {
                     try { cfg = JSON.parse(jsonArea.value); } catch (_) { return; }
                 } else {
-                    if (!ready) return;
-                    cfg = currentItem().data;
+                    if (st.editData) {
+                        cfg = st.editData;
+                    } else {
+                        if (!ready) return;
+                        cfg = currentItem().data;
+                    }
                 }
                 this._renderPreview('diagram', previewBox, st.kind, cfg);
             }, 120);
@@ -790,6 +827,7 @@ export class FutureMenus {
                     b.append(name, sliders);
                     b.addEventListener('click', () => {
                         st.selected[st.kind] = it.id;
+                        st.editData = null;
                         render();
                     });
                     b.addEventListener('dblclick', () => insertBtn.click());
@@ -809,7 +847,10 @@ export class FutureMenus {
 
         jsonToggle.addEventListener('click', () => {
             st.showJson = !st.showJson;
-            if (st.showJson) jsonArea.value = ready ? JSON.stringify(currentItem().data, null, 2) : '';
+            if (st.showJson) {
+                const src = st.editData || (ready ? currentItem().data : null);
+                jsonArea.value = src ? JSON.stringify(src, null, 2) : '';
+            }
             render();
         });
 
@@ -818,12 +859,14 @@ export class FutureMenus {
             if (st.showJson) {
                 try {
                     data = JSON.parse(jsonArea.value);
-                    if (!data || typeof data !== 'object') throw new Error('Oggetto JSON richiesto');
+                    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Oggetto JSON richiesto');
                 } catch (err) {
                     errBox.hidden = false;
                     errBox.textContent = `JSON non valido: ${err.message}`;
                     return;
                 }
+            } else if (st.editData) {
+                data = cloneJson(st.editData);
             } else {
                 if (!ready) return;
                 data = cloneJson(currentItem().data);
@@ -840,12 +883,14 @@ export class FutureMenus {
         this._diagramEditor = {
             reset: () => {
                 st.editId = null;
+                st.editData = null;
                 st.showJson = false;
                 render();
             },
             load: (widget) => {
                 st.editId = widget.id;
                 st.kind = widget.kind === 'sets' ? 'sets' : 'physics';
+                st.editData = widget.data && typeof widget.data === 'object' ? cloneJson(widget.data) : null;
                 st.showJson = false;
                 render();
             },
@@ -968,6 +1013,7 @@ export class FutureMenus {
             item: null,        // selected exercise (top-level or a part)
             loadSeq: 0,
             previewInstances: [],
+            previewSeq: 0,
         };
 
         const savePos = () => {
@@ -977,6 +1023,7 @@ export class FutureMenus {
                     topic: st.topic,
                     note: st.note ? st.note.slug : null,
                     section: st.section,
+                    subsection: st.item ? (st.item.subsection || '') : '',
                     item: st.item ? [st.item.itemNumber, st.item.subItemNumber] : null,
                 }));
             } catch (_) { /* private mode: no memory */ }
@@ -997,14 +1044,30 @@ export class FutureMenus {
         };
         const topItems = () => ((st.parsed && st.parsed.items) || [])
             .filter((it) => it.section === st.section && it.subItemNumber === null);
-        const partsOf = (num) => ((st.parsed && st.parsed.items) || [])
-            .filter((it) => it.section === st.section && it.itemNumber === num && it.subItemNumber !== null);
+        const parentOf = (item) => {
+            if (!item) return null;
+            if (item.subItemNumber === null) return item;
+            const tops = topItems();
+            if (item.parentUid) return tops.find((t) => t.uid === item.parentUid) || null;
+            return tops.find((t) => t.itemNumber === item.itemNumber && (t.subsection || '') === (item.subsection || ''))
+                || tops.find((t) => t.itemNumber === item.itemNumber)
+                || null;
+        };
+        const partsOf = (parent) => {
+            if (!parent) return [];
+            return ((st.parsed && st.parsed.items) || []).filter((it) => {
+                if (it.subItemNumber === null) return false;
+                if (parent.uid && it.parentUid) return it.parentUid === parent.uid;
+                return it.section === st.section && it.itemNumber === parent.itemNumber
+                    && (it.subsection || '') === (parent.subsection || '');
+            });
+        };
         /** Every selectable exercise in order (parts after their parent), for ◀ ▶. */
         const sequence = () => {
             const seq = [];
             for (const it of topItems()) {
                 seq.push(it);
-                seq.push(...partsOf(it.itemNumber));
+                seq.push(...partsOf(it));
             }
             return seq;
         };
@@ -1078,12 +1141,25 @@ export class FutureMenus {
                 }));
             }
             this._revealActiveTab(sectionsEl);
-            // Numbers
+            // Numbers (grouped with subsection labels when a section has multiple <h3> lists)
             const tops = topItems();
+            const activeParent = parentOf(st.item);
             itemsWrap.hidden = tops.length === 0;
             itemsEl.innerHTML = '';
+            const subNames = new Set(tops.map((t) => t.subsection || ''));
+            const showSubHeaders = subNames.size > 1;
+            let lastSub = null;
             for (const it of tops) {
-                const isActive = st.item && st.item.itemNumber === it.itemNumber;
+                if (showSubHeaders && (it.subsection || '') !== lastSub) {
+                    lastSub = it.subsection || '';
+                    if (lastSub) {
+                        const h = document.createElement('div');
+                        h.className = 'board-ex-subhead';
+                        h.textContent = lastSub;
+                        itemsEl.appendChild(h);
+                    }
+                }
+                const isActive = Boolean(activeParent && activeParent === it);
                 const b = button('board-ex-num', String(it.itemNumber), isActive, () => selectItem(it),
                     [it.subsection, it.difficulty].filter(Boolean).join(' · '));
                 if (it.difficulty) {
@@ -1092,16 +1168,15 @@ export class FutureMenus {
                     d.textContent = it.difficulty;
                     b.appendChild(d);
                 }
-                if (partsOf(it.itemNumber).length) b.classList.add('has-parts');
+                if (partsOf(it).length) b.classList.add('has-parts');
                 itemsEl.appendChild(b);
             }
             // Parts of the selected exercise
-            const parts = st.item ? partsOf(st.item.itemNumber) : [];
+            const parts = activeParent ? partsOf(activeParent) : [];
             subsWrap.hidden = parts.length === 0;
             subsEl.innerHTML = '';
-            if (parts.length) {
-                const parent = tops.find((t) => t.itemNumber === st.item.itemNumber);
-                subsEl.appendChild(button('board-ex-num is-all', 'Tutto', st.item === parent, () => selectItem(parent)));
+            if (parts.length && activeParent) {
+                subsEl.appendChild(button('board-ex-num is-all', 'Tutto', st.item === activeParent, () => selectItem(activeParent)));
                 for (const p of parts) {
                     subsEl.appendChild(button('board-ex-num', `${p.itemNumber}.${p.subItemNumber}`, st.item === p, () => selectItem(p)));
                 }
@@ -1116,6 +1191,7 @@ export class FutureMenus {
 
         const showPreview = async () => {
             this._clearPreviewInstances();
+            const seq = st.previewSeq;
             const it = st.item;
             if (!it) {
                 metaEl.textContent = st.note ? '' : 'Scegli un argomento';
@@ -1130,12 +1206,15 @@ export class FutureMenus {
             bodyEl.scrollTop = 0;
             previewEl.scrollTop = 0;
             if (this.engineLoader) {
-                const shown = it;
                 try {
                     const insts = await hydrateEmbeddedEngines(bodyEl, this.engineLoader);
-                    if (st.item !== shown) { insts.forEach((i) => i && i.destroy && i.destroy()); return; }
+                    if (seq !== st.previewSeq || el.hidden) {
+                        insts.forEach((i) => i && i.destroy && i.destroy());
+                        return;
+                    }
                     st.previewInstances.push(...insts);
                 } catch (_) { /* ignore */ }
+                if (seq !== st.previewSeq || el.hidden) return;
                 try { await this.engineLoader.typeset([bodyEl]); } catch (_) { /* ignore */ }
             }
         };
@@ -1169,7 +1248,11 @@ export class FutureMenus {
                 let item = topItems()[0] || null;
                 if (restore && Array.isArray(restore.item)) {
                     const [n, sub] = restore.item;
-                    item = sequence().find((x) => x.itemNumber === n && x.subItemNumber === sub) || item;
+                    const wantSub = restore.subsection || '';
+                    const seqList = sequence();
+                    item = seqList.find((x) => x.itemNumber === n && x.subItemNumber === sub && (x.subsection || '') === wantSub)
+                        || seqList.find((x) => x.itemNumber === n && x.subItemNumber === sub)
+                        || item;
                 }
                 selectItem(item);
             } catch (err) {
@@ -1215,10 +1298,12 @@ export class FutureMenus {
         this._exerciseSheet = {
             open: async () => {
                 if (!this.exercisePicker) return;
-                if (!st.catalog) {
+                if (!st.catalog || st.catalog.length === 0) {
                     statusEl.textContent = 'Caricamento…';
-                    st.catalog = await this.exercisePicker.loadCatalog();
-                    statusEl.textContent = st.catalog.length ? '' : 'Nessuna nota di esercizi trovata.';
+                    const loaded = await this.exercisePicker.loadCatalog();
+                    st.catalog = loaded && loaded.length ? loaded : null;
+                    statusEl.textContent = st.catalog ? '' : 'Nessuna nota di esercizi trovata.';
+                    if (!st.catalog) { render(); return; }
                     // Back where the panel was left (or the first subject).
                     const pos = loadPos();
                     const subj = st.catalog.find((s) => pos && s.subject === pos.subject) || st.catalog[0];
@@ -1239,6 +1324,7 @@ export class FutureMenus {
     }
 
     _clearPreviewInstances() {
+        if (this._exState) this._exState.previewSeq = (this._exState.previewSeq || 0) + 1;
         for (const inst of this._exState.previewInstances || []) {
             if (inst && typeof inst.destroy === 'function') {
                 try { inst.destroy(); } catch (_) { /* ignore */ }
